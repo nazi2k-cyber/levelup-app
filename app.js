@@ -18,7 +18,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- 상태 관리 객체 (초기 상태 세팅) ---
+// --- 상태 관리 객체 (위치정보 location 필드 추가) ---
 let AppState = getInitialAppState();
 
 function getInitialAppState() {
@@ -33,7 +33,8 @@ function getInitialAppState() {
             pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
             titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
             photoURL: null, 
-            friends: []     
+            friends: [],
+            location: null // 실제 GPS 좌표 저장용
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -102,7 +103,6 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// ★ 수정됨: 데이터 구조 충돌을 피하기 위해 복잡한 데이터는 "문자열(String)"로 압축해서 저장 ★
 async function saveUserData() {
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     
@@ -113,12 +113,12 @@ async function saveUserData() {
                 stats: AppState.user.stats,
                 level: AppState.user.level,
                 points: AppState.user.points,
-                // 배열/객체 형태는 에러를 뱉으므로 문자열로 강제 변환하여 저장합니다.
                 titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
                 questStr: JSON.stringify(AppState.quest.completedState),
                 dungeonStr: JSON.stringify(AppState.dungeon),
                 friends: AppState.user.friends || [],
-                photoURL: AppState.user.photoURL || null
+                photoURL: AppState.user.photoURL || null,
+                location: AppState.user.location || null // 위치정보 서버 저장
             }, { merge: true });
         } catch(e) {
             console.error("클라우드 저장 실패:", e);
@@ -126,7 +126,6 @@ async function saveUserData() {
     }
 }
 
-// ★ 수정됨: 문자열로 저장된 데이터를 불러올 때 다시 배열로 복원 ★
 async function loadUserDataFromDB(user) {
     try {
         const docRef = doc(db, "users", user.uid);
@@ -138,18 +137,15 @@ async function loadUserDataFromDB(user) {
             if(data.level) AppState.user.level = data.level;
             if(data.points) AppState.user.points = data.points;
             
-            // 문자열 압축 해제 로직
             if(data.titleHistoryStr) AppState.user.titleHistory = JSON.parse(data.titleHistoryStr);
             if(data.questStr) AppState.quest.completedState = JSON.parse(data.questStr);
             if(data.dungeonStr) AppState.dungeon = JSON.parse(data.dungeonStr);
             
             if(data.friends) AppState.user.friends = data.friends;
+            if(data.location) AppState.user.location = data.location;
             
-            if(data.name) {
-                AppState.user.name = data.name;
-            } else {
-                AppState.user.name = user.displayName || "신규 헌터";
-            }
+            if(data.name) { AppState.user.name = data.name; } 
+            else { AppState.user.name = user.displayName || "신규 헌터"; }
 
             if(data.photoURL) {
                 AppState.user.photoURL = data.photoURL;
@@ -168,13 +164,10 @@ async function loadUserDataFromDB(user) {
         }
         
         loadPlayerName();
-        await saveUserData(); // 누락된 데이터 보정을 위해 로드 후 한 번 저장
-    } catch(e) {
-        console.error("데이터 로드 실패:", e);
-    }
+        await saveUserData(); 
+    } catch(e) { console.error("데이터 로드 실패:", e); }
 }
 
-// ★ 수정됨: 사진을 더 작게(150px) 압축하고, 독립적인 통신 대신 통합 저장(saveUserData) 사용 ★
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -184,7 +177,6 @@ async function loadProfileImage(event) {
         const img = new Image();
         img.onload = async function() {
             const canvas = document.createElement('canvas');
-            // 네트워크 오류 방지를 위해 사이즈와 화질을 대폭 낮춤
             const MAX_WIDTH = 150; const MAX_HEIGHT = 150;
             let width = img.width; let height = img.height;
             if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
@@ -197,7 +189,6 @@ async function loadProfileImage(event) {
             const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6); 
             document.getElementById('profilePreview').src = compressedBase64;
             
-            // 상태 업데이트 후 메인 저장 함수 호출
             AppState.user.photoURL = compressedBase64;
             await saveUserData();
         };
@@ -304,8 +295,7 @@ function changePlayerName() {
         AppState.user.name = newName.trim(); 
         document.getElementById('prof-name').textContent = AppState.user.name;
         document.getElementById('prof-name').removeAttribute('data-i18n');
-        
-        saveUserData(); // 서버에 변경된 이름 즉시 반영
+        saveUserData(); 
         renderUsers(AppState.social.sortCriteria);
     }
 }
@@ -341,8 +331,7 @@ function processLevelUp() {
         const newTitleObj = { ko: `${titleVocab[top1].ko.pre[randPre]} ${titleVocab[top2].ko.suf[randSuf]}`, en: `${titleVocab[top1].en.pre[randPre]} ${titleVocab[top2].en.suf[randSuf]}`, ja: `${titleVocab[top1].ja.pre[randPre]} ${titleVocab[top2].ja.suf[randSuf]}` };
         AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
         
-        saveUserData(); // 변경 사항 서버 저장
-        
+        saveUserData(); 
         updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
         alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
     }
@@ -411,7 +400,7 @@ function toggleQuest(idx) {
     state[idx] = !state[idx];
     if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
     
-    saveUserData(); // 체크 즉시 서버 저장
+    saveUserData(); 
     renderQuestList(); renderCalendar(); updatePointUI(); 
 }
 
@@ -428,6 +417,7 @@ function renderCalendar() {
     calGrid.innerHTML = htmlStr;
 }
 
+// ★ 수정됨: 던전의 구글 지도 URL(깨짐 현상)을 정상적인 주소로 변경 반영 ★
 function updateDungeonStatus() {
     const now = new Date(); const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
     let currentSlot = 0;
@@ -452,9 +442,13 @@ function renderDungeon() {
         banner.innerHTML = `<h3 style="color: var(--text-sub); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
     } else {
         const mission = raidMissions[AppState.dungeon.targetStat]; const st = seoulStations[AppState.dungeon.stationIdx]; const stName = st.name[AppState.currentLang];
+        
         if (!AppState.dungeon.isJoined) {
             timer.classList.add('d-none'); activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none'); banner.classList.remove('d-none');
-            const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&z=15&output=embed`;
+            
+            // ★ 수정됨: 구글 지도 URL 파라미터 픽스
+            const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
+            
             banner.innerHTML = `<div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div><h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3><div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div><p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p><div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> / 10</div><button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>`;
             document.getElementById('btn-raid-join').addEventListener('click', joinDungeon);
         } else {
@@ -484,7 +478,6 @@ function completeDungeon() {
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 }
 
-// ★ 수정됨: 소셜 탭에서 불러올 때도 압축된 문자열 데이터를 해제하여 반영 ★
 async function fetchSocialData() {
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -495,13 +488,10 @@ async function fetchSocialData() {
             const data = docSnap.data(); const uid = docSnap.id; const isMe = auth.currentUser && auth.currentUser.uid === uid;
             const isFriendCheck = myFriends.some(fid => String(fid) === String(uid));
 
-            // 압축 해제된 호칭 찾기
             let userTitle = { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" };
             if (data.titleHistoryStr) {
                 const hist = JSON.parse(data.titleHistoryStr);
                 userTitle = hist[hist.length - 1].title;
-            } else if (data.titleHistory) {
-                userTitle = data.titleHistory[data.titleHistory.length - 1].title;
             }
 
             players.push({
@@ -566,12 +556,46 @@ async function toggleFriend(targetUid) {
     fetchSocialData(); 
 }
 
+// ★ 수정됨: 실제 GPS 데이터를 불러와 화면에 뿌려주는 완전히 활성화된 기능 ★
 function toggleGPS() {
-    const isChecked = document.getElementById('gps-toggle').checked; const statusDiv = document.getElementById('gps-status'); statusDiv.style.display = 'flex';
+    const isChecked = document.getElementById('gps-toggle').checked; 
+    const statusDiv = document.getElementById('gps-status'); 
+    statusDiv.style.display = 'flex';
+    
     if(isChecked) {
-        statusDiv.innerHTML = '...';
-        if ("geolocation" in navigator) navigator.geolocation.getCurrentPosition(() => statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on}</span>`, () => { statusDiv.innerHTML = `<span style="color:var(--neon-red);">${i18n[AppState.currentLang].gps_err}</span>`; document.getElementById('gps-toggle').checked = false; });
-    } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].gps_off}</span>`;
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">위치 탐색 중...</span>`;
+        
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude.toFixed(4);
+                    const lng = position.coords.longitude.toFixed(4);
+                    
+                    // 성공 시 실제 위도/경도를 화면에 표시하고 AppState에 저장
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on}<br>(Lat: ${lat}, Lng: ${lng})</span>`;
+                    AppState.user.location = { lat, lng };
+                    saveUserData(); // 위치 정보 서버 전송
+                }, 
+                (error) => {
+                    let errMsg = i18n[AppState.currentLang].gps_err;
+                    if(error.code === 1) errMsg += " (앱 권한 거부됨)";
+                    else if(error.code === 2) errMsg += " (위치 찾을 수 없음)";
+                    else if(error.code === 3) errMsg += " (시간 초과)";
+                    
+                    statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`; 
+                    document.getElementById('gps-toggle').checked = false; 
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">GPS 미지원 기기</span>`;
+            document.getElementById('gps-toggle').checked = false;
+        }
+    } else {
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].gps_off}</span>`;
+        AppState.user.location = null;
+        saveUserData();
+    }
 }
 
 function toggleHealthSync() {
