@@ -21,21 +21,40 @@ const AppState = {
         users: []
     },
     dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false },
-    system: { watchId: null }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
-    bindEvents();
+    bindEvents(); // 버튼과 기능 연결
 });
 
+// --- 초기화 및 로컬 데이터 불러오기 ---
 function initApp() {
-    // 소셜 데이터 세팅
+    // 1. 저장된 테마(라이트/다크) 불러오기
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.getElementById('theme-toggle').checked = true;
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+
+    // 2. 저장된 유저 데이터(레벨, 포인트, 스탯) 불러오기
+    const savedUser = localStorage.getItem('userData');
+    if (savedUser) {
+        AppState.user = JSON.parse(savedUser);
+    }
+    
+    // 3. 저장된 퀘스트 진척도 불러오기
+    const savedQuest = localStorage.getItem('questData');
+    if (savedQuest) {
+        AppState.quest.completedState = JSON.parse(savedQuest);
+    }
+
+    // 소셜 데이터 세팅 (나의 정보 추가)
     AppState.social.users = JSON.parse(JSON.stringify(mockSocialData));
     AppState.social.users.push({
         id: 3, 
         name: {ko:"플레이어 (나)", en:"Player (Me)", ja:"プレイヤー (私)"}, 
-        title: AppState.user.titleHistory[0].title, 
+        title: AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title, 
         str: AppState.user.stats.str, int: AppState.user.stats.int, cha: AppState.user.stats.cha, 
         vit: AppState.user.stats.vit, wlth: AppState.user.stats.wlth, agi: AppState.user.stats.agi, 
         isMe: true, isFriend: false 
@@ -50,27 +69,26 @@ function initApp() {
     if(savedImage) document.getElementById('profilePreview').src = savedImage;
 }
 
+// --- 이벤트 리스너 연결 (HTML 버튼들과 JS 기능 맵핑) ---
 function bindEvents() {
-    // 로그인 이벤트
+    // 로그인/인증
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
     document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
     
-    // 네비게이션 탭 이벤트
+    // 네비게이션 탭
     document.querySelectorAll('.nav-item').forEach(el => {
         el.addEventListener('click', () => switchTab(el.dataset.tab, el));
     });
 
-    // 상태창 이벤트
+    // 상태창 (레벨업 포함)
     document.getElementById('btn-edit-name').addEventListener('click', changePlayerName);
-    document.getElementById('btn-history-open').addEventListener('click', openTitleModal);
+    document.getElementById('prof-title-badge').addEventListener('click', openTitleModal);
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
-    document.getElementById('btn-levelup').addEventListener('click', processLevelUp);
-    
-    // 프로필 이미지 업로드 이벤트 (추가됨)
+    document.getElementById('btn-levelup').addEventListener('click', processLevelUp); // 레벨업 기능 연결
     document.getElementById('imageUpload').addEventListener('change', loadProfileImage);
 
-    // 소셜 탭 이벤트
+    // 소셜
     document.querySelectorAll('.social-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn));
     });
@@ -78,26 +96,109 @@ function bindEvents() {
         btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn));
     });
 
-    // 설정 이벤트
+    // 설정 (테마 포함)
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
-    document.getElementById('theme-toggle').addEventListener('change', changeTheme);
+    document.getElementById('theme-toggle').addEventListener('change', changeTheme); // 라이트/다크모드 기능 연결
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// --- 프로필 이미지 로드 함수 ---
+// --- 데이터 저장 함수 ---
+function saveUserData() {
+    localStorage.setItem('userData', JSON.stringify(AppState.user));
+    localStorage.setItem('questData', JSON.stringify(AppState.quest.completedState));
+}
+
+// --- 프로필 이미지 로드 ---
 function loadProfileImage(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
             document.getElementById('profilePreview').src = e.target.result;
-            // 로컬 스토리지에 이미지 데이터 저장
             localStorage.setItem('profileImage', e.target.result);
         };
         reader.readAsDataURL(file);
     }
+}
+
+// --- 라이트/다크모드 변경 로직 ---
+function changeTheme() {
+    const isLight = document.getElementById('theme-toggle').checked;
+    document.documentElement.setAttribute('data-theme', isLight ? 'light' : '');
+    
+    // 선택한 테마 로컬 스토리지에 저장
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+
+    let themeMeta = document.querySelector('meta[name="theme-color"]') || document.createElement('meta');
+    themeMeta.name = "theme-color"; themeMeta.content = isLight ? "#ffffff" : "#050508";
+    document.head.appendChild(themeMeta);
+}
+
+// --- 레벨업 로직 ---
+function getReqPoints(level) { return Math.floor(100 * Math.pow(1.5, level - 1)); }
+
+function processLevelUp() {
+    const reqPts = getReqPoints(AppState.user.level);
+    
+    if(AppState.user.points >= reqPts) {
+        // 포인트 차감 및 레벨 증가
+        AppState.user.points -= reqPts;
+        AppState.user.level++;
+        
+        // 대기 스탯을 실제 스탯으로 반영
+        statKeys.forEach(k => {
+            AppState.user.stats[k] = Math.min(100, AppState.user.stats[k] + AppState.user.pendingStats[k]);
+            AppState.user.pendingStats[k] = 0; // 대기 스탯 초기화
+        });
+
+        // 새로운 칭호 생성
+        let sortedStats = statKeys.map(k => ({ key: k, val: AppState.user.stats[k] })).sort((a, b) => b.val - a.val);
+        const top1 = sortedStats[0].key; const top2 = sortedStats[1].key; 
+        const randPre = Math.floor(Math.random() * 3); const randSuf = Math.floor(Math.random() * 3);
+        const newTitleObj = {
+            ko: `${titleVocab[top1].ko.pre[randPre]} ${titleVocab[top2].ko.suf[randSuf]}`,
+            en: `${titleVocab[top1].en.pre[randPre]} ${titleVocab[top2].en.suf[randSuf]}`,
+            ja: `${titleVocab[top1].ja.pre[randPre]} ${titleVocab[top2].ja.suf[randSuf]}`
+        };
+
+        AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
+
+        // 변경된 유저 데이터 저장
+        saveUserData();
+
+        // UI 갱신
+        updatePointUI(); 
+        drawRadarChart(); 
+        renderUsers(AppState.social.sortCriteria);
+        
+        alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
+    }
+}
+
+function updatePointUI() {
+    const reqPts = getReqPoints(AppState.user.level);
+    document.getElementById('sys-level').innerText = `Lv. ${AppState.user.level}`;
+    document.getElementById('display-pts').innerText = AppState.user.points;
+    document.getElementById('display-req-pts').innerText = reqPts;
+    
+    const btn = document.getElementById('btn-levelup');
+    if(AppState.user.points >= reqPts) {
+        btn.disabled = false; btn.style.background = "var(--neon-gold)"; btn.style.color = "black"; btn.style.boxShadow = "0 0 15px var(--neon-gold)";
+    } else {
+        btn.disabled = true; btn.style.background = "#444"; btn.style.color = "#777"; btn.style.boxShadow = "none";
+    }
+    
+    document.getElementById('prof-title-badge').innerText = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title[AppState.currentLang];
+    
+    statKeys.forEach(k => {
+        const pendEl = document.getElementById(`pendVal_${k}`);
+        const pVal = AppState.user.pendingStats[k];
+        if (pVal > 0) pendEl.textContent = `(+${pVal.toFixed(1).replace('.0', '')})`;
+        else if (pVal < 0) pendEl.textContent = `(${pVal.toFixed(1).replace('.0', '')})`;
+        else pendEl.textContent = "";
+    });
 }
 
 // --- 로그인/인증 로직 ---
@@ -105,9 +206,15 @@ function checkLoginStatus() {
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     if (isLoggedIn === 'true') {
         document.getElementById('login-screen').classList.add('d-none');
+        document.getElementById('app-container').classList.remove('d-none');
         document.getElementById('app-container').classList.add('d-flex');
-        changeTheme(); loadPlayerName(); changeLanguage(AppState.currentLang); 
-        renderCalendar(); updatePointUI(); drawRadarChart(); updateDungeonStatus();
+        
+        loadPlayerName(); 
+        changeLanguage(AppState.currentLang); 
+        renderCalendar(); 
+        updatePointUI(); 
+        drawRadarChart(); 
+        updateDungeonStatus();
     } else {
         document.getElementById('login-screen').classList.remove('d-none');
         document.getElementById('app-container').classList.remove('d-flex');
@@ -191,7 +298,7 @@ function changeLanguage(langCode) {
 
     if(document.getElementById('app-container').classList.contains('d-flex')){
         drawRadarChart(); renderUsers(AppState.social.sortCriteria); renderQuestList(); updatePointUI(); updateDungeonStatus();
-        if(document.getElementById('titleModal').style.display === 'flex') renderHistoryModal();
+        if(!document.getElementById('titleModal').classList.contains('d-none')) renderHistoryModal();
         loadPlayerName();
     }
 }
@@ -208,15 +315,6 @@ function switchTab(tabId, el) {
     if(tabId === 'dungeon') { updateDungeonStatus(); }
 }
 
-function changeTheme() {
-    const isLight = document.getElementById('theme-toggle').checked;
-    document.documentElement.setAttribute('data-theme', isLight ? 'light' : '');
-    let themeMeta = document.querySelector('meta[name="theme-color"]') || document.createElement('meta');
-    themeMeta.name = "theme-color"; themeMeta.content = isLight ? "#ffffff" : "#050508";
-    document.head.appendChild(themeMeta);
-}
-
-// --- 상태창 (Leveling & Name) ---
 function loadPlayerName() {
     const savedName = localStorage.getItem('playerName');
     if (savedName) {
@@ -246,61 +344,8 @@ function changePlayerName() {
     }
 }
 
-function getReqPoints(level) { return Math.floor(100 * Math.pow(1.5, level - 1)); }
-
-function updatePointUI() {
-    const reqPts = getReqPoints(AppState.user.level);
-    document.getElementById('sys-level').innerText = `Lv. ${AppState.user.level}`;
-    document.getElementById('display-pts').innerText = AppState.user.points;
-    document.getElementById('display-req-pts').innerText = reqPts;
-    
-    const btn = document.getElementById('btn-levelup');
-    if(AppState.user.points >= reqPts) {
-        btn.disabled = false; btn.style.background = "var(--neon-gold)"; btn.style.color = "black"; btn.style.boxShadow = "0 0 15px var(--neon-gold)";
-    } else {
-        btn.disabled = true; btn.style.background = "#444"; btn.style.color = "#777"; btn.style.boxShadow = "none";
-    }
-    
-    document.getElementById('prof-title-badge').innerText = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title[AppState.currentLang];
-    
-    statKeys.forEach(k => {
-        const pendEl = document.getElementById(`pendVal_${k}`);
-        const pVal = AppState.user.pendingStats[k];
-        if (pVal > 0) pendEl.textContent = `(+${pVal.toFixed(1).replace('.0', '')})`;
-        else if (pVal < 0) pendEl.textContent = `(${pVal.toFixed(1).replace('.0', '')})`;
-        else pendEl.textContent = "";
-    });
-}
-
-function processLevelUp() {
-    const reqPts = getReqPoints(AppState.user.level);
-    if(AppState.user.points >= reqPts) {
-        AppState.user.points -= reqPts;
-        AppState.user.level++;
-        
-        statKeys.forEach(k => {
-            AppState.user.stats[k] = Math.min(100, AppState.user.stats[k] + AppState.user.pendingStats[k]);
-            AppState.user.pendingStats[k] = 0;
-        });
-
-        let sortedStats = statKeys.map(k => ({ key: k, val: AppState.user.stats[k] })).sort((a, b) => b.val - a.val);
-        const top1 = sortedStats[0].key; const top2 = sortedStats[1].key; 
-        const randPre = Math.floor(Math.random() * 3); const randSuf = Math.floor(Math.random() * 3);
-        const newTitleObj = {
-            ko: `${titleVocab[top1].ko.pre[randPre]} ${titleVocab[top2].ko.suf[randSuf]}`,
-            en: `${titleVocab[top1].en.pre[randPre]} ${titleVocab[top2].en.suf[randSuf]}`,
-            ja: `${titleVocab[top1].ja.pre[randPre]} ${titleVocab[top2].ja.suf[randSuf]}`
-        };
-
-        AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
-
-        updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
-        alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
-    }
-}
-
-function openTitleModal() { renderHistoryModal(); document.getElementById('titleModal').style.display = 'flex'; }
-function closeTitleModal() { document.getElementById('titleModal').style.display = 'none'; }
+function openTitleModal() { renderHistoryModal(); document.getElementById('titleModal').classList.remove('d-none'); document.getElementById('titleModal').classList.add('d-flex'); }
+function closeTitleModal() { document.getElementById('titleModal').classList.remove('d-flex'); document.getElementById('titleModal').classList.add('d-none'); }
 function renderHistoryModal() {
     const container = document.getElementById('history-list-container'); container.innerHTML = '';
     [...AppState.user.titleHistory].reverse().forEach(hist => {
@@ -384,6 +429,7 @@ function toggleQuest(idx) {
     if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } 
     else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
     
+    saveUserData(); // 진척도 및 포인트 로컬 저장
     renderQuestList(); renderCalendar(); updatePointUI(); 
 }
 
@@ -441,14 +487,14 @@ function renderDungeon() {
         
         let btnHtml = AppState.dungeon.isJoined ? 
             `<button class="btn-primary" style="background: #444; color: #888; border-color: #333; cursor: not-allowed;" disabled>${i18n[AppState.currentLang].raid_joined}</button>` : 
-            `<button id="btn-raid-join" class="btn-primary bg-red">${i18n[AppState.currentLang].raid_btn}</button>`;
+            `<button id="btn-raid-join" class="btn-primary" style="background:var(--neon-red); border-color:var(--neon-red);">${i18n[AppState.currentLang].raid_btn}</button>`;
 
         banner.innerHTML = `
-            <h3 class="raid-boss-title">⚠️ ${stName} ${i18n[AppState.currentLang].raid_boss}</h3>
+            <h3 style="color: var(--neon-red); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_boss}</h3>
             <div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div>
-            <p class="text-sm text-main mb-5">${i18n[AppState.currentLang].raid_desc1}</p>
-            <p class="text-xs text-sub">${i18n[AppState.currentLang].raid_desc2}</p>
-            <div class="raid-participants">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> / 10</div>
+            <p style="font-size: 0.8rem; color: var(--text-main); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_desc1}</p>
+            <p style="font-size: 0.7rem; color: var(--text-sub);">${i18n[AppState.currentLang].raid_desc2}</p>
+            <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span style="color:var(--neon-blue)">${AppState.dungeon.participants}</span> / 10</div>
             ${btnHtml}
         `;
         if(!AppState.dungeon.isJoined) {
@@ -465,6 +511,7 @@ function joinDungeon() {
     AppState.user.points += pts; AppState.user.pendingStats.agi += agiInc;
     AppState.dungeon.isJoined = true; AppState.dungeon.participants++;
     
+    saveUserData(); // 던전 보상 저장
     renderDungeon(); updatePointUI();
     alert(`${i18n[AppState.currentLang].raid_success}\n[x${multiplier} Reward] ${pts} P / AGI +${agiInc}`);
 }
@@ -496,16 +543,16 @@ function renderUsers(criteria, btn = null) {
     if(AppState.social.mode === 'friends') dUsers = dUsers.filter(u => u.isFriend);
     dUsers.sort((a, b) => b[criteria] - a[criteria]);
 
-    if(dUsers.length === 0) { container.innerHTML = `<div class="text-center py-10 text-sub">${i18n[AppState.currentLang].no_friend}</div>`; return; }
+    if(dUsers.length === 0) { container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sub);">${i18n[AppState.currentLang].no_friend}</div>`; return; }
 
     let htmlStr = '';
     dUsers.forEach((user, i) => {
-        const rDisp = AppState.social.mode === 'global' ? `<div class="font-bold text-sub text-center" style="font-size:1.1rem; width:25px;">${i+1}</div>` : '';
+        const rDisp = AppState.social.mode === 'global' ? `<div style="font-size:1.1rem; font-weight:bold; color:var(--text-sub); width:25px; text-align:center;">${i+1}</div>` : '';
         let fBtn = '';
         if(!user.isMe) fBtn = user.isFriend ? `<button class="btn-friend added" data-id="${user.id}">${i18n[AppState.currentLang].btn_added}</button>` : `<button class="btn-friend" data-id="${user.id}">${i18n[AppState.currentLang].btn_add}</button>`;
         const tDisp = typeof user.title === 'object' ? user.title[AppState.currentLang] : user.title;
         const nDisp = typeof user.name === 'object' ? user.name[AppState.currentLang] : user.name;
-        htmlStr += `<div class="user-card ${user.isMe ? 'my-rank' : ''}">${rDisp}<div class="user-info"><div class="title-badge">${tDisp}</div><div class="text-sm">${nDisp}</div></div><div class="user-score">${user[criteria]}</div>${fBtn}</div>`;
+        htmlStr += `<div class="user-card ${user.isMe ? 'my-rank' : ''}">${rDisp}<div class="user-info"><div class="title-badge">${tDisp}</div><div style="font-size:0.95rem;">${nDisp}</div></div><div class="user-score">${user[criteria]}</div>${fBtn}</div>`;
     });
     container.innerHTML = htmlStr;
     
@@ -525,21 +572,22 @@ function toggleGPS() {
     const statusDiv = document.getElementById('gps-status'); statusDiv.style.display = 'flex';
     if(isChecked) {
         statusDiv.innerHTML = '...';
-        if ("geolocation" in navigator) navigator.geolocation.getCurrentPosition(() => statusDiv.innerHTML = `<span class="text-blue">${i18n[AppState.currentLang].gps_on}</span>`, () => { statusDiv.innerHTML = `<span class="text-red">${i18n[AppState.currentLang].gps_err}</span>`; document.getElementById('gps-toggle').checked = false; });
-    } else statusDiv.innerHTML = `<span class="text-sub">${i18n[AppState.currentLang].gps_off}</span>`;
+        if ("geolocation" in navigator) navigator.geolocation.getCurrentPosition(() => statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on}</span>`, () => { statusDiv.innerHTML = `<span style="color:var(--neon-red);">${i18n[AppState.currentLang].gps_err}</span>`; document.getElementById('gps-toggle').checked = false; });
+    } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].gps_off}</span>`;
 }
 
 function toggleHealthSync() {
     const isChecked = document.getElementById('sync-toggle').checked;
     const statusDiv = document.getElementById('sync-status'); statusDiv.style.display = 'flex';
     if(isChecked) {
-        statusDiv.innerHTML = `<span class="text-sub">${i18n[AppState.currentLang].sync_req}</span>`;
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_req}</span>`;
         setTimeout(() => {
-            statusDiv.innerHTML = `<span class="text-blue">${i18n[AppState.currentLang].sync_done}</span>`;
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].sync_done}</span>`;
             AppState.user.stats.str = Math.min(100, AppState.user.stats.str + 3);
             AppState.user.stats.vit = Math.min(100, AppState.user.stats.vit + 2);
             AppState.user.points += 50; 
+            saveUserData(); // 동기화 보상 저장
             updatePointUI(); drawRadarChart();
         }, 2000);
-    } else statusDiv.innerHTML = `<span class="text-sub">${i18n[AppState.currentLang].sync_off}</span>`;
+    } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off}</span>`;
 }
