@@ -31,8 +31,8 @@ const AppState = {
         titleHistory: [
             { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } }
         ],
-        photoURL: null, // 프로필 사진 저장용
-        friends: []     // 친구 목록(UID) 저장용
+        photoURL: null, 
+        friends: []     
     },
     quest: {
         currentDayOfWeek: new Date().getDay(),
@@ -50,10 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     bindEvents();
 
-    // Firebase 로그인 상태 실시간 감지
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            await loadUserDataFromDB(user); // 서버에서 내 정보 불러오기
+            await loadUserDataFromDB(user); 
             document.getElementById('login-screen').classList.add('d-none');
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
@@ -63,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePointUI(); 
             drawRadarChart(); 
             updateDungeonStatus();
-            fetchSocialData(); // 글로벌 유저 랭킹 정보 서버에서 불러오기
+            fetchSocialData(); 
         } else {
             document.getElementById('login-screen').classList.remove('d-none');
             document.getElementById('app-container').classList.remove('d-flex');
@@ -83,32 +82,21 @@ function initTheme() {
 }
 
 function bindEvents() {
-    // 로그인 관련
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
     document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
     
-    // 탭 이동
-    document.querySelectorAll('.nav-item').forEach(el => {
-        el.addEventListener('click', () => switchTab(el.dataset.tab, el));
-    });
+    document.querySelectorAll('.nav-item').forEach(el => { el.addEventListener('click', () => switchTab(el.dataset.tab, el)); });
 
-    // 상태창 기능
     document.getElementById('btn-edit-name').addEventListener('click', changePlayerName);
     document.getElementById('prof-title-badge').addEventListener('click', openTitleModal);
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
-    document.getElementById('imageUpload').addEventListener('change', loadProfileImage); // 프로필 업로드
+    document.getElementById('imageUpload').addEventListener('change', loadProfileImage); 
 
-    // 소셜 탭
-    document.querySelectorAll('.social-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn));
-    });
-    document.querySelectorAll('.rank-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn));
-    });
+    document.querySelectorAll('.social-tab-btn').forEach(btn => { btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn)); });
+    document.querySelectorAll('.rank-tab-btn').forEach(btn => { btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn)); });
 
-    // 설정창
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
@@ -116,7 +104,7 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// --- Firebase 데이터 저장 함수 (클라우드 + 로컬) ---
+// ★ 디버깅용: 데이터 저장 시 에러가 나면 팝업창(alert)을 띄우도록 수정 ★
 async function saveUserData() {
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     localStorage.setItem('questData', JSON.stringify(AppState.quest.completedState));
@@ -132,15 +120,17 @@ async function saveUserData() {
                 titleHistory: AppState.user.titleHistory,
                 quest: AppState.quest.completedState,
                 dungeon: AppState.dungeon,
-                friends: AppState.user.friends || [] // 친구 목록
+                friends: AppState.user.friends || []
             }, { merge: true });
         } catch(e) {
             console.error("클라우드 저장 실패:", e);
+            // 에러 원인을 화면에 직접 띄웁니다!
+            alert("서버 저장 에러 발생!\n메시지: " + e.message + "\n\n※ 캡처해서 알려주시면 바로 해결해 드립니다.");
         }
     }
 }
 
-// --- Firebase 내 데이터 불러오기 ---
+// ★ 디버깅용: 데이터 로드 시 에러가 나면 팝업창을 띄우도록 수정 ★
 async function loadUserDataFromDB(user) {
     try {
         const docRef = doc(db, "users", user.uid);
@@ -164,7 +154,6 @@ async function loadUserDataFromDB(user) {
                 document.getElementById('profilePreview').src = data.photoURL;
             }
         } else {
-            // 처음 로그인한 유저인 경우 (구글 연동 시 이름/프사 가져오기)
             if (user.displayName) {
                 AppState.user.name = user.displayName;
                 localStorage.setItem('playerName', user.displayName);
@@ -175,14 +164,13 @@ async function loadUserDataFromDB(user) {
             }
             await saveUserData();
         }
-        
         loadPlayerName();
     } catch(e) {
         console.error("데이터 로드 실패:", e);
+        alert("데이터 불러오기 실패:\n" + e.message);
     }
 }
 
-// --- 프로필 사진 저장 로직 (Base64 변환 후 Firebase 저장) ---
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -198,8 +186,9 @@ async function loadProfileImage(event) {
                 await updateDoc(doc(db, "users", auth.currentUser.uid), {
                     photoURL: base64Image
                 });
-            } catch(error) {
-                console.error("프로필 사진 업로드 실패:", error);
+            } catch(e) {
+                console.error("프로필 사진 업로드 실패:", e);
+                alert("프로필 사진 저장 에러:\n" + e.message);
             }
         }
         localStorage.setItem('profileImage', base64Image);
@@ -207,7 +196,7 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- Firebase 회원가입/로그인 로직 ---
+// --- 기타 로직 (변경 없음) ---
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -216,19 +205,17 @@ async function simulateLogin() {
     if(!email || !pw) { alert(i18n[AppState.currentLang].login_err_empty); return; }
     
     const btn = document.getElementById('btn-login-submit');
-    btn.innerText = "처리 중...";
-    btn.disabled = true;
+    btn.innerText = "처리 중..."; btn.disabled = true;
 
     try {
-        if(!AppState.isLoginMode) { // 회원가입
+        if(!AppState.isLoginMode) { 
             if(pw !== pwConfirm) { alert(i18n[AppState.currentLang].pw_mismatch); throw new Error("비밀번호 불일치"); }
             await createUserWithEmailAndPassword(auth, email, pw);
-        } else { // 로그인
+        } else { 
             await signInWithEmailAndPassword(auth, email, pw);
         }
     } catch (error) {
-        console.error(error);
-        alert("인증 오류: " + error.message);
+        console.error(error); alert("인증 오류: " + error.message);
     } finally {
         btn.innerText = AppState.isLoginMode ? i18n[AppState.currentLang].btn_login_submit : i18n[AppState.currentLang].btn_signup_submit;
         btn.disabled = false;
@@ -236,21 +223,15 @@ async function simulateLogin() {
 }
 
 async function simulateGoogleLogin() { 
-    try {
-        await signInWithPopup(auth, googleProvider);
-    } catch(e) {
-        console.error(e);
-        alert("Google 로그인 오류:\n" + e.message);
-    }
+    try { await signInWithPopup(auth, googleProvider); } 
+    catch(e) { console.error(e); alert("Google 로그인 오류:\n" + e.message); }
 }
 
 async function logout() {
     try {
         await fbSignOut(auth);
         localStorage.removeItem('userData'); 
-        document.getElementById('login-email').value = ''; 
-        document.getElementById('login-pw').value = ''; 
-        document.getElementById('login-pw-confirm').value = '';
+        document.getElementById('login-email').value = ''; document.getElementById('login-pw').value = ''; document.getElementById('login-pw-confirm').value = '';
         
         AppState.isLoginMode = true; 
         document.getElementById('btn-login-submit').setAttribute('data-i18n', 'btn_login_submit');
@@ -260,9 +241,7 @@ async function logout() {
         document.getElementById('disclaimer-box').classList.add('d-none');
         
         changeLanguage(AppState.currentLang); 
-    } catch(e) {
-        console.error("로그아웃 오류:", e);
-    }
+    } catch(e) { console.error("로그아웃 오류:", e); }
 }
 
 function toggleAuthMode() {
@@ -274,18 +253,15 @@ function toggleAuthMode() {
     const disclaimerBox = document.getElementById('disclaimer-box');
     
     if(AppState.isLoginMode) {
-        btnSubmit.setAttribute('data-i18n', 'btn_login_submit');
-        toggleText.setAttribute('data-i18n', 'auth_toggle_signup');
+        btnSubmit.setAttribute('data-i18n', 'btn_login_submit'); toggleText.setAttribute('data-i18n', 'auth_toggle_signup');
         pwConfirm.classList.add('d-none'); pwHint.classList.add('d-none'); disclaimerBox.classList.add('d-none');
     } else {
-        btnSubmit.setAttribute('data-i18n', 'btn_signup_submit');
-        toggleText.setAttribute('data-i18n', 'auth_toggle_login');
+        btnSubmit.setAttribute('data-i18n', 'btn_signup_submit'); toggleText.setAttribute('data-i18n', 'auth_toggle_login');
         pwConfirm.classList.remove('d-none'); pwHint.classList.remove('d-none'); disclaimerBox.classList.remove('d-none');
     }
     changeLanguage(AppState.currentLang); 
 }
 
-// --- 공통 기능 ---
 function changeLanguage(langCode) {
     AppState.currentLang = langCode;
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -310,7 +286,7 @@ function switchTab(tabId, el) {
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     el.classList.add('active');
     
-    if(tabId === 'social') { fetchSocialData(); } // 소셜 탭 진입 시 항상 데이터 갱신
+    if(tabId === 'social') { fetchSocialData(); } 
     if(tabId === 'status') { drawRadarChart(); updatePointUI(); }
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
     if(tabId === 'dungeon') { updateDungeonStatus(); }
@@ -363,33 +339,19 @@ function renderHistoryModal() {
     });
 }
 
-// --- 레벨업 및 포인트 UI ---
 function getReqPoints(level) { return Math.floor(100 * Math.pow(1.5, level - 1)); }
 
 function processLevelUp() {
     const reqPts = getReqPoints(AppState.user.level);
     if(AppState.user.points >= reqPts) {
-        AppState.user.points -= reqPts;
-        AppState.user.level++;
-        
-        statKeys.forEach(k => {
-            AppState.user.stats[k] = Math.min(100, AppState.user.stats[k] + AppState.user.pendingStats[k]);
-            AppState.user.pendingStats[k] = 0; 
-        });
-
+        AppState.user.points -= reqPts; AppState.user.level++;
+        statKeys.forEach(k => { AppState.user.stats[k] = Math.min(100, AppState.user.stats[k] + AppState.user.pendingStats[k]); AppState.user.pendingStats[k] = 0; });
         let sortedStats = statKeys.map(k => ({ key: k, val: AppState.user.stats[k] })).sort((a, b) => b.val - a.val);
         const top1 = sortedStats[0].key; const top2 = sortedStats[1].key; 
         const randPre = Math.floor(Math.random() * 3); const randSuf = Math.floor(Math.random() * 3);
-        const newTitleObj = {
-            ko: `${titleVocab[top1].ko.pre[randPre]} ${titleVocab[top2].ko.suf[randSuf]}`,
-            en: `${titleVocab[top1].en.pre[randPre]} ${titleVocab[top2].en.suf[randSuf]}`,
-            ja: `${titleVocab[top1].ja.pre[randPre]} ${titleVocab[top2].ja.suf[randSuf]}`
-        };
-
+        const newTitleObj = { ko: `${titleVocab[top1].ko.pre[randPre]} ${titleVocab[top2].ko.suf[randSuf]}`, en: `${titleVocab[top1].en.pre[randPre]} ${titleVocab[top2].en.suf[randSuf]}`, ja: `${titleVocab[top1].ja.pre[randPre]} ${titleVocab[top2].ja.suf[randSuf]}` };
         AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
-        saveUserData(); 
-        
-        updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
+        saveUserData(); updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
         alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
     }
 }
@@ -399,30 +361,19 @@ function updatePointUI() {
     document.getElementById('sys-level').innerText = `Lv. ${AppState.user.level}`;
     document.getElementById('display-pts').innerText = AppState.user.points;
     document.getElementById('display-req-pts').innerText = reqPts;
-    
     const btn = document.getElementById('btn-levelup');
-    if(AppState.user.points >= reqPts) {
-        btn.disabled = false; btn.style.background = "var(--neon-gold)"; btn.style.color = "black"; btn.style.boxShadow = "0 0 15px var(--neon-gold)";
-    } else {
-        btn.disabled = true; btn.style.background = "#444"; btn.style.color = "#777"; btn.style.boxShadow = "none";
-    }
-    
+    if(AppState.user.points >= reqPts) { btn.disabled = false; btn.style.background = "var(--neon-gold)"; btn.style.color = "black"; btn.style.boxShadow = "0 0 15px var(--neon-gold)"; } 
+    else { btn.disabled = true; btn.style.background = "#444"; btn.style.color = "#777"; btn.style.boxShadow = "none"; }
     document.getElementById('prof-title-badge').innerText = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title[AppState.currentLang];
-    
     statKeys.forEach(k => {
-        const pendEl = document.getElementById(`pendVal_${k}`);
-        const pVal = AppState.user.pendingStats[k];
-        if (pVal > 0) pendEl.textContent = `(+${pVal.toFixed(1).replace('.0', '')})`;
-        else if (pVal < 0) pendEl.textContent = `(${pVal.toFixed(1).replace('.0', '')})`;
-        else pendEl.textContent = "";
+        const pendEl = document.getElementById(`pendVal_${k}`); const pVal = AppState.user.pendingStats[k];
+        if (pVal > 0) pendEl.textContent = `(+${pVal.toFixed(1).replace('.0', '')})`; else if (pVal < 0) pendEl.textContent = `(${pVal.toFixed(1).replace('.0', '')})`; else pendEl.textContent = "";
     });
 }
 
-// --- 차트 렌더링 ---
 function drawRadarChart() {
     const centerX = 50, centerY = 50, radius = 33; 
     const angles = []; for(let i=0; i<6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
-
     const gridGroup = document.getElementById('radarGrid'); const axesGroup = document.getElementById('radarAxes');
     if(gridGroup.innerHTML === '') { 
         let gridHtml = ''; let axesHtml = '';
@@ -434,355 +385,168 @@ function drawRadarChart() {
         for (let i = 0; i < 6; i++) axesHtml += `<line x1="50" y1="50" x2="${centerX + radius * Math.cos(angles[i])}" y2="${centerY + radius * Math.sin(angles[i])}" class="radar-bg-line"></line>`;
         gridGroup.innerHTML = gridHtml; axesGroup.innerHTML = axesHtml;
     }
-
     const pointsGroup = document.getElementById('radarPoints'); const labelsGroup = document.getElementById('radarLabels');
     let pointsHtml = ''; let labelsHtml = ''; let dataPoints = ""; let totalSum = 0;
-
     for (let i = 0; i < 6; i++) {
         const key = statKeys[i]; const val = AppState.user.stats[key]; totalSum += val;
-        const r = radius * (val / 100);
-        const x = centerX + r * Math.cos(angles[i]); const y = centerY + r * Math.sin(angles[i]);
-        dataPoints += `${x},${y} `;
-        pointsHtml += `<circle cx="${x}" cy="${y}" r="1.2" class="radar-point"></circle>`;
-
-        const labelRadius = radius + 9; 
-        const lx = centerX + labelRadius * Math.cos(angles[i]); const ly = centerY + labelRadius * Math.sin(angles[i]) + 2; 
+        const r = radius * (val / 100); const x = centerX + r * Math.cos(angles[i]); const y = centerY + r * Math.sin(angles[i]);
+        dataPoints += `${x},${y} `; pointsHtml += `<circle cx="${x}" cy="${y}" r="1.2" class="radar-point"></circle>`;
+        const labelRadius = radius + 9; const lx = centerX + labelRadius * Math.cos(angles[i]); const ly = centerY + labelRadius * Math.sin(angles[i]) + 2; 
         let anchor = "middle"; if(i===1 || i===2) anchor = "start"; if(i===4 || i===5) anchor = "end";   
-        
-        labelsHtml += `<text x="${lx}" y="${ly - 3}" text-anchor="${anchor}" class="radar-label">${i18n[AppState.currentLang][key]}</text>
-                       <text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" class="radar-value">${val}</text>`;
-                       
-        const barVal = document.getElementById(`barVal_${key}`);
-        if(barVal) barVal.textContent = val;
-        const barFill = document.getElementById(`barFill_${key}`);
-        if(barFill) setTimeout(() => { barFill.style.width = `${val}%`; }, 100);
+        labelsHtml += `<text x="${lx}" y="${ly - 3}" text-anchor="${anchor}" class="radar-label">${i18n[AppState.currentLang][key]}</text><text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" class="radar-value">${val}</text>`;
+        const barVal = document.getElementById(`barVal_${key}`); if(barVal) barVal.textContent = val;
+        const barFill = document.getElementById(`barFill_${key}`); if(barFill) setTimeout(() => { barFill.style.width = `${val}%`; }, 100);
     }
-    
     pointsGroup.innerHTML = pointsHtml; labelsGroup.innerHTML = labelsHtml;
-    
     const playerPolygon = document.getElementById('playerPolygon');
     if(!playerPolygon.getAttribute('points')) playerPolygon.setAttribute('points', "50,50 50,50 50,50 50,50 50,50 50,50"); 
     setTimeout(() => { playerPolygon.setAttribute('points', dataPoints.trim()); }, 50);
     document.getElementById('totalScore').innerHTML = `${totalSum}`;
 }
 
-// --- 퀘스트 로직 ---
 function renderQuestList() {
-    const container = document.getElementById('quest-list-container');
-    const day = AppState.quest.currentDayOfWeek;
-    let htmlStr = '';
+    const container = document.getElementById('quest-list-container'); const day = AppState.quest.currentDayOfWeek; let htmlStr = '';
     weeklyQuestData[day].forEach((q, idx) => {
         const isDone = AppState.quest.completedState[day][idx];
-        htmlStr += `<div class="quest-row ${isDone ? 'done' : ''}" data-idx="${idx}">
-            <div><div class="quest-title"><span class="quest-stat-tag">${q.stat}</span>${q.title[AppState.currentLang]}</div><div class="quest-desc">${q.desc[AppState.currentLang]}</div></div>
-            <div class="quest-checkbox"></div></div>`;
+        htmlStr += `<div class="quest-row ${isDone ? 'done' : ''}" data-idx="${idx}"><div><div class="quest-title"><span class="quest-stat-tag">${q.stat}</span>${q.title[AppState.currentLang]}</div><div class="quest-desc">${q.desc[AppState.currentLang]}</div></div><div class="quest-checkbox"></div></div>`;
     });
     container.innerHTML = htmlStr;
-    document.querySelectorAll('.quest-row').forEach(row => {
-        row.addEventListener('click', () => toggleQuest(row.dataset.idx));
-    });
+    document.querySelectorAll('.quest-row').forEach(row => { row.addEventListener('click', () => toggleQuest(row.dataset.idx)); });
 }
 
 function toggleQuest(idx) {
-    const day = AppState.quest.currentDayOfWeek;
-    const state = AppState.quest.completedState[day];
-    const q = weeklyQuestData[day][idx];
-    const sKey = q.stat.toLowerCase();
-    
+    const day = AppState.quest.currentDayOfWeek; const state = AppState.quest.completedState[day]; const q = weeklyQuestData[day][idx]; const sKey = q.stat.toLowerCase();
     state[idx] = !state[idx];
-    if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } 
-    else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
-    
-    saveUserData(); 
-    renderQuestList(); renderCalendar(); updatePointUI(); 
+    if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
+    saveUserData(); renderQuestList(); renderCalendar(); updatePointUI(); 
 }
 
 function renderCalendar() {
-    const calGrid = document.getElementById('calendar-grid'); 
-    const today = new Date(); const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - AppState.quest.currentDayOfWeek);
-
+    const calGrid = document.getElementById('calendar-grid'); const today = new Date(); const startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - AppState.quest.currentDayOfWeek);
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     document.getElementById('cal-month').innerText = `${monthNames[startOfWeek.getMonth()]} ${startOfWeek.getFullYear()}`;
     const dayNames = { ko: ["일","월","화","수","목","금","토"], en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja: ["日","月","火","水","木","金","土"] };
-
     let htmlStr = '';
     for (let i = 0; i < 7; i++) {
-        const cDate = new Date(startOfWeek); cDate.setDate(startOfWeek.getDate() + i);
-        const count = AppState.quest.completedState[i].filter(v => v).length;
-        htmlStr += `<div class="cal-day ${i === AppState.quest.currentDayOfWeek ? 'today' : ''}">
-            <div class="cal-name">${dayNames[AppState.currentLang][i]}</div><div class="cal-date">${cDate.getDate()}</div><div class="cal-score">${count}/12</div></div>`;
+        const cDate = new Date(startOfWeek); cDate.setDate(startOfWeek.getDate() + i); const count = AppState.quest.completedState[i].filter(v => v).length;
+        htmlStr += `<div class="cal-day ${i === AppState.quest.currentDayOfWeek ? 'today' : ''}"><div class="cal-name">${dayNames[AppState.currentLang][i]}</div><div class="cal-date">${cDate.getDate()}</div><div class="cal-score">${count}/12</div></div>`;
     }
     calGrid.innerHTML = htmlStr;
 }
 
-// --- 레이드 로직 ---
 function updateDungeonStatus() {
-    const now = new Date();
-    const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
-    
+    const now = new Date(); const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
     let currentSlot = 0;
-    if (timeVal >= 6 && timeVal < 8) currentSlot = 1;
-    else if (timeVal >= 11.5 && timeVal < 13.5) currentSlot = 2;
-    else if (timeVal >= 19 && timeVal < 21) currentSlot = 3;
-
+    if (timeVal >= 6 && timeVal < 8) currentSlot = 1; else if (timeVal >= 11.5 && timeVal < 13.5) currentSlot = 2; else if (timeVal >= 19 && timeVal < 21) currentSlot = 3;
     const dateStr = now.toDateString();
-    
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
-        AppState.dungeon.lastGeneratedDate = dateStr; 
-        AppState.dungeon.slot = currentSlot;
-        
+        AppState.dungeon.lastGeneratedDate = dateStr; AppState.dungeon.slot = currentSlot;
         if (currentSlot > 0) {
-            AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length);
-            AppState.dungeon.participants = Math.floor(Math.random() * 5) + 3; 
-            AppState.dungeon.isJoined = false;
-            AppState.dungeon.isCleared = false;
-            AppState.dungeon.progress = 0;
-            
-            const statKeysArr = ['str', 'int', 'cha', 'vit', 'wlth', 'agi'];
-            AppState.dungeon.targetStat = statKeysArr[Math.floor(Math.random() * statKeysArr.length)];
+            AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); AppState.dungeon.participants = Math.floor(Math.random() * 5) + 3; 
+            AppState.dungeon.isJoined = false; AppState.dungeon.isCleared = false; AppState.dungeon.progress = 0;
+            const statKeysArr = ['str', 'int', 'cha', 'vit', 'wlth', 'agi']; AppState.dungeon.targetStat = statKeysArr[Math.floor(Math.random() * statKeysArr.length)];
         }
         saveUserData();
     }
-    
     if (document.getElementById('dungeon').classList.contains('active')) renderDungeon();
 }
 
 function renderDungeon() {
-    const banner = document.getElementById('dungeon-banner');
-    const activeBoard = document.getElementById('dungeon-active-board');
-    const timer = document.getElementById('raid-timer');
-    
+    const banner = document.getElementById('dungeon-banner'); const activeBoard = document.getElementById('dungeon-active-board'); const timer = document.getElementById('raid-timer');
     if (AppState.dungeon.slot === 0) {
-        timer.classList.add('d-none');
-        activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none');
-        banner.classList.remove('d-none');
-        banner.innerHTML = `<h3 style="color: var(--text-sub); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_waiting}</h3>
-                            <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
+        timer.classList.add('d-none'); activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none'); banner.classList.remove('d-none');
+        banner.innerHTML = `<h3 style="color: var(--text-sub); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
     } else {
-        const mission = raidMissions[AppState.dungeon.targetStat];
-        const st = seoulStations[AppState.dungeon.stationIdx];
-        const stName = st.name[AppState.currentLang];
-        
+        const mission = raidMissions[AppState.dungeon.targetStat]; const st = seoulStations[AppState.dungeon.stationIdx]; const stName = st.name[AppState.currentLang];
         if (!AppState.dungeon.isJoined) {
-            timer.classList.add('d-none');
-            activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none');
-            banner.classList.remove('d-none');
-            
+            timer.classList.add('d-none'); activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none'); banner.classList.remove('d-none');
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&z=15&output=embed`;
-            banner.innerHTML = `
-                <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div>
-                <h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3>
-                <div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div>
-                <p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p>
-                <div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> / 10</div>
-                <button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>
-            `;
+            banner.innerHTML = `<div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div><h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3><div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div><p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p><div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> / 10</div><button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>`;
             document.getElementById('btn-raid-join').addEventListener('click', joinDungeon);
         } else {
-            banner.classList.add('d-none');
-            activeBoard.classList.remove('d-none'); activeBoard.classList.add('d-flex');
-            timer.classList.remove('d-none'); 
-            
-            document.getElementById('active-stat-badge').innerText = mission.stat;
-            document.getElementById('active-stat-badge').style.color = mission.color;
-            document.getElementById('active-stat-badge').style.borderColor = mission.color;
-            
-            document.getElementById('active-raid-title').innerText = mission.title[AppState.currentLang];
-            document.getElementById('active-raid-desc').innerHTML = mission.desc2[AppState.currentLang];
-            
-            const btnAction = document.getElementById('btn-raid-action');
-            const btnComplete = document.getElementById('btn-raid-complete');
-            
-            btnAction.innerText = mission.actionText[AppState.currentLang];
-            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`;
-            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
-
+            banner.classList.add('d-none'); activeBoard.classList.remove('d-none'); activeBoard.classList.add('d-flex'); timer.classList.remove('d-none'); 
+            document.getElementById('active-stat-badge').innerText = mission.stat; document.getElementById('active-stat-badge').style.color = mission.color; document.getElementById('active-stat-badge').style.borderColor = mission.color;
+            document.getElementById('active-raid-title').innerText = mission.title[AppState.currentLang]; document.getElementById('active-raid-desc').innerHTML = mission.desc2[AppState.currentLang];
+            const btnAction = document.getElementById('btn-raid-action'); const btnComplete = document.getElementById('btn-raid-complete');
+            btnAction.innerText = mission.actionText[AppState.currentLang]; document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`; document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
             if (AppState.dungeon.isCleared) {
-                btnAction.classList.add('d-none');
-                btnComplete.classList.remove('d-none');
-                btnComplete.innerText = "레이드 정산 완료됨";
-                btnComplete.disabled = true;
-                btnComplete.style.background = "#444";
-                document.getElementById('raid-progress-text').innerText = "100% (CLEAR)";
+                btnAction.classList.add('d-none'); btnComplete.classList.remove('d-none'); btnComplete.innerText = "레이드 정산 완료됨"; btnComplete.disabled = true; btnComplete.style.background = "#444"; document.getElementById('raid-progress-text').innerText = "100% (CLEAR)";
             } else if (AppState.dungeon.progress >= 100) {
-                btnAction.classList.add('d-none');
-                btnComplete.classList.remove('d-none');
-                btnComplete.onclick = completeDungeon;
+                btnAction.classList.add('d-none'); btnComplete.classList.remove('d-none'); btnComplete.onclick = completeDungeon;
             } else {
-                btnAction.classList.remove('d-none');
-                btnComplete.classList.add('d-none');
-                btnAction.onclick = simulateRaidAction;
+                btnAction.classList.remove('d-none'); btnComplete.classList.add('d-none'); btnAction.onclick = simulateRaidAction;
             }
         }
     }
 }
 
-function joinDungeon() {
-    if(AppState.dungeon.isJoined) return;
-    AppState.dungeon.isJoined = true; 
-    AppState.dungeon.participants++;
-    AppState.dungeon.progress = Math.floor(Math.random() * 30) + 40; 
-    saveUserData(); renderDungeon();
-}
-
-function simulateRaidAction() {
-    const btnAction = document.getElementById('btn-raid-action');
-    btnAction.innerText = "동기화 중...";
-    btnAction.disabled = true;
-    setTimeout(() => {
-        AppState.dungeon.progress = 100;
-        saveUserData(); renderDungeon();
-    }, 1500);
-}
-
+function joinDungeon() { if(AppState.dungeon.isJoined) return; AppState.dungeon.isJoined = true; AppState.dungeon.participants++; AppState.dungeon.progress = Math.floor(Math.random() * 30) + 40; saveUserData(); renderDungeon(); }
+function simulateRaidAction() { const btnAction = document.getElementById('btn-raid-action'); btnAction.innerText = "동기화 중..."; btnAction.disabled = true; setTimeout(() => { AppState.dungeon.progress = 100; saveUserData(); renderDungeon(); }, 1500); }
 function completeDungeon() {
     if(AppState.dungeon.isCleared) return;
-    const target = AppState.dungeon.targetStat; 
-    const multiplier = Math.floor(Math.random() * 3) + 1;
-    const pts = 100 * multiplier; 
-    const statInc = 3.0 * multiplier; 
-
-    AppState.user.points += pts; 
-    AppState.user.pendingStats[target] += statInc;
-    AppState.dungeon.isCleared = true;
-    
+    const target = AppState.dungeon.targetStat; const multiplier = Math.floor(Math.random() * 3) + 1; const pts = 100 * multiplier; const statInc = 3.0 * multiplier; 
+    AppState.user.points += pts; AppState.user.pendingStats[target] += statInc; AppState.dungeon.isCleared = true;
     saveUserData(); renderDungeon(); updatePointUI();
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 }
 
-// --- 소셜 렌더링 및 실시간 동기화 로직 ---
 async function fetchSocialData() {
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
         let players = [];
-        
         let myFriends = AppState.user.friends || [];
         if(auth.currentUser) {
             const myDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-            if(myDoc.exists() && myDoc.data().friends) {
-                myFriends = myDoc.data().friends;
-                AppState.user.friends = myFriends;
-            }
+            if(myDoc.exists() && myDoc.data().friends) { myFriends = myDoc.data().friends; AppState.user.friends = myFriends; }
         }
-
         querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const uid = docSnap.id;
-            const isMe = auth.currentUser && auth.currentUser.uid === uid;
-            
+            const data = docSnap.data(); const uid = docSnap.id; const isMe = auth.currentUser && auth.currentUser.uid === uid;
             players.push({
-                id: uid,
-                name: data.name || "Unknown",
-                title: data.titleHistory ? data.titleHistory[data.titleHistory.length - 1].title : "각성자",
-                str: data.stats?.str || 0,
-                int: data.stats?.int || 0,
-                cha: data.stats?.cha || 0,
-                vit: data.stats?.vit || 0,
-                wlth: data.stats?.wlth || 0,
-                agi: data.stats?.agi || 0,
-                photoURL: data.photoURL || null,
-                isMe: isMe,
-                isFriend: myFriends.includes(uid)
+                id: uid, name: data.name || "Unknown", title: data.titleHistory ? data.titleHistory[data.titleHistory.length - 1].title : "각성자",
+                str: data.stats?.str || 0, int: data.stats?.int || 0, cha: data.stats?.cha || 0, vit: data.stats?.vit || 0, wlth: data.stats?.wlth || 0, agi: data.stats?.agi || 0,
+                photoURL: data.photoURL || null, isMe: isMe, isFriend: myFriends.includes(uid)
             });
         });
-        
-        // 더미데이터(목업) 제외하고 실제 유저만 로드
-        AppState.social.users = players;
-        renderUsers(AppState.social.sortCriteria);
-    } catch(e) {
-        console.error("소셜 데이터 로드 실패:", e);
-    }
+        AppState.social.users = players; renderUsers(AppState.social.sortCriteria);
+    } catch(e) { console.error("소셜 로드 에러:", e); /* 팝업창을 띄우지 않고 조용히 처리 */ }
 }
 
-function toggleSocialMode(mode, btn) {
-    AppState.social.mode = mode;
-    document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-    document.getElementById('ranking-controls').style.display = mode === 'global' ? 'flex' : 'none';
-    renderUsers(AppState.social.sortCriteria);
-}
-
+function toggleSocialMode(mode, btn) { AppState.social.mode = mode; document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.getElementById('ranking-controls').style.display = mode === 'global' ? 'flex' : 'none'; renderUsers(AppState.social.sortCriteria); }
 function renderUsers(criteria, btn = null) {
-    if(btn) {
-        AppState.social.sortCriteria = criteria;
-        document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-    }
+    if(btn) { AppState.social.sortCriteria = criteria; document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     const container = document.getElementById('user-list-container');
-    
-    // 현재 로그인된 유저가 없다면 렌더링 중지
     if(!auth.currentUser) return;
-
     AppState.social.users.forEach(u => u.total = u.str + u.int + u.cha + u.vit + u.wlth + u.agi);
-
     let dUsers = [...AppState.social.users];
     if(AppState.social.mode === 'friends') dUsers = dUsers.filter(u => u.isFriend);
     dUsers.sort((a, b) => b[criteria] - a[criteria]);
-
     if(dUsers.length === 0) { container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sub);">${i18n[AppState.currentLang].no_friend}</div>`; return; }
-
     let htmlStr = '';
     dUsers.forEach((user, i) => {
         const rDisp = AppState.social.mode === 'global' ? `<div style="font-size:1.1rem; font-weight:bold; color:var(--text-sub); width:25px; text-align:center;">${i+1}</div>` : '';
         let fBtn = '';
-        if(!user.isMe) {
-            fBtn = user.isFriend 
-                ? `<button class="btn-friend added" data-id="${user.id}">${i18n[AppState.currentLang].btn_added}</button>` 
-                : `<button class="btn-friend" data-id="${user.id}">${i18n[AppState.currentLang].btn_add}</button>`;
-        }
-        
-        // 프사 렌더링 (없으면 기본 회색 동그라미)
-        const profileImg = user.photoURL 
-            ? `<img src="${user.photoURL}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` 
-            : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`;
-
-        const tDisp = typeof user.title === 'object' ? user.title[AppState.currentLang] : user.title;
-        const nDisp = typeof user.name === 'object' ? user.name[AppState.currentLang] : user.name;
-        
-        htmlStr += `
-            <div class="user-card ${user.isMe ? 'my-rank' : ''}">
-                ${rDisp}
-                <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                    ${profileImg}
-                    <div class="user-info" style="margin-left:0;">
-                        <div class="title-badge">${tDisp}</div>
-                        <div style="font-size:0.95rem;">${nDisp}</div>
-                    </div>
-                </div>
-                <div class="user-score">${user[criteria]}</div>
-                ${fBtn}
-            </div>`;
+        if(!user.isMe) { fBtn = user.isFriend ? `<button class="btn-friend added" data-id="${user.id}">${i18n[AppState.currentLang].btn_added}</button>` : `<button class="btn-friend" data-id="${user.id}">${i18n[AppState.currentLang].btn_add}</button>`; }
+        const profileImg = user.photoURL ? `<img src="${user.photoURL}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`;
+        const tDisp = typeof user.title === 'object' ? user.title[AppState.currentLang] : user.title; const nDisp = typeof user.name === 'object' ? user.name[AppState.currentLang] : user.name;
+        htmlStr += `<div class="user-card ${user.isMe ? 'my-rank' : ''}">${rDisp}<div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">${profileImg}<div class="user-info" style="margin-left:0;"><div class="title-badge">${tDisp}</div><div style="font-size:0.95rem;">${nDisp}</div></div></div><div class="user-score">${user[criteria]}</div>${fBtn}</div>`;
     });
     container.innerHTML = htmlStr;
-    
-    document.querySelectorAll('.btn-friend').forEach(btn => { 
-        btn.addEventListener('click', (e) => toggleFriend(e.target.dataset.id)); 
-    });
+    document.querySelectorAll('.btn-friend').forEach(btn => { btn.addEventListener('click', (e) => toggleFriend(e.target.dataset.id)); });
 }
 
-// 친구 추가/삭제 (실시간 DB 연동)
 async function toggleFriend(targetUid) {
     if(!auth.currentUser) return;
-    
-    const myRef = doc(db, "users", auth.currentUser.uid);
-    const targetUser = AppState.social.users.find(u => u.id === targetUid);
-    
+    const myRef = doc(db, "users", auth.currentUser.uid); const targetUser = AppState.social.users.find(u => u.id === targetUid);
     if(targetUser.isFriend) {
-        await updateDoc(myRef, { friends: arrayRemove(targetUid) });
-        AppState.user.friends = AppState.user.friends.filter(id => id !== targetUid);
-        alert("친구 목록에서 삭제되었습니다.");
+        await updateDoc(myRef, { friends: arrayRemove(targetUid) }); AppState.user.friends = AppState.user.friends.filter(id => id !== targetUid); alert("친구 삭제됨");
     } else {
-        await updateDoc(myRef, { friends: arrayUnion(targetUid) });
-        if(!AppState.user.friends) AppState.user.friends = [];
-        AppState.user.friends.push(targetUid);
-        alert("내 친구로 추가되었습니다.");
+        await updateDoc(myRef, { friends: arrayUnion(targetUid) }); if(!AppState.user.friends) AppState.user.friends = []; AppState.user.friends.push(targetUid); alert("친구 추가됨");
     }
-    fetchSocialData(); // UI 갱신을 위해 데이터 다시 로드
+    fetchSocialData(); 
 }
 
-// --- 기타 (GPS, 동기화) ---
 function toggleGPS() {
-    const isChecked = document.getElementById('gps-toggle').checked;
-    const statusDiv = document.getElementById('gps-status'); statusDiv.style.display = 'flex';
+    const isChecked = document.getElementById('gps-toggle').checked; const statusDiv = document.getElementById('gps-status'); statusDiv.style.display = 'flex';
     if(isChecked) {
         statusDiv.innerHTML = '...';
         if ("geolocation" in navigator) navigator.geolocation.getCurrentPosition(() => statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on}</span>`, () => { statusDiv.innerHTML = `<span style="color:var(--neon-red);">${i18n[AppState.currentLang].gps_err}</span>`; document.getElementById('gps-toggle').checked = false; });
@@ -790,15 +554,12 @@ function toggleGPS() {
 }
 
 function toggleHealthSync() {
-    const isChecked = document.getElementById('sync-toggle').checked;
-    const statusDiv = document.getElementById('sync-status'); statusDiv.style.display = 'flex';
+    const isChecked = document.getElementById('sync-toggle').checked; const statusDiv = document.getElementById('sync-status'); statusDiv.style.display = 'flex';
     if(isChecked) {
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_req}</span>`;
         setTimeout(() => {
             statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].sync_done}</span>`;
-            AppState.user.stats.str = Math.min(100, AppState.user.stats.str + 3);
-            AppState.user.stats.vit = Math.min(100, AppState.user.stats.vit + 2);
-            AppState.user.points += 50; 
+            AppState.user.stats.str = Math.min(100, AppState.user.stats.str + 3); AppState.user.stats.vit = Math.min(100, AppState.user.stats.vit + 2); AppState.user.points += 50; 
             saveUserData(); updatePointUI(); drawRadarChart();
         }, 2000);
     } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off}</span>`;
