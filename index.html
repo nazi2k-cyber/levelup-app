@@ -141,17 +141,17 @@
                 
                 <div class="system-card dungeon-banner" id="dungeon-banner"></div>
 
-                <div class="system-card dungeon-active d-none" id="dungeon-active-board">
+                <div class="system-card dungeon-active d-none" id="dungeon-active-board" style="display: block;">
                     <div class="active-header">
                         <span class="blink-text text-red">⚠️ ANOMALY DETECTED</span>
                         <span id="active-stat-badge" class="quest-stat-tag">STR</span>
                     </div>
-                    <h3 id="active-raid-title" style="margin: 10px 0; font-size: 1.1rem; color: var(--text-main);">이상 현상 발생</h3>
-                    <p id="active-raid-desc" style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px;">목표를 달성하여 시스템 붕괴를 막으십시오.</p>
+                    <h3 id="active-raid-title" style="margin: 10px 0; font-size: 1.1rem; color: var(--text-main); word-break: keep-all; line-height: 1.3;">이상 현상 발생</h3>
+                    <p id="active-raid-desc" style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px; word-break: keep-all; line-height: 1.4;">목표를 달성하여 시스템 붕괴를 막으십시오.</p>
                     
                     <div class="raid-progress-box">
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:5px;">
-                            <span>연합 달성률</span>
+                            <span>연합 달성률 (<span id="raid-part-count" style="color:var(--neon-gold);">0</span>명 합류)</span>
                             <span id="raid-progress-text" style="color:var(--neon-blue); font-weight:bold;">0%</span>
                         </div>
                         <div class="progress-bg" style="height: 10px;"><div class="progress-fill" id="raid-progress-bar" style="width: 0%;"></div></div>
