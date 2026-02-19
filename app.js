@@ -20,36 +20,31 @@ const AppState = {
         sortCriteria: 'total',
         users: []
     },
-    dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false },
+    dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
-    bindEvents(); // 버튼과 기능 연결
+    bindEvents();
 });
 
 // --- 초기화 및 로컬 데이터 불러오기 ---
 function initApp() {
-    // 1. 저장된 테마(라이트/다크) 불러오기
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
         document.getElementById('theme-toggle').checked = true;
         document.documentElement.setAttribute('data-theme', 'light');
     }
 
-    // 2. 저장된 유저 데이터(레벨, 포인트, 스탯) 불러오기
     const savedUser = localStorage.getItem('userData');
-    if (savedUser) {
-        AppState.user = JSON.parse(savedUser);
-    }
+    if (savedUser) AppState.user = JSON.parse(savedUser);
     
-    // 3. 저장된 퀘스트 진척도 불러오기
     const savedQuest = localStorage.getItem('questData');
-    if (savedQuest) {
-        AppState.quest.completedState = JSON.parse(savedQuest);
-    }
+    if (savedQuest) AppState.quest.completedState = JSON.parse(savedQuest);
 
-    // 소셜 데이터 세팅 (나의 정보 추가)
+    const savedDungeon = localStorage.getItem('dungeonData');
+    if (savedDungeon) AppState.dungeon = JSON.parse(savedDungeon);
+
     AppState.social.users = JSON.parse(JSON.stringify(mockSocialData));
     AppState.social.users.push({
         id: 3, 
@@ -62,33 +57,27 @@ function initApp() {
 
     changeLanguage('ko');
     checkLoginStatus();
-    setInterval(updateDungeonStatus, 60000); // 던전 타이머
+    setInterval(updateDungeonStatus, 60000); 
     
-    // 저장된 프로필 이미지 로드
     const savedImage = localStorage.getItem('profileImage');
     if(savedImage) document.getElementById('profilePreview').src = savedImage;
 }
 
-// --- 이벤트 리스너 연결 (HTML 버튼들과 JS 기능 맵핑) ---
 function bindEvents() {
-    // 로그인/인증
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
     document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
     
-    // 네비게이션 탭
     document.querySelectorAll('.nav-item').forEach(el => {
         el.addEventListener('click', () => switchTab(el.dataset.tab, el));
     });
 
-    // 상태창 (레벨업 포함)
     document.getElementById('btn-edit-name').addEventListener('click', changePlayerName);
     document.getElementById('prof-title-badge').addEventListener('click', openTitleModal);
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
-    document.getElementById('btn-levelup').addEventListener('click', processLevelUp); // 레벨업 기능 연결
+    document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
     document.getElementById('imageUpload').addEventListener('change', loadProfileImage);
 
-    // 소셜
     document.querySelectorAll('.social-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn));
     });
@@ -96,9 +85,8 @@ function bindEvents() {
         btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn));
     });
 
-    // 설정 (테마 포함)
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
-    document.getElementById('theme-toggle').addEventListener('change', changeTheme); // 라이트/다크모드 기능 연결
+    document.getElementById('theme-toggle').addEventListener('change', changeTheme);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
@@ -108,9 +96,9 @@ function bindEvents() {
 function saveUserData() {
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     localStorage.setItem('questData', JSON.stringify(AppState.quest.completedState));
+    localStorage.setItem('dungeonData', JSON.stringify(AppState.dungeon));
 }
 
-// --- 프로필 이미지 로드 ---
 function loadProfileImage(event) {
     const file = event.target.files[0];
     if (file) {
@@ -123,14 +111,10 @@ function loadProfileImage(event) {
     }
 }
 
-// --- 라이트/다크모드 변경 로직 ---
 function changeTheme() {
     const isLight = document.getElementById('theme-toggle').checked;
     document.documentElement.setAttribute('data-theme', isLight ? 'light' : '');
-    
-    // 선택한 테마 로컬 스토리지에 저장
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
-
     let themeMeta = document.querySelector('meta[name="theme-color"]') || document.createElement('meta');
     themeMeta.name = "theme-color"; themeMeta.content = isLight ? "#ffffff" : "#050508";
     document.head.appendChild(themeMeta);
@@ -143,17 +127,14 @@ function processLevelUp() {
     const reqPts = getReqPoints(AppState.user.level);
     
     if(AppState.user.points >= reqPts) {
-        // 포인트 차감 및 레벨 증가
         AppState.user.points -= reqPts;
         AppState.user.level++;
         
-        // 대기 스탯을 실제 스탯으로 반영
         statKeys.forEach(k => {
             AppState.user.stats[k] = Math.min(100, AppState.user.stats[k] + AppState.user.pendingStats[k]);
-            AppState.user.pendingStats[k] = 0; // 대기 스탯 초기화
+            AppState.user.pendingStats[k] = 0; 
         });
 
-        // 새로운 칭호 생성
         let sortedStats = statKeys.map(k => ({ key: k, val: AppState.user.stats[k] })).sort((a, b) => b.val - a.val);
         const top1 = sortedStats[0].key; const top2 = sortedStats[1].key; 
         const randPre = Math.floor(Math.random() * 3); const randSuf = Math.floor(Math.random() * 3);
@@ -164,14 +145,8 @@ function processLevelUp() {
         };
 
         AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
-
-        // 변경된 유저 데이터 저장
         saveUserData();
-
-        // UI 갱신
-        updatePointUI(); 
-        drawRadarChart(); 
-        renderUsers(AppState.social.sortCriteria);
+        updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
         
         alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
     }
@@ -209,12 +184,8 @@ function checkLoginStatus() {
         document.getElementById('app-container').classList.remove('d-none');
         document.getElementById('app-container').classList.add('d-flex');
         
-        loadPlayerName(); 
-        changeLanguage(AppState.currentLang); 
-        renderCalendar(); 
-        updatePointUI(); 
-        drawRadarChart(); 
-        updateDungeonStatus();
+        loadPlayerName(); changeLanguage(AppState.currentLang); 
+        renderCalendar(); updatePointUI(); drawRadarChart(); updateDungeonStatus();
     } else {
         document.getElementById('login-screen').classList.remove('d-none');
         document.getElementById('app-container').classList.remove('d-flex');
@@ -260,19 +231,14 @@ function simulateLogin() {
         if(pw !== pwConfirm) { alert(i18n[AppState.currentLang].pw_mismatch); return; }
     }
 
-    localStorage.setItem('isLoggedIn', 'true');
-    checkLoginStatus();
-}
-
-function simulateGoogleLogin() {
     localStorage.setItem('isLoggedIn', 'true'); checkLoginStatus();
 }
 
+function simulateGoogleLogin() { localStorage.setItem('isLoggedIn', 'true'); checkLoginStatus(); }
+
 function logout() {
     localStorage.removeItem('isLoggedIn');
-    document.getElementById('login-email').value = '';
-    document.getElementById('login-pw').value = '';
-    document.getElementById('login-pw-confirm').value = '';
+    document.getElementById('login-email').value = ''; document.getElementById('login-pw').value = ''; document.getElementById('login-pw-confirm').value = '';
     
     AppState.isLoginMode = true; 
     document.getElementById('btn-login-submit').setAttribute('data-i18n', 'btn_login_submit');
@@ -353,7 +319,7 @@ function renderHistoryModal() {
     });
 }
 
-// --- 차트 및 렌더링 최적화 ---
+// --- 차트 및 렌더링 ---
 function drawRadarChart() {
     const centerX = 50, centerY = 50, radius = 33; 
     const angles = []; for(let i=0; i<6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
@@ -371,8 +337,7 @@ function drawRadarChart() {
     }
 
     const pointsGroup = document.getElementById('radarPoints'); const labelsGroup = document.getElementById('radarLabels');
-    let pointsHtml = ''; let labelsHtml = ''; let dataPoints = "";
-    let totalSum = 0;
+    let pointsHtml = ''; let labelsHtml = ''; let dataPoints = ""; let totalSum = 0;
 
     for (let i = 0; i < 6; i++) {
         const key = statKeys[i]; const val = AppState.user.stats[key]; totalSum += val;
@@ -429,7 +394,7 @@ function toggleQuest(idx) {
     if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } 
     else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
     
-    saveUserData(); // 진척도 및 포인트 로컬 저장
+    saveUserData();
     renderQuestList(); renderCalendar(); updatePointUI(); 
 }
 
@@ -452,7 +417,7 @@ function renderCalendar() {
     calGrid.innerHTML = htmlStr;
 }
 
-// --- 던전 로직 ---
+// --- 6종 스탯 던전 (레이드) 로직 ---
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
@@ -465,55 +430,126 @@ function updateDungeonStatus() {
     const dateStr = now.toDateString();
     
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
-        AppState.dungeon.lastGeneratedDate = dateStr; AppState.dungeon.slot = currentSlot;
+        AppState.dungeon.lastGeneratedDate = dateStr; 
+        AppState.dungeon.slot = currentSlot;
+        
         if (currentSlot > 0) {
             AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length);
             AppState.dungeon.participants = Math.floor(Math.random() * 5) + 3; 
             AppState.dungeon.isJoined = false;
+            AppState.dungeon.isCleared = false;
+            AppState.dungeon.progress = 0;
+            
+            const statKeysArr = ['str', 'int', 'cha', 'vit', 'wlth', 'agi'];
+            AppState.dungeon.targetStat = statKeysArr[Math.floor(Math.random() * statKeysArr.length)];
         }
+        saveUserData();
     }
-    renderDungeon();
+    
+    if (document.getElementById('dungeon').classList.contains('active')) renderDungeon();
 }
 
 function renderDungeon() {
     const banner = document.getElementById('dungeon-banner');
+    const activeBoard = document.getElementById('dungeon-active-board');
+    const timer = document.getElementById('raid-timer');
+    
     if (AppState.dungeon.slot === 0) {
+        timer.classList.add('d-none');
+        activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none');
+        banner.classList.remove('d-none');
         banner.innerHTML = `<h3 style="color: var(--text-sub); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_waiting}</h3>
                             <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
     } else {
+        const mission = raidMissions[AppState.dungeon.targetStat];
         const st = seoulStations[AppState.dungeon.stationIdx];
         const stName = st.name[AppState.currentLang];
-        const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&z=15&output=embed`;
         
-        let btnHtml = AppState.dungeon.isJoined ? 
-            `<button class="btn-primary" style="background: #444; color: #888; border-color: #333; cursor: not-allowed;" disabled>${i18n[AppState.currentLang].raid_joined}</button>` : 
-            `<button id="btn-raid-join" class="btn-primary" style="background:var(--neon-red); border-color:var(--neon-red);">${i18n[AppState.currentLang].raid_btn}</button>`;
-
-        banner.innerHTML = `
-            <h3 style="color: var(--neon-red); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_boss}</h3>
-            <div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div>
-            <p style="font-size: 0.8rem; color: var(--text-main); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_desc1}</p>
-            <p style="font-size: 0.7rem; color: var(--text-sub);">${i18n[AppState.currentLang].raid_desc2}</p>
-            <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span style="color:var(--neon-blue)">${AppState.dungeon.participants}</span> / 10</div>
-            ${btnHtml}
-        `;
-        if(!AppState.dungeon.isJoined) {
+        if (!AppState.dungeon.isJoined) {
+            timer.classList.add('d-none');
+            activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none');
+            banner.classList.remove('d-none');
+            
+            const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&z=15&output=embed`;
+            banner.innerHTML = `
+                <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div>
+                <h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3>
+                <div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div>
+                <p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p>
+                <div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> / 10</div>
+                <button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>
+            `;
             document.getElementById('btn-raid-join').addEventListener('click', joinDungeon);
+        } else {
+            banner.classList.add('d-none');
+            activeBoard.classList.remove('d-none'); activeBoard.classList.add('d-flex');
+            timer.classList.remove('d-none'); 
+            
+            document.getElementById('active-stat-badge').innerText = mission.stat;
+            document.getElementById('active-stat-badge').style.color = mission.color;
+            document.getElementById('active-stat-badge').style.borderColor = mission.color;
+            
+            document.getElementById('active-raid-title').innerText = mission.title[AppState.currentLang];
+            document.getElementById('active-raid-desc').innerHTML = mission.desc2[AppState.currentLang];
+            
+            const btnAction = document.getElementById('btn-raid-action');
+            const btnComplete = document.getElementById('btn-raid-complete');
+            
+            btnAction.innerText = mission.actionText[AppState.currentLang];
+            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`;
+            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
+
+            if (AppState.dungeon.isCleared) {
+                btnAction.classList.add('d-none');
+                btnComplete.classList.remove('d-none');
+                btnComplete.innerText = "레이드 정산 완료됨";
+                btnComplete.disabled = true;
+                btnComplete.style.background = "#444";
+                document.getElementById('raid-progress-text').innerText = "100% (CLEAR)";
+            } else if (AppState.dungeon.progress >= 100) {
+                btnAction.classList.add('d-none');
+                btnComplete.classList.remove('d-none');
+                btnComplete.onclick = completeDungeon;
+            } else {
+                btnAction.classList.remove('d-none');
+                btnComplete.classList.add('d-none');
+                btnAction.onclick = simulateRaidAction;
+            }
         }
     }
 }
 
 function joinDungeon() {
     if(AppState.dungeon.isJoined) return;
-    const multiplier = Math.floor(Math.random() * 3) + 1;
-    const pts = 100 * multiplier; const agiInc = 2.5 * multiplier;
+    AppState.dungeon.isJoined = true; 
+    AppState.dungeon.participants++;
+    AppState.dungeon.progress = Math.floor(Math.random() * 30) + 40; 
+    saveUserData(); renderDungeon();
+}
 
-    AppState.user.points += pts; AppState.user.pendingStats.agi += agiInc;
-    AppState.dungeon.isJoined = true; AppState.dungeon.participants++;
+function simulateRaidAction() {
+    const btnAction = document.getElementById('btn-raid-action');
+    btnAction.innerText = "동기화 중...";
+    btnAction.disabled = true;
+    setTimeout(() => {
+        AppState.dungeon.progress = 100;
+        saveUserData(); renderDungeon();
+    }, 1500);
+}
+
+function completeDungeon() {
+    if(AppState.dungeon.isCleared) return;
+    const target = AppState.dungeon.targetStat; 
+    const multiplier = Math.floor(Math.random() * 3) + 1;
+    const pts = 100 * multiplier; 
+    const statInc = 3.0 * multiplier; 
+
+    AppState.user.points += pts; 
+    AppState.user.pendingStats[target] += statInc;
+    AppState.dungeon.isCleared = true;
     
-    saveUserData(); // 던전 보상 저장
-    renderDungeon(); updatePointUI();
-    alert(`${i18n[AppState.currentLang].raid_success}\n[x${multiplier} Reward] ${pts} P / AGI +${agiInc}`);
+    saveUserData(); renderDungeon(); updatePointUI();
+    alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 }
 
 // --- 소셜 로직 ---
@@ -530,7 +566,6 @@ function renderUsers(criteria, btn = null) {
         document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
     }
     const container = document.getElementById('user-list-container');
-    
     const me = AppState.social.users.find(u => u.isMe);
     if(me) {
         statKeys.forEach(k => me[k] = AppState.user.stats[k]);
@@ -556,9 +591,7 @@ function renderUsers(criteria, btn = null) {
     });
     container.innerHTML = htmlStr;
     
-    document.querySelectorAll('.btn-friend').forEach(btn => {
-        btn.addEventListener('click', (e) => toggleFriend(parseInt(e.target.dataset.id)));
-    });
+    document.querySelectorAll('.btn-friend').forEach(btn => { btn.addEventListener('click', (e) => toggleFriend(parseInt(e.target.dataset.id))); });
 }
 
 function toggleFriend(id) {
@@ -586,8 +619,7 @@ function toggleHealthSync() {
             AppState.user.stats.str = Math.min(100, AppState.user.stats.str + 3);
             AppState.user.stats.vit = Math.min(100, AppState.user.stats.vit + 2);
             AppState.user.points += 50; 
-            saveUserData(); // 동기화 보상 저장
-            updatePointUI(); drawRadarChart();
+            saveUserData(); updatePointUI(); drawRadarChart();
         }, 2000);
     } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off}</span>`;
 }
