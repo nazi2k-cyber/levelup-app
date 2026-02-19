@@ -16,7 +16,6 @@ const i18n = {
         quest_title: "Daily Quests", quest_hint: "※ 완료 시 +20P & 스탯 +0.5", cal_title: "주간 진척도",
         raid_title: "Local Raid", raid_boss: "⚠️ 연합 보스 출현", raid_desc1: "이상 현상이 감지되었습니다.", raid_desc2: "연합 목표를 달성하고 전리품을 획득하세요.", raid_part: "참여 인원: ", raid_btn: "레이드 입장하기", raid_joined: "참여 완료", raid_success: "레이드 완료!", raid_waiting: "던전 출현 대기 중...", raid_time_info: "출현 시간: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 글로벌 랭킹", soc_friend: "👥 내 친구", sort_tot: "종합스코어", sort_str: "근력", sort_int: "지능", sort_cha: "매력", sort_vit: "체력", sort_wlth: "재력", sort_agi: "민첩",
-        // ★ 명칭 수정됨 ★
         set_title: "System Settings", set_lang: "언어 (Language)", set_theme: "라이트 모드", set_push: "푸시 알림 수신", set_gps: "앱 실행 시 현위치 탐색", set_sync: "구글 피트니스 앱 동기화", set_logout: "로그아웃",
         no_friend: "등록된 친구가 없습니다.", btn_add: "친구 추가", btn_added: "친구 ✓", gps_on: "위치 권한 활성화됨", gps_off: "위치 탐색 중지됨", gps_err: "위치 정보 오류", modal_title: "칭호 이력 조회",
         name_prompt: "새로운 닉네임을 입력하세요.\n(※ 1개월에 1회만 변경 가능합니다.)", name_err: "명칭 변경은 1개월에 한 번만 가능합니다.", sync_req: "동기화 요청 중...", sync_done: "동기화 완료 (포인트 지급)", sync_off: "동기화 해제됨",
@@ -42,7 +41,6 @@ const i18n = {
         quest_title: "Daily Quests", quest_hint: "※ Earn +20P & +0.5 pending stat per quest", cal_title: "Weekly Progress",
         raid_title: "Local Raid", raid_boss: "⚠️ Alliance Boss", raid_desc1: "Anomaly detected.", raid_desc2: "Achieve alliance goals to get loot.", raid_part: "Participants: ", raid_btn: "Enter Raid", raid_joined: "Joined", raid_success: "Raid Success!", raid_waiting: "Waiting for Dungeon...", raid_time_info: "Open Hours: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 Global Rank", soc_friend: "👥 My Friends", sort_tot: "Total", sort_str: "STR", sort_int: "INT", sort_cha: "CHA", sort_vit: "VIT", sort_wlth: "WLTH", sort_agi: "AGI",
-        // ★ 명칭 수정됨 ★
         set_title: "System Settings", set_lang: "Language", set_theme: "Light Theme", set_push: "Push Notifications", set_gps: "Auto Location Tracking", set_sync: "Google Fit Sync", set_logout: "Logout",
         no_friend: "No friends registered.", btn_add: "Add Friend", btn_added: "Friend ✓", gps_on: "Location tracking on", gps_off: "Location tracking off", gps_err: "Location Error", modal_title: "Title History",
         name_prompt: "Enter new player name.\n(Can be changed once a month)", name_err: "Name can only be changed once a month.", sync_req: "Requesting sync...", sync_done: "Sync complete", sync_off: "Sync disabled",
@@ -68,7 +66,6 @@ const i18n = {
         quest_title: "デイリークエスト", quest_hint: "※ 完了で +20P & 待機ステータス+0.5", cal_title: "週間進捗度",
         raid_title: "ローカルレイド", raid_boss: "⚠️ 連合ボス出現", raid_desc1: "異常現象を感知。", raid_desc2: "連合の目標を達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 グローバルランク", soc_friend: "👥 マイフレンド", sort_tot: "総合", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷",
-        // ★ 명칭 수정됨 ★
         set_title: "システム設定", set_lang: "言語 (Language)", set_theme: "ライトモード", set_push: "プッシュ通知受信", set_gps: "起動時の位置情報取得", set_sync: "Google Fit 同期", set_logout: "ログアウト",
         no_friend: "友達がいません。", btn_add: "友達追加", btn_added: "友達 ✓", gps_on: "位置情報有効", gps_off: "位置情報停止", gps_err: "位置情報エラー", modal_title: "称号履歴",
         name_prompt: "新しいプレイヤー名を入力してください。\n(月に1回のみ変更可能)", name_err: "名前の変更は月に1回のみ可能です。", sync_req: "同期を要求中...", sync_done: "同期完了", sync_off: "同期解除",
@@ -82,7 +79,7 @@ const i18n = {
 const titleVocab = {
     str: { ko: { pre: ["강인한", "거친", "부서지지 않는"], suf: ["곰", "바위", "거인"] }, en: { pre: ["Strong", "Tough", "Unbreakable"], suf: ["Bear", "Rock", "Giant"] }, ja: { pre: ["強靭な", "荒々しい", "砕けない"], suf: ["熊", "岩", "巨人"] } },
     int: { ko: { pre: ["지혜로운", "꿰뚫어보는", "깊은"], suf: ["올빼미", "호수", "현자"] }, en: { pre: ["Wise", "Piercing", "Deep"], suf: ["Owl", "Lake", "Sage"] }, ja: { pre: ["知恵のある", "見抜く", "深い"], suf: ["フクロウ", "湖", "賢者"] } },
-    cha: { ko: { pre: ["매혹적인", "빛나는", "사람을 끄는"], suf: ["여우", "불꽃", "별"] }, en: { pre: ["Charming", "Shining", "Magnetic"], suf: ["Fox", "Flame", "Star"] }, ja: { pre: ["魅力的な", "輝く", "惹きつける"], কয়েক", "炎", "星"] } },
+    cha: { ko: { pre: ["매혹적인", "빛나는", "사람을 끄는"], suf: ["여우", "불꽃", "별"] }, en: { pre: ["Charming", "Shining", "Magnetic"], suf: ["Fox", "Flame", "Star"] }, ja: { pre: ["魅力的な", "輝く", "惹きつける"], suf: ["キツネ", "炎", "星"] } },
     vit: { ko: { pre: ["지치지 않는", "끈질긴", "숨쉬는"], suf: ["거북이", "대지", "뿌리"] }, en: { pre: ["Tireless", "Persistent", "Breathing"], suf: ["Turtle", "Earth", "Root"] }, ja: { pre: ["疲れない", "粘り強い", "息づく"], suf: ["亀", "大地", "根"] } },
     wlth:{ ko: { pre: ["풍족한", "황금을 쥔", "계산하는"], suf: ["두꺼비", "태양", "보석"] }, en: { pre: ["Abundant", "Golden", "Calculating"], suf: ["Toad", "Sun", "Gem"] }, ja: { pre: ["豊かな", "黄金を握る", "計算する"], suf: ["ヒキガエル", "太陽", "宝石"] } },
     agi: { ko: { pre: ["날쌘", "바람을 가르는", "보이지 않는"], suf: ["표범", "화살", "매"] }, en: { pre: ["Swift", "Wind-cleaving", "Unseen"], suf: ["Panther", "Arrow", "Hawk"] }, ja: { pre: ["素早い", "風を切る", "見えない"], suf: ["ヒョウ", "矢", "鷹"] } }
