@@ -16,9 +16,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const googleProvider = new GoogleAuthProvider();
 
-// --- 상태 관리 객체 (초기 상태 세팅) ---
+// ★ 수정됨: 구글 로그인 시 피트니스(걸음수) 읽기 권한을 추가로 요청합니다. ★
+const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
+
 let AppState = getInitialAppState();
 
 function getInitialAppState() {
@@ -56,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
             
-            // ★ 수정됨: 앱 로그인 직후(상태창 뷰) 메인 화면 스크롤 잠금 ★
             document.querySelector('main').style.overflowY = 'hidden';
             
             changeLanguage(AppState.currentLang); 
@@ -96,7 +97,6 @@ function bindEvents() {
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
     document.getElementById('imageUpload').addEventListener('change', loadProfileImage); 
 
-    // 모달(가이드 버튼) 이벤트 연결
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
@@ -107,11 +107,13 @@ function bindEvents() {
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
+    
+    // 건강 앱 동기화 이벤트
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
+    
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// --- Firebase 데이터 저장 ---
 async function saveUserData() {
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     
@@ -204,14 +206,13 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- 로그인 ---
+// --- 로그인 로직 ---
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
     const pwConfirm = document.getElementById('login-pw-confirm').value;
 
     if(!email || !pw) { alert(i18n[AppState.currentLang].login_err_empty); return; }
-    
     const btn = document.getElementById('btn-login-submit');
     btn.innerText = "처리 중..."; btn.disabled = true;
 
@@ -230,8 +231,16 @@ async function simulateLogin() {
     }
 }
 
+// ★ 수정됨: 구글 로그인 시 발급되는 '데이터 접근 키(Token)'를 로컬에 저장합니다. ★
 async function simulateGoogleLogin() { 
-    try { await signInWithPopup(auth, googleProvider); } 
+    try { 
+        const result = await signInWithPopup(auth, googleProvider); 
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential && credential.accessToken) {
+            // 구글 피트니스 API를 호출할 수 있는 비밀 열쇠 저장
+            localStorage.setItem('gfit_token', credential.accessToken);
+        }
+    } 
     catch(e) { console.error(e); alert("Google 로그인 오류:\n" + e.message); }
 }
 
@@ -285,7 +294,6 @@ function switchTab(tabId, el) {
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     el.classList.add('active');
     
-    // ★ 수정됨: 탭 이동 시 스크롤 동적 제어 (상태창에서만 잠금) ★
     const mainEl = document.querySelector('main');
     if(tabId === 'status') { 
         mainEl.style.overflowY = 'hidden'; 
@@ -333,7 +341,6 @@ function renderHistoryModal() {
     });
 }
 
-// --- 정보 모달 및 표 렌더링 로직 ---
 function closeInfoModal() {
     document.getElementById('infoModal').classList.remove('d-flex');
     document.getElementById('infoModal').classList.add('d-none');
@@ -342,57 +349,29 @@ function closeInfoModal() {
 function openQuestInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_quest_title;
     const body = document.getElementById('info-modal-body');
-    
-    let tableHtml = `<table class="info-table">
-        <thead>
-            <tr><th>${i18n[AppState.currentLang].th_day}</th><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_quest}</th></tr>
-        </thead>
-        <tbody>`;
-    
+    let tableHtml = `<table class="info-table"><thead><tr><th>${i18n[AppState.currentLang].th_day}</th><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_quest}</th></tr></thead><tbody>`;
     const dayNames = { ko: ["일","월","화","수","목","금","토"], en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja: ["日","月","火","水","木","金","土"] };
-    
     weeklyQuestData.forEach((dayQuests, dayIdx) => {
         dayQuests.forEach((q, idx) => {
             let rowSpan = '';
             if(idx === 0) rowSpan = `rowspan="${dayQuests.length}" style="text-align:center; font-weight:bold; background:rgba(255,255,255,0.05);"`;
-            
-            tableHtml += `<tr>
-                ${idx === 0 ? `<td ${rowSpan}>${dayNames[AppState.currentLang][dayIdx]}</td>` : ''}
-                <td><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${q.stat}</span></td>
-                <td>${q.title[AppState.currentLang]}<br><span style="font-size:0.65rem; color:var(--text-sub);">${q.desc[AppState.currentLang]}</span></td>
-            </tr>`;
+            tableHtml += `<tr>${idx === 0 ? `<td ${rowSpan}>${dayNames[AppState.currentLang][dayIdx]}</td>` : ''}<td><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${q.stat}</span></td><td>${q.title[AppState.currentLang]}<br><span style="font-size:0.65rem; color:var(--text-sub);">${q.desc[AppState.currentLang]}</span></td></tr>`;
         });
     });
-    tableHtml += `</tbody></table>`;
-    body.innerHTML = tableHtml;
-    
-    document.getElementById('infoModal').classList.remove('d-none');
-    document.getElementById('infoModal').classList.add('d-flex');
+    tableHtml += `</tbody></table>`; body.innerHTML = tableHtml;
+    document.getElementById('infoModal').classList.remove('d-none'); document.getElementById('infoModal').classList.add('d-flex');
 }
 
 function openDungeonInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title;
     const body = document.getElementById('info-modal-body');
-    
-    let tableHtml = `<table class="info-table">
-        <thead>
-            <tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_raid}</th><th>${i18n[AppState.currentLang].th_req}</th></tr>
-        </thead>
-        <tbody>`;
-    
+    let tableHtml = `<table class="info-table"><thead><tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_raid}</th><th>${i18n[AppState.currentLang].th_req}</th></tr></thead><tbody>`;
     Object.keys(raidMissions).forEach(key => {
         const mission = raidMissions[key];
-        tableHtml += `<tr>
-            <td><span class="quest-stat-tag" style="border-color:${mission.color}; color:${mission.color};">${mission.stat}</span></td>
-            <td style="color:var(--text-main); font-weight:bold;">${mission.title[AppState.currentLang]}</td>
-            <td style="color:var(--text-sub);">${mission.desc2[AppState.currentLang]}</td>
-        </tr>`;
+        tableHtml += `<tr><td><span class="quest-stat-tag" style="border-color:${mission.color}; color:${mission.color};">${mission.stat}</span></td><td style="color:var(--text-main); font-weight:bold;">${mission.title[AppState.currentLang]}</td><td style="color:var(--text-sub);">${mission.desc2[AppState.currentLang]}</td></tr>`;
     });
-    tableHtml += `</tbody></table>`;
-    body.innerHTML = tableHtml;
-    
-    document.getElementById('infoModal').classList.remove('d-none');
-    document.getElementById('infoModal').classList.add('d-flex');
+    tableHtml += `</tbody></table>`; body.innerHTML = tableHtml;
+    document.getElementById('infoModal').classList.remove('d-none'); document.getElementById('infoModal').classList.add('d-flex');
 }
 
 function getReqPoints(level) { return Math.floor(100 * Math.pow(1.5, level - 1)); }
@@ -698,14 +677,81 @@ function toggleGPS() {
     } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].gps_off}</span>`;
 }
 
-function toggleHealthSync() {
-    const isChecked = document.getElementById('sync-toggle').checked; const statusDiv = document.getElementById('sync-status'); statusDiv.style.display = 'flex';
+// ★ 수정됨: 실제 구글 피트니스(삼성 헬스 연동) API 데이터를 가져오는 로직 ★
+async function toggleHealthSync() {
+    const isChecked = document.getElementById('sync-toggle').checked; 
+    const statusDiv = document.getElementById('sync-status'); 
+    statusDiv.style.display = 'flex';
+    
     if(isChecked) {
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_req}</span>`;
-        setTimeout(() => {
-            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].sync_done}</span>`;
-            AppState.user.stats.str = Math.min(100, AppState.user.stats.str + 3); AppState.user.stats.vit = Math.min(100, AppState.user.stats.vit + 2); AppState.user.points += 50; 
-            saveUserData(); updatePointUI(); drawRadarChart();
-        }, 2000);
-    } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off}</span>`;
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`;
+        
+        // 1. 로그인 시 저장해둔 구글 엑세스 토큰 확인
+        const token = localStorage.getItem('gfit_token');
+        if (!token) {
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">권한 없음. 구글 재로그인 필요</span>`;
+            document.getElementById('sync-toggle').checked = false;
+            alert("건강 데이터를 불러오려면 'Google 계정으로 계속' 버튼을 통해 다시 로그인해야 합니다.");
+            return;
+        }
+
+        // 2. 오늘의 시작 시간과 현재 시간 계산 (밀리초)
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endOfDay = now.getTime();
+
+        try {
+            // 3. 구글 피트니스 API 호출 (오늘의 걸음 수 합산 요청)
+            const response = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    aggregateBy: [{
+                        dataTypeName: 'com.google.step_count.delta',
+                        dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps'
+                    }],
+                    bucketByTime: { durationMillis: 86400000 }, // 1일 단위 그룹화
+                    startTimeMillis: startOfDay,
+                    endTimeMillis: endOfDay
+                })
+            });
+
+            if (!response.ok) throw new Error("토큰 만료 또는 권한 거부");
+
+            const data = await response.json();
+            let steps = 0;
+            
+            // 데이터 파싱 (걸음 수가 아예 없는 경우 방어 코드)
+            if (data.bucket && data.bucket[0] && data.bucket[0].dataset[0] && data.bucket[0].dataset[0].point.length > 0) {
+                steps = data.bucket[0].dataset[0].point[0].value[0].intVal;
+            }
+
+            // 4. 걸음 수에 따른 보상 지급 로직 (예: 1,000걸음 당 10포인트, STR +0.5)
+            const earnedPoints = Math.floor(steps / 1000) * 10;
+            const earnedStr = (Math.floor(steps / 1000) * 0.5);
+
+            if (steps > 0) {
+                AppState.user.points += earnedPoints;
+                AppState.user.pendingStats.str += earnedStr;
+                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료: ${steps.toLocaleString()}걸음<br>(+${earnedPoints}P, STR +${earnedStr})</span>`;
+            } else {
+                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">걸음 수 기록이 없습니다. (0걸음)</span>`;
+            }
+
+            saveUserData(); 
+            updatePointUI(); 
+            drawRadarChart();
+            
+        } catch (error) {
+            console.error("동기화 에러:", error);
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">동기화 실패 (세션 만료)</span>`;
+            document.getElementById('sync-toggle').checked = false;
+        }
+
+    } else {
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off}</span>`;
+    }
 }
