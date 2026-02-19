@@ -18,7 +18,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- 상태 관리 객체 ---
+// --- 상태 관리 객체 (초기 상태 세팅) ---
 let AppState = getInitialAppState();
 
 function getInitialAppState() {
@@ -93,6 +93,11 @@ function bindEvents() {
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
     document.getElementById('imageUpload').addEventListener('change', loadProfileImage); 
 
+    // 모달(가이드 버튼) 이벤트 연결
+    document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
+    document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
+    document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
+
     document.querySelectorAll('.social-tab-btn').forEach(btn => { btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn)); });
     document.querySelectorAll('.rank-tab-btn').forEach(btn => { btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn)); });
 
@@ -103,6 +108,7 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
+// --- Firebase 데이터 저장 ---
 async function saveUserData() {
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     
@@ -316,6 +322,68 @@ function renderHistoryModal() {
     });
 }
 
+// --- 정보 모달 및 표 렌더링 로직 ---
+function closeInfoModal() {
+    document.getElementById('infoModal').classList.remove('d-flex');
+    document.getElementById('infoModal').classList.add('d-none');
+}
+
+function openQuestInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_quest_title;
+    const body = document.getElementById('info-modal-body');
+    
+    let tableHtml = `<table class="info-table">
+        <thead>
+            <tr><th>${i18n[AppState.currentLang].th_day}</th><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_quest}</th></tr>
+        </thead>
+        <tbody>`;
+    
+    const dayNames = { ko: ["일","월","화","수","목","금","토"], en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja: ["日","月","火","水","木","金","土"] };
+    
+    weeklyQuestData.forEach((dayQuests, dayIdx) => {
+        dayQuests.forEach((q, idx) => {
+            let rowSpan = '';
+            if(idx === 0) rowSpan = `rowspan="${dayQuests.length}" style="text-align:center; font-weight:bold; background:rgba(255,255,255,0.05);"`;
+            
+            tableHtml += `<tr>
+                ${idx === 0 ? `<td ${rowSpan}>${dayNames[AppState.currentLang][dayIdx]}</td>` : ''}
+                <td><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${q.stat}</span></td>
+                <td>${q.title[AppState.currentLang]}<br><span style="font-size:0.65rem; color:var(--text-sub);">${q.desc[AppState.currentLang]}</span></td>
+            </tr>`;
+        });
+    });
+    tableHtml += `</tbody></table>`;
+    body.innerHTML = tableHtml;
+    
+    document.getElementById('infoModal').classList.remove('d-none');
+    document.getElementById('infoModal').classList.add('d-flex');
+}
+
+function openDungeonInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title;
+    const body = document.getElementById('info-modal-body');
+    
+    let tableHtml = `<table class="info-table">
+        <thead>
+            <tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_raid}</th><th>${i18n[AppState.currentLang].th_req}</th></tr>
+        </thead>
+        <tbody>`;
+    
+    Object.keys(raidMissions).forEach(key => {
+        const mission = raidMissions[key];
+        tableHtml += `<tr>
+            <td><span class="quest-stat-tag" style="border-color:${mission.color}; color:${mission.color};">${mission.stat}</span></td>
+            <td style="color:var(--text-main); font-weight:bold;">${mission.title[AppState.currentLang]}</td>
+            <td style="color:var(--text-sub);">${mission.desc2[AppState.currentLang]}</td>
+        </tr>`;
+    });
+    tableHtml += `</tbody></table>`;
+    body.innerHTML = tableHtml;
+    
+    document.getElementById('infoModal').classList.remove('d-none');
+    document.getElementById('infoModal').classList.add('d-flex');
+}
+
 function getReqPoints(level) { return Math.floor(100 * Math.pow(1.5, level - 1)); }
 
 function processLevelUp() {
@@ -415,34 +483,29 @@ function renderCalendar() {
     calGrid.innerHTML = htmlStr;
 }
 
-// ★ 수정됨: 매일 3회 랜덤 지정(슬롯별 갱신), 인원수 랜덤 생성 로직 ★
 function updateDungeonStatus() {
     const now = new Date(); const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
     
     let currentSlot = 0;
-    // 출현 시간: 06:00~08:00 (1) | 11:30~13:30 (2) | 19:00~21:00 (3)
     if (timeVal >= 6 && timeVal < 8) currentSlot = 1; 
     else if (timeVal >= 11.5 && timeVal < 13.5) currentSlot = 2; 
     else if (timeVal >= 19 && timeVal < 21) currentSlot = 3;
 
-    const dateStr = now.toDateString(); // 날짜가 바뀌면 자동 리셋
+    const dateStr = now.toDateString(); 
     
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
         AppState.dungeon.lastGeneratedDate = dateStr; 
         AppState.dungeon.slot = currentSlot;
         
-        if (currentSlot > 0) { // 새로운 레이드 열림
+        if (currentSlot > 0) { 
             AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
-            // 랜덤 인원수 10 ~ 100명 설정
             AppState.dungeon.participants = Math.floor(Math.random() * 91) + 10; 
             AppState.dungeon.isJoined = false; 
             AppState.dungeon.isCleared = false; 
-            AppState.dungeon.progress = 0; // 진행률 초기화
-            
+            AppState.dungeon.progress = 0; 
             const statKeysArr = ['str', 'int', 'cha', 'vit', 'wlth', 'agi']; 
             AppState.dungeon.targetStat = statKeysArr[Math.floor(Math.random() * statKeysArr.length)];
         } else {
-            // 레이드 대기 시간일 때
             AppState.dungeon.isJoined = false;
         }
         saveUserData();
@@ -470,7 +533,6 @@ function renderDungeon() {
             banner.innerHTML = `<div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div><h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3><div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div><p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p><div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> 명</div><button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>`;
             document.getElementById('btn-raid-join').addEventListener('click', joinDungeon);
         } else {
-            // 레이드 입장 후 상태
             banner.classList.add('d-none'); activeBoard.classList.remove('d-none'); activeBoard.classList.add('d-flex'); timer.classList.remove('d-none'); 
             
             document.getElementById('active-stat-badge').innerText = mission.stat; 
@@ -479,7 +541,6 @@ function renderDungeon() {
             document.getElementById('active-raid-title').innerText = mission.title[AppState.currentLang]; 
             document.getElementById('active-raid-desc').innerHTML = mission.desc2[AppState.currentLang];
             
-            // UI에 참여 인원 및 달성률 반영
             document.getElementById('raid-part-count').innerText = AppState.dungeon.participants;
             document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`; 
             document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
@@ -499,22 +560,18 @@ function renderDungeon() {
     }
 }
 
-// ★ 수정됨: 입장 시 기초 달성률을 랜덤하게 제공
 function joinDungeon() { 
     if(AppState.dungeon.isJoined) return; 
     AppState.dungeon.isJoined = true; 
-    AppState.dungeon.participants++; // 내가 합류했으니 +1명
-    // 다른 유저들이 이미 기여한 기본 달성률 설정 (30% ~ 60%)
+    AppState.dungeon.participants++; 
     AppState.dungeon.progress = Math.floor(Math.random() * 31) + 30; 
     saveUserData(); 
     renderDungeon(); 
 }
 
-// ★ 수정됨: 버튼 클릭 시마다 퍼센트가 점진적으로 오르는 로직
 function simulateRaidAction() { 
     if (AppState.dungeon.progress >= 100) return;
 
-    // 1번 클릭 시 5% ~ 15% 사이로 달성률 증가 (카운트 시뮬레이션)
     const contribution = Math.floor(Math.random() * 11) + 5; 
     AppState.dungeon.progress += contribution;
     
@@ -528,7 +585,6 @@ function simulateRaidAction() {
     saveUserData(); 
     renderDungeon(); 
 
-    // 타격감을 위한 짧은 딜레이 후 버튼 다시 활성화
     setTimeout(() => { 
         if (AppState.dungeon.progress < 100) {
             btnAction.innerText = originalText;
