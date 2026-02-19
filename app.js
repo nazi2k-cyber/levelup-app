@@ -104,7 +104,7 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// ★ 디버깅용: 데이터 저장 시 에러가 나면 팝업창(alert)을 띄우도록 수정 ★
+// --- Firebase 데이터 저장 (클라우드 + 로컬) ---
 async function saveUserData() {
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     localStorage.setItem('questData', JSON.stringify(AppState.quest.completedState));
@@ -124,13 +124,10 @@ async function saveUserData() {
             }, { merge: true });
         } catch(e) {
             console.error("클라우드 저장 실패:", e);
-            // 에러 원인을 화면에 직접 띄웁니다!
-            alert("서버 저장 에러 발생!\n메시지: " + e.message + "\n\n※ 캡처해서 알려주시면 바로 해결해 드립니다.");
         }
     }
 }
 
-// ★ 디버깅용: 데이터 로드 시 에러가 나면 팝업창을 띄우도록 수정 ★
 async function loadUserDataFromDB(user) {
     try {
         const docRef = doc(db, "users", user.uid);
@@ -167,36 +164,55 @@ async function loadUserDataFromDB(user) {
         loadPlayerName();
     } catch(e) {
         console.error("데이터 로드 실패:", e);
-        alert("데이터 불러오기 실패:\n" + e.message);
     }
 }
 
+// ★ 수정됨 1: 프로필 사진 자동 리사이징 및 압축 (1MB 제한 회피) ★
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async function(e) {
-        const base64Image = e.target.result;
-        document.getElementById('profilePreview').src = base64Image;
-        AppState.user.photoURL = base64Image;
-        
-        if(auth.currentUser) {
-            try {
-                await updateDoc(doc(db, "users", auth.currentUser.uid), {
-                    photoURL: base64Image
-                });
-            } catch(e) {
-                console.error("프로필 사진 업로드 실패:", e);
-                alert("프로필 사진 저장 에러:\n" + e.message);
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = async function() {
+            // 이미지 크기를 강제로 줄이는 Canvas 로직
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 250; 
+            const MAX_HEIGHT = 250;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+            } else {
+                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
             }
-        }
-        localStorage.setItem('profileImage', base64Image);
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // 용량을 확 줄인 JPEG 포맷으로 변환
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8); 
+            
+            document.getElementById('profilePreview').src = compressedBase64;
+            AppState.user.photoURL = compressedBase64;
+            
+            if(auth.currentUser) {
+                try {
+                    await updateDoc(doc(db, "users", auth.currentUser.uid), { photoURL: compressedBase64 });
+                } catch(error) {
+                    alert("사진 저장 실패: 네트워크 오류가 발생했습니다.");
+                }
+            }
+            localStorage.setItem('profileImage', compressedBase64);
+        };
+        img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
 
-// --- 기타 로직 (변경 없음) ---
+// --- 로그인 ---
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -490,57 +506,87 @@ function completeDungeon() {
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 }
 
+// ★ 수정됨 2: 친구 목록 로딩 시 글자와 숫자를 정확하게 일치시키도록 수정 ★
 async function fetchSocialData() {
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
         let players = [];
         let myFriends = AppState.user.friends || [];
+        
         if(auth.currentUser) {
             const myDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-            if(myDoc.exists() && myDoc.data().friends) { myFriends = myDoc.data().friends; AppState.user.friends = myFriends; }
+            if(myDoc.exists() && myDoc.data().friends) { 
+                myFriends = myDoc.data().friends; 
+                AppState.user.friends = myFriends; 
+            }
         }
+
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data(); const uid = docSnap.id; const isMe = auth.currentUser && auth.currentUser.uid === uid;
+            
+            // 내 친구 목록 배열 안에 현재 유저의 ID가 있는지 문자로 확실하게 비교
+            const isFriendCheck = myFriends.some(fid => String(fid) === String(uid));
+
             players.push({
                 id: uid, name: data.name || "Unknown", title: data.titleHistory ? data.titleHistory[data.titleHistory.length - 1].title : "각성자",
                 str: data.stats?.str || 0, int: data.stats?.int || 0, cha: data.stats?.cha || 0, vit: data.stats?.vit || 0, wlth: data.stats?.wlth || 0, agi: data.stats?.agi || 0,
-                photoURL: data.photoURL || null, isMe: isMe, isFriend: myFriends.includes(uid)
+                photoURL: data.photoURL || null, isMe: isMe, isFriend: isFriendCheck
             });
         });
         AppState.social.users = players; renderUsers(AppState.social.sortCriteria);
-    } catch(e) { console.error("소셜 로드 에러:", e); /* 팝업창을 띄우지 않고 조용히 처리 */ }
+    } catch(e) { console.error("소셜 로드 에러:", e); }
 }
 
 function toggleSocialMode(mode, btn) { AppState.social.mode = mode; document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); document.getElementById('ranking-controls').style.display = mode === 'global' ? 'flex' : 'none'; renderUsers(AppState.social.sortCriteria); }
+
 function renderUsers(criteria, btn = null) {
     if(btn) { AppState.social.sortCriteria = criteria; document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
     const container = document.getElementById('user-list-container');
     if(!auth.currentUser) return;
+    
     AppState.social.users.forEach(u => u.total = u.str + u.int + u.cha + u.vit + u.wlth + u.agi);
     let dUsers = [...AppState.social.users];
+    
     if(AppState.social.mode === 'friends') dUsers = dUsers.filter(u => u.isFriend);
     dUsers.sort((a, b) => b[criteria] - a[criteria]);
+    
     if(dUsers.length === 0) { container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sub);">${i18n[AppState.currentLang].no_friend}</div>`; return; }
+    
     let htmlStr = '';
     dUsers.forEach((user, i) => {
         const rDisp = AppState.social.mode === 'global' ? `<div style="font-size:1.1rem; font-weight:bold; color:var(--text-sub); width:25px; text-align:center;">${i+1}</div>` : '';
         let fBtn = '';
-        if(!user.isMe) { fBtn = user.isFriend ? `<button class="btn-friend added" data-id="${user.id}">${i18n[AppState.currentLang].btn_added}</button>` : `<button class="btn-friend" data-id="${user.id}">${i18n[AppState.currentLang].btn_add}</button>`; }
+        if(!user.isMe) { 
+            fBtn = user.isFriend ? `<button class="btn-friend added" data-id="${user.id}">${i18n[AppState.currentLang].btn_added}</button>` : `<button class="btn-friend" data-id="${user.id}">${i18n[AppState.currentLang].btn_add}</button>`; 
+        }
         const profileImg = user.photoURL ? `<img src="${user.photoURL}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`;
         const tDisp = typeof user.title === 'object' ? user.title[AppState.currentLang] : user.title; const nDisp = typeof user.name === 'object' ? user.name[AppState.currentLang] : user.name;
         htmlStr += `<div class="user-card ${user.isMe ? 'my-rank' : ''}">${rDisp}<div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">${profileImg}<div class="user-info" style="margin-left:0;"><div class="title-badge">${tDisp}</div><div style="font-size:0.95rem;">${nDisp}</div></div></div><div class="user-score">${user[criteria]}</div>${fBtn}</div>`;
     });
     container.innerHTML = htmlStr;
-    document.querySelectorAll('.btn-friend').forEach(btn => { btn.addEventListener('click', (e) => toggleFriend(e.target.dataset.id)); });
+    
+    // 버튼 클릭 시 정확한 ID값을 전달하도록 설정
+    document.querySelectorAll('.btn-friend').forEach(btn => { 
+        btn.addEventListener('click', () => toggleFriend(btn.dataset.id)); 
+    });
 }
 
+// ★ 수정됨 2: 친구 추가/삭제 시에도 문자로 일치시키도록 수정 ★
 async function toggleFriend(targetUid) {
     if(!auth.currentUser) return;
-    const myRef = doc(db, "users", auth.currentUser.uid); const targetUser = AppState.social.users.find(u => u.id === targetUid);
+    const targetStr = String(targetUid);
+    const myRef = doc(db, "users", auth.currentUser.uid); 
+    const targetUser = AppState.social.users.find(u => String(u.id) === targetStr);
+    
     if(targetUser.isFriend) {
-        await updateDoc(myRef, { friends: arrayRemove(targetUid) }); AppState.user.friends = AppState.user.friends.filter(id => id !== targetUid); alert("친구 삭제됨");
+        await updateDoc(myRef, { friends: arrayRemove(targetStr) }); 
+        AppState.user.friends = AppState.user.friends.filter(id => String(id) !== targetStr); 
+        alert("친구 목록에서 삭제되었습니다.");
     } else {
-        await updateDoc(myRef, { friends: arrayUnion(targetUid) }); if(!AppState.user.friends) AppState.user.friends = []; AppState.user.friends.push(targetUid); alert("친구 추가됨");
+        await updateDoc(myRef, { friends: arrayUnion(targetStr) }); 
+        if(!AppState.user.friends) AppState.user.friends = []; 
+        AppState.user.friends.push(targetStr); 
+        alert("내 친구로 추가되었습니다.");
     }
     fetchSocialData(); 
 }
