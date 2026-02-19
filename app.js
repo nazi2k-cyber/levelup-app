@@ -1,8 +1,29 @@
+// --- Firebase SDK 초기화 ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
+    authDomain: "levelup-app-53d02.firebaseapp.com",
+    projectId: "levelup-app-53d02",
+    storageBucket: "levelup-app-53d02.firebasestorage.app",
+    messagingSenderId: "233040099152",
+    appId: "1:233040099152:web:82310514d26c8c6d52de55",
+    measurementId: "G-4DBGG03CCJ"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
+
 // --- 상태 관리 객체 ---
 const AppState = {
     isLoginMode: true,
     currentLang: 'ko',
     user: {
+        name: localStorage.getItem('playerName') || "플레이어 (나)",
         level: 1,
         points: 50,
         stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
@@ -24,45 +45,43 @@ const AppState = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    initApp();
+    initTheme();
     bindEvents();
+
+    // Firebase 로그인 상태 실시간 감지
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            await loadUserDataFromDB(user); // 서버에서 내 정보 불러오기
+            document.getElementById('login-screen').classList.add('d-none');
+            document.getElementById('app-container').classList.remove('d-none');
+            document.getElementById('app-container').classList.add('d-flex');
+            
+            changeLanguage(AppState.currentLang); 
+            renderCalendar(); 
+            updatePointUI(); 
+            drawRadarChart(); 
+            updateDungeonStatus();
+            fetchSocialData(); // 글로벌 유저 랭킹 정보 서버에서 불러오기
+        } else {
+            document.getElementById('login-screen').classList.remove('d-none');
+            document.getElementById('app-container').classList.remove('d-flex');
+            document.getElementById('app-container').classList.add('d-none');
+        }
+    });
+
+    setInterval(updateDungeonStatus, 60000); 
 });
 
-// --- 초기화 및 로컬 데이터 불러오기 ---
-function initApp() {
+// --- 테마 초기화 ---
+function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
         document.getElementById('theme-toggle').checked = true;
         document.documentElement.setAttribute('data-theme', 'light');
     }
-
-    const savedUser = localStorage.getItem('userData');
-    if (savedUser) AppState.user = JSON.parse(savedUser);
-    
-    const savedQuest = localStorage.getItem('questData');
-    if (savedQuest) AppState.quest.completedState = JSON.parse(savedQuest);
-
-    const savedDungeon = localStorage.getItem('dungeonData');
-    if (savedDungeon) AppState.dungeon = JSON.parse(savedDungeon);
-
-    AppState.social.users = JSON.parse(JSON.stringify(mockSocialData));
-    AppState.social.users.push({
-        id: 3, 
-        name: {ko:"플레이어 (나)", en:"Player (Me)", ja:"プレイヤー (私)"}, 
-        title: AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title, 
-        str: AppState.user.stats.str, int: AppState.user.stats.int, cha: AppState.user.stats.cha, 
-        vit: AppState.user.stats.vit, wlth: AppState.user.stats.wlth, agi: AppState.user.stats.agi, 
-        isMe: true, isFriend: false 
-    });
-
-    changeLanguage('ko');
-    checkLoginStatus();
-    setInterval(updateDungeonStatus, 60000); 
-    
-    const savedImage = localStorage.getItem('profileImage');
-    if(savedImage) document.getElementById('profilePreview').src = savedImage;
 }
 
+// --- 이벤트 바인딩 ---
 function bindEvents() {
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
@@ -92,11 +111,97 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// --- 데이터 저장 함수 ---
-function saveUserData() {
+// --- Firebase 데이터 저장 함수 (클라우드 + 로컬) ---
+async function saveUserData() {
+    // 오프라인 대비용 로컬 저장
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     localStorage.setItem('questData', JSON.stringify(AppState.quest.completedState));
     localStorage.setItem('dungeonData', JSON.stringify(AppState.dungeon));
+    
+    // Firebase 클라우드에 영구 저장 (핵심 기능)
+    if(auth.currentUser) {
+        try {
+            await setDoc(doc(db, "users", auth.currentUser.uid), {
+                name: AppState.user.name,
+                stats: AppState.user.stats,
+                level: AppState.user.level,
+                points: AppState.user.points,
+                titleHistory: AppState.user.titleHistory,
+                quest: AppState.quest.completedState,
+                dungeon: AppState.dungeon
+            }, { merge: true });
+        } catch(e) {
+            console.error("클라우드 저장 실패:", e);
+        }
+    }
+}
+
+// --- Firebase 내 데이터 불러오기 ---
+async function loadUserDataFromDB(user) {
+    try {
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if(data.stats) AppState.user.stats = data.stats;
+            if(data.level) AppState.user.level = data.level;
+            if(data.points) AppState.user.points = data.points;
+            if(data.titleHistory) AppState.user.titleHistory = data.titleHistory;
+            if(data.quest) AppState.quest.completedState = data.quest;
+            if(data.dungeon) AppState.dungeon = data.dungeon;
+            if(data.name) {
+                AppState.user.name = data.name;
+                localStorage.setItem('playerName', data.name);
+            }
+        } else {
+            // 처음 회원가입한 사람의 경우 기본값 저장
+            await saveUserData();
+        }
+        
+        const savedImage = localStorage.getItem('profileImage');
+        if(savedImage) document.getElementById('profilePreview').src = savedImage;
+        
+        loadPlayerName();
+    } catch(e) {
+        console.error("데이터 로드 실패:", e);
+    }
+}
+
+// --- Firebase 글로벌 랭킹 데이터 불러오기 ---
+async function fetchSocialData() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        let realUsers = [];
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const uid = docSnap.id;
+            const isMe = auth.currentUser && auth.currentUser.uid === uid;
+            
+            realUsers.push({
+                id: uid,
+                name: data.name || "Unknown Hunter",
+                title: data.titleHistory ? data.titleHistory[data.titleHistory.length - 1].title : {ko:"신규 각성자", en:"New Awakened", ja:"新規覚醒者"},
+                str: data.stats ? data.stats.str : 0,
+                int: data.stats ? data.stats.int : 0,
+                cha: data.stats ? data.stats.cha : 0,
+                vit: data.stats ? data.stats.vit : 0,
+                wlth: data.stats ? data.stats.wlth : 0,
+                agi: data.stats ? data.stats.agi : 0,
+                isMe: isMe,
+                isFriend: false
+            });
+        });
+        
+        // 더미 데이터와 실제 유저 데이터를 합침
+        AppState.social.users = [...mockSocialData, ...realUsers];
+        
+        if(document.getElementById('social').classList.contains('active')) {
+            renderUsers(AppState.social.sortCriteria);
+        }
+    } catch(e) {
+        console.error("랭킹 데이터 로드 실패:", e);
+    }
 }
 
 function loadProfileImage(event) {
@@ -125,7 +230,6 @@ function getReqPoints(level) { return Math.floor(100 * Math.pow(1.5, level - 1))
 
 function processLevelUp() {
     const reqPts = getReqPoints(AppState.user.level);
-    
     if(AppState.user.points >= reqPts) {
         AppState.user.points -= reqPts;
         AppState.user.level++;
@@ -145,9 +249,9 @@ function processLevelUp() {
         };
 
         AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
-        saveUserData();
-        updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
+        saveUserData(); // 서버 저장
         
+        updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
         alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
     }
 }
@@ -176,20 +280,62 @@ function updatePointUI() {
     });
 }
 
-// --- 로그인/인증 로직 ---
-function checkLoginStatus() {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (isLoggedIn === 'true') {
-        document.getElementById('login-screen').classList.add('d-none');
-        document.getElementById('app-container').classList.remove('d-none');
-        document.getElementById('app-container').classList.add('d-flex');
+// --- Firebase 회원가입/로그인 로직 ---
+async function simulateLogin() {
+    const email = document.getElementById('login-email').value;
+    const pw = document.getElementById('login-pw').value;
+    const pwConfirm = document.getElementById('login-pw-confirm').value;
+
+    if(!email || !pw) { alert(i18n[AppState.currentLang].login_err_empty); return; }
+    
+    const btn = document.getElementById('btn-login-submit');
+    btn.innerText = "처리 중...";
+    btn.disabled = true;
+
+    try {
+        if(!AppState.isLoginMode) {
+            // 회원가입
+            if(pw !== pwConfirm) { alert(i18n[AppState.currentLang].pw_mismatch); throw new Error("비밀번호 불일치"); }
+            await createUserWithEmailAndPassword(auth, email, pw);
+        } else {
+            // 로그인
+            await signInWithEmailAndPassword(auth, email, pw);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("인증 오류: " + error.message);
+    } finally {
+        btn.innerText = AppState.isLoginMode ? i18n[AppState.currentLang].btn_login_submit : i18n[AppState.currentLang].btn_signup_submit;
+        btn.disabled = false;
+    }
+}
+
+async function simulateGoogleLogin() { 
+    try {
+        await signInWithPopup(auth, googleProvider);
+    } catch(e) {
+        alert("Google 로그인 오류:\n" + e.message);
+    }
+}
+
+async function logout() {
+    try {
+        await fbSignOut(auth);
+        localStorage.removeItem('userData'); 
+        document.getElementById('login-email').value = ''; 
+        document.getElementById('login-pw').value = ''; 
+        document.getElementById('login-pw-confirm').value = '';
         
-        loadPlayerName(); changeLanguage(AppState.currentLang); 
-        renderCalendar(); updatePointUI(); drawRadarChart(); updateDungeonStatus();
-    } else {
-        document.getElementById('login-screen').classList.remove('d-none');
-        document.getElementById('app-container').classList.remove('d-flex');
-        document.getElementById('app-container').classList.add('d-none');
+        AppState.isLoginMode = true; 
+        document.getElementById('btn-login-submit').setAttribute('data-i18n', 'btn_login_submit');
+        document.getElementById('auth-toggle-btn').setAttribute('data-i18n', 'auth_toggle_signup');
+        document.getElementById('login-pw-confirm').classList.add('d-none');
+        document.getElementById('pw-hint').classList.add('d-none');
+        document.getElementById('disclaimer-box').classList.add('d-none');
+        
+        changeLanguage(AppState.currentLang); 
+    } catch(e) {
+        console.error("로그아웃 오류:", e);
     }
 }
 
@@ -211,43 +357,6 @@ function toggleAuthMode() {
         pwConfirm.classList.remove('d-none'); pwHint.classList.remove('d-none'); disclaimerBox.classList.remove('d-none');
     }
     changeLanguage(AppState.currentLang); 
-}
-
-function simulateLogin() {
-    const email = document.getElementById('login-email').value;
-    const pw = document.getElementById('login-pw').value;
-    const pwConfirm = document.getElementById('login-pw-confirm').value;
-
-    if(!email || !pw) { alert(i18n[AppState.currentLang].login_err_empty); return; }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if(!emailRegex.test(email)) { alert(i18n[AppState.currentLang].login_err_email); return; }
-
-    if(!AppState.isLoginMode) {
-        const hasUppercase = /[A-Z]/.test(pw);
-        const specialChars = pw.match(/[^a-zA-Z0-9]/g) || [];
-        if(pw.length < 8 || !hasUppercase || specialChars.length < 2) {
-            alert(i18n[AppState.currentLang].login_err_pw_req); return;
-        }
-        if(pw !== pwConfirm) { alert(i18n[AppState.currentLang].pw_mismatch); return; }
-    }
-
-    localStorage.setItem('isLoggedIn', 'true'); checkLoginStatus();
-}
-
-function simulateGoogleLogin() { localStorage.setItem('isLoggedIn', 'true'); checkLoginStatus(); }
-
-function logout() {
-    localStorage.removeItem('isLoggedIn');
-    document.getElementById('login-email').value = ''; document.getElementById('login-pw').value = ''; document.getElementById('login-pw-confirm').value = '';
-    
-    AppState.isLoginMode = true; 
-    document.getElementById('btn-login-submit').setAttribute('data-i18n', 'btn_login_submit');
-    document.getElementById('auth-toggle-btn').setAttribute('data-i18n', 'auth_toggle_signup');
-    document.getElementById('login-pw-confirm').classList.add('d-none');
-    document.getElementById('pw-hint').classList.add('d-none');
-    document.getElementById('disclaimer-box').classList.add('d-none');
-    
-    changeLanguage(AppState.currentLang); checkLoginStatus();
 }
 
 // --- 공통 기능 ---
@@ -275,18 +384,15 @@ function switchTab(tabId, el) {
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     el.classList.add('active');
     
-    if(tabId === 'social') renderUsers(AppState.social.sortCriteria);
+    if(tabId === 'social') { fetchSocialData(); renderUsers(AppState.social.sortCriteria); }
     if(tabId === 'status') { drawRadarChart(); updatePointUI(); }
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
     if(tabId === 'dungeon') { updateDungeonStatus(); }
 }
 
 function loadPlayerName() {
-    const savedName = localStorage.getItem('playerName');
-    if (savedName) {
-        document.getElementById('prof-name').textContent = savedName;
-        document.getElementById('prof-name').removeAttribute('data-i18n'); 
-    }
+    document.getElementById('prof-name').textContent = AppState.user.name;
+    document.getElementById('prof-name').removeAttribute('data-i18n'); 
 }
 
 function changePlayerName() {
@@ -302,10 +408,13 @@ function changePlayerName() {
     const newName = prompt(i18n[AppState.currentLang].name_prompt);
     if (newName && newName.trim() !== "") {
         const finalName = newName.trim();
+        AppState.user.name = finalName; // 서버에 보낼 이름 변경
         document.getElementById('prof-name').textContent = finalName;
         document.getElementById('prof-name').removeAttribute('data-i18n');
         localStorage.setItem('lastNameChange', now.toString());
         localStorage.setItem('playerName', finalName);
+        
+        saveUserData(); // 변경된 이름 즉시 서버로 전송
         renderUsers(AppState.social.sortCriteria);
     }
 }
@@ -319,7 +428,7 @@ function renderHistoryModal() {
     });
 }
 
-// --- 차트 및 렌더링 ---
+// --- 차트 렌더링 ---
 function drawRadarChart() {
     const centerX = 50, centerY = 50, radius = 33; 
     const angles = []; for(let i=0; i<6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
@@ -394,7 +503,7 @@ function toggleQuest(idx) {
     if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } 
     else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
     
-    saveUserData();
+    saveUserData(); // 클라우드에 퀘스트 완료 내역 저장
     renderQuestList(); renderCalendar(); updatePointUI(); 
 }
 
@@ -552,24 +661,19 @@ function completeDungeon() {
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 }
 
-// --- 소셜 로직 ---
-function toggleSocialMode(mode, btn) {
-    AppState.social.mode = mode;
-    document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-    document.getElementById('ranking-controls').style.display = mode === 'global' ? 'flex' : 'none';
-    renderUsers(AppState.social.sortCriteria);
-}
-
+// --- 소셜 렌더링 로직 ---
 function renderUsers(criteria, btn = null) {
     if(btn) {
         AppState.social.sortCriteria = criteria;
         document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
     }
     const container = document.getElementById('user-list-container');
+    
+    // 현재 유저의 실시간 상태를 랭킹 보드에 덮어쓰기
     const me = AppState.social.users.find(u => u.isMe);
     if(me) {
         statKeys.forEach(k => me[k] = AppState.user.stats[k]);
-        const savedName = localStorage.getItem('playerName'); if(savedName) me.name = savedName;
+        me.name = AppState.user.name;
         me.title = AppState.user.titleHistory[AppState.user.titleHistory.length-1].title;
     }
     AppState.social.users.forEach(u => u.total = u.str + u.int + u.cha + u.vit + u.wlth + u.agi);
@@ -591,15 +695,15 @@ function renderUsers(criteria, btn = null) {
     });
     container.innerHTML = htmlStr;
     
-    document.querySelectorAll('.btn-friend').forEach(btn => { btn.addEventListener('click', (e) => toggleFriend(parseInt(e.target.dataset.id))); });
+    document.querySelectorAll('.btn-friend').forEach(btn => { btn.addEventListener('click', (e) => toggleFriend(e.target.dataset.id)); });
 }
 
 function toggleFriend(id) {
-    const u = AppState.social.users.find(x => x.id === id); 
+    const u = AppState.social.users.find(x => x.id == id); 
     if(u) { u.isFriend = !u.isFriend; renderUsers(AppState.social.sortCriteria); } 
 }
 
-// --- GPS 및 건강 연동 ---
+// --- 기타 (GPS, 동기화) ---
 function toggleGPS() {
     const isChecked = document.getElementById('gps-toggle').checked;
     const statusDiv = document.getElementById('gps-status'); statusDiv.style.display = 'flex';
