@@ -17,10 +17,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ★ 수정됨: 구글 로그인 시 피트니스(걸음수) 읽기 권한을 추가로 요청합니다. ★
+// 구글 로그인 시 피트니스(걸음수) 읽기 권한을 요청
 const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
 
+// --- 상태 관리 객체 (걸음 수 보상 기록 필드 추가) ---
 let AppState = getInitialAppState();
 
 function getInitialAppState() {
@@ -36,7 +37,10 @@ function getInitialAppState() {
             titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
             photoURL: null, 
             friends: [],
-            location: null 
+            location: null,
+            // ★ 추가됨: 동기화 설정 및 걸음 수 보상 기록 데이터
+            syncEnabled: false, 
+            stepData: { date: "", rewardedSteps: 0 } 
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -66,6 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
             drawRadarChart(); 
             updateDungeonStatus();
             fetchSocialData(); 
+            
+            // ★ 추가됨: 앱이 켜질 때 스위치가 ON 상태라면 백그라운드에서 걸음수 체크
+            if (AppState.user.syncEnabled) {
+                syncHealthData(false); 
+            }
+
         } else {
             document.getElementById('login-screen').classList.remove('d-none');
             document.getElementById('app-container').classList.remove('d-flex');
@@ -108,7 +118,7 @@ function bindEvents() {
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     
-    // 건강 앱 동기화 이벤트
+    // 건강 동기화 스위치
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     
     document.getElementById('btn-logout').addEventListener('click', logout);
@@ -129,7 +139,9 @@ async function saveUserData() {
                 dungeonStr: JSON.stringify(AppState.dungeon),
                 friends: AppState.user.friends || [],
                 photoURL: AppState.user.photoURL || null,
-                location: AppState.user.location || null 
+                location: AppState.user.location || null,
+                syncEnabled: AppState.user.syncEnabled, // 스위치 상태 저장
+                stepData: AppState.user.stepData        // 걸음 보상 기록 저장
             }, { merge: true });
         } catch(e) { console.error("클라우드 저장 실패:", e); }
     }
@@ -153,6 +165,13 @@ async function loadUserDataFromDB(user) {
             if(data.friends) AppState.user.friends = data.friends;
             if(data.location) AppState.user.location = data.location;
             
+            // 저장된 설정 데이터 불러오기
+            if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
+            if(data.stepData !== undefined) AppState.user.stepData = data.stepData;
+            
+            // 스위치 UI에 현재 상태 반영
+            document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
+
             if(data.name) { AppState.user.name = data.name; } 
             else { AppState.user.name = user.displayName || "신규 헌터"; }
 
@@ -206,13 +225,14 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- 로그인 로직 ---
+// --- 로그인 ---
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
     const pwConfirm = document.getElementById('login-pw-confirm').value;
 
     if(!email || !pw) { alert(i18n[AppState.currentLang].login_err_empty); return; }
+    
     const btn = document.getElementById('btn-login-submit');
     btn.innerText = "처리 중..."; btn.disabled = true;
 
@@ -231,13 +251,12 @@ async function simulateLogin() {
     }
 }
 
-// ★ 수정됨: 구글 로그인 시 발급되는 '데이터 접근 키(Token)'를 로컬에 저장합니다. ★
+// 구글 피트니스 액세스 토큰 로컬 저장
 async function simulateGoogleLogin() { 
     try { 
         const result = await signInWithPopup(auth, googleProvider); 
         const credential = GoogleAuthProvider.credentialFromResult(result);
         if (credential && credential.accessToken) {
-            // 구글 피트니스 API를 호출할 수 있는 비밀 열쇠 저장
             localStorage.setItem('gfit_token', credential.accessToken);
         }
     } 
@@ -305,6 +324,11 @@ function switchTab(tabId, el) {
     if(tabId === 'social') { fetchSocialData(); } 
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
     if(tabId === 'dungeon') { updateDungeonStatus(); }
+    
+    // ★ 추가됨: 탭을 이동할 때마다 스위치가 켜져있다면 걸음수 백그라운드 동기화 수행
+    if (AppState.user.syncEnabled && tabId === 'status') {
+        syncHealthData(false);
+    }
 }
 
 function loadPlayerName() {
@@ -677,81 +701,113 @@ function toggleGPS() {
     } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].gps_off}</span>`;
 }
 
-// ★ 수정됨: 실제 구글 피트니스(삼성 헬스 연동) API 데이터를 가져오는 로직 ★
-async function toggleHealthSync() {
-    const isChecked = document.getElementById('sync-toggle').checked; 
-    const statusDiv = document.getElementById('sync-status'); 
-    statusDiv.style.display = 'flex';
+// ★ 추가/수정됨: 스위치 클릭 시 호출되는 함수 (ON/OFF 상태 저장)
+function toggleHealthSync() {
+    const isChecked = document.getElementById('sync-toggle').checked;
+    AppState.user.syncEnabled = isChecked;
+    saveUserData(); // 스위치 상태 즉시 서버에 저장
     
-    if(isChecked) {
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`;
-        
-        // 1. 로그인 시 저장해둔 구글 엑세스 토큰 확인
-        const token = localStorage.getItem('gfit_token');
-        if (!token) {
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">권한 없음. 구글 재로그인 필요</span>`;
-            document.getElementById('sync-toggle').checked = false;
-            alert("건강 데이터를 불러오려면 'Google 계정으로 계속' 버튼을 통해 다시 로그인해야 합니다.");
-            return;
-        }
-
-        // 2. 오늘의 시작 시간과 현재 시간 계산 (밀리초)
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const endOfDay = now.getTime();
-
-        try {
-            // 3. 구글 피트니스 API 호출 (오늘의 걸음 수 합산 요청)
-            const response = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    aggregateBy: [{
-                        dataTypeName: 'com.google.step_count.delta',
-                        dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps'
-                    }],
-                    bucketByTime: { durationMillis: 86400000 }, // 1일 단위 그룹화
-                    startTimeMillis: startOfDay,
-                    endTimeMillis: endOfDay
-                })
-            });
-
-            if (!response.ok) throw new Error("토큰 만료 또는 권한 거부");
-
-            const data = await response.json();
-            let steps = 0;
-            
-            // 데이터 파싱 (걸음 수가 아예 없는 경우 방어 코드)
-            if (data.bucket && data.bucket[0] && data.bucket[0].dataset[0] && data.bucket[0].dataset[0].point.length > 0) {
-                steps = data.bucket[0].dataset[0].point[0].value[0].intVal;
-            }
-
-            // 4. 걸음 수에 따른 보상 지급 로직 (예: 1,000걸음 당 10포인트, STR +0.5)
-            const earnedPoints = Math.floor(steps / 1000) * 10;
-            const earnedStr = (Math.floor(steps / 1000) * 0.5);
-
-            if (steps > 0) {
-                AppState.user.points += earnedPoints;
-                AppState.user.pendingStats.str += earnedStr;
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료: ${steps.toLocaleString()}걸음<br>(+${earnedPoints}P, STR +${earnedStr})</span>`;
-            } else {
-                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">걸음 수 기록이 없습니다. (0걸음)</span>`;
-            }
-
-            saveUserData(); 
-            updatePointUI(); 
-            drawRadarChart();
-            
-        } catch (error) {
-            console.error("동기화 에러:", error);
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">동기화 실패 (세션 만료)</span>`;
-            document.getElementById('sync-toggle').checked = false;
-        }
-
+    if (isChecked) {
+        syncHealthData(true); // 켰을 때는 안내 메시지 표시
     } else {
+        const statusDiv = document.getElementById('sync-status');
+        statusDiv.style.display = 'flex';
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off}</span>`;
+    }
+}
+
+// ★ 추가됨: 실제 구글 피트니스 통신 및 스마트 누적 보상 시스템
+async function syncHealthData(showStatusMsg = false) {
+    if (!AppState.user.syncEnabled) return;
+    
+    const statusDiv = document.getElementById('sync-status');
+    if (showStatusMsg) {
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`;
+    }
+
+    const token = localStorage.getItem('gfit_token');
+    if (!token) {
+        if (showStatusMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">권한 없음. 다시 로그인 필요</span>`;
+        AppState.user.syncEnabled = false;
+        document.getElementById('sync-toggle').checked = false;
+        saveUserData();
+        return;
+    }
+
+    const now = new Date();
+    const todayStr = now.toDateString(); // 날짜 판별용 텍스트
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const endOfDay = now.getTime();
+
+    // 날짜가 바뀌면(자정이 지나면) 보상받은 걸음 수 초기화
+    if (!AppState.user.stepData || AppState.user.stepData.date !== todayStr) {
+        AppState.user.stepData = { date: todayStr, rewardedSteps: 0 };
+    }
+
+    try {
+        const response = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aggregateBy: [{ dataTypeName: 'com.google.step_count.delta', dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps' }],
+                bucketByTime: { durationMillis: 86400000 }, 
+                startTimeMillis: startOfDay,
+                endTimeMillis: endOfDay
+            })
+        });
+
+        if (!response.ok) throw new Error("구글 인증 토큰 만료");
+
+        const data = await response.json();
+        let totalStepsToday = 0;
+        
+        // 걸음 수 안전하게 추출
+        if (data.bucket && data.bucket.length > 0) {
+            data.bucket.forEach(b => {
+                if (b.dataset && b.dataset[0] && b.dataset[0].point) {
+                    b.dataset[0].point.forEach(p => {
+                        totalStepsToday += p.value[0].intVal;
+                    });
+                }
+            });
+        }
+
+        // 아직 보상받지 않은 '새로운' 걸음 수 계산
+        const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
+        
+        // 1,000보 당 포인트 지급 처리
+        if (unrewardedSteps >= 1000) {
+            const rewardChunks = Math.floor(unrewardedSteps / 1000); // 1000보 단위 묶음
+            const earnedPoints = rewardChunks * 10;                  // 묶음 당 10P
+            const earnedStr = rewardChunks * 0.5;                    // 묶음 당 STR 0.5
+            
+            AppState.user.points += earnedPoints;
+            AppState.user.pendingStats.str += earnedStr;
+            AppState.user.stepData.rewardedSteps += (rewardChunks * 1000); // 보상 완료 처리
+
+            if (showStatusMsg) {
+                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료: 총 ${totalStepsToday.toLocaleString()}보<br>추가 보상: +${earnedPoints}P, STR +${earnedStr}</span>`;
+            }
+            updatePointUI();
+            drawRadarChart();
+        } else {
+            // 새로 달성한 1,000보가 없을 때
+            if (showStatusMsg) {
+                if(totalStepsToday === 0) {
+                    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">걸음 수 기록이 없습니다. (0보)</span>`;
+                } else {
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료: 총 ${totalStepsToday.toLocaleString()}보<br>(다음 보상까지 ${1000 - unrewardedSteps}보 남음)</span>`;
+                }
+            }
+        }
+        
+        saveUserData(); // 최종 데이터 서버 전송
+
+    } catch (error) {
+        console.error("동기화 에러:", error);
+        if (showStatusMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">동기화 실패. 다시 로그인해주세요.</span>`;
+        document.getElementById('sync-toggle').checked = false;
+        AppState.user.syncEnabled = false;
     }
 }
