@@ -66,6 +66,7 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 .profile-image-container { position: relative; width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--neon-blue); background: #222; display: flex; justify-content: center; align-items: center; }
 .profile-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .upload-overlay { position: absolute; bottom: -5px; right: -5px; background: var(--neon-blue); width: 20px; height: 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 12px; cursor: pointer; border: 2px solid var(--bg-dark); z-index: 5; }
+#imageUpload { display: none; }
 
 .title-badge { display: inline-block; padding: 2px 6px; font-size: 0.65rem; font-weight: bold; background: linear-gradient(45deg, rgba(181, 60, 255, 0.2), transparent); border: 1px solid var(--neon-purple); color: var(--neon-purple); border-radius: 4px; margin-bottom: 3px; cursor: pointer;}
 .name-container { display: flex; align-items: center; gap: 5px; }
@@ -178,7 +179,18 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 }
 .info-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; color: var(--text-main); margin-top: 10px; }
 .info-table th, .info-table td { border: 1px solid var(--border-color); padding: 8px; text-align: left; word-break: keep-all; }
-.info-table th { background: rgba(0, 217, 255, 0.1); color: var(--neon-blue); font-weight: bold; position: sticky; top: 0; z-index: 1;}
+
+/* 투명도를 제거하여 스크롤 시 글자가 겹치지 않게 수정한 표 헤더 */
+.info-table th { 
+    background: var(--bg-dark); 
+    color: var(--neon-blue); 
+    font-weight: bold; 
+    position: sticky; 
+    top: -1px; 
+    z-index: 5; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5); 
+}
+
 .info-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 
 /* 유틸리티 클래스 */
