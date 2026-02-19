@@ -14,7 +14,7 @@ const i18n = {
         str: "근력", int: "지능", cha: "매력", vit: "체력", wlth: "재력", agi: "민첩",
         bar_str: "근력 (물리/운동)", bar_int: "지능 (학습/인지)", bar_cha: "매력 (인맥/소통)", bar_vit: "체력 (수면/회복)", bar_wlth: "재력 (자본/투자)", bar_agi: "민첩 (시간/효율)",
         quest_title: "Daily Quests", quest_hint: "※ 퀘스트 완료 시 +20P 및 스탯 +0.5 대기 적립", cal_title: "주간 진척도",
-        raid_title: "Local Raid", raid_boss: "⚠️ 서울 강남 연합 보스 출현", raid_desc1: '"퇴근길의 유혹자"가 감지되었습니다.', raid_desc2: "근처 헌터들과 연합하여 2시간 내<br>합산 50km를 달성하고 전리품을 획득하세요.", raid_part: "참여 인원: ", raid_btn: "레이드 입장하기", raid_joined: "참여 완료", raid_success: "레이드 완료!", raid_waiting: "던전 출현 대기 중...", raid_time_info: "출현 시간: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
+        raid_title: "Local Raid", raid_boss: "⚠️ 연합 보스 출현", raid_desc1: "이상 현상이 감지되었습니다.", raid_desc2: "연합 목표를 달성하고 전리품을 획득하세요.", raid_part: "참여 인원: ", raid_btn: "레이드 입장하기", raid_joined: "참여 완료", raid_success: "레이드 완료!", raid_waiting: "던전 출현 대기 중...", raid_time_info: "출현 시간: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 글로벌 랭킹", soc_friend: "👥 내 친구", sort_tot: "종합스코어", sort_str: "근력", sort_int: "지능", sort_cha: "매력", sort_vit: "체력", sort_wlth: "재력", sort_agi: "민첩",
         set_title: "System Settings", set_lang: "언어 (Language)", set_theme: "라이트 모드", set_push: "푸시 알림 수신", set_gps: "앱 실행 시 현위치 탐색", set_sync: "건강 앱 동기화", set_logout: "로그아웃",
         no_friend: "등록된 친구가 없습니다.", btn_add: "친구 추가", btn_added: "친구 ✓", gps_on: "위치 권한 활성화됨", gps_off: "위치 탐색 중지됨", gps_err: "위치 정보 오류", modal_title: "칭호 이력 조회",
@@ -35,7 +35,7 @@ const i18n = {
         str: "STR", int: "INT", cha: "CHA", vit: "VIT", wlth: "WLTH", agi: "AGI",
         bar_str: "STR (Physical)", bar_int: "INT (Cognitive)", bar_cha: "CHA (Social)", bar_vit: "VIT (Recovery)", bar_wlth: "WLTH (Capital)", bar_agi: "AGI (Efficiency)",
         quest_title: "Daily Quests", quest_hint: "※ Earn +20P & +0.5 pending stat per quest", cal_title: "Weekly Progress",
-        raid_title: "Local Raid", raid_boss: "⚠️ Gangnam Alliance Boss", raid_desc1: '"Predator of Laziness" detected.', raid_desc2: "Unite with nearby hunters to achieve<br>50km in 2 hours and get loot.", raid_part: "Participants: ", raid_btn: "Enter Raid", raid_joined: "Joined", raid_success: "Raid Success!", raid_waiting: "Waiting for Dungeon...", raid_time_info: "Open Hours: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
+        raid_title: "Local Raid", raid_boss: "⚠️ Alliance Boss", raid_desc1: "Anomaly detected.", raid_desc2: "Achieve alliance goals to get loot.", raid_part: "Participants: ", raid_btn: "Enter Raid", raid_joined: "Joined", raid_success: "Raid Success!", raid_waiting: "Waiting for Dungeon...", raid_time_info: "Open Hours: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 Global Rank", soc_friend: "👥 My Friends", sort_tot: "Total", sort_str: "STR", sort_int: "INT", sort_cha: "CHA", sort_vit: "VIT", sort_wlth: "WLTH", sort_agi: "AGI",
         set_title: "System Settings", set_lang: "Language", set_theme: "Light Theme", set_push: "Push Notifications", set_gps: "Auto Location Tracking", set_sync: "Health App Sync", set_logout: "Logout",
         no_friend: "No friends registered.", btn_add: "Add Friend", btn_added: "Friend ✓", gps_on: "Location tracking on", gps_off: "Location tracking off", gps_err: "Location Error", modal_title: "Title History",
@@ -56,7 +56,7 @@ const i18n = {
         str: "筋力", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
         bar_str: "筋力 (運動)", bar_int: "知能 (認知)", bar_cha: "魅力 (人脈)", bar_vit: "体力 (回復)", bar_wlth: "財力 (資本)", bar_agi: "敏捷 (効率)",
         quest_title: "デイリークエスト", quest_hint: "※ 完了で +20P & 待機ステータス+0.5", cal_title: "週間進捗度",
-        raid_title: "ローカルレイド", raid_boss: "⚠️ 江南連合ボス出現", raid_desc1: "「怠惰の捕食者」感知。", raid_desc2: "近くのハンターと連合して2時間以内に<br>合計50kmを達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
+        raid_title: "ローカルレイド", raid_boss: "⚠️ 連合ボス出現", raid_desc1: "異常現象を感知。", raid_desc2: "連合の目標を達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 グローバルランク", soc_friend: "👥 マイフレンド", sort_tot: "総合", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷",
         set_title: "システム設定", set_lang: "言語 (Language)", set_theme: "ライトモード", set_push: "プッシュ通知受信", set_gps: "起動時の位置情報取得", set_sync: "ヘルスケアアプリ同期", set_logout: "ログアウト",
         no_friend: "友達がいません。", btn_add: "友達追加", btn_added: "友達 ✓", gps_on: "位置情報有効", gps_off: "位置情報停止", gps_err: "位置情報エラー", modal_title: "称号履歴",
@@ -68,7 +68,7 @@ const titleVocab = {
     str: { ko: { pre: ["강인한", "거친", "부서지지 않는"], suf: ["곰", "바위", "거인"] }, en: { pre: ["Strong", "Tough", "Unbreakable"], suf: ["Bear", "Rock", "Giant"] }, ja: { pre: ["強靭な", "荒々しい", "砕けない"], suf: ["熊", "岩", "巨人"] } },
     int: { ko: { pre: ["지혜로운", "꿰뚫어보는", "깊은"], suf: ["올빼미", "호수", "현자"] }, en: { pre: ["Wise", "Piercing", "Deep"], suf: ["Owl", "Lake", "Sage"] }, ja: { pre: ["知恵のある", "見抜く", "深い"], suf: ["フクロウ", "湖", "賢者"] } },
     cha: { ko: { pre: ["매혹적인", "빛나는", "사람을 끄는"], suf: ["여우", "불꽃", "별"] }, en: { pre: ["Charming", "Shining", "Magnetic"], suf: ["Fox", "Flame", "Star"] }, ja: { pre: ["魅力的な", "輝く", "惹きつける"], suf: ["キツネ", "炎", "星"] } },
-    vit: { ko: { pre: ["지치지 않는", "끈질긴", "숨쉬는"], suf: ["거북이", "대지", "뿌리"] }, en: { pre: ["Tireless", "Persistent", "Breathing"], suf: ["Turtle", "Earth", "Root"] }, ja: { pre: ["疲れない", "粘り強い", "息づく"], suf: ["亀", "大地", "根"] } },
+    vit: { ko: { pre: ["지치지 않는", "끈질긴", "숨쉬는"], 파라미터suf: ["거북이", "대지", "뿌리"] }, en: { pre: ["Tireless", "Persistent", "Breathing"], suf: ["Turtle", "Earth", "Root"] }, ja: { pre: ["疲れない", "粘り強い", "息づく"], suf: ["亀", "大地", "根"] } },
     wlth:{ ko: { pre: ["풍족한", "황금을 쥔", "계산하는"], suf: ["두꺼비", "태양", "보석"] }, en: { pre: ["Abundant", "Golden", "Calculating"], suf: ["Toad", "Sun", "Gem"] }, ja: { pre: ["豊かな", "黄金を握る", "計算する"], suf: ["ヒキガエル", "太陽", "宝石"] } },
     agi: { ko: { pre: ["날쌘", "바람을 가르는", "보이지 않는"], suf: ["표범", "화살", "매"] }, en: { pre: ["Swift", "Wind-cleaving", "Unseen"], suf: ["Panther", "Arrow", "Hawk"] }, ja: { pre: ["素早い", "風を切る", "見えない"], suf: ["ヒョウ", "矢", "鷹"] } }
 };
@@ -92,6 +92,52 @@ const seoulStations = [
     { name: {ko: "여의도역", en: "Yeouido Stn", ja: "汝矣島駅"}, lat: 37.5216, lng: 126.9241 },
     { name: {ko: "신도림역", en: "Sindorim Stn", ja: "新道林駅"}, lat: 37.5088, lng: 126.8912 }
 ];
+
+// --- 제1원칙 기반 6종 대중적 라이프스타일 스탯 던전 임무 ---
+const raidMissions = {
+    str: {
+        stat: "STR", color: "var(--neon-red)",
+        title: {ko: "물리 법칙 붕괴: 중력 이상 현상", en: "Physics Collapse: Gravity Anomaly", ja: "物理法則崩壊: 重力異常"},
+        desc1: {ko: "해당 구역에 강력한 무기력장(게으름)이 퍼지고 있습니다.", en: "Strong lethargy field is expanding.", ja: "無気力場が広がっています。"},
+        desc2: {ko: "헌터 연합 합산 1만보 걷기 또는 홈트/짐 30분 운동 기록을 동기화하여 중력장을 상쇄하십시오.", en: "Sync 10k steps or 30m workout data.", ja: "1万歩または30分運動データを同期せよ。"},
+        actionText: {ko: "운동 데이터 송신", en: "Transmit Workout Data", ja: "運動データ送信"}
+    },
+    int: {
+        stat: "INT", color: "var(--neon-blue)",
+        title: {ko: "정보 왜곡 지대: 인지 마비 안개", en: "Info Distortion: Cognitive Fog", ja: "情報歪曲: 認知麻痺の霧"},
+        desc1: {ko: "집단 지성을 저하시키는 왜곡장이 감지되었습니다.", en: "Field degrading collective intelligence detected.", ja: "集団知性を低下させる歪曲場を感知。"},
+        desc2: {ko: "독서 1챕터, 아티클 요약, 또는 30분 이상의 어학/학습 기록을 업로드하여 왜곡을 돌파하십시오.", en: "Upload 1 chapter read or 30m study log.", ja: "読書1章または30分の学習記録をアップロードせよ。"},
+        actionText: {ko: "학습 로그 업로드", en: "Upload Study Log", ja: "学習ログアップロード"}
+    },
+    cha: {
+        stat: "CHA", color: "var(--neon-purple)",
+        title: {ko: "고립의 장벽: 단절의 넥서스", en: "Wall of Isolation: Disconnect Nexus", ja: "孤立の障壁: 断絶のネクサス"},
+        desc1: {ko: "현대인들을 단절시키는 고립의 장벽이 세워졌습니다.", en: "Barrier of isolation disconnecting people.", ja: "人々を断絶させる孤立の障壁。"},
+        desc2: {ko: "지인에게 안부 메시지 전송, 동료에게 감사 표현, 또는 커피 한 잔의 여유를 인증하여 연결망을 복구하십시오.", en: "Message a friend, show gratitude, or share coffee.", ja: "友人に連絡するか、感謝を伝えよ。"},
+        actionText: {ko: "소셜 버프 발동", en: "Activate Social Buff", ja: "ソーシャルバフ発動"}
+    },
+    vit: {
+        stat: "VIT", color: "#00ff66",
+        title: {ko: "생명력 탈취 역장: 피로의 늪", en: "Vitality Drain Field: Swamp of Fatigue", ja: "生命力奪取 역장: 疲労の沼"},
+        desc1: {ko: "주변 헌터들의 생명력을 서서히 흡수하는 만성 피로 구역입니다.", en: "Zone absorbing hunters' vitality.", ja: "ハンターの生命力を吸収する力場。"},
+        desc2: {ko: "물 2리터 마시기, 영양제 섭취, 또는 7시간 수면 기록을 시스템에 증명하여 역장을 정화하십시오.", en: "Drink 2L water, take vitamins, or sleep 7h.", ja: "水2L、サプリ、または7時間睡眠を証明せよ。"},
+        actionText: {ko: "회복 데이터 증명", en: "Prove Recovery Data", ja: "回復データ証明"}
+    },
+    wlth: {
+        stat: "WLTH", color: "var(--neon-gold)",
+        title: {ko: "자본 유출 넥서스: 가치 붕괴 포털", en: "Capital Leak Nexus: Value Collapse Portal", ja: "資本流出ネクサス: 価値崩壊ポータル"},
+        desc1: {ko: "해당 좌표에서 경제적 가치(통장 잔고)가 줄줄 새고 있습니다.", en: "Economic value is leaking here.", ja: "経済的価値が漏出しています。"},
+        desc2: {ko: "오늘 하루 불필요한 지출 방어(무지출), 소액 저축, 또는 경제 뉴스 1편 스크랩을 통해 포털을 닫으십시오.", en: "No-spend day, micro-save, or read eco news.", ja: "無支出、少額貯蓄、または経済ニュースを読め。"},
+        actionText: {ko: "자산 방어 프로토콜 가동", en: "Activate Asset Defense", ja: "資産防御プロトコル稼働"}
+    },
+    agi: {
+        stat: "AGI", color: "#ff8c00",
+        title: {ko: "시간 지연 게이트: 타임 패러독스", en: "Time Dilation Gate: Time Paradox", ja: "時間遅延ゲート: タイムパラドックス"},
+        desc1: {ko: "이 구역의 일 처리 속도가 심각하게 지연되고 있습니다.", en: "Productivity is severely delayed here.", ja: "この区域の生産性が深刻に遅延しています。"},
+        desc2: {ko: "뽀모도로(25분 집중) 1세트 완료, 혹은 밀린 업무/집안일 3가지 처리 로그를 전송해 시간을 가속하십시오.", en: "1 Pomodoro or complete 3 pending tasks.", ja: "ポモドーロ1回またはタスク3つ完了せよ。"},
+        actionText: {ko: "효율성 로그 전송", en: "Transmit Efficiency Log", ja: "効率ログ送信"}
+    }
+};
 
 const mockSocialData = [
     { id: 1, name: "Gwangju_Runner", title: {ko:"무등산 호랑이", en:"Tiger of Mudeung", ja:"無等山の虎"}, str: 95, int: 50, cha: 70, vit: 90, wlth: 30, agi: 85, isMe: false, isFriend: false },
