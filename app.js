@@ -18,7 +18,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- 상태 관리 객체 (위치정보 location 필드 추가) ---
+// --- 상태 관리 객체 ---
 let AppState = getInitialAppState();
 
 function getInitialAppState() {
@@ -34,14 +34,14 @@ function getInitialAppState() {
             titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
             photoURL: null, 
             friends: [],
-            location: null // 실제 GPS 좌표 저장용
+            location: null 
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
     };
 }
 
@@ -118,11 +118,9 @@ async function saveUserData() {
                 dungeonStr: JSON.stringify(AppState.dungeon),
                 friends: AppState.user.friends || [],
                 photoURL: AppState.user.photoURL || null,
-                location: AppState.user.location || null // 위치정보 서버 저장
+                location: AppState.user.location || null 
             }, { merge: true });
-        } catch(e) {
-            console.error("클라우드 저장 실패:", e);
-        }
+        } catch(e) { console.error("클라우드 저장 실패:", e); }
     }
 }
 
@@ -417,26 +415,47 @@ function renderCalendar() {
     calGrid.innerHTML = htmlStr;
 }
 
-// ★ 수정됨: 던전의 구글 지도 URL(깨짐 현상)을 정상적인 주소로 변경 반영 ★
+// ★ 수정됨: 매일 3회 랜덤 지정(슬롯별 갱신), 인원수 랜덤 생성 로직 ★
 function updateDungeonStatus() {
     const now = new Date(); const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
+    
     let currentSlot = 0;
-    if (timeVal >= 6 && timeVal < 8) currentSlot = 1; else if (timeVal >= 11.5 && timeVal < 13.5) currentSlot = 2; else if (timeVal >= 19 && timeVal < 21) currentSlot = 3;
-    const dateStr = now.toDateString();
+    // 출현 시간: 06:00~08:00 (1) | 11:30~13:30 (2) | 19:00~21:00 (3)
+    if (timeVal >= 6 && timeVal < 8) currentSlot = 1; 
+    else if (timeVal >= 11.5 && timeVal < 13.5) currentSlot = 2; 
+    else if (timeVal >= 19 && timeVal < 21) currentSlot = 3;
+
+    const dateStr = now.toDateString(); // 날짜가 바뀌면 자동 리셋
+    
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
-        AppState.dungeon.lastGeneratedDate = dateStr; AppState.dungeon.slot = currentSlot;
-        if (currentSlot > 0) {
-            AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); AppState.dungeon.participants = Math.floor(Math.random() * 5) + 3; 
-            AppState.dungeon.isJoined = false; AppState.dungeon.isCleared = false; AppState.dungeon.progress = 0;
-            const statKeysArr = ['str', 'int', 'cha', 'vit', 'wlth', 'agi']; AppState.dungeon.targetStat = statKeysArr[Math.floor(Math.random() * statKeysArr.length)];
+        AppState.dungeon.lastGeneratedDate = dateStr; 
+        AppState.dungeon.slot = currentSlot;
+        
+        if (currentSlot > 0) { // 새로운 레이드 열림
+            AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
+            // 랜덤 인원수 10 ~ 100명 설정
+            AppState.dungeon.participants = Math.floor(Math.random() * 91) + 10; 
+            AppState.dungeon.isJoined = false; 
+            AppState.dungeon.isCleared = false; 
+            AppState.dungeon.progress = 0; // 진행률 초기화
+            
+            const statKeysArr = ['str', 'int', 'cha', 'vit', 'wlth', 'agi']; 
+            AppState.dungeon.targetStat = statKeysArr[Math.floor(Math.random() * statKeysArr.length)];
+        } else {
+            // 레이드 대기 시간일 때
+            AppState.dungeon.isJoined = false;
         }
         saveUserData();
     }
+    
     if (document.getElementById('dungeon').classList.contains('active')) renderDungeon();
 }
 
 function renderDungeon() {
-    const banner = document.getElementById('dungeon-banner'); const activeBoard = document.getElementById('dungeon-active-board'); const timer = document.getElementById('raid-timer');
+    const banner = document.getElementById('dungeon-banner'); 
+    const activeBoard = document.getElementById('dungeon-active-board'); 
+    const timer = document.getElementById('raid-timer');
+    
     if (AppState.dungeon.slot === 0) {
         timer.classList.add('d-none'); activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none'); banner.classList.remove('d-none');
         banner.innerHTML = `<h3 style="color: var(--text-sub); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
@@ -446,17 +465,29 @@ function renderDungeon() {
         if (!AppState.dungeon.isJoined) {
             timer.classList.add('d-none'); activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none'); banner.classList.remove('d-none');
             
-            // ★ 수정됨: 구글 지도 URL 파라미터 픽스
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
             
-            banner.innerHTML = `<div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div><h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3><div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div><p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p><div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> / 10</div><button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>`;
+            banner.innerHTML = `<div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div><h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3><div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div><p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p><div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> 명</div><button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>`;
             document.getElementById('btn-raid-join').addEventListener('click', joinDungeon);
         } else {
+            // 레이드 입장 후 상태
             banner.classList.add('d-none'); activeBoard.classList.remove('d-none'); activeBoard.classList.add('d-flex'); timer.classList.remove('d-none'); 
-            document.getElementById('active-stat-badge').innerText = mission.stat; document.getElementById('active-stat-badge').style.color = mission.color; document.getElementById('active-stat-badge').style.borderColor = mission.color;
-            document.getElementById('active-raid-title').innerText = mission.title[AppState.currentLang]; document.getElementById('active-raid-desc').innerHTML = mission.desc2[AppState.currentLang];
-            const btnAction = document.getElementById('btn-raid-action'); const btnComplete = document.getElementById('btn-raid-complete');
-            btnAction.innerText = mission.actionText[AppState.currentLang]; document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`; document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
+            
+            document.getElementById('active-stat-badge').innerText = mission.stat; 
+            document.getElementById('active-stat-badge').style.color = mission.color; 
+            document.getElementById('active-stat-badge').style.borderColor = mission.color;
+            document.getElementById('active-raid-title').innerText = mission.title[AppState.currentLang]; 
+            document.getElementById('active-raid-desc').innerHTML = mission.desc2[AppState.currentLang];
+            
+            // UI에 참여 인원 및 달성률 반영
+            document.getElementById('raid-part-count').innerText = AppState.dungeon.participants;
+            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`; 
+            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
+            
+            const btnAction = document.getElementById('btn-raid-action'); 
+            const btnComplete = document.getElementById('btn-raid-complete');
+            btnAction.innerText = mission.actionText[AppState.currentLang]; 
+            
             if (AppState.dungeon.isCleared) {
                 btnAction.classList.add('d-none'); btnComplete.classList.remove('d-none'); btnComplete.innerText = "레이드 정산 완료됨"; btnComplete.disabled = true; btnComplete.style.background = "#444"; document.getElementById('raid-progress-text').innerText = "100% (CLEAR)";
             } else if (AppState.dungeon.progress >= 100) {
@@ -468,8 +499,44 @@ function renderDungeon() {
     }
 }
 
-function joinDungeon() { if(AppState.dungeon.isJoined) return; AppState.dungeon.isJoined = true; AppState.dungeon.participants++; AppState.dungeon.progress = Math.floor(Math.random() * 30) + 40; saveUserData(); renderDungeon(); }
-function simulateRaidAction() { const btnAction = document.getElementById('btn-raid-action'); btnAction.innerText = "동기화 중..."; btnAction.disabled = true; setTimeout(() => { AppState.dungeon.progress = 100; saveUserData(); renderDungeon(); }, 1500); }
+// ★ 수정됨: 입장 시 기초 달성률을 랜덤하게 제공
+function joinDungeon() { 
+    if(AppState.dungeon.isJoined) return; 
+    AppState.dungeon.isJoined = true; 
+    AppState.dungeon.participants++; // 내가 합류했으니 +1명
+    // 다른 유저들이 이미 기여한 기본 달성률 설정 (30% ~ 60%)
+    AppState.dungeon.progress = Math.floor(Math.random() * 31) + 30; 
+    saveUserData(); 
+    renderDungeon(); 
+}
+
+// ★ 수정됨: 버튼 클릭 시마다 퍼센트가 점진적으로 오르는 로직
+function simulateRaidAction() { 
+    if (AppState.dungeon.progress >= 100) return;
+
+    // 1번 클릭 시 5% ~ 15% 사이로 달성률 증가 (카운트 시뮬레이션)
+    const contribution = Math.floor(Math.random() * 11) + 5; 
+    AppState.dungeon.progress += contribution;
+    
+    if (AppState.dungeon.progress > 100) AppState.dungeon.progress = 100;
+
+    const btnAction = document.getElementById('btn-raid-action');
+    const originalText = btnAction.innerText;
+    btnAction.innerText = `기여 완료! (+${contribution}%)`; 
+    btnAction.disabled = true;
+    
+    saveUserData(); 
+    renderDungeon(); 
+
+    // 타격감을 위한 짧은 딜레이 후 버튼 다시 활성화
+    setTimeout(() => { 
+        if (AppState.dungeon.progress < 100) {
+            btnAction.innerText = originalText;
+            btnAction.disabled = false;
+        }
+    }, 500); 
+}
+
 function completeDungeon() {
     if(AppState.dungeon.isCleared) return;
     const target = AppState.dungeon.targetStat; const multiplier = Math.floor(Math.random() * 3) + 1; const pts = 100 * multiplier; const statInc = 3.0 * multiplier; 
@@ -556,46 +623,12 @@ async function toggleFriend(targetUid) {
     fetchSocialData(); 
 }
 
-// ★ 수정됨: 실제 GPS 데이터를 불러와 화면에 뿌려주는 완전히 활성화된 기능 ★
 function toggleGPS() {
-    const isChecked = document.getElementById('gps-toggle').checked; 
-    const statusDiv = document.getElementById('gps-status'); 
-    statusDiv.style.display = 'flex';
-    
+    const isChecked = document.getElementById('gps-toggle').checked; const statusDiv = document.getElementById('gps-status'); statusDiv.style.display = 'flex';
     if(isChecked) {
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">위치 탐색 중...</span>`;
-        
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude.toFixed(4);
-                    const lng = position.coords.longitude.toFixed(4);
-                    
-                    // 성공 시 실제 위도/경도를 화면에 표시하고 AppState에 저장
-                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on}<br>(Lat: ${lat}, Lng: ${lng})</span>`;
-                    AppState.user.location = { lat, lng };
-                    saveUserData(); // 위치 정보 서버 전송
-                }, 
-                (error) => {
-                    let errMsg = i18n[AppState.currentLang].gps_err;
-                    if(error.code === 1) errMsg += " (앱 권한 거부됨)";
-                    else if(error.code === 2) errMsg += " (위치 찾을 수 없음)";
-                    else if(error.code === 3) errMsg += " (시간 초과)";
-                    
-                    statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`; 
-                    document.getElementById('gps-toggle').checked = false; 
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        } else {
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">GPS 미지원 기기</span>`;
-            document.getElementById('gps-toggle').checked = false;
-        }
-    } else {
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].gps_off}</span>`;
-        AppState.user.location = null;
-        saveUserData();
-    }
+        statusDiv.innerHTML = '...';
+        if ("geolocation" in navigator) navigator.geolocation.getCurrentPosition(() => statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on}</span>`, () => { statusDiv.innerHTML = `<span style="color:var(--neon-red);">${i18n[AppState.currentLang].gps_err}</span>`; document.getElementById('gps-toggle').checked = false; });
+    } else statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].gps_off}</span>`;
 }
 
 function toggleHealthSync() {
