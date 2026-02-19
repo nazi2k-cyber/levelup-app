@@ -118,7 +118,10 @@
 
             <section id="quests" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
+                        <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
+                    </div>
                     <span style="font-size:0.7rem; color:var(--neon-gold);" data-i18n="quest_hint">※ 완료 시 +20P & 스탯 +0.5</span>
                 </div>
                 <div class="system-card" style="padding:10px;">
@@ -135,7 +138,10 @@
 
             <section id="dungeon" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="raid_title" style="margin:0;">Local Raid</h2>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <h2 data-i18n="raid_title" style="margin:0;">Local Raid</h2>
+                        <button class="btn-info-sm" id="btn-dungeon-info">ℹ️ <span data-i18n="btn_dungeon_info">가이드</span></button>
+                    </div>
                     <span class="dungeon-timer d-none" id="raid-timer">01:59:59</span>
                 </div>
                 
@@ -232,6 +238,17 @@
                 <button class="modal-close" id="btn-history-close">×</button>
             </div>
             <div class="history-list" id="history-list-container"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay d-none" id="infoModal">
+        <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
+            <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
+                <span id="info-modal-title">정보</span>
+                <button class="modal-close" id="btn-info-close">×</button>
+            </div>
+            <div class="modal-body" id="info-modal-body" style="overflow-y: auto; max-height: 60vh;">
+                </div>
         </div>
     </div>
 
