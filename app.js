@@ -18,33 +18,31 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- 상태 관리 객체 ---
-const AppState = {
-    isLoginMode: true,
-    currentLang: 'ko',
-    user: {
-        name: localStorage.getItem('playerName') || "플레이어 (나)",
-        level: 1,
-        points: 50,
-        stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
-        pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
-        titleHistory: [
-            { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } }
-        ],
-        photoURL: null, 
-        friends: []     
-    },
-    quest: {
-        currentDayOfWeek: new Date().getDay(),
-        completedState: Array.from({length: 7}, () => Array(12).fill(false))
-    },
-    social: {
-        mode: 'global',
-        sortCriteria: 'total',
-        users: []
-    },
-    dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
-};
+// --- 상태 관리 객체 (초기 상태 세팅) ---
+let AppState = getInitialAppState();
+
+function getInitialAppState() {
+    return {
+        isLoginMode: true,
+        currentLang: 'ko',
+        user: {
+            name: "플레이어 (나)",
+            level: 1,
+            points: 50,
+            stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+            pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+            titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
+            photoURL: null, 
+            friends: []     
+        },
+        quest: {
+            currentDayOfWeek: new Date().getDay(),
+            completedState: Array.from({length: 7}, () => Array(12).fill(false))
+        },
+        social: { mode: 'global', sortCriteria: 'total', users: [] },
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
+    };
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
@@ -128,6 +126,7 @@ async function saveUserData() {
     }
 }
 
+// ★ 수정됨: 데이터 호출 시 철저한 덮어쓰기 보장 ★
 async function loadUserDataFromDB(user) {
     try {
         const docRef = doc(db, "users", user.uid);
@@ -149,8 +148,14 @@ async function loadUserDataFromDB(user) {
             if(data.photoURL) {
                 AppState.user.photoURL = data.photoURL;
                 document.getElementById('profilePreview').src = data.photoURL;
+            } else {
+                // 사진이 없는 유저라면 기본 이미지로 초기화
+                AppState.user.photoURL = null;
+                document.getElementById('profilePreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
             }
         } else {
+            // 완전 신규 가입자 처리
+            AppState = getInitialAppState(); // 새 계정 초기화 보장
             if (user.displayName) {
                 AppState.user.name = user.displayName;
                 localStorage.setItem('playerName', user.displayName);
@@ -167,7 +172,7 @@ async function loadUserDataFromDB(user) {
     }
 }
 
-// ★ 수정됨 1: 프로필 사진 자동 리사이징 및 압축 (1MB 제한 회피) ★
+// ★ 수정됨: 프로필 저장 시 문서가 없어도 무조건 저장(setDoc) 되도록 수정 ★
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -176,31 +181,24 @@ async function loadProfileImage(event) {
     reader.onload = function(e) {
         const img = new Image();
         img.onload = async function() {
-            // 이미지 크기를 강제로 줄이는 Canvas 로직
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 250; 
-            const MAX_HEIGHT = 250;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-            } else {
-                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-            }
+            const MAX_WIDTH = 250; const MAX_HEIGHT = 250;
+            let width = img.width; let height = img.height;
+            if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+            else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+            
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            // 용량을 확 줄인 JPEG 포맷으로 변환
             const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8); 
-            
             document.getElementById('profilePreview').src = compressedBase64;
             AppState.user.photoURL = compressedBase64;
             
             if(auth.currentUser) {
                 try {
-                    await updateDoc(doc(db, "users", auth.currentUser.uid), { photoURL: compressedBase64 });
+                    // updateDoc 대신 setDoc(merge:true)를 사용하여 안전하게 덮어쓰기
+                    await setDoc(doc(db, "users", auth.currentUser.uid), { photoURL: compressedBase64 }, { merge: true });
                 } catch(error) {
                     alert("사진 저장 실패: 네트워크 오류가 발생했습니다.");
                 }
@@ -212,7 +210,6 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- 로그인 ---
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -243,11 +240,26 @@ async function simulateGoogleLogin() {
     catch(e) { console.error(e); alert("Google 로그인 오류:\n" + e.message); }
 }
 
+// ★ 수정됨: 로그아웃 시 메모리와 저장소의 모든 이전 유저 기록 완벽 삭제 ★
 async function logout() {
     try {
         await fbSignOut(auth);
+        
+        // 1. 로컬 저장소 찌꺼기 완벽 삭제
         localStorage.removeItem('userData'); 
-        document.getElementById('login-email').value = ''; document.getElementById('login-pw').value = ''; document.getElementById('login-pw-confirm').value = '';
+        localStorage.removeItem('questData'); 
+        localStorage.removeItem('dungeonData'); 
+        localStorage.removeItem('profileImage'); 
+        localStorage.removeItem('playerName'); 
+
+        // 2. 메모리(AppState)를 완전히 초기화
+        AppState = getInitialAppState();
+        
+        // 3. UI 폼 초기화
+        document.getElementById('login-email').value = ''; 
+        document.getElementById('login-pw').value = ''; 
+        document.getElementById('login-pw-confirm').value = '';
+        document.getElementById('profilePreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
         
         AppState.isLoginMode = true; 
         document.getElementById('btn-login-submit').setAttribute('data-i18n', 'btn_login_submit');
@@ -506,7 +518,6 @@ function completeDungeon() {
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 }
 
-// ★ 수정됨 2: 친구 목록 로딩 시 글자와 숫자를 정확하게 일치시키도록 수정 ★
 async function fetchSocialData() {
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -523,8 +534,6 @@ async function fetchSocialData() {
 
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data(); const uid = docSnap.id; const isMe = auth.currentUser && auth.currentUser.uid === uid;
-            
-            // 내 친구 목록 배열 안에 현재 유저의 ID가 있는지 문자로 확실하게 비교
             const isFriendCheck = myFriends.some(fid => String(fid) === String(uid));
 
             players.push({
@@ -565,13 +574,11 @@ function renderUsers(criteria, btn = null) {
     });
     container.innerHTML = htmlStr;
     
-    // 버튼 클릭 시 정확한 ID값을 전달하도록 설정
     document.querySelectorAll('.btn-friend').forEach(btn => { 
         btn.addEventListener('click', () => toggleFriend(btn.dataset.id)); 
     });
 }
 
-// ★ 수정됨 2: 친구 추가/삭제 시에도 문자로 일치시키도록 수정 ★
 async function toggleFriend(targetUid) {
     if(!auth.currentUser) return;
     const targetStr = String(targetUid);
