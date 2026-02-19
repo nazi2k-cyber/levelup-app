@@ -72,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateDungeonStatus, 60000); 
 });
 
-// --- 테마 초기화 ---
 function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
@@ -81,7 +80,6 @@ function initTheme() {
     }
 }
 
-// --- 이벤트 바인딩 ---
 function bindEvents() {
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
@@ -111,14 +109,12 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// --- Firebase 데이터 저장 함수 (클라우드 + 로컬) ---
+// --- Firebase 데이터 저장 함수 ---
 async function saveUserData() {
-    // 오프라인 대비용 로컬 저장
     localStorage.setItem('userData', JSON.stringify(AppState.user));
     localStorage.setItem('questData', JSON.stringify(AppState.quest.completedState));
     localStorage.setItem('dungeonData', JSON.stringify(AppState.dungeon));
     
-    // Firebase 클라우드에 영구 저장 (핵심 기능)
     if(auth.currentUser) {
         try {
             await setDoc(doc(db, "users", auth.currentUser.uid), {
@@ -136,7 +132,7 @@ async function saveUserData() {
     }
 }
 
-// --- Firebase 내 데이터 불러오기 ---
+// --- Firebase 내 데이터 불러오기 (구글 연동 업데이트) ---
 async function loadUserDataFromDB(user) {
     try {
         const docRef = doc(db, "users", user.uid);
@@ -155,7 +151,15 @@ async function loadUserDataFromDB(user) {
                 localStorage.setItem('playerName', data.name);
             }
         } else {
-            // 처음 회원가입한 사람의 경우 기본값 저장
+            // [업데이트] 최초 로그인 시, 구글 계정 이름/프사가 있다면 가져오기
+            if (user.displayName) {
+                AppState.user.name = user.displayName;
+                localStorage.setItem('playerName', user.displayName);
+            }
+            if (user.photoURL) {
+                document.getElementById('profilePreview').src = user.photoURL;
+                localStorage.setItem('profileImage', user.photoURL);
+            }
             await saveUserData();
         }
         
@@ -193,7 +197,6 @@ async function fetchSocialData() {
             });
         });
         
-        // 더미 데이터와 실제 유저 데이터를 합침
         AppState.social.users = [...mockSocialData, ...realUsers];
         
         if(document.getElementById('social').classList.contains('active')) {
@@ -249,7 +252,7 @@ function processLevelUp() {
         };
 
         AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
-        saveUserData(); // 서버 저장
+        saveUserData(); 
         
         updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
         alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
@@ -280,7 +283,7 @@ function updatePointUI() {
     });
 }
 
-// --- Firebase 회원가입/로그인 로직 ---
+// --- Firebase 이메일 및 구글 로그인 로직 ---
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -294,11 +297,9 @@ async function simulateLogin() {
 
     try {
         if(!AppState.isLoginMode) {
-            // 회원가입
             if(pw !== pwConfirm) { alert(i18n[AppState.currentLang].pw_mismatch); throw new Error("비밀번호 불일치"); }
             await createUserWithEmailAndPassword(auth, email, pw);
         } else {
-            // 로그인
             await signInWithEmailAndPassword(auth, email, pw);
         }
     } catch (error) {
@@ -310,10 +311,12 @@ async function simulateLogin() {
     }
 }
 
+// [업데이트] 구글 로그인 (팝업창 호출)
 async function simulateGoogleLogin() { 
     try {
         await signInWithPopup(auth, googleProvider);
     } catch(e) {
+        console.error(e);
         alert("Google 로그인 오류:\n" + e.message);
     }
 }
@@ -408,13 +411,13 @@ function changePlayerName() {
     const newName = prompt(i18n[AppState.currentLang].name_prompt);
     if (newName && newName.trim() !== "") {
         const finalName = newName.trim();
-        AppState.user.name = finalName; // 서버에 보낼 이름 변경
+        AppState.user.name = finalName; 
         document.getElementById('prof-name').textContent = finalName;
         document.getElementById('prof-name').removeAttribute('data-i18n');
         localStorage.setItem('lastNameChange', now.toString());
         localStorage.setItem('playerName', finalName);
         
-        saveUserData(); // 변경된 이름 즉시 서버로 전송
+        saveUserData(); 
         renderUsers(AppState.social.sortCriteria);
     }
 }
@@ -503,7 +506,7 @@ function toggleQuest(idx) {
     if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } 
     else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
     
-    saveUserData(); // 클라우드에 퀘스트 완료 내역 저장
+    saveUserData(); 
     renderQuestList(); renderCalendar(); updatePointUI(); 
 }
 
@@ -526,7 +529,7 @@ function renderCalendar() {
     calGrid.innerHTML = htmlStr;
 }
 
-// --- 6종 스탯 던전 (레이드) 로직 ---
+// --- 레이드 로직 ---
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
@@ -669,7 +672,6 @@ function renderUsers(criteria, btn = null) {
     }
     const container = document.getElementById('user-list-container');
     
-    // 현재 유저의 실시간 상태를 랭킹 보드에 덮어쓰기
     const me = AppState.social.users.find(u => u.isMe);
     if(me) {
         statKeys.forEach(k => me[k] = AppState.user.stats[k]);
