@@ -18,27 +18,31 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- 상태 관리 객체 (초기 상태) ---
-let AppState = {
-    isLoginMode: true,
-    currentLang: 'ko',
-    user: {
-        name: localStorage.getItem('playerName') || "신규 헌터",
-        level: 1,
-        points: 50,
-        stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
-        pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
-        titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
-        photoURL: null, 
-        friends: []     
-    },
-    quest: {
-        currentDayOfWeek: new Date().getDay(),
-        completedState: Array.from({length: 7}, () => Array(12).fill(false))
-    },
-    social: { mode: 'global', sortCriteria: 'total', users: [] },
-    dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false, targetStat: 'str', progress: 0, isCleared: false }
-};
+// --- 상태 관리 객체 (초기 상태 세팅) ---
+let AppState = getInitialAppState();
+
+function getInitialAppState() {
+    return {
+        isLoginMode: true,
+        currentLang: 'ko',
+        user: {
+            name: "신규 헌터",
+            level: 1,
+            points: 50,
+            stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+            pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+            titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
+            photoURL: null, 
+            friends: []     
+        },
+        quest: {
+            currentDayOfWeek: new Date().getDay(),
+            completedState: Array.from({length: 7}, () => Array(12).fill(false))
+        },
+        social: { mode: 'global', sortCriteria: 'total', users: [] },
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 4, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
+    };
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
@@ -98,11 +102,9 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
 }
 
-// --- Firebase 데이터 저장 (클라우드 + 로컬) ---
+// ★ 수정됨: 데이터 구조 충돌을 피하기 위해 복잡한 데이터는 "문자열(String)"로 압축해서 저장 ★
 async function saveUserData() {
     localStorage.setItem('userData', JSON.stringify(AppState.user));
-    localStorage.setItem('questData', JSON.stringify(AppState.quest.completedState));
-    localStorage.setItem('dungeonData', JSON.stringify(AppState.dungeon));
     
     if(auth.currentUser) {
         try {
@@ -111,10 +113,12 @@ async function saveUserData() {
                 stats: AppState.user.stats,
                 level: AppState.user.level,
                 points: AppState.user.points,
-                titleHistory: AppState.user.titleHistory,
-                quest: AppState.quest.completedState,
-                dungeon: AppState.dungeon,
-                friends: AppState.user.friends || []
+                // 배열/객체 형태는 에러를 뱉으므로 문자열로 강제 변환하여 저장합니다.
+                titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
+                questStr: JSON.stringify(AppState.quest.completedState),
+                dungeonStr: JSON.stringify(AppState.dungeon),
+                friends: AppState.user.friends || [],
+                photoURL: AppState.user.photoURL || null
             }, { merge: true });
         } catch(e) {
             console.error("클라우드 저장 실패:", e);
@@ -122,65 +126,55 @@ async function saveUserData() {
     }
 }
 
-// ★ 수정됨: 데이터 복구 및 자동 복원(Auto-Repair) 로직 강화 ★
+// ★ 수정됨: 문자열로 저장된 데이터를 불러올 때 다시 배열로 복원 ★
 async function loadUserDataFromDB(user) {
     try {
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         
-        let needsSave = false; // DB가 비어있어서 강제 저장이 필요한지 체크
-
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // 데이터가 있으면 덮어쓰기, 없으면 내 기본값 유지
-            if(data.stats) { AppState.user.stats = data.stats; } else { needsSave = true; }
+            if(data.stats) AppState.user.stats = data.stats;
             if(data.level) AppState.user.level = data.level;
             if(data.points) AppState.user.points = data.points;
-            if(data.titleHistory) AppState.user.titleHistory = data.titleHistory;
-            if(data.quest) AppState.quest.completedState = data.quest;
-            if(data.dungeon) AppState.dungeon = data.dungeon;
+            
+            // 문자열 압축 해제 로직
+            if(data.titleHistoryStr) AppState.user.titleHistory = JSON.parse(data.titleHistoryStr);
+            if(data.questStr) AppState.quest.completedState = JSON.parse(data.questStr);
+            if(data.dungeonStr) AppState.dungeon = JSON.parse(data.dungeonStr);
+            
             if(data.friends) AppState.user.friends = data.friends;
             
             if(data.name) {
                 AppState.user.name = data.name;
-                localStorage.setItem('playerName', data.name);
             } else {
                 AppState.user.name = user.displayName || "신규 헌터";
-                needsSave = true;
             }
 
             if(data.photoURL) {
                 AppState.user.photoURL = data.photoURL;
                 document.getElementById('profilePreview').src = data.photoURL;
             } else {
+                AppState.user.photoURL = null;
                 document.getElementById('profilePreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
             }
         } else {
-            // 완전 신규 유저일 경우
-            if (user.displayName) {
-                AppState.user.name = user.displayName;
-                localStorage.setItem('playerName', user.displayName);
-            }
+            AppState = getInitialAppState(); 
+            if (user.displayName) AppState.user.name = user.displayName;
             if (user.photoURL) {
                 AppState.user.photoURL = user.photoURL;
                 document.getElementById('profilePreview').src = user.photoURL;
             }
-            needsSave = true;
         }
-
+        
         loadPlayerName();
-
-        // 불완전한 계정(Unknown/0스탯) 방지를 위해 서버에 기본값 강제 세팅
-        if (needsSave) {
-            await saveUserData();
-        }
-
+        await saveUserData(); // 누락된 데이터 보정을 위해 로드 후 한 번 저장
     } catch(e) {
         console.error("데이터 로드 실패:", e);
     }
 }
 
-// ★ 수정됨: 사진 저장 시 setDoc을 사용하여 문서 부재 에러 원천 차단 ★
+// ★ 수정됨: 사진을 더 작게(150px) 압축하고, 독립적인 통신 대신 통합 저장(saveUserData) 사용 ★
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -190,7 +184,8 @@ async function loadProfileImage(event) {
         const img = new Image();
         img.onload = async function() {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 250; const MAX_HEIGHT = 250;
+            // 네트워크 오류 방지를 위해 사이즈와 화질을 대폭 낮춤
+            const MAX_WIDTH = 150; const MAX_HEIGHT = 150;
             let width = img.width; let height = img.height;
             if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
             else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
@@ -199,26 +194,19 @@ async function loadProfileImage(event) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8); 
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6); 
             document.getElementById('profilePreview').src = compressedBase64;
-            AppState.user.photoURL = compressedBase64;
             
-            if(auth.currentUser) {
-                try {
-                    // updateDoc 대신 무조건 병합 저장하는 setDoc 사용!
-                    await setDoc(doc(db, "users", auth.currentUser.uid), { photoURL: compressedBase64 }, { merge: true });
-                } catch(error) {
-                    alert("사진 저장 실패: 네트워크 오류가 발생했습니다.\n" + error.message);
-                }
-            }
-            localStorage.setItem('profileImage', compressedBase64);
+            // 상태 업데이트 후 메인 저장 함수 호출
+            AppState.user.photoURL = compressedBase64;
+            await saveUserData();
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
 
-// --- 로그인/로그아웃 ---
+// --- 로그인 ---
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -249,15 +237,12 @@ async function simulateGoogleLogin() {
     catch(e) { console.error(e); alert("Google 로그인 오류:\n" + e.message); }
 }
 
-// ★ 수정됨: 로그아웃 시 메모리 꼬임 방지를 위한 완전 초기화 (새로고침) ★
 async function logout() {
     try {
         await fbSignOut(auth);
-        localStorage.clear(); // 로컬 스토리지의 모든 데이터 완벽 삭제
-        window.location.reload(); // ★ 앱을 완전히 새로고침하여 메모리를 포맷시킴 ★
-    } catch(e) { 
-        console.error("로그아웃 오류:", e); 
-    }
+        localStorage.clear(); 
+        window.location.reload(); 
+    } catch(e) { console.error("로그아웃 오류:", e); }
 }
 
 function toggleAuthMode() {
@@ -314,25 +299,13 @@ function loadPlayerName() {
 }
 
 function changePlayerName() {
-    const lastChanged = localStorage.getItem('lastNameChange');
-    const now = new Date().getTime();
-    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-
-    if (lastChanged && (now - lastChanged) < thirtyDays) {
-        const remain = Math.ceil((thirtyDays - (now - lastChanged)) / (1000*60*60*24));
-        alert(`${i18n[AppState.currentLang].name_err} (${remain}일 후 가능)`); return;
-    }
-
     const newName = prompt(i18n[AppState.currentLang].name_prompt);
     if (newName && newName.trim() !== "") {
-        const finalName = newName.trim();
-        AppState.user.name = finalName; 
-        document.getElementById('prof-name').textContent = finalName;
+        AppState.user.name = newName.trim(); 
+        document.getElementById('prof-name').textContent = AppState.user.name;
         document.getElementById('prof-name').removeAttribute('data-i18n');
-        localStorage.setItem('lastNameChange', now.toString());
-        localStorage.setItem('playerName', finalName);
         
-        saveUserData(); 
+        saveUserData(); // 서버에 변경된 이름 즉시 반영
         renderUsers(AppState.social.sortCriteria);
     }
 }
@@ -367,7 +340,10 @@ function processLevelUp() {
         const randPre = Math.floor(Math.random() * 3); const randSuf = Math.floor(Math.random() * 3);
         const newTitleObj = { ko: `${titleVocab[top1].ko.pre[randPre]} ${titleVocab[top2].ko.suf[randSuf]}`, en: `${titleVocab[top1].en.pre[randPre]} ${titleVocab[top2].en.suf[randSuf]}`, ja: `${titleVocab[top1].ja.pre[randPre]} ${titleVocab[top2].ja.suf[randSuf]}` };
         AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitleObj });
-        saveUserData(); updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
+        
+        saveUserData(); // 변경 사항 서버 저장
+        
+        updatePointUI(); drawRadarChart(); renderUsers(AppState.social.sortCriteria);
         alert(`Level Up! [Lv.${AppState.user.level}]\n새로운 칭호 획득: ${newTitleObj[AppState.currentLang]}`);
     }
 }
@@ -434,7 +410,9 @@ function toggleQuest(idx) {
     const day = AppState.quest.currentDayOfWeek; const state = AppState.quest.completedState[day]; const q = weeklyQuestData[day][idx]; const sKey = q.stat.toLowerCase();
     state[idx] = !state[idx];
     if(state[idx]) { AppState.user.points += 20; AppState.user.pendingStats[sKey] += 0.5; } else { AppState.user.points -= 20; AppState.user.pendingStats[sKey] -= 0.5; }
-    saveUserData(); renderQuestList(); renderCalendar(); updatePointUI(); 
+    
+    saveUserData(); // 체크 즉시 서버 저장
+    renderQuestList(); renderCalendar(); updatePointUI(); 
 }
 
 function renderCalendar() {
@@ -506,29 +484,28 @@ function completeDungeon() {
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 }
 
+// ★ 수정됨: 소셜 탭에서 불러올 때도 압축된 문자열 데이터를 해제하여 반영 ★
 async function fetchSocialData() {
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
         let players = [];
         let myFriends = AppState.user.friends || [];
         
-        if(auth.currentUser) {
-            const myDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
-            if(myDoc.exists() && myDoc.data().friends) { 
-                myFriends = myDoc.data().friends; 
-                AppState.user.friends = myFriends; 
-            }
-        }
-
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data(); const uid = docSnap.id; const isMe = auth.currentUser && auth.currentUser.uid === uid;
             const isFriendCheck = myFriends.some(fid => String(fid) === String(uid));
 
-            // ★수정됨: 이름이 비어있으면 '신규 헌터'로 표시
+            // 압축 해제된 호칭 찾기
+            let userTitle = { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" };
+            if (data.titleHistoryStr) {
+                const hist = JSON.parse(data.titleHistoryStr);
+                userTitle = hist[hist.length - 1].title;
+            } else if (data.titleHistory) {
+                userTitle = data.titleHistory[data.titleHistory.length - 1].title;
+            }
+
             players.push({
-                id: uid, 
-                name: data.name || "신규 헌터", 
-                title: data.titleHistory ? data.titleHistory[data.titleHistory.length - 1].title : "각성자",
+                id: uid, name: data.name || "신규 헌터", title: userTitle,
                 str: data.stats?.str || 0, int: data.stats?.int || 0, cha: data.stats?.cha || 0, vit: data.stats?.vit || 0, wlth: data.stats?.wlth || 0, agi: data.stats?.agi || 0,
                 photoURL: data.photoURL || null, isMe: isMe, isFriend: isFriendCheck
             });
