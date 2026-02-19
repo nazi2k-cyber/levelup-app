@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LEVEL UP: REBOOT</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="login-title">LEVEL UP: REBOOT</div>
+            <div class="login-sub" id="login-desc" data-i18n="login_desc">시스템에 접속하여 현실을 게임처럼.</div>
+            
+            <input type="email" class="login-input" id="login-email" data-i18n-placeholder="ph_email">
+            <input type="password" class="login-input" id="login-pw" data-i18n-placeholder="ph_pw">
+            <div id="pw-hint" class="hint-text" style="display: none;" data-i18n="pw_req_hint">※ 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함</div>
+            <input type="password" class="login-input" id="login-pw-confirm" style="display: none;" data-i18n-placeholder="ph_pw_conf">
+            
+            <div id="disclaimer-box" class="disclaimer-text" style="display: none;" data-i18n="disclaimer_txt">
+                ※ 가입 시 이용약관 및 면책사항에 동의하는 것으로 간주됩니다. 본 앱은 건강 보조 목적이며, 퀘스트 수행 중 발생하는 신체적 부상이나 손해에 대해 일절 책임지지 않습니다.
+            </div>
+
+            <button class="btn-primary" style="margin-bottom: 10px;" id="btn-login-submit" data-i18n="btn_login_submit">시스템 접속</button>
+            <button class="btn-primary btn-google" id="btn-google-login">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.16v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.16C1.43 8.55 1 10.22 1 12s.43 3.45 1.16 4.93l3.68-2.84z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.16 7.07l3.68 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                <span data-i18n="btn_google_login">Google 계정으로 계속</span>
+            </button>
+            <div class="login-toggle" id="auth-toggle-btn" data-i18n="auth_toggle_signup">계정이 없으신가요? 회원가입</div>
+        </div>
+    </div>
+
+    <div id="app-container" style="display: none;">
+        <header>
+            <div id="sys-title">LEVEL UP: REBOOT</div>
+            <div class="level-badge" id="sys-level">Lv. 1</div>
+        </header>
+
+        <main>
+            <section id="status" class="view-section active">
+                <div class="system-card">
+                    <div class="profile-compact-header">
+                        <div class="profile-box">
+                            <div class="profile-image-container">
+                                <img id="profilePreview" class="profile-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Profile">
+                                <label for="imageUpload" class="upload-overlay">📷</label>
+                                <input type="file" id="imageUpload" accept="image/*">
+                            </div>
+                            <div>
+                                <div class="title-badge" id="prof-title-badge" style="cursor:pointer;">신규 각성자 ℹ️</div>
+                                <div class="name-container">
+                                    <div style="font-size: 1rem; font-weight: bold;" id="prof-name" data-i18n="prof_name">플레이어 (나)</div>
+                                    <button class="btn-edit-name" id="btn-edit-name">✏️</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="compact-score-box">
+                            <div style="font-size: 0.65rem; color: var(--text-sub);" data-i18n="tot_score">종합 스코어</div>
+                            <div class="compact-score-val" id="totalScore">0</div>
+                        </div>
+                    </div>
+
+                    <div class="levelup-panel-compact">
+                        <div>
+                            <div style="font-size: 0.65rem; color: var(--text-sub);" data-i18n="avail_pts">보유 포인트</div>
+                            <div style="font-size: 1.3rem; font-weight: 900; color: var(--neon-gold);"><span id="display-pts">0</span><span style="font-size: 0.8rem;"> P</span></div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="font-size: 0.6rem; color: var(--text-sub); text-align: right;">
+                                <span data-i18n="req_pts">요구량:</span><br><span id="display-req-pts">100</span> P
+                            </div>
+                            <button id="btn-levelup" class="btn-primary btn-levelup-sm" data-i18n="btn_lvlup">레벨 업</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="system-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                        <h2 data-i18n="radar_title" style="margin:0;">Stat Radar</h2>
+                        <span style="font-size: 0.65rem; color:var(--neon-gold);" data-i18n="stat_hint">※ 대기 스탯은 레벨업 시 반영됨</span>
+                    </div>
+                    
+                    <div class="radar-chart-container">
+                        <svg class="radar-chart" viewBox="0 0 100 100" id="radarSvg">
+                            <g id="radarGrid"></g><g id="radarAxes"></g>
+                            <polygon id="playerPolygon" class="radar-polygon" points="" />
+                            <g id="radarPoints"></g><g id="radarLabels"></g>
+                        </svg>
+                    </div>
+                    
+                    <div>
+                        <div class="stat-info"><span data-i18n="bar_str">근력 (물리/운동)</span><div><span style="color:var(--neon-blue)" id="barVal_str">0</span><span class="pending-stat" id="pendVal_str"></span></div></div>
+                        <div class="progress-bg"><div class="progress-fill" id="barFill_str"></div></div>
+                        
+                        <div class="stat-info"><span data-i18n="bar_int">지능 (학습/인지)</span><div><span style="color:var(--neon-blue)" id="barVal_int">0</span><span class="pending-stat" id="pendVal_int"></span></div></div>
+                        <div class="progress-bg"><div class="progress-fill" id="barFill_int"></div></div>
+                        
+                        <div class="stat-info"><span data-i18n="bar_cha">매력 (인맥/소통)</span><div><span style="color:var(--neon-blue)" id="barVal_cha">0</span><span class="pending-stat" id="pendVal_cha"></span></div></div>
+                        <div class="progress-bg"><div class="progress-fill" id="barFill_cha"></div></div>
+                        
+                        <div class="stat-info"><span data-i18n="bar_vit">체력 (수면/회복)</span><div><span style="color:var(--neon-blue)" id="barVal_vit">0</span><span class="pending-stat" id="pendVal_vit"></span></div></div>
+                        <div class="progress-bg"><div class="progress-fill" id="barFill_vit"></div></div>
+                        
+                        <div class="stat-info"><span data-i18n="bar_wlth">재력 (자본/투자)</span><div><span style="color:var(--neon-blue)" id="barVal_wlth">0</span><span class="pending-stat" id="pendVal_wlth"></span></div></div>
+                        <div class="progress-bg"><div class="progress-fill" id="barFill_wlth"></div></div>
+                        
+                        <div class="stat-info"><span data-i18n="bar_agi">민첩 (시간/효율)</span><div><span style="color:var(--neon-blue)" id="barVal_agi">0</span><span class="pending-stat" id="pendVal_agi"></span></div></div>
+                        <div class="progress-bg"><div class="progress-fill" id="barFill_agi"></div></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="quests" class="view-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
+                    <span style="font-size:0.7rem; color:var(--neon-gold);" data-i18n="quest_hint">※ 완료 시 +20P & 스탯 +0.5</span>
+                </div>
+                <div class="system-card" style="padding:10px;">
+                    <div class="quest-list-wrapper" id="quest-list-container"></div>
+                </div>
+                <div class="system-card calendar-wrapper">
+                    <div class="cal-header">
+                        <span data-i18n="cal_title">주간 진척도</span>
+                        <span style="font-size:0.75rem; color:var(--text-sub);" id="cal-month"></span>
+                    </div>
+                    <div class="cal-grid" id="calendar-grid"></div>
+                </div>
+            </section>
+
+            <section id="dungeon" class="view-section">
+                <h2 data-i18n="raid_title">Local Raid</h2>
+                <div class="system-card dungeon-banner" id="dungeon-banner">
+                    </div>
+            </section>
+
+            <section id="social" class="view-section">
+                <div class="social-header">
+                    <button class="social-tab-btn active" data-mode="global" data-i18n="soc_global">🏆 글로벌 랭킹</button>
+                    <button class="social-tab-btn" data-mode="friends" data-i18n="soc_friend">👥 내 친구</button>
+                </div>
+                <div id="ranking-controls" class="rank-tabs">
+                    <button class="rank-tab-btn active" data-sort="total" data-i18n="sort_tot">종합스코어</button>
+                    <button class="rank-tab-btn" data-sort="str" data-i18n="sort_str">근력</button>
+                    <button class="rank-tab-btn" data-sort="int" data-i18n="sort_int">지능</button>
+                    <button class="rank-tab-btn" data-sort="cha" data-i18n="sort_cha">매력</button>
+                    <button class="rank-tab-btn" data-sort="vit" data-i18n="sort_vit">체력</button>
+                    <button class="rank-tab-btn" data-sort="wlth" data-i18n="sort_wlth">재력</button>
+                    <button class="rank-tab-btn" data-sort="agi" data-i18n="sort_agi">민첩</button>
+                </div>
+                <div class="user-list" id="user-list-container"></div>
+            </section>
+
+            <section id="settings" class="view-section">
+                <h2 data-i18n="set_title">System Settings</h2>
+                <div class="system-card">
+                    <div class="setting-row">
+                        <span data-i18n="set_lang">언어 (Language)</span>
+                        <select class="custom-select" id="lang-select">
+                            <option value="ko" selected>한국어</option>
+                            <option value="en">English</option>
+                            <option value="ja">日本語</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <span data-i18n="set_theme">라이트 모드</span>
+                        <label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider"></span></label>
+                    </div>
+                </div>
+                <div class="system-card">
+                    <div class="setting-row">
+                        <span data-i18n="set_gps">앱 실행 시 현위치 탐색</span>
+                        <label class="switch"><input type="checkbox" id="gps-toggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row" id="gps-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
+                    
+                    <div class="setting-row">
+                        <span data-i18n="set_sync">건강 앱 동기화</span>
+                        <label class="switch"><input type="checkbox" id="sync-toggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row" id="sync-status" style="font-size:0.7rem; color:var(--neon-blue); display:none; justify-content:flex-end; padding-top:0; text-align:right;"></div>
+                </div>
+                <button class="btn-primary" style="background: #222; border: 1px solid var(--border-color); color: var(--neon-red);" id="btn-logout" data-i18n="set_logout">로그아웃</button>
+            </section>
+        </main>
+
+        <nav>
+            <div class="nav-item active" data-tab="status"><span class="nav-icon">👤</span><span data-i18n="nav_status">상태창</span></div>
+            <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
+            <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
+            <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
+            <div class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
+        </nav>
+    </div>
+
+    <div class="modal-overlay" id="titleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span data-i18n="modal_title">칭호 이력 조회</span>
+                <button class="modal-close" id="btn-history-close">×</button>
+            </div>
+            <div class="history-list" id="history-list-container"></div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

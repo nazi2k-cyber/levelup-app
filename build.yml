@@ -1,0 +1,40 @@
+name: Android APK Build
+
+on:
+  push:
+    branches: [ "main" ] # 코드가 업데이트 될 때마다 실행
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 깃허브의 깨끗한 리눅스 서버 대여
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Node.js 셋업
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Java 셋업 (여기서 자바 에러가 완벽히 해결됨)
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: 모듈 설치 및 동기화 (Node.js 명령어)
+      run: |
+        npm install
+        npx cap sync android
+
+    - name: APK 빌드 (Gradle)
+      run: |
+        cd android
+        chmod +x ./gradlew
+        ./gradlew assembleDebug
+
+    - name: 빌드된 APK 파일 다운로드 제공
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-debug.apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
