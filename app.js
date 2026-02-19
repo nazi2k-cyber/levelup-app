@@ -56,6 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
             
+            // ★ 수정됨: 앱 로그인 직후(상태창 뷰) 메인 화면 스크롤 잠금 ★
+            document.querySelector('main').style.overflowY = 'hidden';
+            
             changeLanguage(AppState.currentLang); 
             renderCalendar(); 
             updatePointUI(); 
@@ -282,8 +285,16 @@ function switchTab(tabId, el) {
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     el.classList.add('active');
     
+    // ★ 수정됨: 탭 이동 시 스크롤 동적 제어 (상태창에서만 잠금) ★
+    const mainEl = document.querySelector('main');
+    if(tabId === 'status') { 
+        mainEl.style.overflowY = 'hidden'; 
+        drawRadarChart(); updatePointUI(); 
+    } else {
+        mainEl.style.overflowY = 'auto';
+    }
+    
     if(tabId === 'social') { fetchSocialData(); } 
-    if(tabId === 'status') { drawRadarChart(); updatePointUI(); }
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
     if(tabId === 'dungeon') { updateDungeonStatus(); }
 }
