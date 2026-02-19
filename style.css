@@ -196,3 +196,14 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 /* 유틸리티 클래스 */
 .d-none { display: none !important; }
 .d-flex { display: flex !important; }
+
+/* --- ★ 추가됨: 작은 화면 기기(세로 700px 이하)에서 상태창 스크롤 고정 시 잘림 방지 --- */
+@media (max-height: 700px) {
+    #status .system-card { padding: 10px; margin-bottom: 8px; }
+    #status h2 { margin-bottom: 6px; }
+    .radar-chart-container { margin: 0 0 5px 0; }
+    .radar-chart { max-width: 120px; }
+    .stat-info { margin-bottom: 0px; font-size: 0.7rem; }
+    .progress-bg { margin-bottom: 4px; height: 3px; }
+    .compact-score-val { font-size: 1.3rem; }
+}
