@@ -46,6 +46,7 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
+        // 던전 기본 데이터 구조
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
     };
 }
@@ -374,7 +375,7 @@ function openStatusInfoModal() {
                 <span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${stat.toUpperCase()}</span><br>
                 <b style="font-size:0.75rem; color:var(--text-main); display:inline-block; margin-top:3px;">${i18n[AppState.currentLang][stat]}</b>
             </td>
-            <td style="color:var(--text-sub); line-height:1.5;">${i18n[AppState.currentLang]['desc_'+stat]}</td>
+            <td style="color:var(--text-sub); line-height:1.5; word-break:keep-all;">${i18n[AppState.currentLang]['desc_'+stat]}</td>
         </tr>`;
     });
     tableHtml += `</tbody></table>`; body.innerHTML = tableHtml;
@@ -508,6 +509,8 @@ function renderCalendar() {
     calGrid.innerHTML = htmlStr;
 }
 
+// 3. 지역은 서울 지하철역 매일 3번 랜덤 지정 (총 3회) 하고 다음날 리셋
+// 2. 레이드 참여 인원 10~100명 (랜덤)
 function updateDungeonStatus() {
     const now = new Date(); const h = now.getHours(); const m = now.getMinutes(); const timeVal = h + m / 60;
     
@@ -524,7 +527,7 @@ function updateDungeonStatus() {
         
         if (currentSlot > 0) { 
             AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
-            AppState.dungeon.participants = Math.floor(Math.random() * 91) + 10; 
+            AppState.dungeon.participants = Math.floor(Math.random() * 91) + 10; // 10~100명 랜덤
             AppState.dungeon.isJoined = false; 
             AppState.dungeon.isCleared = false; 
             AppState.dungeon.progress = 0; 
@@ -539,26 +542,40 @@ function updateDungeonStatus() {
     if (document.getElementById('dungeon').classList.contains('active')) renderDungeon();
 }
 
+// 1. 상태창 가로로 변경 (d-flex 억제하여 block으로 출력)
+// 구글맵 URL 오타 수정 및 정상 연동
 function renderDungeon() {
     const banner = document.getElementById('dungeon-banner'); 
     const activeBoard = document.getElementById('dungeon-active-board'); 
     const timer = document.getElementById('raid-timer');
     
     if (AppState.dungeon.slot === 0) {
-        timer.classList.add('d-none'); activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none'); banner.classList.remove('d-none');
+        timer.classList.add('d-none'); 
+        activeBoard.style.display = 'none'; 
+        banner.style.display = 'block';
         banner.innerHTML = `<h3 style="color: var(--text-sub); margin: 0 0 10px 0; font-size:1.1rem;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
     } else {
         const mission = raidMissions[AppState.dungeon.targetStat]; const st = seoulStations[AppState.dungeon.stationIdx]; const stName = st.name[AppState.currentLang];
         
         if (!AppState.dungeon.isJoined) {
-            timer.classList.add('d-none'); activeBoard.classList.remove('d-flex'); activeBoard.classList.add('d-none'); banner.classList.remove('d-none');
+            timer.classList.add('d-none'); 
+            activeBoard.style.display = 'none'; 
+            banner.style.display = 'block';
             
+            // ★ 수정됨: 구글 지도 URL 파라미터 오타(0{st.lat}) 수정 ★
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
             
-            banner.innerHTML = `<div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div><h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3><div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div><p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px;">${mission.desc1[AppState.currentLang]}</p><div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> 명</div><button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>`;
+            banner.innerHTML = `<div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${mission.color}; border:1px solid ${mission.color}; border-radius:3px; margin-bottom:5px;">${mission.stat} 요구됨</div><h3 class="raid-boss-title" style="color:${mission.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${stName} - ${mission.title[AppState.currentLang]}</h3><div class="map-container"><iframe src="${mapUrl}" allowfullscreen="" loading="lazy"></iframe></div><p class="text-sm text-main mb-5" style="font-size: 0.8rem; margin-bottom: 5px; word-break: keep-all;">${mission.desc1[AppState.currentLang]}</p><div class="raid-participants" style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> 명</div><button id="btn-raid-join" class="btn-primary" style="background:${mission.color}; border-color:${mission.color}; margin-top:10px; color:black;">작전 합류 (입장)</button>`;
             document.getElementById('btn-raid-join').addEventListener('click', joinDungeon);
         } else {
-            banner.classList.add('d-none'); activeBoard.classList.remove('d-none'); activeBoard.classList.add('d-flex'); timer.classList.remove('d-none'); 
+            banner.style.display = 'none'; 
+            
+            // ★ 수정됨: d-flex를 지우고 display: block을 주어 가로로 온전히(글자 세로깨짐 방지) 출력되도록 변경 ★
+            activeBoard.classList.remove('d-none'); 
+            activeBoard.classList.remove('d-flex'); 
+            activeBoard.style.display = 'block'; 
+            
+            timer.classList.remove('d-none'); 
             
             document.getElementById('active-stat-badge').innerText = mission.stat; 
             document.getElementById('active-stat-badge').style.color = mission.color; 
@@ -594,6 +611,7 @@ function joinDungeon() {
     renderDungeon(); 
 }
 
+// 2. 달성률은 참여 인원 클릭을 통한 카운트로 증가
 function simulateRaidAction() { 
     if (AppState.dungeon.progress >= 100) return;
 
