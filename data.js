@@ -10,9 +10,8 @@ const i18n = {
         
         nav_status: "상태창", nav_quest: "퀘스트", nav_dungeon: "던전", nav_social: "소셜", nav_settings: "설정",
         prof_name: "플레이어 (나)", btn_hist: "칭호 이력 조회", avail_pts: "보유 포인트", btn_lvlup: "레벨 업", req_pts: "요구량:",
-        tot_score: "종합 스코어", radar_title: "Stat Radar", stat_hint: "※ 대기 스탯은 레벨업 시 일괄 반영됩니다.",
+        tot_score: "종합 스코어", radar_title: "STAT RADAR", stat_hint: "※ 대기 스탯은 레벨업 시 일괄 반영됩니다.",
         str: "근력", int: "지능", cha: "매력", vit: "체력", wlth: "재력", agi: "민첩",
-        bar_str: "근력 (물리/운동)", bar_int: "지능 (학습/인지)", bar_cha: "매력 (인맥/소통)", bar_vit: "체력 (수면/회복)", bar_wlth: "재력 (자본/투자)", bar_agi: "민첩 (시간/효율)",
         quest_title: "Daily Quests", quest_hint: "※ 완료 시 +20P & 스탯 +0.5", cal_title: "주간 진척도",
         raid_title: "Local Raid", raid_boss: "⚠️ 연합 보스 출현", raid_desc1: "이상 현상이 감지되었습니다.", raid_desc2: "연합 목표를 달성하고 전리품을 획득하세요.", raid_part: "참여 인원: ", raid_btn: "레이드 입장하기", raid_joined: "참여 완료", raid_success: "레이드 완료!", raid_waiting: "던전 출현 대기 중...", raid_time_info: "출현 시간: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 글로벌 랭킹", soc_friend: "👥 내 친구", sort_tot: "종합스코어", sort_str: "근력", sort_int: "지능", sort_cha: "매력", sort_vit: "체력", sort_wlth: "재력", sort_agi: "민첩",
@@ -22,7 +21,15 @@ const i18n = {
         
         btn_quest_info: "가이드", btn_dungeon_info: "가이드",
         modal_quest_title: "주간 퀘스트 목록", modal_dungeon_title: "이상 현상 목록",
-        th_day: "요일", th_stat: "스탯", th_quest: "퀘스트 명", th_raid: "이상 현상", th_req: "요구 데이터"
+        th_day: "요일", th_stat: "스탯", th_quest: "퀘스트 명", th_raid: "이상 현상", th_req: "요구 데이터",
+
+        btn_status_info: "가이드", modal_status_title: "스탯(능력치) 가이드", th_desc: "상세 설명",
+        desc_str: "물리적 힘, 신체 단련, 근력 운동 관련 수치 (예: 헬스, 러닝)",
+        desc_int: "학습, 독서, 인지 능력, 지식 탐구 관련 수치 (예: 공부, 독서)",
+        desc_cha: "인맥 관리, 소통, 외적 매력, 멘탈 케어 수치 (예: 미소, 안부 연락)",
+        desc_vit: "수면, 휴식, 식습관, 생명력 회복 수치 (예: 영양제, 수분 보충)",
+        desc_wlth: "자산 관리, 절약, 경제 지식 등 자본 관련 수치 (예: 무지출, 투자 공부)",
+        desc_agi: "시간 관리, 업무 효율성, 주변 정리 관련 수치 (예: 알람, 뽀모도로)"
     },
     en: {
         login_desc: "Access the system, gamify your life.", btn_login_submit: "System Access (Login)", btn_signup_submit: "Register Player (Sign Up)", 
@@ -35,9 +42,8 @@ const i18n = {
         
         nav_status: "Status", nav_quest: "Quests", nav_dungeon: "Dungeon", nav_social: "Social", nav_settings: "Settings",
         prof_name: "Player (Me)", btn_hist: "Title History", avail_pts: "Available Pts", btn_lvlup: "Level Up", req_pts: "Required:",
-        tot_score: "Total Score", radar_title: "Stat Radar", stat_hint: "※ Pending stats are applied upon Level Up.",
+        tot_score: "Total Score", radar_title: "STAT RADAR", stat_hint: "※ Pending stats are applied upon Level Up.",
         str: "STR", int: "INT", cha: "CHA", vit: "VIT", wlth: "WLTH", agi: "AGI",
-        bar_str: "STR (Physical)", bar_int: "INT (Cognitive)", bar_cha: "CHA (Social)", bar_vit: "VIT (Recovery)", bar_wlth: "WLTH (Capital)", bar_agi: "AGI (Efficiency)",
         quest_title: "Daily Quests", quest_hint: "※ Earn +20P & +0.5 pending stat per quest", cal_title: "Weekly Progress",
         raid_title: "Local Raid", raid_boss: "⚠️ Alliance Boss", raid_desc1: "Anomaly detected.", raid_desc2: "Achieve alliance goals to get loot.", raid_part: "Participants: ", raid_btn: "Enter Raid", raid_joined: "Joined", raid_success: "Raid Success!", raid_waiting: "Waiting for Dungeon...", raid_time_info: "Open Hours: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 Global Rank", soc_friend: "👥 My Friends", sort_tot: "Total", sort_str: "STR", sort_int: "INT", sort_cha: "CHA", sort_vit: "VIT", sort_wlth: "WLTH", sort_agi: "AGI",
@@ -47,7 +53,15 @@ const i18n = {
 
         btn_quest_info: "Guide", btn_dungeon_info: "Guide",
         modal_quest_title: "Weekly Quests", modal_dungeon_title: "Anomaly List",
-        th_day: "Day", th_stat: "Stat", th_quest: "Quest", th_raid: "Anomaly", th_req: "Requirement"
+        th_day: "Day", th_stat: "Stat", th_quest: "Quest", th_raid: "Anomaly", th_req: "Requirement",
+
+        btn_status_info: "Guide", modal_status_title: "Stats Guide", th_desc: "Description",
+        desc_str: "Physical strength, workouts, and fitness. (e.g., Gym, Running)",
+        desc_int: "Learning, reading, and cognitive abilities. (e.g., Study, Books)",
+        desc_cha: "Networking, communication, and charm. (e.g., Smile, Reach out)",
+        desc_vit: "Sleep, rest, diet, and recovery. (e.g., Vitamins, Hydration)",
+        desc_wlth: "Asset management, savings, and wealth. (e.g., No-spend, Finance)",
+        desc_agi: "Time management, efficiency, and cleaning. (e.g., Pomodoro, Routine)"
     },
     ja: {
         login_desc: "システムに接続し、現実をゲームのように。", btn_login_submit: "システム接続 (ログイン)", btn_signup_submit: "新規プレイヤー登録", 
@@ -60,9 +74,8 @@ const i18n = {
 
         nav_status: "ステータス", nav_quest: "クエスト", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
         prof_name: "プレイヤー (私)", btn_hist: "称号履歴", avail_pts: "保有ポイント", btn_lvlup: "レベルUP", req_pts: "必要量:",
-        tot_score: "総合スコア", radar_title: "ステータスレーダー", stat_hint: "※ 待機ステータスはレベルUP時に反映",
+        tot_score: "総合スコア", radar_title: "STAT RADAR", stat_hint: "※ 待機ステータスはレベルUP時に反映",
         str: "筋力", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
-        bar_str: "筋力 (運動)", bar_int: "知能 (認知)", bar_cha: "魅力 (人脈)", bar_vit: "体力 (回復)", bar_wlth: "財力 (資本)", bar_agi: "敏捷 (効率)",
         quest_title: "デイリークエスト", quest_hint: "※ 完了で +20P & 待機ステータス+0.5", cal_title: "週間進捗度",
         raid_title: "ローカルレイド", raid_boss: "⚠️ 連合ボス出現", raid_desc1: "異常現象を感知。", raid_desc2: "連合の目標を達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 グローバルランク", soc_friend: "👥 マイフレンド", sort_tot: "総合", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷",
@@ -72,7 +85,15 @@ const i18n = {
 
         btn_quest_info: "ガイド", btn_dungeon_info: "ガイド",
         modal_quest_title: "週間クエスト一覧", modal_dungeon_title: "異常現象一覧",
-        th_day: "曜日", th_stat: "ステータス", th_quest: "クエスト名", th_raid: "異常現象", th_req: "要求データ"
+        th_day: "曜日", th_stat: "ステータス", th_quest: "クエスト名", th_raid: "異常現象", th_req: "要求データ",
+
+        btn_status_info: "ガイド", modal_status_title: "ステータスガイド", th_desc: "詳細説明",
+        desc_str: "物理的な力、運動、筋力トレーニング関連 (例: ジム、ランニング)",
+        desc_int: "学習、読書、認知能力、知識探求関連 (例: 勉強、読書)",
+        desc_cha: "人脈管理、コミュニケーション、魅力関連 (例: 笑顔、連絡)",
+        desc_vit: "睡眠、休息、食習慣、回復力関連 (例: サプリ、水分補給)",
+        desc_wlth: "資産管理、節約、経済知識などの資本関連 (例: 無支出、投資)",
+        desc_agi: "時間管理、効率性、片付けなどの関連 (例: ポモドーロ、習慣)"
     }
 };
 
