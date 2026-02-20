@@ -121,8 +121,9 @@ function bindEvents() {
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
     
-    document.getElementById('btn-raid-action').addEventListener('click', simulateRaidAction);
-    document.getElementById('btn-raid-complete').addEventListener('click', completeDungeon);
+    // 던전 버튼 이벤트
+    document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
+    document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 }
 
 // --- 데이터 저장/로드 ---
@@ -337,7 +338,7 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- 던전 로직 ---
+// --- ★ 3. 던전 (구글 맵 & 입장 후 화면) 완전 복원 ★ ---
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours();
@@ -369,29 +370,43 @@ function updateDungeonStatus() {
 
 function renderDungeon() {
     const banner = document.getElementById('dungeon-banner');
-    const board = document.getElementById('dungeon-active-board');
-    if(!banner || !board) return;
+    const activeBoard = document.getElementById('dungeon-active-board');
+    const timer = document.getElementById('raid-timer');
+    if(!banner || !activeBoard) return;
 
     if (AppState.dungeon.slot === 0) {
-        board.style.display = 'none'; 
-        banner.style.display = 'block';
-        banner.innerHTML = `<h3 style="color:var(--text-sub);">${i18n[AppState.currentLang].raid_waiting}</h3>`;
+        // 출현 대기 상태
+        if(timer) timer.classList.add('d-none');
+        activeBoard.classList.add('d-none'); 
+        banner.classList.remove('d-none');
+        banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
     } else {
         const m = raidMissions[AppState.dungeon.targetStat];
         const st = seoulStations[AppState.dungeon.stationIdx];
         
         if (!AppState.dungeon.isJoined) {
-            board.style.display = 'none'; 
-            banner.style.display = 'block';
+            // 입장 전 (구글 맵 표시)
+            if(timer) timer.classList.add('d-none');
+            activeBoard.classList.add('d-none'); 
+            banner.classList.remove('d-none');
+            
+            const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
+
             banner.innerHTML = `
-                <div style="padding:15px; border:1px solid ${m.color}; border-radius:10px; background:rgba(255,255,255,0.02);">
-                    <h3 style="color:${m.color}; margin-bottom:10px;">📍 ${st.name[AppState.currentLang]} - ${m.title[AppState.currentLang]}</h3>
-                    <button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border:none;">입장하기</button>
+                <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
+                <h3 class="raid-boss-title" style="color:${m.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${st.name[AppState.currentLang]} - ${m.title[AppState.currentLang]}</h3>
+                <div class="map-container" style="width:100%; height:180px; border-radius:6px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border-color);">
+                    <iframe src="${mapUrl}" style="width:100%; height:100%; border:none;" allowfullscreen="" loading="lazy"></iframe>
                 </div>
+                <p style="font-size: 0.8rem; margin-bottom: 5px; color:var(--text-main); word-break:keep-all;">${m.desc1[AppState.currentLang]}</p>
+                <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> 명</div>
+                <button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>
             `;
         } else {
-            banner.style.display = 'none'; 
-            board.style.display = 'block';
+            // 입장 후 (진행률 보드 표시)
+            if(timer) timer.classList.remove('d-none');
+            banner.classList.add('d-none'); 
+            activeBoard.classList.remove('d-none'); // 여기서 빈화면이 되던 충돌 해결!
             
             document.getElementById('active-stat-badge').innerText = m.stat;
             document.getElementById('active-stat-badge').style.borderColor = m.color;
@@ -406,6 +421,8 @@ function renderDungeon() {
             const btnAction = document.getElementById('btn-raid-action');
             const btnComplete = document.getElementById('btn-raid-complete');
             
+            btnAction.innerText = m.actionText[AppState.currentLang]; // 동기화 텍스트 복원
+
             if (AppState.dungeon.progress >= 100) {
                 btnAction.classList.add('d-none');
                 btnComplete.classList.remove('d-none');
@@ -425,24 +442,44 @@ window.joinDungeon = () => {
     renderDungeon();
 };
 
-function simulateRaidAction() {
-    AppState.dungeon.progress = Math.min(100, AppState.dungeon.progress + 10);
+window.simulateRaidAction = () => {
+    if (AppState.dungeon.progress >= 100) return;
+    
+    const contribution = Math.floor(Math.random() * 11) + 5; 
+    AppState.dungeon.progress = Math.min(100, AppState.dungeon.progress + contribution);
+    
+    const btn = document.getElementById('btn-raid-action');
+    const origText = btn.innerText;
+    btn.innerText = `기여 완료! (+${contribution}%)`;
+    btn.disabled = true;
+
     saveUserData(); 
     renderDungeon();
-}
+    
+    setTimeout(() => {
+        if (AppState.dungeon.progress < 100) {
+            btn.innerText = origText;
+            btn.disabled = false;
+        }
+    }, 500);
+};
 
-function completeDungeon() {
+window.completeDungeon = () => {
     if(AppState.dungeon.isCleared) return;
     const target = AppState.dungeon.targetStat;
-    AppState.user.points += 200;
-    AppState.user.pendingStats[target] += 2.0;
+    const pts = 200;
+    const statInc = 2.0;
+    
+    AppState.user.points += pts;
+    AppState.user.pendingStats[target] += statInc;
     AppState.dungeon.isCleared = true;
     AppState.dungeon.progress = 100;
+    
     saveUserData(); 
     renderDungeon(); 
     updatePointUI();
-    alert("레이드 성공! 보상을 획득했습니다.");
-}
+    alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
+};
 
 // --- 공통 UI ---
 function switchTab(tabId, el) {
@@ -648,7 +685,7 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- ★ 1. 모달 팝업창 디자인 구체화 복원 ★ ---
+// --- 팝업 모달 ---
 function closeInfoModal() { 
     const m = document.getElementById('infoModal'); 
     m.classList.add('d-none'); 
@@ -758,7 +795,7 @@ function changeTheme() {
     localStorage.setItem('theme', light ? 'light' : 'dark'); 
 }
 
-// --- ★ 2. GPS 및 건강 데이터 연동 기능 복원 ★ ---
+// --- GPS 및 건강 데이터 설정 ---
 function toggleGPS() {
     const isChecked = document.getElementById('gps-toggle').checked;
     const statusDiv = document.getElementById('gps-status');
