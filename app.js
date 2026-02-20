@@ -18,7 +18,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const googleProvider = new GoogleAuthProvider();
-// 피트니스 데이터 접근 권한 요청
 googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -105,7 +104,6 @@ function bindEvents() {
     document.getElementById('btn-edit-insta').addEventListener('click', changeInstaId);
     document.getElementById('imageUpload').addEventListener('change', loadProfileImage); 
     
-    // 모달(팝업창) 이벤트
     document.getElementById('prof-title-badge').addEventListener('click', openTitleModal);
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
     document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
@@ -117,7 +115,6 @@ function bindEvents() {
     document.querySelectorAll('.social-tab-btn').forEach(btn => { btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn)); });
     document.querySelectorAll('.rank-tab-btn').forEach(btn => { btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn)); });
 
-    // 설정 탭 이벤트
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
@@ -502,8 +499,6 @@ function processLevelUp() {
     
     saveUserData(); updatePointUI(); drawRadarChart();
     alert("Level Up!");
-    
-    // 레벨업 시 칭호 팝업 즉시 열기
     openTitleModal();
 }
 
@@ -653,7 +648,7 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- ★ 1. 모달 팝업창 완전 복원 (d-flex 제어 방식 적용) ★ ---
+// --- ★ 1. 모달 팝업창 디자인 구체화 복원 ★ ---
 function closeInfoModal() { 
     const m = document.getElementById('infoModal'); 
     m.classList.add('d-none'); 
@@ -680,8 +675,10 @@ function openTitleModal() {
 function openStatusInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
     const body = document.getElementById('info-modal-body');
-    let html = `<table class="info-table"><thead><tr><th>스탯</th><th>설명</th></tr></thead><tbody>`;
-    statKeys.forEach(k => { html += `<tr><td style="text-align:center"><b>${i18n[AppState.currentLang][k]}</b></td><td>${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; });
+    let html = `<table class="info-table"><thead><tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_desc}</th></tr></thead><tbody>`;
+    statKeys.forEach(k => { 
+        html += `<tr><td style="text-align:center"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${k.toUpperCase()}</span><br><b style="font-size:0.75rem; color:var(--text-main); display:inline-block; margin-top:3px;">${i18n[AppState.currentLang][k]}</b></td><td style="color:var(--text-sub); line-height:1.5;">${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; 
+    });
     body.innerHTML = html + `</tbody></table>`;
     const m = document.getElementById('infoModal'); 
     m.classList.remove('d-none'); 
@@ -689,11 +686,34 @@ function openStatusInfoModal() {
 }
 
 function openQuestInfoModal() {
-    document.getElementById('info-modal-title').innerText = "퀘스트 DB";
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_quest_title || "주간 퀘스트 목록";
     const body = document.getElementById('info-modal-body');
-    const dayNames = ["일","월","화","수","목","금","토"];
-    let html = `<table class="info-table"><thead><tr><th>요일</th><th>미션</th></tr></thead><tbody>`;
-    weeklyQuestData.forEach((day, i) => { html += `<tr><td style="text-align:center"><b>${dayNames[i]}</b></td><td>${day[0].title.ko} 외 11건</td></tr>`; });
+    const dayNames = { ko: ["일","월","화","수","목","금","토"], en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja: ["日","月","火","水","木","金","土"] };
+    
+    let html = `<table class="info-table">
+        <thead>
+            <tr>
+                <th>${i18n[AppState.currentLang].th_day}</th>
+                <th>${i18n[AppState.currentLang].th_stat}</th>
+                <th>${i18n[AppState.currentLang].th_quest}</th>
+            </tr>
+        </thead>
+        <tbody>`;
+    
+    weeklyQuestData.forEach((dayQuests, i) => { 
+        dayQuests.forEach((q, j) => {
+            const rowSpan = j === 0 ? `<td rowspan="${dayQuests.length}" style="text-align:center; vertical-align:middle; background:rgba(255,255,255,0.05);"><b>${dayNames[AppState.currentLang][i]}</b></td>` : '';
+            const title = q.title[AppState.currentLang] || q.title.ko;
+            const desc = q.desc[AppState.currentLang] || q.desc.ko;
+
+            html += `<tr>
+                ${rowSpan}
+                <td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${q.stat}</span></td>
+                <td><b style="color:var(--text-main);">${title}</b><br><span style="font-size:0.65rem; color:var(--text-sub);">${desc}</span></td>
+            </tr>`; 
+        }); 
+    });
+    
     body.innerHTML = html + `</tbody></table>`;
     const m = document.getElementById('infoModal'); 
     m.classList.remove('d-none'); 
@@ -701,10 +721,31 @@ function openQuestInfoModal() {
 }
 
 function openDungeonInfoModal() {
-    document.getElementById('info-modal-title').innerText = "이상 현상 목록";
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title || "이상 현상 목록";
     const body = document.getElementById('info-modal-body');
-    let html = `<table class="info-table"><thead><tr><th>분류</th><th>현상</th></tr></thead><tbody>`;
-    Object.keys(raidMissions).forEach(k => { html += `<tr><td>${raidMissions[k].stat}</td><td>${raidMissions[k].title.ko}</td></tr>`; });
+    
+    let html = `<table class="info-table">
+        <thead>
+            <tr>
+                <th>${i18n[AppState.currentLang].th_stat}</th>
+                <th>${i18n[AppState.currentLang].th_raid}</th>
+                <th>${i18n[AppState.currentLang].th_req}</th>
+            </tr>
+        </thead>
+        <tbody>`;
+    
+    Object.keys(raidMissions).forEach(k => { 
+        const m = raidMissions[k];
+        const title = m.title[AppState.currentLang] || m.title.ko;
+        const reqTask = m.desc2[AppState.currentLang] || m.desc2.ko;
+
+        html += `<tr>
+            <td style="text-align:center; vertical-align:middle;"><span class="quest-stat-tag" style="border-color:${m.color}; color:${m.color};">${m.stat}</span></td>
+            <td style="word-break:keep-all; font-weight:bold; color:var(--text-main);">${title}</td>
+            <td style="word-break:keep-all; color:var(--text-sub); font-size:0.75rem;">${reqTask}</td>
+        </tr>`; 
+    });
+    
     body.innerHTML = html + `</tbody></table>`;
     const m = document.getElementById('infoModal'); 
     m.classList.remove('d-none'); 
