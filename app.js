@@ -46,7 +46,6 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        // ★ maxParticipants 추가
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, maxParticipants: 5, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
     };
 }
@@ -160,7 +159,6 @@ async function loadUserDataFromDB(user) {
             if(data.questStr) AppState.quest.completedState = JSON.parse(data.questStr);
             if(data.dungeonStr) {
                 AppState.dungeon = JSON.parse(data.dungeonStr);
-                // 구버전 데이터 호환 방어코드
                 if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
             }
             if(data.friends) AppState.user.friends = data.friends;
@@ -341,7 +339,7 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- ★ 던전 로직 (참여인원 제한 및 모달 업데이트) ★ ---
+// --- ★ 던전 로직 (시간 변경 및 적용) ★ ---
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours();
@@ -349,9 +347,10 @@ function updateDungeonStatus() {
     const timeVal = h + m / 60;
     
     let currentSlot = 0;
-    if (timeVal >= 6 && timeVal < 8) currentSlot = 1; 
-    else if (timeVal >= 11.5 && timeVal < 13.5) currentSlot = 2; 
-    else if (timeVal >= 19 && timeVal < 21) currentSlot = 3;
+    // 변경된 출현 시간: 06~09 / 11~14 / 18~21
+    if (timeVal >= 6 && timeVal < 9) currentSlot = 1; 
+    else if (timeVal >= 11 && timeVal < 14) currentSlot = 2; 
+    else if (timeVal >= 18 && timeVal < 21) currentSlot = 3;
 
     const dateStr = now.toDateString(); 
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
@@ -360,9 +359,8 @@ function updateDungeonStatus() {
         
         if (currentSlot > 0) { 
             AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
-            // ★ 테스트를 위해 전체 인원 5명 고정, 현재 인원 0~4명 사이로 배정 ★
             AppState.dungeon.maxParticipants = 5; 
-            AppState.dungeon.participants = Math.floor(Math.random() * 5); // 0명 ~ 4명
+            AppState.dungeon.participants = Math.floor(Math.random() * 5); // 0~4명 사이로 설정
             AppState.dungeon.isJoined = false; 
             AppState.dungeon.isCleared = false; 
             AppState.dungeon.progress = 0; 
@@ -383,7 +381,13 @@ function renderDungeon() {
         if(timer) timer.classList.add('d-none');
         activeBoard.classList.add('d-none'); 
         banner.classList.remove('d-none');
-        banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${i18n[AppState.currentLang].raid_time_info}</p>`;
+        
+        // 언어별 시간에 맞게 문구 변경 (동적 적용)
+        const timeStr = AppState.currentLang === 'ko' ? "출현 시간: 06:00~09:00 | 11:00~14:00 | 18:00~21:00" :
+                        AppState.currentLang === 'en' ? "Open: 06:00~09:00 | 11:00~14:00 | 18:00~21:00" :
+                        "出現時間: 06:00~09:00 | 11:00~14:00 | 18:00~21:00";
+        
+        banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${timeStr}</p>`;
     } else {
         const m = raidMissions[AppState.dungeon.targetStat];
         const st = seoulStations[AppState.dungeon.stationIdx];
@@ -395,7 +399,6 @@ function renderDungeon() {
             
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
             
-            // ★ 입장 제한 버튼 UI 처리 ★
             const isFull = AppState.dungeon.participants >= AppState.dungeon.maxParticipants;
             const joinBtnHtml = isFull 
                 ? `<button disabled class="btn-primary" style="background:#333; border-color:#333; margin-top:10px; color:#888; font-weight:bold; cursor:not-allowed;">정원 초과 (입장 불가)</button>`
@@ -425,7 +428,6 @@ function renderDungeon() {
             document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
             document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
             
-            // ★ 입장 후 활성화 보드 참여인원 표시 ★
             document.getElementById('raid-part-count').innerText = `${AppState.dungeon.participants} / ${AppState.dungeon.maxParticipants}`;
             document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`;
             document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
@@ -447,7 +449,6 @@ function renderDungeon() {
 }
 
 window.joinDungeon = () => {
-    // 혹시 모를 더블 클릭 방어 코드
     if(AppState.dungeon.participants >= AppState.dungeon.maxParticipants) {
         alert("이미 정원이 초과되었습니다.");
         return;
@@ -702,7 +703,7 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- 팝업 모달 ---
+// --- ★ 팝업 모달창 스크롤 방지 UI 최적화 ★ ---
 function closeInfoModal() { 
     const m = document.getElementById('infoModal'); 
     m.classList.add('d-none'); 
@@ -778,12 +779,12 @@ function openDungeonInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title || "이상 현상 목록";
     const body = document.getElementById('info-modal-body');
     
-    // ★ 상단 던전 개방 시간 표기 추가 ★
+    // ★ 폰트 크기 및 여백 조정 (스크롤 방지) ★
     const timeInfoHtml = `
-        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:12px; border-radius:8px; margin-bottom:15px; text-align:center;">
-            <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:5px;">🕒 던전 시스템 개방 시간 (KST)</div>
-            <div style="font-weight:bold; color:var(--neon-blue); font-size:0.95rem; letter-spacing:0.5px;">
-                06:00~08:00 &nbsp;|&nbsp; 11:30~13:30 &nbsp;|&nbsp; 19:00~21:00
+        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:8px; border-radius:6px; margin-bottom:10px; text-align:center;">
+            <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:3px;">🕒 던전 시스템 개방 시간 (KST)</div>
+            <div style="font-weight:bold; color:var(--neon-blue); font-size:0.8rem; letter-spacing:0.5px;">
+                06:00~09:00 &nbsp;|&nbsp; 11:00~14:00 &nbsp;|&nbsp; 18:00~21:00
             </div>
         </div>
     `;
