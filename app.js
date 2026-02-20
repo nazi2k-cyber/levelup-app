@@ -21,7 +21,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// --- 상태 관리 객체 ---
+// --- 상태 관리 객체 (기본값 설정) ---
 let AppState = getInitialAppState();
 
 function getInitialAppState() {
@@ -50,7 +50,7 @@ function getInitialAppState() {
     };
 }
 
-// --- 초기화 및 인증 감지 ---
+// --- 앱 초기 로드 ---
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     bindEvents();
@@ -61,13 +61,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('login-screen').classList.add('d-none');
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
+            
+            // 상태창 스크롤 제어
             document.querySelector('main').style.overflowY = 'hidden';
             
+            // 초기 렌더링 실행 (데이터 복구 핵심)
             changeLanguage(AppState.currentLang); 
             renderCalendar(); 
             updatePointUI(); 
             drawRadarChart(); 
             updateDungeonStatus();
+            renderQuestList(); // ★ 추가: 퀘스트 즉시 렌더링
             fetchSocialData(); 
             
             if (AppState.user.syncEnabled) { syncHealthData(false); }
@@ -88,6 +92,7 @@ function initTheme() {
     }
 }
 
+// --- 이벤트 바인딩 ---
 function bindEvents() {
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
@@ -117,9 +122,13 @@ function bindEvents() {
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
+    
+    // 던전 레이드 액션 버튼
+    document.getElementById('btn-raid-action').addEventListener('click', simulateRaidAction);
+    document.getElementById('btn-raid-complete').addEventListener('click', completeDungeon);
 }
 
-// --- DB 통신 ---
+// --- 데이터 저장/로드 ---
 async function saveUserData() {
     if(!auth.currentUser) return;
     try {
@@ -137,7 +146,7 @@ async function saveUserData() {
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "" 
         }, { merge: true });
-    } catch(e) { console.error("데이터 저장 실패:", e); }
+    } catch(e) { console.error("DB 저장 실패:", e); }
 }
 
 async function loadUserDataFromDB(user) {
@@ -165,60 +174,201 @@ async function loadUserDataFromDB(user) {
             }
         }
         loadPlayerName();
-    } catch(e) { console.error("데이터 로드 실패:", e); }
+    } catch(e) { console.error("데이터 로드 에러:", e); }
 }
 
-// --- 로그인 시스템 (보안 및 오류 추적 강화) ---
-async function simulateLogin() {
-    const email = document.getElementById('login-email').value;
-    const pw = document.getElementById('login-pw').value;
-    const btn = document.getElementById('btn-login-submit');
-    if(!email || !pw) { alert(i18n[AppState.currentLang].login_err_empty || "이메일과 비밀번호를 입력해주세요."); return; }
-    btn.innerText = "접속 중..."; btn.disabled = true;
-    try {
-        if(!AppState.isLoginMode) { 
-            const pwConfirm = document.getElementById('login-pw-confirm').value;
-            if(pw !== pwConfirm) throw new Error("비밀번호 불일치");
-            await createUserWithEmailAndPassword(auth, email, pw);
-        } else { await signInWithEmailAndPassword(auth, email, pw); }
-    } catch (e) { 
-        console.error(e);
-        alert("로그인 실패: " + e.message); 
-    } finally { 
-        btn.innerText = AppState.isLoginMode ? "시스템 접속" : "회원가입"; 
-        btn.disabled = false; 
+// --- 1. 스탯창 레이더 복원 ---
+function drawRadarChart() {
+    const centerX = 50, centerY = 50, radius = 33;
+    const angles = statKeys.map((_, i) => -Math.PI/2 + (i * Math.PI/3));
+    let points = "";
+    
+    statKeys.forEach((k, i) => {
+        // 숫자가 아닌 경우 0으로 처리 (복구 로직)
+        const val = Number(AppState.user.stats[k]) || 0;
+        const r = radius * (val / 100);
+        const x = centerX + r * Math.cos(angles[i]);
+        const y = centerY + r * Math.sin(angles[i]);
+        points += `${x},${y} `;
+        
+        // 하단 텍스트 스탯바 업데이트
+        const barVal = document.getElementById(`barVal_${k}`);
+        const barFill = document.getElementById(`barFill_${k}`);
+        if(barVal) barVal.innerText = val;
+        if(barFill) barFill.style.width = `${val}%`;
+    });
+    
+    const poly = document.getElementById('playerPolygon');
+    if(poly) poly.setAttribute('points', points.trim());
+    
+    // 종합 스코어 계산
+    const total = statKeys.reduce((s,k) => s + (Number(AppState.user.stats[k])||0), 0);
+    const totalEl = document.getElementById('totalScore');
+    if(totalEl) totalEl.innerText = total;
+}
+
+// --- 2. 퀘스트 및 진척도 복원 ---
+function renderQuestList() {
+    const container = document.getElementById('quest-list-container');
+    if(!container) return;
+    
+    const day = AppState.quest.currentDayOfWeek;
+    const quests = weeklyQuestData[day];
+    
+    container.innerHTML = quests.map((q, i) => {
+        const isDone = AppState.quest.completedState[day][i];
+        return `
+            <div class="quest-row ${isDone ? 'done' : ''}" onclick="toggleQuest(${i})">
+                <div>
+                    <div class="quest-title"><span class="quest-stat-tag">${q.stat}</span>${q.title[AppState.currentLang]}</div>
+                    <div class="quest-desc">${q.desc[AppState.currentLang]}</div>
+                </div>
+                <div class="quest-checkbox"></div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.toggleQuest = (i) => {
+    const day = AppState.quest.currentDayOfWeek;
+    const state = AppState.quest.completedState[day];
+    state[i] = !state[i];
+    
+    const q = weeklyQuestData[day][i];
+    const factor = state[i] ? 1 : -1;
+    
+    AppState.user.points += (20 * factor);
+    AppState.user.pendingStats[q.stat.toLowerCase()] += (0.5 * factor);
+    
+    saveUserData(); 
+    renderQuestList(); 
+    renderCalendar(); 
+    updatePointUI();
+};
+
+function renderCalendar() {
+    const container = document.getElementById('calendar-grid');
+    if(!container) return;
+    
+    const today = new Date();
+    const monthEl = document.getElementById('cal-month');
+    if(monthEl) monthEl.innerText = today.toDateString().split(' ')[1];
+    
+    container.innerHTML = AppState.quest.completedState.map((s, i) => `
+        <div class="cal-day ${i === AppState.quest.currentDayOfWeek ? 'today' : ''}">
+            <div class="cal-date">${s.filter(v=>v).length}/12</div>
+        </div>
+    `).join('');
+}
+
+// --- 3. 던전 기능 복원 ---
+function updateDungeonStatus() {
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+    const timeVal = h + m / 60;
+    
+    let currentSlot = 0;
+    if (timeVal >= 6 && timeVal < 8) currentSlot = 1; 
+    else if (timeVal >= 11.5 && timeVal < 13.5) currentSlot = 2; 
+    else if (timeVal >= 19 && timeVal < 21) currentSlot = 3;
+
+    const dateStr = now.toDateString(); 
+    if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
+        AppState.dungeon.lastGeneratedDate = dateStr; 
+        AppState.dungeon.slot = currentSlot;
+        
+        if (currentSlot > 0) { 
+            AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
+            AppState.dungeon.participants = Math.floor(Math.random() * 91) + 10; 
+            AppState.dungeon.isJoined = false; 
+            AppState.dungeon.isCleared = false; 
+            AppState.dungeon.progress = 0; 
+            AppState.dungeon.targetStat = statKeys[Math.floor(Math.random() * 6)];
+        }
+        saveUserData();
     }
+    renderDungeon();
 }
 
-async function simulateGoogleLogin() { 
-    try { 
-        const result = await signInWithPopup(auth, googleProvider); 
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        if (credential?.accessToken) { localStorage.setItem('gfit_token', credential.accessToken); }
-    } catch(e) { 
-        console.error(e); 
-        if(e.code === 'auth/unauthorized-domain') {
-            alert("보안 오류: 파이어베이스 콘솔에서 'up-reboot.vercel.app' 도메인을 승인해야 합니다.");
-        } else if(e.code === 'auth/popup-blocked') {
-            alert("팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.");
+function renderDungeon() {
+    const banner = document.getElementById('dungeon-banner');
+    const board = document.getElementById('dungeon-active-board');
+    if(!banner || !board) return;
+
+    if (AppState.dungeon.slot === 0) {
+        board.style.display = 'none'; 
+        banner.style.display = 'block';
+        banner.innerHTML = `<h3 style="color:var(--text-sub);">${i18n[AppState.currentLang].raid_waiting}</h3>`;
+    } else {
+        const m = raidMissions[AppState.dungeon.targetStat];
+        const st = seoulStations[AppState.dungeon.stationIdx];
+        
+        if (!AppState.dungeon.isJoined) {
+            board.style.display = 'none'; 
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div style="padding:15px; border:1px solid ${m.color}; border-radius:10px; background:rgba(255,255,255,0.02);">
+                    <h3 style="color:${m.color}; margin-bottom:10px;">📍 ${st.name[AppState.currentLang]} - ${m.title[AppState.currentLang]}</h3>
+                    <button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border:none;">입장하기</button>
+                </div>
+            `;
         } else {
-            alert("Google 로그인 실패: " + e.message);
+            banner.style.display = 'none'; 
+            board.style.display = 'block';
+            
+            document.getElementById('active-stat-badge').innerText = m.stat;
+            document.getElementById('active-stat-badge').style.borderColor = m.color;
+            document.getElementById('active-stat-badge').style.color = m.color;
+            document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
+            document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
+            
+            document.getElementById('raid-part-count').innerText = AppState.dungeon.participants;
+            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`;
+            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
+            
+            const btnAction = document.getElementById('btn-raid-action');
+            const btnComplete = document.getElementById('btn-raid-complete');
+            
+            if (AppState.dungeon.progress >= 100) {
+                btnAction.classList.add('d-none');
+                btnComplete.classList.remove('d-none');
+            } else {
+                btnAction.classList.remove('d-none');
+                btnComplete.classList.add('d-none');
+            }
         }
     }
 }
 
-async function logout() { await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+window.joinDungeon = () => {
+    AppState.dungeon.isJoined = true;
+    AppState.dungeon.participants++;
+    AppState.dungeon.progress = Math.floor(Math.random() * 20) + 20; 
+    saveUserData(); 
+    renderDungeon();
+};
 
-function toggleAuthMode() {
-    AppState.isLoginMode = !AppState.isLoginMode;
-    const btnSubmit = document.getElementById('btn-login-submit');
-    const toggleText = document.getElementById('auth-toggle-btn');
-    document.getElementById('login-pw-confirm').classList.toggle('d-none', AppState.isLoginMode);
-    btnSubmit.innerText = AppState.isLoginMode ? "시스템 접속" : "플레이어 등록";
-    toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
+function simulateRaidAction() {
+    AppState.dungeon.progress = Math.min(100, AppState.dungeon.progress + 10);
+    saveUserData(); 
+    renderDungeon();
 }
 
-// --- 탭 이동 및 UI ---
+function completeDungeon() {
+    if(AppState.dungeon.isCleared) return;
+    const target = AppState.dungeon.targetStat;
+    AppState.user.points += 200;
+    AppState.user.pendingStats[target] += 2.0;
+    AppState.dungeon.isCleared = true;
+    AppState.dungeon.progress = 100;
+    saveUserData(); 
+    renderDungeon(); 
+    updatePointUI();
+    alert("레이드 성공! 보상을 획득했습니다.");
+}
+
+// --- 공통 유틸리티 ---
 function switchTab(tabId, el) {
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -238,21 +388,207 @@ function switchTab(tabId, el) {
     if(tabId === 'dungeon') updateDungeonStatus();
 }
 
-function loadPlayerName() { document.getElementById('prof-name').textContent = AppState.user.name; }
-function changePlayerName() {
-    const newName = prompt(i18n[AppState.currentLang].name_prompt || "이름 변경");
-    if (newName?.trim()) {
-        AppState.user.name = newName.trim();
-        document.getElementById('prof-name').textContent = AppState.user.name;
-        saveUserData();
-    }
+function updatePointUI() {
+    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
+    document.getElementById('sys-level').innerText = `Lv. ${AppState.user.level}`;
+    document.getElementById('display-pts').innerText = AppState.user.points;
+    document.getElementById('display-req-pts').innerText = req;
+    document.getElementById('btn-levelup').disabled = AppState.user.points < req;
+    
+    const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title;
+    const titleText = typeof titleObj === 'object' ? titleObj[AppState.currentLang] || titleObj.ko : titleObj;
+    document.getElementById('prof-title-badge').innerHTML = `${titleText} ℹ️`;
+
+    statKeys.forEach(k => {
+        const p = AppState.user.pendingStats[k];
+        const el = document.getElementById(`pendVal_${k}`);
+        if(el) el.innerText = p > 0 ? `(+${p.toFixed(1)})` : "";
+    });
 }
-function changeInstaId() {
-    const newId = prompt(i18n[AppState.currentLang].insta_prompt || "인스타 ID", AppState.user.instaId);
-    if (newId !== null) {
-        AppState.user.instaId = newId.trim().replace('@', '');
-        saveUserData();
+
+// --- 소셜 시스템 (복구 및 통일) ---
+async function fetchSocialData() {
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        AppState.social.users = snap.docs.map(d => {
+            const data = d.data();
+            let title = "각성자";
+            if (data.titleHistoryStr) {
+                try {
+                    const hist = JSON.parse(data.titleHistoryStr);
+                    const last = hist[hist.length - 1].title;
+                    title = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last;
+                } catch(e) {}
+            }
+            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, isFriend: AppState.user.friends.includes(d.id), isMe: auth.currentUser?.uid === d.id };
+        });
+        renderUsers(AppState.social.sortCriteria);
+    } catch(e) { console.error("소셜 로드 에러", e); }
+}
+
+function renderUsers(criteria, btn = null) {
+    if(btn) { 
+        AppState.social.sortCriteria = criteria; 
+        document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); 
     }
+    const container = document.getElementById('user-list-container');
+    if(!container) return;
+
+    let list = AppState.social.users.map(u => {
+        const s = u.stats;
+        const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
+        return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0 };
+    });
+
+    if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
+    list.sort((a,b) => b[criteria] - a[criteria]);
+
+    const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: var(--text-sub);"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+
+    container.innerHTML = list.map((u, i) => `
+        <div class="user-card ${u.isMe ? 'my-rank' : ''}">
+            <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
+            <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
+                ${u.photoURL ? `<img src="${u.photoURL}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                <div class="user-info" style="margin-left:0;">
+                    <div class="title-badge" style="font-size:0.6rem;">${u.title}</div>
+                    <div style="font-size:0.9rem; display:flex; align-items:center;">
+                        ${u.name} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${u.instaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${u[criteria]}</div>
+            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${u.id}')">${u.isFriend ? '친구✓' : '추가'}</button>` : ''}
+        </div>
+    `).join('');
+}
+
+window.toggleFriend = async (id) => {
+    const isFriend = AppState.user.friends.includes(id);
+    await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) });
+    AppState.user.friends = isFriend ? AppState.user.friends.filter(f=>f!==id) : [...AppState.user.friends, id];
+    fetchSocialData();
+};
+
+// --- 로그인/인증 로직 ---
+async function simulateLogin() {
+    const email = document.getElementById('login-email').value;
+    const pw = document.getElementById('login-pw').value;
+    const btn = document.getElementById('btn-login-submit');
+    if(!email || !pw) { alert("이메일과 비밀번호를 입력해주세요."); return; }
+    btn.innerText = "Processing..."; btn.disabled = true;
+    try {
+        if(!AppState.isLoginMode) { 
+            const pwConfirm = document.getElementById('login-pw-confirm').value;
+            if(pw !== pwConfirm) throw new Error("비밀번호 불일치");
+            await createUserWithEmailAndPassword(auth, email, pw);
+        } else { await signInWithEmailAndPassword(auth, email, pw); }
+    } catch (e) { alert("인증 오류: " + e.message); } 
+    finally { btn.innerText = AppState.isLoginMode ? "시스템 접속" : "회원가입"; btn.disabled = false; }
+}
+
+async function simulateGoogleLogin() { 
+    try { 
+        const result = await signInWithPopup(auth, googleProvider); 
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential?.accessToken) { localStorage.setItem('gfit_token', credential.accessToken); }
+    } catch(e) { console.error(e); alert("Google 로그인 실패: " + e.message); }
+}
+
+async function logout() { await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+
+function toggleAuthMode() {
+    AppState.isLoginMode = !AppState.isLoginMode;
+    const btnSubmit = document.getElementById('btn-login-submit');
+    const toggleText = document.getElementById('auth-toggle-btn');
+    document.getElementById('login-pw-confirm').classList.toggle('d-none', AppState.isLoginMode);
+    btnSubmit.innerText = AppState.isLoginMode ? "시스템 접속" : "플레이어 등록";
+    toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
+}
+
+// 가이드 모달 통합 제어
+function closeInfoModal() { 
+    const m = document.getElementById('infoModal');
+    m.classList.add('d-none'); m.classList.remove('d-flex');
+}
+function closeTitleModal() { document.getElementById('titleModal').classList.add('d-none'); }
+function openTitleModal() {
+    const container = document.getElementById('history-list-container');
+    container.innerHTML = [...AppState.user.titleHistory].reverse().map(h => {
+        const t = typeof h.title === 'object' ? h.title[AppState.currentLang] || h.title.ko : h.title;
+        return `<div class="history-item"><span class="hist-lvl">Lv. ${h.level}</span><span class="hist-title">${t}</span></div>`;
+    }).join('');
+    document.getElementById('titleModal').classList.remove('d-none');
+}
+
+function openStatusInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
+    const body = document.getElementById('info-modal-body');
+    let html = `<table class="info-table"><thead><tr><th>스탯</th><th>설명</th></tr></thead><tbody>`;
+    statKeys.forEach(k => { html += `<tr><td style="text-align:center"><b>${i18n[AppState.currentLang][k]}</b></td><td>${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; });
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none'); m.classList.add('d-flex');
+}
+
+function openQuestInfoModal() {
+    document.getElementById('info-modal-title').innerText = "퀘스트 DB";
+    const body = document.getElementById('info-modal-body');
+    const dayNames = ["일","월","화","수","목","금","토"];
+    let html = `<table class="info-table"><thead><tr><th>요일</th><th>미션</th></tr></thead><tbody>`;
+    weeklyQuestData.forEach((day, i) => { 
+        html += `<tr><td style="text-align:center"><b>${dayNames[i]}</b></td><td>${day[0].title.ko} 외 11건</td></tr>`;
+    });
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none'); m.classList.add('d-flex');
+}
+
+function openDungeonInfoModal() {
+    document.getElementById('info-modal-title').innerText = "이상 현상 목록";
+    const body = document.getElementById('info-modal-body');
+    let html = `<table class="info-table"><thead><tr><th>분류</th><th>현상</th></tr></thead><tbody>`;
+    Object.keys(raidMissions).forEach(k => { html += `<tr><td>${raidMissions[k].stat}</td><td>${raidMissions[k].title.ko}</td></tr>`; });
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none'); m.classList.add('d-flex');
+}
+
+function processLevelUp() {
+    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
+    if(AppState.user.points < req) return;
+    AppState.user.points -= req; AppState.user.level++;
+    statKeys.forEach(k => { 
+        AppState.user.stats[k] = Math.min(100, (Number(AppState.user.stats[k])||0) + (Number(AppState.user.pendingStats[k])||0)); 
+        AppState.user.pendingStats[k] = 0; 
+    });
+    saveUserData(); updatePointUI(); drawRadarChart();
+    alert("Level Up!");
+}
+
+function changeLanguage(lang) { 
+    AppState.currentLang = lang; 
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang][key]) el.innerHTML = i18n[lang][key];
+    });
+    renderQuestList();
+}
+
+function changeTheme() { 
+    const light = document.getElementById('theme-toggle').checked;
+    document.documentElement.setAttribute('data-theme', light ? 'light' : '');
+    localStorage.setItem('theme', light ? 'light' : 'dark');
+}
+
+function changePlayerName() {
+    const newName = prompt("닉네임 변경");
+    if (newName?.trim()) { AppState.user.name = newName.trim(); document.getElementById('prof-name').textContent = newName; saveUserData(); }
+}
+
+function changeInstaId() {
+    const newId = prompt("인스타 ID", AppState.user.instaId);
+    if (newId !== null) { AppState.user.instaId = newId.trim().replace('@', ''); saveUserData(); }
 }
 
 async function loadProfileImage(event) {
@@ -276,158 +612,38 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- 모달 제어 ---
-function closeInfoModal() { 
-    const m = document.getElementById('infoModal');
-    m.classList.add('d-none'); m.classList.remove('d-flex');
-}
-function closeTitleModal() { document.getElementById('titleModal').classList.add('d-none'); }
-
-function openTitleModal() {
-    const container = document.getElementById('history-list-container');
-    container.innerHTML = [...AppState.user.titleHistory].reverse().map(h => {
-        const t = typeof h.title === 'object' ? h.title[AppState.currentLang] || h.title.ko : h.title;
-        return `<div class="history-item"><span class="hist-lvl">Lv. ${h.level}</span><span class="hist-title">${t}</span></div>`;
-    }).join('');
-    document.getElementById('titleModal').classList.remove('d-none');
+function toggleGPS() {}
+function toggleHealthSync() { 
+    AppState.user.syncEnabled = document.getElementById('sync-toggle').checked; 
+    saveUserData(); 
+    if(AppState.user.syncEnabled) syncHealthData(true); 
 }
 
-function openStatusInfoModal() {
-    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
-    const body = document.getElementById('info-modal-body');
-    let html = `<table class="info-table"><thead><tr><th>스탯</th><th>설명</th></tr></thead><tbody>`;
-    statKeys.forEach(k => { html += `<tr><td style="text-align:center"><b>${i18n[AppState.currentLang][k]}</b></td><td>${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; });
-    body.innerHTML = html + `</tbody></table>`;
-    document.getElementById('infoModal').classList.remove('d-none'); document.getElementById('infoModal').classList.add('d-flex');
-}
-
-function openQuestInfoModal() {
-    document.getElementById('info-modal-title').innerText = "퀘스트 DB";
-    const body = document.getElementById('info-modal-body');
-    const dayNames = ["일","월","화","수","목","금","토"];
-    let html = `<table class="info-table"><thead><tr><th>요일</th><th>미션</th></tr></thead><tbody>`;
-    weeklyQuestData.forEach((day, i) => { 
-        html += `<tr><td style="text-align:center"><b>${dayNames[i]}</b></td><td>${day[0].title.ko} 외 11건</td></tr>`;
-    });
-    body.innerHTML = html + `</tbody></table>`;
-    document.getElementById('infoModal').classList.remove('d-none'); document.getElementById('infoModal').classList.add('d-flex');
-}
-
-function openDungeonInfoModal() {
-    document.getElementById('info-modal-title').innerText = "이상 현상 목록";
-    const body = document.getElementById('info-modal-body');
-    let html = `<table class="info-table"><thead><tr><th>분류</th><th>현상</th></tr></thead><tbody>`;
-    Object.keys(raidMissions).forEach(k => { html += `<tr><td>${raidMissions[k].stat}</td><td>${raidMissions[k].title.ko}</td></tr>`; });
-    body.innerHTML = html + `</tbody></table>`;
-    document.getElementById('infoModal').classList.remove('d-none'); document.getElementById('infoModal').classList.add('d-flex');
-}
-
-// --- 게임 로직 ---
-function drawRadarChart() {
-    const centerX = 50, centerY = 50, radius = 33;
-    const angles = statKeys.map((_, i) => -Math.PI/2 + (i * Math.PI/3));
-    let points = "";
-    statKeys.forEach((k, i) => {
-        const val = Number(AppState.user.stats[k]) || 0;
-        const r = radius * (val / 100);
-        const x = centerX + r * Math.cos(angles[i]);
-        const y = centerY + r * Math.sin(angles[i]);
-        points += `${x},${y} `;
-        document.getElementById(`barVal_${k}`).innerText = val;
-        document.getElementById(`barFill_${k}`).style.width = `${val}%`;
-    });
-    document.getElementById('playerPolygon').setAttribute('points', points.trim());
-    document.getElementById('totalScore').innerText = statKeys.reduce((s,k) => s + (Number(AppState.user.stats[k])||0), 0);
-}
-
-function processLevelUp() {
-    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
-    if(AppState.user.points < req) return;
-    AppState.user.points -= req; AppState.user.level++;
-    statKeys.forEach(k => { 
-        AppState.user.stats[k] = Math.min(100, (Number(AppState.user.stats[k])||0) + (Number(AppState.user.pendingStats[k])||0)); 
-        AppState.user.pendingStats[k] = 0; 
-    });
-    saveUserData(); updatePointUI(); drawRadarChart();
-    alert("Level Up!");
-}
-
-function updatePointUI() {
-    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
-    document.getElementById('sys-level').innerText = `Lv. ${AppState.user.level}`;
-    document.getElementById('display-pts').innerText = AppState.user.points;
-    document.getElementById('display-req-pts').innerText = req;
-    document.getElementById('btn-levelup').disabled = AppState.user.points < req;
-    const currentTitle = AppState.user.titleHistory[AppState.user.titleHistory.length-1].title;
-    document.getElementById('prof-title-badge').innerText = (typeof currentTitle === 'object' ? currentTitle[AppState.currentLang] || currentTitle.ko : currentTitle) + " ℹ️";
-}
-
-// --- 소셜 시스템 (최종 복구 버전) ---
-async function fetchSocialData() {
+async function syncHealthData(msg) {
+    const token = localStorage.getItem('gfit_token');
+    if (!token) return;
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     try {
-        const snap = await getDocs(collection(db, "users"));
-        AppState.social.users = snap.docs.map(d => {
-            const data = d.data();
-            let userTitle = "각성자";
-            if (data.titleHistoryStr) {
-                try {
-                    const parsed = JSON.parse(data.titleHistoryStr);
-                    const last = parsed[parsed.length - 1].title;
-                    userTitle = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last;
-                } catch(e) {}
-            }
-            return { id: d.id, ...data, title: userTitle, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, isFriend: AppState.user.friends.includes(d.id), isMe: auth.currentUser?.uid === d.id };
+        const res = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aggregateBy: [{ dataTypeName: 'com.google.step_count.delta', dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps' }],
+                bucketByTime: { durationMillis: 86400000 }, 
+                startTimeMillis: start, endTimeMillis: now.getTime()
+            })
         });
-        renderUsers(AppState.social.sortCriteria);
-    } catch(e) { console.error(e); }
+        const data = await res.json();
+        const steps = data.bucket[0]?.dataset[0]?.point[0]?.value[0]?.intVal || 0;
+        const diff = steps - AppState.user.stepData.rewardedSteps;
+        if (diff >= 1000) {
+            const chunks = Math.floor(diff / 1000);
+            AppState.user.points += chunks * 10;
+            AppState.user.pendingStats.str += chunks * 0.5;
+            AppState.user.stepData = { date: now.toDateString(), rewardedSteps: AppState.user.stepData.rewardedSteps + (chunks * 1000) };
+            updatePointUI(); drawRadarChart(); saveUserData();
+            if(msg) alert(`동기화 성공! +${chunks*10}P 획득`);
+        }
+    } catch(e) { console.error("동기화 실패", e); }
 }
-
-function renderUsers(criteria, btn = null) {
-    if(btn) { 
-        AppState.social.sortCriteria = criteria; 
-        document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); 
-    }
-    const container = document.getElementById('user-list-container');
-    let list = AppState.social.users.map(u => {
-        const s = u.stats;
-        const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
-        return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0 };
-    });
-    if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
-    list.sort((a,b) => b[criteria] - a[criteria]);
-
-    const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: var(--text-sub);"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/></svg>`;
-
-    container.innerHTML = list.map((u, i) => `
-        <div class="user-card ${u.isMe ? 'my-rank' : ''}">
-            <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
-            <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                ${u.photoURL ? `<img src="${u.photoURL}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
-                <div class="user-info" style="margin-left:0;">
-                    <div class="title-badge" style="font-size:0.6rem;">${u.title}</div>
-                    <div style="font-size:0.9rem; display:flex; align-items:center;">
-                        ${u.name} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${u.instaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
-                    </div>
-                </div>
-            </div>
-            <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${u[criteria]}</div>
-            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="toggleFriend('${u.id}')">${u.isFriend ? '친구✓' : '추가'}</button>` : ''}
-        </div>
-    `).join('');
-}
-
-// --- 기타 기능 ---
-window.toggleQuest = (i) => { /* 기존 퀘스트 로직 동일 */ };
-window.toggleFriend = async (id) => {
-    const isFriend = AppState.user.friends.includes(id);
-    await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) });
-    AppState.user.friends = isFriend ? AppState.user.friends.filter(f=>f!==id) : [...AppState.user.friends, id];
-    fetchSocialData();
-};
-function toggleHealthSync() { AppState.user.syncEnabled = document.getElementById('sync-toggle').checked; saveUserData(); if(AppState.user.syncEnabled) syncHealthData(true); }
-async function syncHealthData(msg) { /* 기존 건강 동기화 로직 동일 */ }
-function changeLanguage(lang) { AppState.currentLang = lang; /* i18n 업데이트 로직 */ }
-function changeTheme() { /* 테마 업데이트 로직 */ }
-function toggleGPS() { /* GPS 업데이트 로직 */ }
-function updateDungeonStatus() { /* 던전 로직 동일 */ }
-function renderCalendar() { /* 캘린더 로직 동일 */ }
