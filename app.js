@@ -46,7 +46,8 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
+        // ★ maxParticipants 추가
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, maxParticipants: 5, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
     };
 }
 
@@ -90,7 +91,6 @@ function initTheme() {
     }
 }
 
-// --- 이벤트 바인딩 ---
 function bindEvents() {
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
@@ -121,7 +121,6 @@ function bindEvents() {
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
     
-    // 던전 버튼 이벤트
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 }
@@ -159,7 +158,11 @@ async function loadUserDataFromDB(user) {
                 try { AppState.user.titleHistory = JSON.parse(data.titleHistoryStr); } catch(e) { AppState.user.titleHistory = [{level:1, title:{ko:"각성자"}}]; }
             }
             if(data.questStr) AppState.quest.completedState = JSON.parse(data.questStr);
-            if(data.dungeonStr) AppState.dungeon = JSON.parse(data.dungeonStr);
+            if(data.dungeonStr) {
+                AppState.dungeon = JSON.parse(data.dungeonStr);
+                // 구버전 데이터 호환 방어코드
+                if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
+            }
             if(data.friends) AppState.user.friends = data.friends;
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.stepData) AppState.user.stepData = data.stepData;
@@ -338,7 +341,7 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- ★ 3. 던전 (구글 맵 & 입장 후 화면) 완전 복원 ★ ---
+// --- ★ 던전 로직 (참여인원 제한 및 모달 업데이트) ★ ---
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours();
@@ -357,7 +360,9 @@ function updateDungeonStatus() {
         
         if (currentSlot > 0) { 
             AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
-            AppState.dungeon.participants = Math.floor(Math.random() * 91) + 10; 
+            // ★ 테스트를 위해 전체 인원 5명 고정, 현재 인원 0~4명 사이로 배정 ★
+            AppState.dungeon.maxParticipants = 5; 
+            AppState.dungeon.participants = Math.floor(Math.random() * 5); // 0명 ~ 4명
             AppState.dungeon.isJoined = false; 
             AppState.dungeon.isCleared = false; 
             AppState.dungeon.progress = 0; 
@@ -375,7 +380,6 @@ function renderDungeon() {
     if(!banner || !activeBoard) return;
 
     if (AppState.dungeon.slot === 0) {
-        // 출현 대기 상태
         if(timer) timer.classList.add('d-none');
         activeBoard.classList.add('d-none'); 
         banner.classList.remove('d-none');
@@ -385,12 +389,17 @@ function renderDungeon() {
         const st = seoulStations[AppState.dungeon.stationIdx];
         
         if (!AppState.dungeon.isJoined) {
-            // 입장 전 (구글 맵 표시)
             if(timer) timer.classList.add('d-none');
             activeBoard.classList.add('d-none'); 
             banner.classList.remove('d-none');
             
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
+            
+            // ★ 입장 제한 버튼 UI 처리 ★
+            const isFull = AppState.dungeon.participants >= AppState.dungeon.maxParticipants;
+            const joinBtnHtml = isFull 
+                ? `<button disabled class="btn-primary" style="background:#333; border-color:#333; margin-top:10px; color:#888; font-weight:bold; cursor:not-allowed;">정원 초과 (입장 불가)</button>`
+                : `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>`;
 
             banner.innerHTML = `
                 <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
@@ -399,14 +408,16 @@ function renderDungeon() {
                     <iframe src="${mapUrl}" style="width:100%; height:100%; border:none;" allowfullscreen="" loading="lazy"></iframe>
                 </div>
                 <p style="font-size: 0.8rem; margin-bottom: 5px; color:var(--text-main); word-break:keep-all;">${m.desc1[AppState.currentLang]}</p>
-                <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">${i18n[AppState.currentLang].raid_part} <span class="text-blue">${AppState.dungeon.participants}</span> 명</div>
-                <button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>
+                <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">
+                    ${i18n[AppState.currentLang].raid_part} 
+                    <span class="text-blue">${AppState.dungeon.participants} / ${AppState.dungeon.maxParticipants}</span> 명
+                </div>
+                ${joinBtnHtml}
             `;
         } else {
-            // 입장 후 (진행률 보드 표시)
             if(timer) timer.classList.remove('d-none');
             banner.classList.add('d-none'); 
-            activeBoard.classList.remove('d-none'); // 여기서 빈화면이 되던 충돌 해결!
+            activeBoard.classList.remove('d-none'); 
             
             document.getElementById('active-stat-badge').innerText = m.stat;
             document.getElementById('active-stat-badge').style.borderColor = m.color;
@@ -414,14 +425,15 @@ function renderDungeon() {
             document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
             document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
             
-            document.getElementById('raid-part-count').innerText = AppState.dungeon.participants;
+            // ★ 입장 후 활성화 보드 참여인원 표시 ★
+            document.getElementById('raid-part-count').innerText = `${AppState.dungeon.participants} / ${AppState.dungeon.maxParticipants}`;
             document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`;
             document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
             
             const btnAction = document.getElementById('btn-raid-action');
             const btnComplete = document.getElementById('btn-raid-complete');
             
-            btnAction.innerText = m.actionText[AppState.currentLang]; // 동기화 텍스트 복원
+            btnAction.innerText = m.actionText[AppState.currentLang]; 
 
             if (AppState.dungeon.progress >= 100) {
                 btnAction.classList.add('d-none');
@@ -435,6 +447,11 @@ function renderDungeon() {
 }
 
 window.joinDungeon = () => {
+    // 혹시 모를 더블 클릭 방어 코드
+    if(AppState.dungeon.participants >= AppState.dungeon.maxParticipants) {
+        alert("이미 정원이 초과되었습니다.");
+        return;
+    }
     AppState.dungeon.isJoined = true;
     AppState.dungeon.participants++;
     AppState.dungeon.progress = Math.floor(Math.random() * 20) + 20; 
@@ -761,6 +778,16 @@ function openDungeonInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title || "이상 현상 목록";
     const body = document.getElementById('info-modal-body');
     
+    // ★ 상단 던전 개방 시간 표기 추가 ★
+    const timeInfoHtml = `
+        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:12px; border-radius:8px; margin-bottom:15px; text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:5px;">🕒 던전 시스템 개방 시간 (KST)</div>
+            <div style="font-weight:bold; color:var(--neon-blue); font-size:0.95rem; letter-spacing:0.5px;">
+                06:00~08:00 &nbsp;|&nbsp; 11:30~13:30 &nbsp;|&nbsp; 19:00~21:00
+            </div>
+        </div>
+    `;
+
     let html = `<table class="info-table">
         <thead>
             <tr>
@@ -783,7 +810,7 @@ function openDungeonInfoModal() {
         </tr>`; 
     });
     
-    body.innerHTML = html + `</tbody></table>`;
+    body.innerHTML = timeInfoHtml + html + `</tbody></table>`;
     const m = document.getElementById('infoModal'); 
     m.classList.remove('d-none'); 
     m.classList.add('d-flex');
