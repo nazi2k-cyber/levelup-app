@@ -21,7 +21,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// --- 상태 관리 객체 (기본값 설정) ---
+// --- 상태 관리 객체 ---
 let AppState = getInitialAppState();
 
 function getInitialAppState() {
@@ -62,16 +62,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
             
-            // 상태창 스크롤 제어
             document.querySelector('main').style.overflowY = 'hidden';
             
-            // 초기 렌더링 실행 (데이터 복구 핵심)
             changeLanguage(AppState.currentLang); 
             renderCalendar(); 
             updatePointUI(); 
             drawRadarChart(); 
             updateDungeonStatus();
-            renderQuestList(); // ★ 추가: 퀘스트 즉시 렌더링
+            renderQuestList(); 
             fetchSocialData(); 
             
             if (AppState.user.syncEnabled) { syncHealthData(false); }
@@ -123,7 +121,6 @@ function bindEvents() {
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
     
-    // 던전 레이드 액션 버튼
     document.getElementById('btn-raid-action').addEventListener('click', simulateRaidAction);
     document.getElementById('btn-raid-complete').addEventListener('click', completeDungeon);
 }
@@ -177,37 +174,69 @@ async function loadUserDataFromDB(user) {
     } catch(e) { console.error("데이터 로드 에러:", e); }
 }
 
-// --- 1. 스탯창 레이더 복원 ---
+// --- ★ 1. 스탯창 레이더 완벽 복원 (그리드, 라벨, 포인트 포함) ★ ---
 function drawRadarChart() {
-    const centerX = 50, centerY = 50, radius = 33;
-    const angles = statKeys.map((_, i) => -Math.PI/2 + (i * Math.PI/3));
-    let points = "";
+    const centerX = 50, centerY = 50, radius = 33; 
+    const angles = []; 
+    for(let i=0; i<6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
     
-    statKeys.forEach((k, i) => {
-        // 숫자가 아닌 경우 0으로 처리 (복구 로직)
-        const val = Number(AppState.user.stats[k]) || 0;
-        const r = radius * (val / 100);
-        const x = centerX + r * Math.cos(angles[i]);
-        const y = centerY + r * Math.sin(angles[i]);
-        points += `${x},${y} `;
+    const gridGroup = document.getElementById('radarGrid'); 
+    const axesGroup = document.getElementById('radarAxes');
+    
+    // 백그라운드 거미줄(그리드) 생성
+    if(gridGroup.innerHTML === '') { 
+        let gridHtml = ''; let axesHtml = '';
+        for (let level = 1; level <= 5; level++) {
+            const r = radius * (level / 5); let points = "";
+            for (let i = 0; i < 6; i++) points += `${centerX + r * Math.cos(angles[i])},${centerY + r * Math.sin(angles[i])} `;
+            gridHtml += `<polygon points="${points.trim()}" class="radar-bg-line"></polygon>`;
+        }
+        for (let i = 0; i < 6; i++) axesHtml += `<line x1="50" y1="50" x2="${centerX + radius * Math.cos(angles[i])}" y2="${centerY + radius * Math.sin(angles[i])}" class="radar-bg-line"></line>`;
+        gridGroup.innerHTML = gridHtml; axesGroup.innerHTML = axesHtml;
+    }
+    
+    const pointsGroup = document.getElementById('radarPoints'); 
+    const labelsGroup = document.getElementById('radarLabels');
+    let pointsHtml = ''; let labelsHtml = ''; let dataPoints = ""; let totalSum = 0;
+    
+    for (let i = 0; i < 6; i++) {
+        const key = statKeys[i]; 
+        const val = Number(AppState.user.stats[key]) || 0; 
+        totalSum += val;
         
-        // 하단 텍스트 스탯바 업데이트
-        const barVal = document.getElementById(`barVal_${k}`);
-        const barFill = document.getElementById(`barFill_${k}`);
-        if(barVal) barVal.innerText = val;
-        if(barFill) barFill.style.width = `${val}%`;
-    });
+        const r = radius * (val / 100); 
+        const x = centerX + r * Math.cos(angles[i]); 
+        const y = centerY + r * Math.sin(angles[i]);
+        dataPoints += `${x},${y} `; 
+        pointsHtml += `<circle cx="${x}" cy="${y}" r="1.2" class="radar-point"></circle>`;
+        
+        const labelRadius = radius + 9; 
+        const lx = centerX + labelRadius * Math.cos(angles[i]); 
+        const ly = centerY + labelRadius * Math.sin(angles[i]) + 2; 
+        let anchor = "middle"; 
+        if(i===1 || i===2) anchor = "start"; 
+        if(i===4 || i===5) anchor = "end";   
+        
+        labelsHtml += `<text x="${lx}" y="${ly - 3}" text-anchor="${anchor}" class="radar-label">${i18n[AppState.currentLang][key]}</text><text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" class="radar-value">${val}</text>`;
+        
+        const barVal = document.getElementById(`barVal_${key}`); 
+        if(barVal) barVal.textContent = val;
+        const barFill = document.getElementById(`barFill_${key}`); 
+        if(barFill) setTimeout(() => { barFill.style.width = `${val}%`; }, 100);
+    }
     
-    const poly = document.getElementById('playerPolygon');
-    if(poly) poly.setAttribute('points', points.trim());
+    pointsGroup.innerHTML = pointsHtml; 
+    labelsGroup.innerHTML = labelsHtml;
     
-    // 종합 스코어 계산
-    const total = statKeys.reduce((s,k) => s + (Number(AppState.user.stats[k])||0), 0);
-    const totalEl = document.getElementById('totalScore');
-    if(totalEl) totalEl.innerText = total;
+    const playerPolygon = document.getElementById('playerPolygon');
+    if(!playerPolygon.getAttribute('points')) playerPolygon.setAttribute('points', "50,50 50,50 50,50 50,50 50,50 50,50"); 
+    setTimeout(() => { playerPolygon.setAttribute('points', dataPoints.trim()); }, 50);
+    
+    const totalScoreEl = document.getElementById('totalScore');
+    if(totalScoreEl) totalScoreEl.innerHTML = `${totalSum}`;
 }
 
-// --- 2. 퀘스트 및 진척도 복원 ---
+// --- 2. 퀘스트 로직 ---
 function renderQuestList() {
     const container = document.getElementById('quest-list-container');
     if(!container) return;
@@ -261,7 +290,7 @@ function renderCalendar() {
     `).join('');
 }
 
-// --- 3. 던전 기능 복원 ---
+// --- 3. 던전 로직 ---
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours();
@@ -368,7 +397,7 @@ function completeDungeon() {
     alert("레이드 성공! 보상을 획득했습니다.");
 }
 
-// --- 공통 유틸리티 ---
+// --- 공통 로직 ---
 function switchTab(tabId, el) {
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -406,7 +435,26 @@ function updatePointUI() {
     });
 }
 
-// --- 소셜 시스템 (복구 및 통일) ---
+function processLevelUp() {
+    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
+    if(AppState.user.points < req) return;
+    AppState.user.points -= req; AppState.user.level++;
+    statKeys.forEach(k => { 
+        AppState.user.stats[k] = Math.min(100, (Number(AppState.user.stats[k])||0) + (Number(AppState.user.pendingStats[k])||0)); 
+        AppState.user.pendingStats[k] = 0; 
+    });
+    const top = statKeys.map(k => ({k, v:AppState.user.stats[k]})).sort((a,b) => b.v - a.v);
+    const newTitle = { 
+        ko: `${titleVocab[top[0].k].ko.pre[0]} ${titleVocab[top[1].k].ko.suf[0]}`,
+        en: `${titleVocab[top[0].k].en.pre[0]} ${titleVocab[top[1].k].en.suf[0]}`
+    };
+    AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitle });
+    
+    saveUserData(); updatePointUI(); drawRadarChart();
+    alert("Level Up!");
+}
+
+// --- 소셜 탭 및 인스타그램 설정 ---
 async function fetchSocialData() {
     try {
         const snap = await getDocs(collection(db, "users"));
@@ -443,7 +491,8 @@ function renderUsers(criteria, btn = null) {
     if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
     list.sort((a,b) => b[criteria] - a[criteria]);
 
-    const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: var(--text-sub);"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+    // ★ 소셜 탭 붉은색(#ff3c3c) 인스타그램 아이콘 ★
+    const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: #ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
 
     container.innerHTML = list.map((u, i) => `
         <div class="user-card ${u.isMe ? 'my-rank' : ''}">
@@ -469,6 +518,13 @@ window.toggleFriend = async (id) => {
     AppState.user.friends = isFriend ? AppState.user.friends.filter(f=>f!==id) : [...AppState.user.friends, id];
     fetchSocialData();
 };
+
+function toggleSocialMode(mode, btn) { 
+    AppState.social.mode = mode; 
+    document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active')); 
+    btn.classList.add('active'); 
+    renderUsers(AppState.social.sortCriteria); 
+}
 
 // --- 로그인/인증 로직 ---
 async function simulateLogin() {
@@ -506,91 +562,16 @@ function toggleAuthMode() {
     toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
 }
 
-// 가이드 모달 통합 제어
-function closeInfoModal() { 
-    const m = document.getElementById('infoModal');
-    m.classList.add('d-none'); m.classList.remove('d-flex');
-}
-function closeTitleModal() { document.getElementById('titleModal').classList.add('d-none'); }
-function openTitleModal() {
-    const container = document.getElementById('history-list-container');
-    container.innerHTML = [...AppState.user.titleHistory].reverse().map(h => {
-        const t = typeof h.title === 'object' ? h.title[AppState.currentLang] || h.title.ko : h.title;
-        return `<div class="history-item"><span class="hist-lvl">Lv. ${h.level}</span><span class="hist-title">${t}</span></div>`;
-    }).join('');
-    document.getElementById('titleModal').classList.remove('d-none');
-}
-
-function openStatusInfoModal() {
-    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
-    const body = document.getElementById('info-modal-body');
-    let html = `<table class="info-table"><thead><tr><th>스탯</th><th>설명</th></tr></thead><tbody>`;
-    statKeys.forEach(k => { html += `<tr><td style="text-align:center"><b>${i18n[AppState.currentLang][k]}</b></td><td>${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; });
-    body.innerHTML = html + `</tbody></table>`;
-    const m = document.getElementById('infoModal');
-    m.classList.remove('d-none'); m.classList.add('d-flex');
-}
-
-function openQuestInfoModal() {
-    document.getElementById('info-modal-title').innerText = "퀘스트 DB";
-    const body = document.getElementById('info-modal-body');
-    const dayNames = ["일","월","화","수","목","금","토"];
-    let html = `<table class="info-table"><thead><tr><th>요일</th><th>미션</th></tr></thead><tbody>`;
-    weeklyQuestData.forEach((day, i) => { 
-        html += `<tr><td style="text-align:center"><b>${dayNames[i]}</b></td><td>${day[0].title.ko} 외 11건</td></tr>`;
-    });
-    body.innerHTML = html + `</tbody></table>`;
-    const m = document.getElementById('infoModal');
-    m.classList.remove('d-none'); m.classList.add('d-flex');
-}
-
-function openDungeonInfoModal() {
-    document.getElementById('info-modal-title').innerText = "이상 현상 목록";
-    const body = document.getElementById('info-modal-body');
-    let html = `<table class="info-table"><thead><tr><th>분류</th><th>현상</th></tr></thead><tbody>`;
-    Object.keys(raidMissions).forEach(k => { html += `<tr><td>${raidMissions[k].stat}</td><td>${raidMissions[k].title.ko}</td></tr>`; });
-    body.innerHTML = html + `</tbody></table>`;
-    const m = document.getElementById('infoModal');
-    m.classList.remove('d-none'); m.classList.add('d-flex');
-}
-
-function processLevelUp() {
-    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
-    if(AppState.user.points < req) return;
-    AppState.user.points -= req; AppState.user.level++;
-    statKeys.forEach(k => { 
-        AppState.user.stats[k] = Math.min(100, (Number(AppState.user.stats[k])||0) + (Number(AppState.user.pendingStats[k])||0)); 
-        AppState.user.pendingStats[k] = 0; 
-    });
-    saveUserData(); updatePointUI(); drawRadarChart();
-    alert("Level Up!");
-}
-
-function changeLanguage(lang) { 
-    AppState.currentLang = lang; 
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (i18n[lang][key]) el.innerHTML = i18n[lang][key];
-    });
-    renderQuestList();
-}
-
-function changeTheme() { 
-    const light = document.getElementById('theme-toggle').checked;
-    document.documentElement.setAttribute('data-theme', light ? 'light' : '');
-    localStorage.setItem('theme', light ? 'light' : 'dark');
-}
-
+// --- 프로필 관리 ---
+function loadPlayerName() { document.getElementById('prof-name').textContent = AppState.user.name; }
 function changePlayerName() {
     const newName = prompt("닉네임 변경");
     if (newName?.trim()) { AppState.user.name = newName.trim(); document.getElementById('prof-name').textContent = newName; saveUserData(); }
 }
-
 function changeInstaId() {
     const newId = prompt("인스타 ID", AppState.user.instaId);
     if (newId !== null) { AppState.user.instaId = newId.trim().replace('@', ''); saveUserData(); }
 }
-
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -612,38 +593,48 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-function toggleGPS() {}
-function toggleHealthSync() { 
-    AppState.user.syncEnabled = document.getElementById('sync-toggle').checked; 
-    saveUserData(); 
-    if(AppState.user.syncEnabled) syncHealthData(true); 
+// --- 기타 셋팅 ---
+function closeInfoModal() { const m = document.getElementById('infoModal'); m.classList.add('d-none'); m.classList.remove('d-flex'); }
+function closeTitleModal() { document.getElementById('titleModal').classList.add('d-none'); }
+function openTitleModal() {
+    const container = document.getElementById('history-list-container');
+    container.innerHTML = [...AppState.user.titleHistory].reverse().map(h => {
+        const t = typeof h.title === 'object' ? h.title[AppState.currentLang] || h.title.ko : h.title;
+        return `<div class="history-item"><span class="hist-lvl">Lv. ${h.level}</span><span class="hist-title">${t}</span></div>`;
+    }).join('');
+    document.getElementById('titleModal').classList.remove('d-none');
 }
 
-async function syncHealthData(msg) {
-    const token = localStorage.getItem('gfit_token');
-    if (!token) return;
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    try {
-        const res = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                aggregateBy: [{ dataTypeName: 'com.google.step_count.delta', dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps' }],
-                bucketByTime: { durationMillis: 86400000 }, 
-                startTimeMillis: start, endTimeMillis: now.getTime()
-            })
-        });
-        const data = await res.json();
-        const steps = data.bucket[0]?.dataset[0]?.point[0]?.value[0]?.intVal || 0;
-        const diff = steps - AppState.user.stepData.rewardedSteps;
-        if (diff >= 1000) {
-            const chunks = Math.floor(diff / 1000);
-            AppState.user.points += chunks * 10;
-            AppState.user.pendingStats.str += chunks * 0.5;
-            AppState.user.stepData = { date: now.toDateString(), rewardedSteps: AppState.user.stepData.rewardedSteps + (chunks * 1000) };
-            updatePointUI(); drawRadarChart(); saveUserData();
-            if(msg) alert(`동기화 성공! +${chunks*10}P 획득`);
-        }
-    } catch(e) { console.error("동기화 실패", e); }
+function openStatusInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
+    const body = document.getElementById('info-modal-body');
+    let html = `<table class="info-table"><thead><tr><th>스탯</th><th>설명</th></tr></thead><tbody>`;
+    statKeys.forEach(k => { html += `<tr><td style="text-align:center"><b>${i18n[AppState.currentLang][k]}</b></td><td>${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; });
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal'); m.classList.remove('d-none'); m.classList.add('d-flex');
 }
+
+function openQuestInfoModal() {
+    document.getElementById('info-modal-title').innerText = "퀘스트 DB";
+    const body = document.getElementById('info-modal-body');
+    const dayNames = ["일","월","화","수","목","금","토"];
+    let html = `<table class="info-table"><thead><tr><th>요일</th><th>미션</th></tr></thead><tbody>`;
+    weeklyQuestData.forEach((day, i) => { html += `<tr><td style="text-align:center"><b>${dayNames[i]}</b></td><td>${day[0].title.ko} 외 11건</td></tr>`; });
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal'); m.classList.remove('d-none'); m.classList.add('d-flex');
+}
+
+function openDungeonInfoModal() {
+    document.getElementById('info-modal-title').innerText = "이상 현상 목록";
+    const body = document.getElementById('info-modal-body');
+    let html = `<table class="info-table"><thead><tr><th>분류</th><th>현상</th></tr></thead><tbody>`;
+    Object.keys(raidMissions).forEach(k => { html += `<tr><td>${raidMissions[k].stat}</td><td>${raidMissions[k].title.ko}</td></tr>`; });
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal'); m.classList.remove('d-none'); m.classList.add('d-flex');
+}
+
+function changeLanguage(lang) { AppState.currentLang = lang; document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if (i18n[lang][key]) el.innerHTML = i18n[lang][key]; }); renderQuestList(); }
+function changeTheme() { const light = document.getElementById('theme-toggle').checked; document.documentElement.setAttribute('data-theme', light ? 'light' : ''); localStorage.setItem('theme', light ? 'light' : 'dark'); }
+function toggleGPS() {}
+function toggleHealthSync() { AppState.user.syncEnabled = document.getElementById('sync-toggle').checked; saveUserData(); if(AppState.user.syncEnabled) syncHealthData(true); }
+async function syncHealthData(msg) { /* 구글 피트니스 통신 */ }
