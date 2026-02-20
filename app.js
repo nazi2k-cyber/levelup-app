@@ -1,7 +1,6 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-// ★ 수정됨: signInWithPopup 대신 signInWithRedirect와 getRedirectResult를 불러옵니다 ★
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -18,21 +17,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 구글 피트니스 권한 요청
+// 구글 피트니스(걸음수) 읽기 권한 요청
 const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
-
-// ★ 추가됨: 리다이렉트 로그인 후 돌아왔을 때 토큰을 낚아채는 로직 ★
-getRedirectResult(auth).then((result) => {
-    if (result) {
-        const credential = GoogleAuthProvider.credentialFromResult(result);
-        if (credential && credential.accessToken) {
-            localStorage.setItem('gfit_token', credential.accessToken); // 피트니스 토큰 저장
-        }
-    }
-}).catch((error) => {
-    console.error("리다이렉트 로그인 에러:", error);
-});
 
 // --- 상태 관리 객체 ---
 let AppState = getInitialAppState();
@@ -256,13 +243,16 @@ async function simulateLogin() {
     }
 }
 
-// ★ 수정됨: 팝업 방식(Popup)에서 페이지 이동(Redirect) 방식으로 변경! 웹뷰 에러 방지 ★
 async function simulateGoogleLogin() { 
     try { 
-        // 팝업이 막힌 환경을 위해 화면을 아예 구글 로그인 창으로 넘겨버립니다.
-        await signInWithRedirect(auth, googleProvider); 
+        // 팝업 방식으로 구글 로그인 진행 및 토큰 발급
+        const result = await signInWithPopup(auth, googleProvider); 
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        if (credential && credential.accessToken) {
+            localStorage.setItem('gfit_token', credential.accessToken);
+        }
     } 
-    catch(e) { console.error(e); alert("Google 로그인 에러:\n" + e.message); }
+    catch(e) { console.error(e); alert("Google 로그인 오류:\n" + e.message); }
 }
 
 async function logout() {
