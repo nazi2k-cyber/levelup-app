@@ -174,7 +174,36 @@ async function loadUserDataFromDB(user) {
     } catch(e) { console.error("데이터 로드 에러:", e); }
 }
 
-// --- ★ 1. 스탯창 레이더 완벽 복원 (그리드, 라벨, 포인트 포함) ★ ---
+// --- 1. 상태창 이름 리셋 방지 및 프로필 관리 ---
+function loadPlayerName() { 
+    const nameEl = document.getElementById('prof-name');
+    if(nameEl) {
+        nameEl.textContent = AppState.user.name; 
+        // ★ 핵심: 다국어 렌더링 시 이름이 덮어씌워지지 않도록 속성 제거 ★
+        nameEl.removeAttribute('data-i18n'); 
+    }
+}
+
+function changePlayerName() {
+    const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
+    if (newName && newName.trim() !== "") {
+        AppState.user.name = newName.trim();
+        loadPlayerName(); // 즉시 UI 반영
+        saveUserData().then(() => {
+            fetchSocialData(); // 소셜 탭에도 즉시 갱신
+        });
+    }
+}
+
+function changeInstaId() {
+    const newId = prompt(i18n[AppState.currentLang].insta_prompt || "인스타 ID를 입력하세요", AppState.user.instaId);
+    if (newId !== null) { 
+        AppState.user.instaId = newId.trim().replace('@', ''); 
+        saveUserData().then(() => fetchSocialData());
+    }
+}
+
+// --- 스탯창 레이더 ---
 function drawRadarChart() {
     const centerX = 50, centerY = 50, radius = 33; 
     const angles = []; 
@@ -183,7 +212,6 @@ function drawRadarChart() {
     const gridGroup = document.getElementById('radarGrid'); 
     const axesGroup = document.getElementById('radarAxes');
     
-    // 백그라운드 거미줄(그리드) 생성
     if(gridGroup.innerHTML === '') { 
         let gridHtml = ''; let axesHtml = '';
         for (let level = 1; level <= 5; level++) {
@@ -236,7 +264,7 @@ function drawRadarChart() {
     if(totalScoreEl) totalScoreEl.innerHTML = `${totalSum}`;
 }
 
-// --- 2. 퀘스트 로직 ---
+// --- 2. 퀘스트 및 캘린더 날짜/연도 표시 복원 ---
 function renderQuestList() {
     const container = document.getElementById('quest-list-container');
     if(!container) return;
@@ -280,14 +308,39 @@ function renderCalendar() {
     if(!container) return;
     
     const today = new Date();
-    const monthEl = document.getElementById('cal-month');
-    if(monthEl) monthEl.innerText = today.toDateString().split(' ')[1];
+    const currentDay = today.getDay(); // 0(일요일) ~ 6(토요일)
     
-    container.innerHTML = AppState.quest.completedState.map((s, i) => `
-        <div class="cal-day ${i === AppState.quest.currentDayOfWeek ? 'today' : ''}">
-            <div class="cal-date">${s.filter(v=>v).length}/12</div>
-        </div>
-    `).join('');
+    // 이번 주의 일요일(시작일) 계산
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDay);
+    
+    // 연도와 월 설정 (예: 2026 Feb)
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthEl = document.getElementById('cal-month');
+    if(monthEl) {
+        monthEl.innerText = `${startOfWeek.getFullYear()} ${monthNames[startOfWeek.getMonth()]}`;
+    }
+    
+    const dayNames = { 
+        ko: ["일","월","화","수","목","금","토"], 
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], 
+        ja: ["日","月","火","水","木","金","土"] 
+    };
+    
+    container.innerHTML = AppState.quest.completedState.map((s, i) => {
+        const iterDate = new Date(startOfWeek);
+        iterDate.setDate(startOfWeek.getDate() + i); // 해당 요일의 실제 날짜
+        const isToday = (i === AppState.quest.currentDayOfWeek);
+        const count = s.filter(v=>v).length;
+        
+        return `
+            <div class="cal-day ${isToday ? 'today' : ''}">
+                <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
+                <div class="cal-date">${iterDate.getDate()}</div>
+                <div class="cal-score">${count}/12</div>
+            </div>
+        `;
+    }).join('');
 }
 
 // --- 3. 던전 로직 ---
@@ -454,7 +507,26 @@ function processLevelUp() {
     alert("Level Up!");
 }
 
-// --- 소셜 탭 및 인스타그램 설정 ---
+// --- 언어 및 UI 업데이트 ---
+function changeLanguage(langCode) {
+    AppState.currentLang = langCode;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[langCode][key]) el.innerHTML = i18n[langCode][key];
+    });
+    
+    if(document.getElementById('app-container').classList.contains('d-flex')){
+        drawRadarChart(); 
+        renderUsers(AppState.social.sortCriteria); 
+        renderQuestList(); 
+        renderCalendar(); // 언어 변경 시 달력 요일 재렌더링
+        updatePointUI(); 
+        updateDungeonStatus();
+        loadPlayerName(); // 언어 렌더링 후 이름이 덮어씌워지지 않게 다시 적용
+    }
+}
+
+// --- 소셜 탭 ---
 async function fetchSocialData() {
     try {
         const snap = await getDocs(collection(db, "users"));
@@ -491,7 +563,6 @@ function renderUsers(criteria, btn = null) {
     if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
     list.sort((a,b) => b[criteria] - a[criteria]);
 
-    // ★ 소셜 탭 붉은색(#ff3c3c) 인스타그램 아이콘 ★
     const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: #ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
 
     container.innerHTML = list.map((u, i) => `
@@ -562,16 +633,6 @@ function toggleAuthMode() {
     toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
 }
 
-// --- 프로필 관리 ---
-function loadPlayerName() { document.getElementById('prof-name').textContent = AppState.user.name; }
-function changePlayerName() {
-    const newName = prompt("닉네임 변경");
-    if (newName?.trim()) { AppState.user.name = newName.trim(); document.getElementById('prof-name').textContent = newName; saveUserData(); }
-}
-function changeInstaId() {
-    const newId = prompt("인스타 ID", AppState.user.instaId);
-    if (newId !== null) { AppState.user.instaId = newId.trim().replace('@', ''); saveUserData(); }
-}
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -593,7 +654,7 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- 기타 셋팅 ---
+// --- 모달 로직 ---
 function closeInfoModal() { const m = document.getElementById('infoModal'); m.classList.add('d-none'); m.classList.remove('d-flex'); }
 function closeTitleModal() { document.getElementById('titleModal').classList.add('d-none'); }
 function openTitleModal() {
@@ -633,7 +694,6 @@ function openDungeonInfoModal() {
     const m = document.getElementById('infoModal'); m.classList.remove('d-none'); m.classList.add('d-flex');
 }
 
-function changeLanguage(lang) { AppState.currentLang = lang; document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if (i18n[lang][key]) el.innerHTML = i18n[lang][key]; }); renderQuestList(); }
 function changeTheme() { const light = document.getElementById('theme-toggle').checked; document.documentElement.setAttribute('data-theme', light ? 'light' : ''); localStorage.setItem('theme', light ? 'light' : 'dark'); }
 function toggleGPS() {}
 function toggleHealthSync() { AppState.user.syncEnabled = document.getElementById('sync-toggle').checked; saveUserData(); if(AppState.user.syncEnabled) syncHealthData(true); }
