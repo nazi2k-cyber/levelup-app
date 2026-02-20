@@ -81,7 +81,7 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 
 /* 레이더 및 스탯 */
 .radar-chart-container { display: flex; justify-content: center; margin: 5px 0 15px 0; }
-.radar-chart { width: 100%; max-width: 150px; height: auto; aspect-ratio: 1/1; }
+.radar-chart { width: 100%; max-width: 220px; height: auto; aspect-ratio: 1/1; }
 .radar-bg-line { fill: none; stroke: var(--border-color); stroke-width: 0.8; }
 .radar-polygon { fill: rgba(0, 217, 255, 0.25); stroke: var(--neon-blue); stroke-width: 2; transition: all 0.6s ease; }
 .radar-point { fill: var(--neon-blue); transition: all 0.6s; }
@@ -179,30 +179,19 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 }
 .info-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; color: var(--text-main); margin-top: 10px; }
 .info-table th, .info-table td { border: 1px solid var(--border-color); padding: 8px; text-align: left; word-break: keep-all; }
-
-/* 투명도를 제거하여 스크롤 시 글자가 겹치지 않게 수정한 표 헤더 */
-.info-table th { 
-    background: var(--bg-dark); 
-    color: var(--neon-blue); 
-    font-weight: bold; 
-    position: sticky; 
-    top: -1px; 
-    z-index: 5; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5); 
-}
-
+.info-table th { background: var(--bg-dark); color: var(--neon-blue); font-weight: bold; position: sticky; top: -1px; z-index: 5; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .info-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 
 /* 유틸리티 클래스 */
 .d-none { display: none !important; }
 .d-flex { display: flex !important; }
 
-/* --- ★ 추가됨: 작은 화면 기기(세로 700px 이하)에서 상태창 스크롤 고정 시 잘림 방지 --- */
+/* 작은 화면 기기에서 상태창 스크롤 고정 시 잘림 방지 (레이더 차트 크기 확대 적용) */
 @media (max-height: 700px) {
     #status .system-card { padding: 10px; margin-bottom: 8px; }
     #status h2 { margin-bottom: 6px; }
     .radar-chart-container { margin: 0 0 5px 0; }
-    .radar-chart { max-width: 120px; }
+    .radar-chart { max-width: 175px; } 
     .stat-info { margin-bottom: 0px; font-size: 0.7rem; }
     .progress-bg { margin-bottom: 4px; height: 3px; }
     .compact-score-val { font-size: 1.3rem; }
