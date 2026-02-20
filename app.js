@@ -105,6 +105,7 @@ function bindEvents() {
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
     document.getElementById('imageUpload').addEventListener('change', loadProfileImage); 
 
+    document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
@@ -245,7 +246,6 @@ async function simulateLogin() {
 
 async function simulateGoogleLogin() { 
     try { 
-        // 팝업 방식으로 구글 로그인 진행 및 토큰 발급
         const result = await signInWithPopup(auth, googleProvider); 
         const credential = GoogleAuthProvider.credentialFromResult(result);
         if (credential && credential.accessToken) {
@@ -359,6 +359,26 @@ function renderHistoryModal() {
 function closeInfoModal() {
     document.getElementById('infoModal').classList.remove('d-flex');
     document.getElementById('infoModal').classList.add('d-none');
+}
+
+function openStatusInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
+    const body = document.getElementById('info-modal-body');
+    
+    let tableHtml = `<table class="info-table"><thead><tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_desc}</th></tr></thead><tbody>`;
+    const stats = ['str', 'int', 'cha', 'vit', 'wlth', 'agi'];
+    
+    stats.forEach(stat => {
+        tableHtml += `<tr>
+            <td style="text-align:center; vertical-align:middle; width:20%;">
+                <span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${stat.toUpperCase()}</span><br>
+                <b style="font-size:0.75rem; color:var(--text-main); display:inline-block; margin-top:3px;">${i18n[AppState.currentLang][stat]}</b>
+            </td>
+            <td style="color:var(--text-sub); line-height:1.5;">${i18n[AppState.currentLang]['desc_'+stat]}</td>
+        </tr>`;
+    });
+    tableHtml += `</tbody></table>`; body.innerHTML = tableHtml;
+    document.getElementById('infoModal').classList.remove('d-none'); document.getElementById('infoModal').classList.add('d-flex');
 }
 
 function openQuestInfoModal() {
