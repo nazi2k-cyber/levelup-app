@@ -21,6 +21,16 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
+// --- ★ 명언 데이터 (철학 & 성장) ★ ---
+const systemQuotes = [
+    { ko: "변화의 비밀은 과거와 싸우는 것이 아니라, 새로운 것을 만드는 데 에너지를 집중하는 것이다.", en: "The secret of change is to focus all of your energy, not on fighting the old, but on building the new.", ja: "変化の秘密は、古いものと戦うことではなく、新しいものを作り上げることにすべてのエネルギーを集中させることだ。", author: "Socrates (소크라테스)" },
+    { ko: "살아야 할 이유를 아는 사람은 어떠한 어려움도 견뎌낼 수 있다.", en: "He who has a why to live for can bear almost any how.", ja: "生きる理由を知っている者は、どのような困難にも耐えることができる。", author: "Friedrich Nietzsche (니체)" },
+    { ko: "우리가 두려워해야 할 것은 죽음이 아니라, 한 번도 진정으로 살지 못하는 것이다.", en: "It is not death that a man should fear, but he should fear never beginning to live.", ja: "私たちが恐れるべきは死ではなく、一度も本当に生きないことである。", author: "Marcus Aurelius (마르쿠스 아우렐리우스)" },
+    { ko: "고난을 겪어보지 않은 사람만큼 불행한 사람은 없다.", en: "No man is more unhappy than he who never faces adversity.", ja: "困難を経験したことのない人ほど不幸な人はいない。", author: "Seneca (세네카)" },
+    { ko: "당신이 할 수 있다고 믿든, 할 수 없다고 믿든, 당신이 옳다.", en: "Whether you think you can, or you think you can't – you're right.", ja: "できると思おうと、できないと思おうと、どちらも正しい。", author: "Henry Ford (헨리 포드)" },
+    { ko: "꾸준함이 모든 것을 이긴다.", en: "Consistency is key to everything.", ja: "継続は力なり。", author: "System (시스템)" }
+];
+
 // --- 상태 관리 객체 ---
 let AppState = getInitialAppState();
 
@@ -46,7 +56,6 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        // ★ hasContributed(기여 여부) 추가 ★
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, maxParticipants: 5, isJoined: false, hasContributed: false, targetStat: 'str', progress: 0, isCleared: false },
     };
 }
@@ -70,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePointUI(); 
             drawRadarChart(); 
             updateDungeonStatus();
-            startRaidTimer(); // ★ 실시간 타이머 시작
+            startRaidTimer(); 
             renderQuestList(); 
             fetchSocialData(); 
             
@@ -137,7 +146,7 @@ async function saveUserData() {
             points: AppState.user.points,
             titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
             questStr: JSON.stringify(AppState.quest.completedState),
-            dungeonStr: JSON.stringify(AppState.dungeon), // 전체 객체 저장
+            dungeonStr: JSON.stringify(AppState.dungeon), 
             friends: AppState.user.friends || [],
             photoURL: AppState.user.photoURL || null,
             syncEnabled: AppState.user.syncEnabled, 
@@ -342,7 +351,7 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- ★ 던전 로직 및 타이머 ★ ---
+// --- 던전 로직 및 타이머 ---
 let raidTimerInterval = null;
 
 function startRaidTimer() {
@@ -396,7 +405,6 @@ function updateDungeonStatus() {
             AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
             AppState.dungeon.maxParticipants = 5; 
             
-            // ★ 더미 참여 인원 (0~4명), 기존 기여도 반영 세팅 ★
             const dummyParticipants = Math.floor(Math.random() * AppState.dungeon.maxParticipants); 
             AppState.dungeon.participants = dummyParticipants;
             AppState.dungeon.progress = (dummyParticipants / AppState.dungeon.maxParticipants) * 100;
@@ -431,7 +439,6 @@ function renderDungeon() {
         const st = seoulStations[AppState.dungeon.stationIdx];
         
         if (!AppState.dungeon.isJoined) {
-            // 던전 입장 전 화면
             if(timer) timer.classList.add('d-none');
             activeBoard.classList.add('d-none'); 
             banner.classList.remove('d-none');
@@ -457,7 +464,6 @@ function renderDungeon() {
                 ${joinBtnHtml}
             `;
         } else {
-            // 던전 입장 후 진행률 보드
             if(timer) timer.classList.remove('d-none');
             banner.classList.add('d-none'); 
             activeBoard.classList.remove('d-none'); 
@@ -475,7 +481,6 @@ function renderDungeon() {
             const btnAction = document.getElementById('btn-raid-action');
             const btnComplete = document.getElementById('btn-raid-complete');
             
-            // ★ 전리품 버튼 및 전송 버튼 활성화 분기 처리 ★
             if (AppState.dungeon.progress >= 100) {
                 btnAction.classList.add('d-none');
                 btnComplete.classList.remove('d-none');
@@ -522,7 +527,6 @@ window.joinDungeon = () => {
 window.simulateRaidAction = () => {
     if (AppState.dungeon.hasContributed || AppState.dungeon.progress >= 100) return;
     
-    // ★ 기여 로직: 인원수 증가 및 비율만큼 정확히 상승 ★
     AppState.dungeon.hasContributed = true;
     AppState.dungeon.participants++;
     AppState.dungeon.progress = (AppState.dungeon.participants / AppState.dungeon.maxParticipants) * 100;
@@ -617,9 +621,26 @@ function changeLanguage(langCode) {
         renderUsers(AppState.social.sortCriteria); 
         renderQuestList(); 
         renderCalendar(); 
+        renderQuote();
         updatePointUI(); 
         updateDungeonStatus();
         loadPlayerName(); 
+    }
+}
+
+// --- ★ 일일 명언 렌더링 함수 ★ ---
+function renderQuote() {
+    const today = new Date();
+    // 날짜를 기반으로 일관된 랜덤 인덱스 생성
+    const index = (today.getFullYear() + today.getMonth() + today.getDate()) % systemQuotes.length;
+    const q = systemQuotes[index];
+    
+    const quoteEl = document.getElementById('daily-quote');
+    const authorEl = document.getElementById('daily-quote-author');
+    
+    if(quoteEl && authorEl) {
+        quoteEl.innerText = `"${q[AppState.currentLang] || q.ko}"`;
+        authorEl.innerText = `- ${q.author} -`;
     }
 }
 
