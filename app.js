@@ -46,7 +46,6 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        // 글로벌 동기화를 위한 변수 추가 (globalParticipants, globalProgress)
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false },
     };
 }
@@ -81,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 주기적인 시간 및 글로벌 동기화 체크 (30초마다)
     setInterval(() => {
         updateDungeonStatus();
         if(document.getElementById('dungeon').classList.contains('active')) {
@@ -169,7 +167,7 @@ async function loadUserDataFromDB(user) {
                 AppState.dungeon = JSON.parse(data.dungeonStr);
                 if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
                 if(AppState.dungeon.hasContributed === undefined) AppState.dungeon.hasContributed = false; 
-                AppState.dungeon.globalParticipants = 0; // UI용 변수 초기화
+                AppState.dungeon.globalParticipants = 0;
                 AppState.dungeon.globalProgress = 0;
             }
             if(data.friends) AppState.user.friends = data.friends;
@@ -345,10 +343,9 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- ★ 던전 로직 (글로벌 고정 장소 + 실제 유저 동기화) ★ ---
+// --- 던전 로직 ---
 let raidTimerInterval = null;
 
-// 특정 날짜와 시간에 고정된 동일한 랜덤 값을 생성하는 함수
 function getFixedDungeonData(dateStr, slot) {
     const seedStr = dateStr + "_slot" + slot;
     let hash = 0;
@@ -393,7 +390,6 @@ function startRaidTimer() {
     }, 1000);
 }
 
-// Firebase를 조회하여 실제 등록 사용자들의 진행도를 실시간 계산
 window.syncGlobalDungeon = async () => {
     if (AppState.dungeon.slot === 0 || !auth.currentUser) return;
     try {
@@ -408,10 +404,9 @@ window.syncGlobalDungeon = async () => {
             if (data.dungeonStr) {
                 try {
                     const dng = JSON.parse(data.dungeonStr);
-                    // 같은 날, 같은 시간에 '입장'한 유저만 필터링
                     if (dng.lastGeneratedDate === targetDate && dng.slot === targetSlot && dng.isJoined) {
                         realParticipants++;
-                        if (dng.hasContributed) realProgressCount++; // '전송' 버튼을 누른 횟수
+                        if (dng.hasContributed) realProgressCount++; 
                     }
                 } catch(e) {}
             }
@@ -420,7 +415,6 @@ window.syncGlobalDungeon = async () => {
         AppState.dungeon.globalParticipants = realParticipants;
         AppState.dungeon.globalProgress = Math.min(100, (realProgressCount / AppState.dungeon.maxParticipants) * 100);
 
-        // 현재 던전 탭을 보고 있다면 UI 업데이트
         if (document.getElementById('dungeon').classList.contains('active')) {
             renderDungeon();
         }
@@ -446,12 +440,11 @@ function updateDungeonStatus() {
         AppState.dungeon.slot = currentSlot;
         
         if (currentSlot > 0) { 
-            // 1) 고정된 던전 장소 할당 (더미 랜덤 제거)
             const fixedData = getFixedDungeonData(dateStr, currentSlot);
             AppState.dungeon.stationIdx = fixedData.stationIdx;
             AppState.dungeon.targetStat = fixedData.targetStat;
             
-            AppState.dungeon.maxParticipants = 5; // 5명으로 테스트 제한
+            AppState.dungeon.maxParticipants = 5; 
             
             AppState.dungeon.isJoined = false; 
             AppState.dungeon.hasContributed = false;
@@ -466,7 +459,6 @@ function updateDungeonStatus() {
     }
     renderDungeon();
     
-    // 던전 출현 중이라면 실시간 데이터 즉시 호출
     if (currentSlot > 0) {
         window.syncGlobalDungeon();
     }
@@ -490,14 +482,12 @@ function renderDungeon() {
         const st = seoulStations[AppState.dungeon.stationIdx];
         
         if (!AppState.dungeon.isJoined) {
-            // 입장 전 UI
             if(timer) timer.classList.add('d-none');
             activeBoard.classList.add('d-none'); 
             banner.classList.remove('d-none');
             
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
             
-            // 100% (5명) 도달 시 입장 불가 처리
             const isFull = AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants;
             const joinBtnHtml = isFull 
                 ? `<button disabled class="btn-primary" style="background:#333; border-color:#333; margin-top:10px; color:#888; font-weight:bold; cursor:not-allowed;">정원 초과 (입장 불가)</button>`
@@ -517,7 +507,6 @@ function renderDungeon() {
                 ${joinBtnHtml}
             `;
         } else {
-            // 입장 후 진행도 UI
             if(timer) timer.classList.remove('d-none');
             banner.classList.add('d-none'); 
             activeBoard.classList.remove('d-none'); 
@@ -528,7 +517,6 @@ function renderDungeon() {
             document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
             document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
             
-            // 글로벌 변수 적용
             document.getElementById('raid-part-count').innerText = `${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}`;
             document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.globalProgress}%`;
             document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.globalProgress}%`;
@@ -536,7 +524,6 @@ function renderDungeon() {
             const btnAction = document.getElementById('btn-raid-action');
             const btnComplete = document.getElementById('btn-raid-complete');
             
-            // 100% 도달 시 전리품 버튼 분리 활성화
             if (AppState.dungeon.globalProgress >= 100) {
                 btnAction.classList.add('d-none');
                 btnComplete.classList.remove('d-none');
@@ -556,7 +543,6 @@ function renderDungeon() {
                 btnAction.classList.remove('d-none');
                 btnComplete.classList.add('d-none');
                 
-                // 데이터 전송(기여) 1회 제한
                 if (AppState.dungeon.hasContributed) {
                     btnAction.innerText = "데이터 전송 완료";
                     btnAction.disabled = true;
@@ -578,20 +564,19 @@ window.joinDungeon = async () => {
     }
     AppState.dungeon.isJoined = true;
     await saveUserData(); 
-    await window.syncGlobalDungeon(); // 입장 즉시 글로벌 서버 동기화
+    await window.syncGlobalDungeon(); 
 };
 
 window.simulateRaidAction = async () => {
     if (AppState.dungeon.hasContributed || AppState.dungeon.globalProgress >= 100) return;
     
-    // 버튼 시각적 피드백 즉시 처리
     const btn = document.getElementById('btn-raid-action');
     btn.innerText = `데이터 전송 중...`;
     btn.disabled = true;
 
     AppState.dungeon.hasContributed = true;
-    await saveUserData(); // 기여 완료 상태 서버 저장
-    await window.syncGlobalDungeon(); // 진행도 재계산
+    await saveUserData(); 
+    await window.syncGlobalDungeon(); 
 };
 
 window.completeDungeon = () => {
@@ -629,7 +614,7 @@ function switchTab(tabId, el) {
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
-        window.syncGlobalDungeon(); // 던전 탭 진입 시 실시간 데이터 다시 긁어오기
+        window.syncGlobalDungeon(); 
     }
 }
 
@@ -684,7 +669,7 @@ function changeLanguage(langCode) {
     }
 }
 
-// --- 외부 API 연동 명언 렌더링 ---
+// --- 외부 API 연동 명언 ---
 async function renderQuote() {
     const quoteEl = document.getElementById('daily-quote');
     const authorEl = document.getElementById('daily-quote-author');
@@ -855,7 +840,7 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- 팝업 모달창 로직 ---
+// --- ★ 팝업 모달창 로직 (호칭 표 등) ★ ---
 function closeInfoModal() { 
     const m = document.getElementById('infoModal'); 
     m.classList.add('d-none'); 
@@ -869,11 +854,35 @@ function closeTitleModal() {
 }
 
 function openTitleModal() {
-    const container = document.getElementById('history-list-container');
-    container.innerHTML = [...AppState.user.titleHistory].reverse().map(h => {
-        const t = typeof h.title === 'object' ? (h.title[AppState.currentLang] || h.title.ko) : h.title;
-        return `<div class="history-item"><span class="hist-lvl">Lv. ${h.level}</span><span class="hist-title">${t}</span></div>`;
-    }).join('');
+    const container = document.getElementById('title-guide-container');
+    
+    const html = `
+        <div style="font-size:0.8rem; color:var(--text-main); background: rgba(0, 217, 255, 0.05); border: 1px solid var(--neon-blue); padding: 12px; border-radius: 6px; margin-bottom:15px; line-height:1.5; word-break:keep-all;">
+            💡 <b style="color:var(--neon-blue);">호칭 조합 공식</b><br>
+            레벨업 시 보유한 스탯 점수를 기준으로 <b>[1위 스탯의 접두사] + [2위 스탯의 접미사]</b>가 결합되어 고유 호칭이 부여됩니다.
+        </div>
+
+        <table class="info-table">
+            <thead>
+                <tr>
+                    <th>스탯</th>
+                    <th>🥇 1위 (접두사)</th>
+                    <th>🥈 2위 (접미사)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">STR</span></td><td>강인한</td><td>전사 / 호랑이</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">INT</span></td><td>예리한</td><td>학자 / 올빼미</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">CHA</span></td><td>매혹적인</td><td>셀럽 / 여우</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">VIT</span></td><td>지치지 않는</td><td>거북이 / 곰</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">WLTH</span></td><td>부유한</td><td>자본가 / 귀족</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">AGI</span></td><td>날렵한</td><td>그림자 / 표범</td></tr>
+            </tbody>
+        </table>
+        <div style="font-size:0.7rem; color:var(--text-sub); margin-top:10px; text-align:right;">※ 스탯 동점 시 시스템 내부 우선순위에 따름</div>
+    `;
+
+    container.innerHTML = html;
     const m = document.getElementById('titleModal');
     m.classList.remove('d-none');
     m.classList.add('d-flex');
