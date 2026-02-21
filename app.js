@@ -46,7 +46,8 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, maxParticipants: 5, isJoined: false, hasContributed: false, targetStat: 'str', progress: 0, isCleared: false },
+        // 글로벌 동기화를 위한 변수 추가 (globalParticipants, globalProgress)
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false },
     };
 }
 
@@ -62,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
             
-            // 상태창 스크롤 허용 (명언 카드가 잘리지 않도록)
             document.querySelector('main').style.overflowY = 'auto'; 
             
             changeLanguage(AppState.currentLang); 
@@ -81,7 +81,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    setInterval(updateDungeonStatus, 60000); 
+    // 주기적인 시간 및 글로벌 동기화 체크 (30초마다)
+    setInterval(() => {
+        updateDungeonStatus();
+        if(document.getElementById('dungeon').classList.contains('active')) {
+            window.syncGlobalDungeon();
+        }
+    }, 30000); 
 });
 
 function initTheme() {
@@ -163,6 +169,8 @@ async function loadUserDataFromDB(user) {
                 AppState.dungeon = JSON.parse(data.dungeonStr);
                 if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
                 if(AppState.dungeon.hasContributed === undefined) AppState.dungeon.hasContributed = false; 
+                AppState.dungeon.globalParticipants = 0; // UI용 변수 초기화
+                AppState.dungeon.globalProgress = 0;
             }
             if(data.friends) AppState.user.friends = data.friends;
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
@@ -337,8 +345,22 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- 던전 로직 및 타이머 ---
+// --- ★ 던전 로직 (글로벌 고정 장소 + 실제 유저 동기화) ★ ---
 let raidTimerInterval = null;
+
+// 특정 날짜와 시간에 고정된 동일한 랜덤 값을 생성하는 함수
+function getFixedDungeonData(dateStr, slot) {
+    const seedStr = dateStr + "_slot" + slot;
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+        hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    hash = Math.abs(hash);
+    return {
+        stationIdx: hash % seoulStations.length,
+        targetStat: statKeys[hash % statKeys.length]
+    };
+}
 
 function startRaidTimer() {
     if(raidTimerInterval) clearInterval(raidTimerInterval);
@@ -371,6 +393,42 @@ function startRaidTimer() {
     }, 1000);
 }
 
+// Firebase를 조회하여 실제 등록 사용자들의 진행도를 실시간 계산
+window.syncGlobalDungeon = async () => {
+    if (AppState.dungeon.slot === 0 || !auth.currentUser) return;
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        let realParticipants = 0;
+        let realProgressCount = 0;
+        const targetDate = AppState.dungeon.lastGeneratedDate;
+        const targetSlot = AppState.dungeon.slot;
+
+        snap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.dungeonStr) {
+                try {
+                    const dng = JSON.parse(data.dungeonStr);
+                    // 같은 날, 같은 시간에 '입장'한 유저만 필터링
+                    if (dng.lastGeneratedDate === targetDate && dng.slot === targetSlot && dng.isJoined) {
+                        realParticipants++;
+                        if (dng.hasContributed) realProgressCount++; // '전송' 버튼을 누른 횟수
+                    }
+                } catch(e) {}
+            }
+        });
+
+        AppState.dungeon.globalParticipants = realParticipants;
+        AppState.dungeon.globalProgress = Math.min(100, (realProgressCount / AppState.dungeon.maxParticipants) * 100);
+
+        // 현재 던전 탭을 보고 있다면 UI 업데이트
+        if (document.getElementById('dungeon').classList.contains('active')) {
+            renderDungeon();
+        }
+    } catch (e) {
+        console.error("글로벌 동기화 에러:", e);
+    }
+};
+
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours();
@@ -388,23 +446,30 @@ function updateDungeonStatus() {
         AppState.dungeon.slot = currentSlot;
         
         if (currentSlot > 0) { 
-            AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
-            AppState.dungeon.maxParticipants = 5; 
+            // 1) 고정된 던전 장소 할당 (더미 랜덤 제거)
+            const fixedData = getFixedDungeonData(dateStr, currentSlot);
+            AppState.dungeon.stationIdx = fixedData.stationIdx;
+            AppState.dungeon.targetStat = fixedData.targetStat;
             
-            const dummyParticipants = Math.floor(Math.random() * AppState.dungeon.maxParticipants); 
-            AppState.dungeon.participants = dummyParticipants;
-            AppState.dungeon.progress = (dummyParticipants / AppState.dungeon.maxParticipants) * 100;
+            AppState.dungeon.maxParticipants = 5; // 5명으로 테스트 제한
             
             AppState.dungeon.isJoined = false; 
             AppState.dungeon.hasContributed = false;
             AppState.dungeon.isCleared = false; 
-            AppState.dungeon.targetStat = statKeys[Math.floor(Math.random() * 6)];
+            
+            AppState.dungeon.globalParticipants = 0;
+            AppState.dungeon.globalProgress = 0;
         } else {
             AppState.dungeon.isJoined = false;
         }
         saveUserData();
     }
     renderDungeon();
+    
+    // 던전 출현 중이라면 실시간 데이터 즉시 호출
+    if (currentSlot > 0) {
+        window.syncGlobalDungeon();
+    }
 }
 
 function renderDungeon() {
@@ -425,14 +490,15 @@ function renderDungeon() {
         const st = seoulStations[AppState.dungeon.stationIdx];
         
         if (!AppState.dungeon.isJoined) {
-            // 던전 입장 전 화면
+            // 입장 전 UI
             if(timer) timer.classList.add('d-none');
             activeBoard.classList.add('d-none'); 
             banner.classList.remove('d-none');
             
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
             
-            const isFull = AppState.dungeon.participants >= AppState.dungeon.maxParticipants;
+            // 100% (5명) 도달 시 입장 불가 처리
+            const isFull = AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants;
             const joinBtnHtml = isFull 
                 ? `<button disabled class="btn-primary" style="background:#333; border-color:#333; margin-top:10px; color:#888; font-weight:bold; cursor:not-allowed;">정원 초과 (입장 불가)</button>`
                 : `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>`;
@@ -446,12 +512,12 @@ function renderDungeon() {
                 <p style="font-size: 0.8rem; margin-bottom: 5px; color:var(--text-main); word-break:keep-all;">${m.desc1[AppState.currentLang]}</p>
                 <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">
                     ${i18n[AppState.currentLang].raid_part} 
-                    <span class="text-blue">${AppState.dungeon.participants} / ${AppState.dungeon.maxParticipants}</span> 명
+                    <span class="text-blue">${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}</span> 명
                 </div>
                 ${joinBtnHtml}
             `;
         } else {
-            // 던전 입장 후 진행률 보드
+            // 입장 후 진행도 UI
             if(timer) timer.classList.remove('d-none');
             banner.classList.add('d-none'); 
             activeBoard.classList.remove('d-none'); 
@@ -462,14 +528,16 @@ function renderDungeon() {
             document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
             document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
             
-            document.getElementById('raid-part-count').innerText = `${AppState.dungeon.participants} / ${AppState.dungeon.maxParticipants}`;
-            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.progress}%`;
-            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.progress}%`;
+            // 글로벌 변수 적용
+            document.getElementById('raid-part-count').innerText = `${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}`;
+            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.globalProgress}%`;
+            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.globalProgress}%`;
             
             const btnAction = document.getElementById('btn-raid-action');
             const btnComplete = document.getElementById('btn-raid-complete');
             
-            if (AppState.dungeon.progress >= 100) {
+            // 100% 도달 시 전리품 버튼 분리 활성화
+            if (AppState.dungeon.globalProgress >= 100) {
                 btnAction.classList.add('d-none');
                 btnComplete.classList.remove('d-none');
                 
@@ -488,6 +556,7 @@ function renderDungeon() {
                 btnAction.classList.remove('d-none');
                 btnComplete.classList.add('d-none');
                 
+                // 데이터 전송(기여) 1회 제한
                 if (AppState.dungeon.hasContributed) {
                     btnAction.innerText = "데이터 전송 완료";
                     btnAction.disabled = true;
@@ -502,25 +571,27 @@ function renderDungeon() {
     }
 }
 
-window.joinDungeon = () => {
-    if(AppState.dungeon.participants >= AppState.dungeon.maxParticipants) {
+window.joinDungeon = async () => {
+    if(AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants) {
         alert("이미 정원이 초과되었습니다.");
         return;
     }
     AppState.dungeon.isJoined = true;
-    saveUserData(); 
-    renderDungeon();
+    await saveUserData(); 
+    await window.syncGlobalDungeon(); // 입장 즉시 글로벌 서버 동기화
 };
 
-window.simulateRaidAction = () => {
-    if (AppState.dungeon.hasContributed || AppState.dungeon.progress >= 100) return;
+window.simulateRaidAction = async () => {
+    if (AppState.dungeon.hasContributed || AppState.dungeon.globalProgress >= 100) return;
     
+    // 버튼 시각적 피드백 즉시 처리
+    const btn = document.getElementById('btn-raid-action');
+    btn.innerText = `데이터 전송 중...`;
+    btn.disabled = true;
+
     AppState.dungeon.hasContributed = true;
-    AppState.dungeon.participants++;
-    AppState.dungeon.progress = (AppState.dungeon.participants / AppState.dungeon.maxParticipants) * 100;
-    
-    saveUserData(); 
-    renderDungeon();
+    await saveUserData(); // 기여 완료 상태 서버 저장
+    await window.syncGlobalDungeon(); // 진행도 재계산
 };
 
 window.completeDungeon = () => {
@@ -548,7 +619,7 @@ function switchTab(tabId, el) {
     
     const mainEl = document.querySelector('main');
     if(tabId === 'status') { 
-        mainEl.style.overflowY = 'auto'; // 상태창 스크롤 항상 허용
+        mainEl.style.overflowY = 'auto'; 
         drawRadarChart(); updatePointUI(); 
     } else {
         mainEl.style.overflowY = 'auto';
@@ -556,7 +627,10 @@ function switchTab(tabId, el) {
     
     if(tabId === 'social') fetchSocialData(); 
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
-    if(tabId === 'dungeon') updateDungeonStatus();
+    if(tabId === 'dungeon') {
+        updateDungeonStatus();
+        window.syncGlobalDungeon(); // 던전 탭 진입 시 실시간 데이터 다시 긁어오기
+    }
 }
 
 function updatePointUI() {
@@ -610,11 +684,10 @@ function changeLanguage(langCode) {
     }
 }
 
-// --- ★ 외부 API 연동 명언 렌더링 함수 ★ ---
+// --- 외부 API 연동 명언 렌더링 ---
 async function renderQuote() {
     const quoteEl = document.getElementById('daily-quote');
     const authorEl = document.getElementById('daily-quote-author');
-    
     if(!quoteEl || !authorEl) return;
 
     try {
@@ -622,7 +695,6 @@ async function renderQuote() {
         authorEl.innerText = "";
 
         let apiUrl = 'https://korean-advice-open-api.vercel.app/api/advice';
-        
         if (AppState.currentLang === 'en' || AppState.currentLang === 'ja') {
             apiUrl = 'https://dummyjson.com/quotes/random';
         }
@@ -631,7 +703,6 @@ async function renderQuote() {
         if (!response.ok) throw new Error("API 통신 에러");
 
         const data = await response.json();
-
         const quoteText = data.message || data.quote;
         const quoteAuthor = data.author || "Unknown";
 
