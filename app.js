@@ -72,7 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
             
-            document.querySelector('main').style.overflowY = 'hidden';
+            // ★ 수정됨: 상태창 스크롤을 허용하여 명언이 보이도록 함 ★
+            document.querySelector('main').style.overflowY = 'auto'; 
             
             changeLanguage(AppState.currentLang); 
             renderCalendar(); 
@@ -213,7 +214,7 @@ function changeInstaId() {
     }
 }
 
-// --- 스탯 레이더 ---
+// --- ★ 스탯 레이더 (하단 스탯 막대바 관련 코드 삭제) ★ ---
 function drawRadarChart() {
     const centerX = 50, centerY = 50, radius = 33; 
     const angles = []; 
@@ -256,11 +257,6 @@ function drawRadarChart() {
         if(i===4 || i===5) anchor = "end";   
         
         labelsHtml += `<text x="${lx}" y="${ly - 3}" text-anchor="${anchor}" class="radar-label">${i18n[AppState.currentLang][key]}</text><text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" class="radar-value">${val}</text>`;
-        
-        const barVal = document.getElementById(`barVal_${key}`); 
-        if(barVal) barVal.textContent = val;
-        const barFill = document.getElementById(`barFill_${key}`); 
-        if(barFill) setTimeout(() => { barFill.style.width = `${val}%`; }, 100);
     }
     
     pointsGroup.innerHTML = pointsHtml; 
@@ -551,7 +547,7 @@ window.completeDungeon = () => {
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 };
 
-// --- 공통 UI ---
+// --- ★ 공통 UI 제어 (상태창 스크롤 허용) ★ ---
 function switchTab(tabId, el) {
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -560,7 +556,7 @@ function switchTab(tabId, el) {
     
     const mainEl = document.querySelector('main');
     if(tabId === 'status') { 
-        mainEl.style.overflowY = 'hidden'; 
+        mainEl.style.overflowY = 'auto'; // 스크롤을 항상 허용하여 명언 카드가 잘리지 않게 함
         drawRadarChart(); updatePointUI(); 
     } else {
         mainEl.style.overflowY = 'auto';
@@ -581,12 +577,8 @@ function updatePointUI() {
     const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title;
     const titleText = typeof titleObj === 'object' ? titleObj[AppState.currentLang] || titleObj.ko : titleObj;
     document.getElementById('prof-title-badge').innerHTML = `${titleText} ℹ️`;
-
-    statKeys.forEach(k => {
-        const p = AppState.user.pendingStats[k];
-        const el = document.getElementById(`pendVal_${k}`);
-        if(el) el.innerText = p > 0 ? `(+${p.toFixed(1)})` : "";
-    });
+    
+    // 막대바가 사라졌으므로 pendVal 렌더링 생략
 }
 
 function processLevelUp() {
@@ -628,10 +620,9 @@ function changeLanguage(langCode) {
     }
 }
 
-// --- ★ 일일 명언 렌더링 함수 ★ ---
+// --- 일일 명언 렌더링 ---
 function renderQuote() {
     const today = new Date();
-    // 날짜를 기반으로 일관된 랜덤 인덱스 생성
     const index = (today.getFullYear() + today.getMonth() + today.getDate()) % systemQuotes.length;
     const q = systemQuotes[index];
     
