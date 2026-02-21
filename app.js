@@ -21,16 +21,6 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// --- ★ 명언 데이터 (철학 & 성장) ★ ---
-const systemQuotes = [
-    { ko: "변화의 비밀은 과거와 싸우는 것이 아니라, 새로운 것을 만드는 데 에너지를 집중하는 것이다.", en: "The secret of change is to focus all of your energy, not on fighting the old, but on building the new.", ja: "変化の秘密は、古いものと戦うことではなく、新しいものを作り上げることにすべてのエネルギーを集中させることだ。", author: "Socrates (소크라테스)" },
-    { ko: "살아야 할 이유를 아는 사람은 어떠한 어려움도 견뎌낼 수 있다.", en: "He who has a why to live for can bear almost any how.", ja: "生きる理由を知っている者は、どのような困難にも耐えることができる。", author: "Friedrich Nietzsche (니체)" },
-    { ko: "우리가 두려워해야 할 것은 죽음이 아니라, 한 번도 진정으로 살지 못하는 것이다.", en: "It is not death that a man should fear, but he should fear never beginning to live.", ja: "私たちが恐れるべきは死ではなく、一度も本当に生きないことである。", author: "Marcus Aurelius (마르쿠스 아우렐리우스)" },
-    { ko: "고난을 겪어보지 않은 사람만큼 불행한 사람은 없다.", en: "No man is more unhappy than he who never faces adversity.", ja: "困難を経験したことのない人ほど不幸な人はいない。", author: "Seneca (세네카)" },
-    { ko: "당신이 할 수 있다고 믿든, 할 수 없다고 믿든, 당신이 옳다.", en: "Whether you think you can, or you think you can't – you're right.", ja: "できると思おうと、できないと思おうと、どちらも正しい。", author: "Henry Ford (헨리 포드)" },
-    { ko: "꾸준함이 모든 것을 이긴다.", en: "Consistency is key to everything.", ja: "継続は力なり。", author: "System (시스템)" }
-];
-
 // --- 상태 관리 객체 ---
 let AppState = getInitialAppState();
 
@@ -72,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
             
-            // ★ 수정됨: 상태창 스크롤을 허용하여 명언이 보이도록 함 ★
+            // 상태창 스크롤 허용 (명언 카드가 잘리지 않도록)
             document.querySelector('main').style.overflowY = 'auto'; 
             
             changeLanguage(AppState.currentLang); 
@@ -214,7 +204,7 @@ function changeInstaId() {
     }
 }
 
-// --- ★ 스탯 레이더 (하단 스탯 막대바 관련 코드 삭제) ★ ---
+// --- 스탯 레이더 ---
 function drawRadarChart() {
     const centerX = 50, centerY = 50, radius = 33; 
     const angles = []; 
@@ -435,6 +425,7 @@ function renderDungeon() {
         const st = seoulStations[AppState.dungeon.stationIdx];
         
         if (!AppState.dungeon.isJoined) {
+            // 던전 입장 전 화면
             if(timer) timer.classList.add('d-none');
             activeBoard.classList.add('d-none'); 
             banner.classList.remove('d-none');
@@ -460,6 +451,7 @@ function renderDungeon() {
                 ${joinBtnHtml}
             `;
         } else {
+            // 던전 입장 후 진행률 보드
             if(timer) timer.classList.remove('d-none');
             banner.classList.add('d-none'); 
             activeBoard.classList.remove('d-none'); 
@@ -547,7 +539,7 @@ window.completeDungeon = () => {
     alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
 };
 
-// --- ★ 공통 UI 제어 (상태창 스크롤 허용) ★ ---
+// --- 공통 UI ---
 function switchTab(tabId, el) {
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -556,7 +548,7 @@ function switchTab(tabId, el) {
     
     const mainEl = document.querySelector('main');
     if(tabId === 'status') { 
-        mainEl.style.overflowY = 'auto'; // 스크롤을 항상 허용하여 명언 카드가 잘리지 않게 함
+        mainEl.style.overflowY = 'auto'; // 상태창 스크롤 항상 허용
         drawRadarChart(); updatePointUI(); 
     } else {
         mainEl.style.overflowY = 'auto';
@@ -577,8 +569,6 @@ function updatePointUI() {
     const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title;
     const titleText = typeof titleObj === 'object' ? titleObj[AppState.currentLang] || titleObj.ko : titleObj;
     document.getElementById('prof-title-badge').innerHTML = `${titleText} ℹ️`;
-    
-    // 막대바가 사라졌으므로 pendVal 렌더링 생략
 }
 
 function processLevelUp() {
@@ -620,18 +610,49 @@ function changeLanguage(langCode) {
     }
 }
 
-// --- 일일 명언 렌더링 ---
-function renderQuote() {
-    const today = new Date();
-    const index = (today.getFullYear() + today.getMonth() + today.getDate()) % systemQuotes.length;
-    const q = systemQuotes[index];
-    
+// --- ★ 외부 API 연동 명언 렌더링 함수 ★ ---
+async function renderQuote() {
     const quoteEl = document.getElementById('daily-quote');
     const authorEl = document.getElementById('daily-quote-author');
     
-    if(quoteEl && authorEl) {
-        quoteEl.innerText = `"${q[AppState.currentLang] || q.ko}"`;
-        authorEl.innerText = `- ${q.author} -`;
+    if(!quoteEl || !authorEl) return;
+
+    try {
+        quoteEl.innerText = "위성 통신망에서 데이터를 수신 중입니다...";
+        authorEl.innerText = "";
+
+        let apiUrl = 'https://korean-advice-open-api.vercel.app/api/advice';
+        
+        if (AppState.currentLang === 'en' || AppState.currentLang === 'ja') {
+            apiUrl = 'https://dummyjson.com/quotes/random';
+        }
+
+        const response = await fetch(apiUrl);
+        if (!response.ok) throw new Error("API 통신 에러");
+
+        const data = await response.json();
+
+        const quoteText = data.message || data.quote;
+        const quoteAuthor = data.author || "Unknown";
+
+        quoteEl.style.opacity = 0;
+        authorEl.style.opacity = 0;
+        
+        setTimeout(() => {
+            quoteEl.innerText = `"${quoteText}"`;
+            authorEl.innerText = `- ${quoteAuthor} -`;
+            quoteEl.style.opacity = 1;
+            quoteEl.style.transition = "opacity 0.5s ease-in";
+            authorEl.style.opacity = 1;
+            authorEl.style.transition = "opacity 0.5s ease-in";
+        }, 300);
+
+    } catch (error) {
+        console.error("명언 API 호출 실패:", error);
+        quoteEl.innerText = `"어떠한 시련 속에서도 꾸준함은 시스템을 지탱하는 가장 강력한 무기이다."`;
+        authorEl.innerText = `- System Offline -`;
+        quoteEl.style.opacity = 1;
+        authorEl.style.opacity = 1;
     }
 }
 
