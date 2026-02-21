@@ -46,7 +46,8 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false))
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, maxParticipants: 5, isJoined: false, targetStat: 'str', progress: 0, isCleared: false },
+        // ★ hasContributed(기여 여부) 추가 ★
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, participants: 0, maxParticipants: 5, isJoined: false, hasContributed: false, targetStat: 'str', progress: 0, isCleared: false },
     };
 }
 
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePointUI(); 
             drawRadarChart(); 
             updateDungeonStatus();
+            startRaidTimer(); // ★ 실시간 타이머 시작
             renderQuestList(); 
             fetchSocialData(); 
             
@@ -135,7 +137,7 @@ async function saveUserData() {
             points: AppState.user.points,
             titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
             questStr: JSON.stringify(AppState.quest.completedState),
-            dungeonStr: JSON.stringify(AppState.dungeon),
+            dungeonStr: JSON.stringify(AppState.dungeon), // 전체 객체 저장
             friends: AppState.user.friends || [],
             photoURL: AppState.user.photoURL || null,
             syncEnabled: AppState.user.syncEnabled, 
@@ -160,6 +162,7 @@ async function loadUserDataFromDB(user) {
             if(data.dungeonStr) {
                 AppState.dungeon = JSON.parse(data.dungeonStr);
                 if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
+                if(AppState.dungeon.hasContributed === undefined) AppState.dungeon.hasContributed = false; 
             }
             if(data.friends) AppState.user.friends = data.friends;
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
@@ -339,7 +342,40 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- ★ 던전 로직 (시간 변경 및 적용) ★ ---
+// --- ★ 던전 로직 및 타이머 ★ ---
+let raidTimerInterval = null;
+
+function startRaidTimer() {
+    if(raidTimerInterval) clearInterval(raidTimerInterval);
+    
+    raidTimerInterval = setInterval(() => {
+        const timerEl = document.getElementById('raid-timer');
+        if(!timerEl || AppState.dungeon.slot === 0) return;
+
+        const now = new Date();
+        let endHour = 0;
+
+        if (AppState.dungeon.slot === 1) endHour = 9;
+        else if (AppState.dungeon.slot === 2) endHour = 14;
+        else if (AppState.dungeon.slot === 3) endHour = 21;
+
+        const endTime = new Date(now);
+        endTime.setHours(endHour, 0, 0, 0);
+
+        const diff = endTime.getTime() - now.getTime();
+
+        if (diff <= 0) {
+            timerEl.innerText = "00:00:00";
+            updateDungeonStatus(); 
+        } else {
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            timerEl.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+    }, 1000);
+}
+
 function updateDungeonStatus() {
     const now = new Date();
     const h = now.getHours();
@@ -347,7 +383,6 @@ function updateDungeonStatus() {
     const timeVal = h + m / 60;
     
     let currentSlot = 0;
-    // 변경된 출현 시간: 06~09 / 11~14 / 18~21
     if (timeVal >= 6 && timeVal < 9) currentSlot = 1; 
     else if (timeVal >= 11 && timeVal < 14) currentSlot = 2; 
     else if (timeVal >= 18 && timeVal < 21) currentSlot = 3;
@@ -360,11 +395,18 @@ function updateDungeonStatus() {
         if (currentSlot > 0) { 
             AppState.dungeon.stationIdx = Math.floor(Math.random() * seoulStations.length); 
             AppState.dungeon.maxParticipants = 5; 
-            AppState.dungeon.participants = Math.floor(Math.random() * 5); // 0~4명 사이로 설정
+            
+            // ★ 더미 참여 인원 (0~4명), 기존 기여도 반영 세팅 ★
+            const dummyParticipants = Math.floor(Math.random() * AppState.dungeon.maxParticipants); 
+            AppState.dungeon.participants = dummyParticipants;
+            AppState.dungeon.progress = (dummyParticipants / AppState.dungeon.maxParticipants) * 100;
+            
             AppState.dungeon.isJoined = false; 
+            AppState.dungeon.hasContributed = false;
             AppState.dungeon.isCleared = false; 
-            AppState.dungeon.progress = 0; 
             AppState.dungeon.targetStat = statKeys[Math.floor(Math.random() * 6)];
+        } else {
+            AppState.dungeon.isJoined = false;
         }
         saveUserData();
     }
@@ -382,17 +424,14 @@ function renderDungeon() {
         activeBoard.classList.add('d-none'); 
         banner.classList.remove('d-none');
         
-        // 언어별 시간에 맞게 문구 변경 (동적 적용)
-        const timeStr = AppState.currentLang === 'ko' ? "출현 시간: 06:00~09:00 | 11:00~14:00 | 18:00~21:00" :
-                        AppState.currentLang === 'en' ? "Open: 06:00~09:00 | 11:00~14:00 | 18:00~21:00" :
-                        "出現時間: 06:00~09:00 | 11:00~14:00 | 18:00~21:00";
-        
+        const timeStr = AppState.currentLang === 'ko' ? "출현 시간: 06:00~09:00 | 11:00~14:00 | 18:00~21:00" : "Open: 06:00~09:00 | 11:00~14:00 | 18:00~21:00";
         banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${timeStr}</p>`;
     } else {
         const m = raidMissions[AppState.dungeon.targetStat];
         const st = seoulStations[AppState.dungeon.stationIdx];
         
         if (!AppState.dungeon.isJoined) {
+            // 던전 입장 전 화면
             if(timer) timer.classList.add('d-none');
             activeBoard.classList.add('d-none'); 
             banner.classList.remove('d-none');
@@ -418,6 +457,7 @@ function renderDungeon() {
                 ${joinBtnHtml}
             `;
         } else {
+            // 던전 입장 후 진행률 보드
             if(timer) timer.classList.remove('d-none');
             banner.classList.add('d-none'); 
             activeBoard.classList.remove('d-none'); 
@@ -435,14 +475,35 @@ function renderDungeon() {
             const btnAction = document.getElementById('btn-raid-action');
             const btnComplete = document.getElementById('btn-raid-complete');
             
-            btnAction.innerText = m.actionText[AppState.currentLang]; 
-
+            // ★ 전리품 버튼 및 전송 버튼 활성화 분기 처리 ★
             if (AppState.dungeon.progress >= 100) {
                 btnAction.classList.add('d-none');
                 btnComplete.classList.remove('d-none');
+                
+                if(AppState.dungeon.isCleared) {
+                    btnComplete.innerText = "정산 완료";
+                    btnComplete.disabled = true;
+                    btnComplete.style.background = "#444";
+                    btnComplete.style.color = "#888";
+                } else {
+                    btnComplete.innerText = "전리품 획득";
+                    btnComplete.disabled = false;
+                    btnComplete.style.background = "var(--neon-gold)";
+                    btnComplete.style.color = "black";
+                }
             } else {
                 btnAction.classList.remove('d-none');
                 btnComplete.classList.add('d-none');
+                
+                if (AppState.dungeon.hasContributed) {
+                    btnAction.innerText = "데이터 전송 완료";
+                    btnAction.disabled = true;
+                    btnAction.style.opacity = "0.5";
+                } else {
+                    btnAction.innerText = m.actionText[AppState.currentLang];
+                    btnAction.disabled = false;
+                    btnAction.style.opacity = "1";
+                }
             }
         }
     }
@@ -454,32 +515,20 @@ window.joinDungeon = () => {
         return;
     }
     AppState.dungeon.isJoined = true;
-    AppState.dungeon.participants++;
-    AppState.dungeon.progress = Math.floor(Math.random() * 20) + 20; 
     saveUserData(); 
     renderDungeon();
 };
 
 window.simulateRaidAction = () => {
-    if (AppState.dungeon.progress >= 100) return;
+    if (AppState.dungeon.hasContributed || AppState.dungeon.progress >= 100) return;
     
-    const contribution = Math.floor(Math.random() * 11) + 5; 
-    AppState.dungeon.progress = Math.min(100, AppState.dungeon.progress + contribution);
+    // ★ 기여 로직: 인원수 증가 및 비율만큼 정확히 상승 ★
+    AppState.dungeon.hasContributed = true;
+    AppState.dungeon.participants++;
+    AppState.dungeon.progress = (AppState.dungeon.participants / AppState.dungeon.maxParticipants) * 100;
     
-    const btn = document.getElementById('btn-raid-action');
-    const origText = btn.innerText;
-    btn.innerText = `기여 완료! (+${contribution}%)`;
-    btn.disabled = true;
-
     saveUserData(); 
     renderDungeon();
-    
-    setTimeout(() => {
-        if (AppState.dungeon.progress < 100) {
-            btn.innerText = origText;
-            btn.disabled = false;
-        }
-    }, 500);
 };
 
 window.completeDungeon = () => {
@@ -491,7 +540,6 @@ window.completeDungeon = () => {
     AppState.user.points += pts;
     AppState.user.pendingStats[target] += statInc;
     AppState.dungeon.isCleared = true;
-    AppState.dungeon.progress = 100;
     
     saveUserData(); 
     renderDungeon(); 
@@ -703,7 +751,7 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- ★ 팝업 모달창 스크롤 방지 UI 최적화 ★ ---
+// --- 팝업 모달창 로직 ---
 function closeInfoModal() { 
     const m = document.getElementById('infoModal'); 
     m.classList.add('d-none'); 
@@ -779,12 +827,11 @@ function openDungeonInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title || "이상 현상 목록";
     const body = document.getElementById('info-modal-body');
     
-    // ★ 폰트 크기 및 여백 조정 (스크롤 방지) ★
     const timeInfoHtml = `
         <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:8px; border-radius:6px; margin-bottom:10px; text-align:center;">
             <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:3px;">🕒 던전 시스템 개방 시간 (KST)</div>
             <div style="font-weight:bold; color:var(--neon-blue); font-size:0.8rem; letter-spacing:0.5px;">
-                06:00~09:00 &nbsp;|&nbsp; 11:00~14:00 &nbsp;|&nbsp; 18:00~21:00
+                06:00~09:00  |  11:00~14:00  |  18:00~21:00
             </div>
         </div>
     `;
