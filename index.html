@@ -86,7 +86,7 @@
                     </div>
                 </div>
 
-                <div class="system-card">
+                <div class="system-card" style="margin-bottom: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <h2 data-i18n="radar_title" style="margin:0;">STAT RADAR</h2>
@@ -95,36 +95,16 @@
                         <span style="font-size: 0.65rem; color:var(--neon-gold);" data-i18n="stat_hint">※ 대기 스탯은 레벨업 시 반영됨</span>
                     </div>
                     
-                    <div class="radar-chart-container">
+                    <div class="radar-chart-container" style="margin-bottom: 5px;">
                         <svg class="radar-chart" viewBox="0 0 100 100" id="radarSvg">
                             <g id="radarGrid"></g><g id="radarAxes"></g>
                             <polygon id="playerPolygon" class="radar-polygon" points="" />
                             <g id="radarPoints"></g><g id="radarLabels"></g>
                         </svg>
                     </div>
-                    
-                    <div>
-                        <div class="stat-info"><span data-i18n="str">근력</span><div><span style="color:var(--neon-blue)" id="barVal_str">0</span><span class="pending-stat" id="pendVal_str"></span></div></div>
-                        <div class="progress-bg"><div class="progress-fill" id="barFill_str"></div></div>
-                        
-                        <div class="stat-info"><span data-i18n="int">지능</span><div><span style="color:var(--neon-blue)" id="barVal_int">0</span><span class="pending-stat" id="pendVal_int"></span></div></div>
-                        <div class="progress-bg"><div class="progress-fill" id="barFill_int"></div></div>
-                        
-                        <div class="stat-info"><span data-i18n="cha">매력</span><div><span style="color:var(--neon-blue)" id="barVal_cha">0</span><span class="pending-stat" id="pendVal_cha"></span></div></div>
-                        <div class="progress-bg"><div class="progress-fill" id="barFill_cha"></div></div>
-                        
-                        <div class="stat-info"><span data-i18n="vit">체력</span><div><span style="color:var(--neon-blue)" id="barVal_vit">0</span><span class="pending-stat" id="pendVal_vit"></span></div></div>
-                        <div class="progress-bg"><div class="progress-fill" id="barFill_vit"></div></div>
-                        
-                        <div class="stat-info"><span data-i18n="wlth">재력</span><div><span style="color:var(--neon-blue)" id="barVal_wlth">0</span><span class="pending-stat" id="pendVal_wlth"></span></div></div>
-                        <div class="progress-bg"><div class="progress-fill" id="barFill_wlth"></div></div>
-                        
-                        <div class="stat-info"><span data-i18n="agi">민첩</span><div><span style="color:var(--neon-blue)" id="barVal_agi">0</span><span class="pending-stat" id="pendVal_agi"></span></div></div>
-                        <div class="progress-bg"><div class="progress-fill" id="barFill_agi"></div></div>
-                    </div>
                 </div>
 
-                <div class="system-card" style="text-align: center; padding: 20px 15px; margin-top: 15px;">
+                <div class="system-card" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 20px;">
                     <div style="font-size: 1.2rem; color: var(--neon-blue); margin-bottom: 8px;">❝</div>
                     <div id="daily-quote" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; line-height: 1.5; word-break: keep-all; font-style: italic;"></div>
                     <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
