@@ -647,7 +647,7 @@ function processLevelUp() {
     
     saveUserData(); updatePointUI(); drawRadarChart();
     alert("Level Up!");
-    openTitleModal();
+    // 호칭 가이드 모달창 자동 표시(openTitleModal()) 삭제 완료
 }
 
 function changeLanguage(langCode) {
