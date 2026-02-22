@@ -1,6 +1,6 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -54,17 +54,6 @@ function getInitialAppState() {
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     bindEvents();
-
-    // 웹 브라우저 환경에서 구글 로그인 Redirect 결과 처리
-    try {
-        const redirectResult = await getRedirectResult(auth);
-        if (redirectResult) {
-            const credential = GoogleAuthProvider.credentialFromResult(redirectResult);
-            if (credential?.accessToken) { localStorage.setItem('gfit_token', credential.accessToken); }
-        }
-    } catch (e) {
-        console.error("Redirect 결과 처리 오류:", e);
-    }
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -812,55 +801,37 @@ async function simulateLogin() {
 }
 
 async function simulateGoogleLogin() {
-    // Capacitor 네이티브 앱 환경 감지
-    const isCapacitor = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    // Capacitor 네이티브 앱(Android/iOS) 환경인지 확인
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
-    if (isCapacitor) {
-        // ── 네이티브 앱(Android/iOS): capacitor-google-auth 플러그인 사용 ──
+    if (isNative) {
+        // ── 안드로이드 앱: capacitor-google-auth 플러그인 사용 ──
         try {
             const { GoogleAuth } = window.Capacitor.Plugins;
-            if (!GoogleAuth) throw new Error("GoogleAuth 플러그인이 없습니다. capacitor-google-auth를 설치하세요.");
-
-            await GoogleAuth.initialize({
-                clientId: '233040099152-YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // ← Firebase 콘솔 웹 클라이언트 ID로 교체
-                scopes: ['profile', 'email', 'https://www.googleapis.com/auth/fitness.activity.read'],
-                grantOfflineAccess: true,
-            });
-
+            if (!GoogleAuth) {
+                alert("GoogleAuth 플러그인 없음. 'npm install @codetrix-studio/capacitor-google-auth && npx cap sync android' 실행 필요");
+                return;
+            }
             const googleUser = await GoogleAuth.signIn();
-
-            // idToken으로 Firebase 인증
             const idToken = googleUser.authentication.idToken;
             const credential = GoogleAuthProvider.credential(idToken);
             const result = await signInWithCredential(auth, credential);
-
-            // accessToken 저장 (Google Fit 연동용)
             const accessToken = googleUser.authentication.accessToken;
             if (accessToken) { localStorage.setItem('gfit_token', accessToken); }
-
-            console.log("네이티브 구글 로그인 성공:", result.user.email);
-
+            console.log("앱 구글 로그인 성공:", result.user.email);
         } catch (e) {
-            console.error("네이티브 구글 로그인 실패:", e);
-            alert("Google 로그인 실패: " + (e.message || e));
+            console.error("앱 구글 로그인 실패:", e);
+            alert("Google 로그인 실패: " + (e.message || JSON.stringify(e)));
         }
     } else {
-        // ── 웹 브라우저 환경: signInWithRedirect 사용 (Popup 대신 Redirect) ──
-        // Popup은 일부 환경(WebView)에서 차단될 수 있으므로 Redirect 방식 권장
+        // ── 웹 브라우저: 기존 Popup 방식 유지 ──
         try {
-            await signInWithRedirect(auth, googleProvider);
-            // 리다이렉트 후 getRedirectResult는 onAuthStateChanged에서 처리됨
+            const result = await signInWithPopup(auth, googleProvider);
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential?.accessToken) { localStorage.setItem('gfit_token', credential.accessToken); }
         } catch (e) {
-            console.error("구글 로그인 실패:", e);
-            // Redirect도 실패하면 Popup 시도
-            try {
-                const result = await signInWithPopup(auth, googleProvider);
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential?.accessToken) { localStorage.setItem('gfit_token', credential.accessToken); }
-            } catch (e2) {
-                console.error(e2);
-                alert("Google 로그인 실패: " + e2.message);
-            }
+            console.error("웹 구글 로그인 실패:", e);
+            alert("Google 로그인 실패: " + e.message);
         }
     }
 }
