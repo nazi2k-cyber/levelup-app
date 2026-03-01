@@ -1,7 +1,7 @@
 {
   "appId": "com.levelup.reboot",
   "appName": "LEVEL UP: REBOOT",
-  "webDir": ".",
+  "webDir": "www",
   "server": {
     "androidScheme": "https",
     "cleartext": false

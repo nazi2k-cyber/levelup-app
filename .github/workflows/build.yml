@@ -2,7 +2,7 @@ name: Android APK 자동 빌드
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "claude/**" ]
   workflow_dispatch:  # 수동 트리거 허용
 
 jobs:
@@ -40,7 +40,13 @@ jobs:
       - name: npm 패키지 설치
         run: npm ci
 
-      # 6. Android 플랫폼 추가 (android/ 폴더가 없을 때 자동 생성)
+      # 6. 웹 파일을 www/ 디렉토리로 복사 (Capacitor webDir 요구사항)
+      - name: 웹 빌드 디렉토리 준비
+        run: |
+          mkdir -p www
+          cp index.html app.js style.css data.js www/
+
+      # 7. Android 플랫폼 추가 (android/ 폴더가 없을 때 자동 생성)
       - name: Android 플랫폼 추가
         run: |
           if [ ! -d android ]; then
@@ -51,7 +57,7 @@ jobs:
         env:
           CI: true
 
-      # 7. 웹 소스를 Android 프로젝트에 동기화
+      # 8. 웹 소스를 Android 프로젝트에 동기화
       - name: 웹→Android 동기화
         run: npx cap sync android
         env:
