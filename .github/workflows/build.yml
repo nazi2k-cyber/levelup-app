@@ -38,11 +38,20 @@ jobs:
 
       # 6. Android 플랫폼 추가 (android/ 폴더가 없을 때 자동 생성)
       - name: Android 플랫폼 추가
-        run: npx cap add android
+        run: |
+          if [ ! -d android ]; then
+            ./node_modules/.bin/cap add android
+          else
+            echo "android 디렉토리가 이미 존재합니다. 스킵합니다."
+          fi
+        env:
+          CI: true
 
       # 7. 웹 소스를 Android 프로젝트에 동기화
       - name: 웹→Android 동기화
-        run: npx cap sync android
+        run: ./node_modules/.bin/cap sync android
+        env:
+          CI: true
 
       # 8. Gradle 래퍼 실행 권한 부여
       - name: Gradle 실행 권한 부여
