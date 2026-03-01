@@ -18,6 +18,15 @@
       "backgroundColor": "#0a0a0f",
       "androidScaleType": "CENTER_CROP",
       "showSpinner": false
+    },
+    "GoogleAuth": {
+      "scopes": [
+        "profile",
+        "email",
+        "https://www.googleapis.com/auth/fitness.activity.read"
+      ],
+      "serverClientId": "233040099152-REPLACE_WITH_WEB_CLIENT_HASH.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
     }
   }
 }
