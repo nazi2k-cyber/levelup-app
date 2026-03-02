@@ -214,6 +214,19 @@
                     <div class="setting-row" id="sync-status" style="font-size:0.7rem; color:var(--neon-blue); display:none; justify-content:flex-end; padding-top:0; text-align:right;"></div>
                 </div>
                 <button class="btn-primary" style="background: #222; border: 1px solid var(--border-color); color: var(--neon-red);" id="btn-logout" data-i18n="set_logout">로그아웃</button>
+
+                <div class="system-card" style="margin-top: 12px;">
+                    <h2 style="margin-bottom: 10px;">오류 로그</h2>
+                    <div class="setting-row">
+                        <span style="font-size:0.85rem;">수집된 로그</span>
+                        <span id="log-count-badge" style="font-size:0.8rem; color:var(--neon-blue); font-weight:bold;">0개</span>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:10px;">
+                        <button class="btn-primary" style="background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); flex:1;" onclick="AppLogger.openViewer()">로그 보기</button>
+                        <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold); flex:1;" onclick="AppLogger.export()">파일 저장</button>
+                        <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red); flex:1;" onclick="if(confirm('로그를 모두 삭제하시겠습니까?')) AppLogger.clear()">초기화</button>
+                    </div>
+                </div>
             </section>
         </main>
 
@@ -236,6 +249,20 @@
         </div>
     </div>
 
+    <div class="modal-overlay d-none" id="logViewerModal" onclick="if(event.target===this){this.classList.add('d-none');this.style.display='none';}">
+        <div class="modal-content" style="max-width: 95%; width: 420px; padding: 15px; max-height: 80vh;">
+            <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
+                <span style="font-weight:bold; color:var(--neon-blue);">오류 로그 뷰어</span>
+                <button class="modal-close" onclick="document.getElementById('logViewerModal').classList.add('d-none');document.getElementById('logViewerModal').style.display='none';">×</button>
+            </div>
+            <div id="log-viewer-content" style="overflow-y:auto; flex-grow:1; max-height:55vh; font-family:monospace; font-size:0.72rem;"></div>
+            <div style="display:flex; gap:8px; margin-top:10px; flex-shrink:0;">
+                <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold);" onclick="AppLogger.export()">파일 저장</button>
+                <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red);" onclick="if(confirm('로그를 모두 삭제하시겠습니까?')){AppLogger.clear();AppLogger.openViewer();}">초기화</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay d-none" id="infoModal">
         <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
@@ -246,6 +273,7 @@
         </div>
     </div>
 
+    <script src="logger.js"></script>
     <script src="data.js"></script>
     <script type="module" src="app.js"></script>
 </body>

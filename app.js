@@ -57,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            await loadUserDataFromDB(user); 
+            AppLogger.info('[Auth] 로그인 감지: ' + (user.email || user.uid));
+            await loadUserDataFromDB(user);
             document.getElementById('login-screen').classList.add('d-none');
             document.getElementById('app-container').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-flex');
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (AppState.user.syncEnabled) { syncHealthData(false); }
         } else {
+            AppLogger.info('[Auth] 로그아웃 상태');
             document.getElementById('login-screen').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-none');
         }
@@ -148,7 +150,7 @@ async function saveUserData() {
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "" 
         }, { merge: true });
-    } catch(e) { console.error("DB 저장 실패:", e); }
+    } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
 
 async function loadUserDataFromDB(user) {
@@ -182,7 +184,7 @@ async function loadUserDataFromDB(user) {
             }
         }
         loadPlayerName();
-    } catch(e) { console.error("데이터 로드 에러:", e); }
+    } catch(e) { console.error("데이터 로드 에러:", e); AppLogger.error('[DB] 데이터 로드 실패', e.stack || e.message); }
 }
 
 function loadPlayerName() { 
@@ -420,6 +422,7 @@ window.syncGlobalDungeon = async () => {
         }
     } catch (e) {
         console.error("글로벌 동기화 에러:", e);
+        AppLogger.error('[Dungeon] 글로벌 동기화 실패', e.stack || e.message);
     }
 };
 
@@ -645,6 +648,7 @@ function processLevelUp() {
     };
     AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitle });
     
+    AppLogger.info('[LevelUp] 레벨 ' + AppState.user.level + ' 달성');
     saveUserData(); updatePointUI(); drawRadarChart();
     alert("Level Up!");
     // 호칭 가이드 모달창 자동 표시(openTitleModal()) 삭제 완료
@@ -821,7 +825,7 @@ async function simulateGoogleLogin() {
             const result = await signInWithCredential(auth, credential);
             const accessToken = googleUser.authentication.accessToken;
             if (accessToken) { localStorage.setItem('gfit_token', accessToken); }
-            console.log("앱 구글 로그인 성공:", result.user.email);
+            AppLogger.info('[Auth] 앱 구글 로그인 성공: ' + result.user.email);
         } catch (e) {
             console.error("앱 구글 로그인 실패:", e);
             alert("Google 로그인 실패: " + (e.message || JSON.stringify(e)));
@@ -839,7 +843,7 @@ async function simulateGoogleLogin() {
     }
 }
 
-async function logout() { await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
 
 function toggleAuthMode() {
     AppState.isLoginMode = !AppState.isLoginMode;

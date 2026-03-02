@@ -44,7 +44,7 @@ jobs:
       - name: 웹 빌드 디렉토리 준비
         run: |
           mkdir -p www
-          cp index.html app.js style.css data.js www/
+          cp index.html app.js style.css data.js logger.js www/
 
       # 6-1. Google OAuth Web Client ID를 capacitor.config.json에 주입
       - name: Google Web Client ID 주입

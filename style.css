@@ -197,3 +197,10 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
     font-size: 1rem; margin-left: 5px; cursor: pointer; transition: transform 0.2s; display: inline-block; vertical-align: middle;
 }
 .social-insta-btn:active { transform: scale(1.2); }
+
+/* 로그 뷰어 */
+.log-entry { padding: 6px 0; border-bottom: 1px solid var(--border-color); line-height: 1.4; }
+.log-entry:last-child { border-bottom: none; }
+.log-level { font-weight: bold; font-size: 0.68rem; margin-right: 4px; }
+.log-time { color: var(--text-sub); font-size: 0.65rem; }
+.log-msg { color: var(--text-main); font-size: 0.72rem; margin-top: 2px; word-break: break-all; }
