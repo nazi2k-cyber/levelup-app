@@ -96,6 +96,12 @@ jobs:
           cd android
           ./gradlew assembleDebug --stacktrace
 
+      # 9-1. 디버그 키스토어 SHA-1 출력 (Firebase 등록용)
+      - name: SHA-1 지문 출력 (Firebase 등록용)
+        run: |
+          cd android
+          ./gradlew signingReport | grep -E "SHA[-]?1:" || true
+
       # 10. 빌드된 APK 파일을 Artifact로 업로드
       - name: APK 업로드 (Artifact)
         uses: actions/upload-artifact@v4
