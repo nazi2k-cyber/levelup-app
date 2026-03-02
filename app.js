@@ -812,6 +812,9 @@ async function simulateGoogleLogin() {
                 alert("GoogleAuth 플러그인 없음. 'npm install @codetrix-studio/capacitor-google-auth && npx cap sync android' 실행 필요");
                 return;
             }
+            // v3.x requires explicit initialization before signIn()
+            // Without this, GoogleSignInClient remains null → NullPointerException
+            await GoogleAuth.initialize();
             const googleUser = await GoogleAuth.signIn();
             const idToken = googleUser.authentication.idToken;
             const credential = GoogleAuthProvider.credential(idToken);
