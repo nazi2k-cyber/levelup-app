@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "233040099152-af0qursd4goocu2jl6n300iiblbr1o1o.apps.googleusercontent.com",
+          "클라이언트 유형": 1,
+          "android_info": {
+            "패키지 이름": "com.levelup.reboot",
+            "인증서 해시": "38c113e397682bc90ba7cd949136a3a541098167"
+          }
+        },
+        {
           "client_id": "233040099152-ecirjuuctnacioj15tlhen2rt0v3iuv4.apps.googleusercontent.com",
           "클라이언트 유형": 1,
           "android_info": {
