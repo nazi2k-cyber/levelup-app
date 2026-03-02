@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "233040099152",
+    "project_id": "levelup-app-53d02",
+    "storage_bucket": "levelup-app-53d02.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:233040099152:android:0000000000000001",
+        "android_client_info": {
+          "package_name": "com.levelup.reboot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
