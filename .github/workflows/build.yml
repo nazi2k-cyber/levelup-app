@@ -52,7 +52,9 @@ jobs:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
           if [ -n "$GOOGLE_WEB_CLIENT_ID" ]; then
-            sed -i "s|233040099152-REPLACE_WITH_WEB_CLIENT_HASH.apps.googleusercontent.com|$GOOGLE_WEB_CLIENT_ID|g" capacitor.config.json
+            # 줄바꿈/공백 제거 (시크릿 저장 시 trailing newline 방지)
+            CLEAN_ID=$(echo "$GOOGLE_WEB_CLIENT_ID" | tr -d '[:space:]')
+            sed -i "s|233040099152-REPLACE_WITH_WEB_CLIENT_HASH.apps.googleusercontent.com|$CLEAN_ID|g" capacitor.config.json
             echo "✅ Web Client ID 주입 완료"
           else
             echo "⚠️ GOOGLE_WEB_CLIENT_ID 시크릿 미설정 - 플레이스홀더 유지 (Google 로그인 불가)"
