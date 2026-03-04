@@ -88,14 +88,13 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          # 시크릿이 올바른 패키지명을 포함하면 사용, 아니면 저장소의 템플릿 사용
-          if [ -n "$GOOGLE_SERVICES_JSON" ] && echo "$GOOGLE_SERVICES_JSON" | grep -q '"com.levelup.reboot"' && echo "$GOOGLE_SERVICES_JSON" | grep -q '"project_info"'; then
-            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-            echo "✅ GOOGLE_SERVICES_JSON 시크릿 사용 (패키지명 및 표준 필드 확인됨)"
-          else
-            cp google-services.json android/app/google-services.json
-            echo "ℹ️ 저장소의 google-services.json 사용"
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "❌ GOOGLE_SERVICES_JSON 시크릿이 설정되지 않았습니다."
+            echo "   GitHub Secrets에 GOOGLE_SERVICES_JSON을 등록하세요."
+            exit 1
           fi
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          echo "✅ google-services.json 복원 완료"
 
       # 8. 웹 소스를 Android 프로젝트에 동기화
       - name: 웹→Android 동기화
