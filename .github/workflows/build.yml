@@ -112,37 +112,37 @@ jobs:
           cd android
           ./gradlew assembleDebug --stacktrace
 
-      # 9-1. 디버그 키스토어 SHA-1 출력 및 Firebase 등록 안내
-      - name: SHA-1 지문 출력 (Firebase 등록용)
-        env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+      # 9-1. SHA-1 일치 여부 검증 (google-services.json ↔ APK 서명)
+      - name: SHA-1 검증 및 지문 출력
         run: |
           echo "================================================"
-          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
-            echo "🔑 키스토어: GitHub Secrets (DEBUG_KEYSTORE_BASE64) 사용 - SHA-1 고정됨"
-          else
-            echo "⚠️  키스토어: 랜덤 생성 - SHA-1이 이 빌드에서만 유효합니다!"
-            echo "   Google 로그인 코드 10 방지를 위해 DEBUG_KEYSTORE_BASE64 시크릿 설정을 권장합니다."
-          fi
-          echo "------------------------------------------------"
           SHA1=$(cd android && ./gradlew signingReport 2>/dev/null | grep -A5 "Variant: debug" | grep "SHA1:" | head -1 | awk '{print $2}')
-          echo "📋 이 빌드 SHA-1: $SHA1"
-          echo "   Firebase Console > 프로젝트 설정 > 앱 > 디지털 지문에 등록하세요."
-          echo "================================================"
-          # GitHub Summary에도 출력
-          echo "## 🔑 APK 서명 SHA-1" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
-            echo "✅ **고정 키스토어 사용** (DEBUG_KEYSTORE_BASE64 시크릿)" >> $GITHUB_STEP_SUMMARY
+          SHA1_LOWER=$(echo "$SHA1" | tr '[:upper:]' '[:lower:]' | tr -d ':')
+          echo "📋 APK 서명 SHA-1: $SHA1"
+
+          echo "📄 google-services.json certificate_hash 목록:"
+          HASHES=$(grep -o '"certificate_hash": *"[^"]*"' android/app/google-services.json | grep -o '[0-9a-f]\{40\}')
+          echo "$HASHES"
+
+          if echo "$HASHES" | grep -q "$SHA1_LOWER"; then
+            echo "✅ SHA-1 일치 확인"
+            MATCH="✅ 일치"
           else
-            echo "⚠️ **랜덤 키스토어** - 이 SHA-1은 이 빌드에서만 유효" >> $GITHUB_STEP_SUMMARY
+            echo "❌ SHA-1 불일치 — GOOGLE_SERVICES_JSON 시크릿을 Firebase Console에서 재다운로드하여 업데이트하세요"
+            MATCH="❌ 불일치"
           fi
+          echo "================================================"
+
+          echo "## 🔑 Google Sign-In SHA-1 검증" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----|" >> $GITHUB_STEP_SUMMARY
+          echo "| APK 서명 SHA-1 | \`$SHA1\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| SHA-1 일치 여부 | $MATCH |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$SHA1" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Firebase Console > 프로젝트 설정 > 앱 > 디지털 지문 추가에 등록" >> $GITHUB_STEP_SUMMARY
+          echo '**google-services.json certificate_hash 목록:**' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$HASHES" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       # 10. 빌드된 APK 파일을 Artifact로 업로드
       - name: APK 업로드 (Artifact)
