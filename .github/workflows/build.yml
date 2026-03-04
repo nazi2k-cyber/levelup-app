@@ -113,11 +113,37 @@ jobs:
           cd android
           ./gradlew assembleDebug --stacktrace
 
-      # 9-1. 디버그 키스토어 SHA-1 출력 (Firebase 등록용)
+      # 9-1. 디버그 키스토어 SHA-1 출력 및 Firebase 등록 안내
       - name: SHA-1 지문 출력 (Firebase 등록용)
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
-          cd android
-          ./gradlew signingReport | grep -E "SHA[-]?1:" || true
+          echo "================================================"
+          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
+            echo "🔑 키스토어: GitHub Secrets (DEBUG_KEYSTORE_BASE64) 사용 - SHA-1 고정됨"
+          else
+            echo "⚠️  키스토어: 랜덤 생성 - SHA-1이 이 빌드에서만 유효합니다!"
+            echo "   Google 로그인 코드 10 방지를 위해 DEBUG_KEYSTORE_BASE64 시크릿 설정을 권장합니다."
+          fi
+          echo "------------------------------------------------"
+          SHA1=$(cd android && ./gradlew signingReport 2>/dev/null | grep -A5 "Variant: debug" | grep "SHA1:" | head -1 | awk '{print $2}')
+          echo "📋 이 빌드 SHA-1: $SHA1"
+          echo "   Firebase Console > 프로젝트 설정 > 앱 > 디지털 지문에 등록하세요."
+          echo "================================================"
+          # GitHub Summary에도 출력
+          echo "## 🔑 APK 서명 SHA-1" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
+            echo "✅ **고정 키스토어 사용** (DEBUG_KEYSTORE_BASE64 시크릿)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **랜덤 키스토어** - 이 SHA-1은 이 빌드에서만 유효" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$SHA1" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Firebase Console > 프로젝트 설정 > 앱 > 디지털 지문 추가에 등록" >> $GITHUB_STEP_SUMMARY
 
       # 10. 빌드된 APK 파일을 Artifact로 업로드
       - name: APK 업로드 (Artifact)
@@ -134,3 +160,5 @@ jobs:
           echo "✅ APK 빌드 성공!"
           echo "📦 파일 위치: android/app/build/outputs/apk/debug/app-debug.apk"
           ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          echo "## ✅ APK 빌드 성공" >> $GITHUB_STEP_SUMMARY
+          echo "파일: \`android/app/build/outputs/apk/debug/app-debug.apk\`" >> $GITHUB_STEP_SUMMARY
