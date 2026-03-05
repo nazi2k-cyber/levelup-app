@@ -826,7 +826,12 @@ async function simulateGoogleLogin() {
             }
             // v3.x requires explicit initialization before signIn()
             // Without this, GoogleSignInClient remains null → NullPointerException
-            await GoogleAuth.initialize();
+            // 주의: 프로그래밍 방식에서는 'clientId'를 사용 (capacitor.config.json의 'serverClientId'와 키 이름이 다름)
+            await GoogleAuth.initialize({
+                clientId: '233040099152-htr1tnuqmpadikjvj9hbitf4tuh0ako5.apps.googleusercontent.com',
+                scopes: ['profile', 'email'],
+                grantOfflineAccess: true
+            });
             const googleUser = await GoogleAuth.signIn();
             const idToken = googleUser.authentication.idToken;
             const credential = GoogleAuthProvider.credential(idToken);
@@ -1148,7 +1153,9 @@ async function requestFitnessScope() {
             const { GoogleAuth } = window.Capacitor.Plugins;
             if (!GoogleAuth) return false;
             await GoogleAuth.initialize({
-                scopes: ['profile', 'email', 'https://www.googleapis.com/auth/fitness.activity.read']
+                clientId: '233040099152-htr1tnuqmpadikjvj9hbitf4tuh0ako5.apps.googleusercontent.com',
+                scopes: ['profile', 'email', 'https://www.googleapis.com/auth/fitness.activity.read'],
+                grantOfflineAccess: true
             });
             const googleUser = await GoogleAuth.signIn();
             const accessToken = googleUser.authentication.accessToken;
