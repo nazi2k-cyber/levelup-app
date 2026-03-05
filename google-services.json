@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "233040099152-uduoi76m8ooahibp6u7csbr5ru8kkc21.apps.googleusercontent.com",
+          "client_id": "233040099152-7i70005np9kt6b8bjkf68mpm47isbro2.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.levelup.reboot",
-            "certificate_hash": "2297962c03b0b15e6ce103e94de120f2b2ac8063"
+            "certificate_hash": "30a1dddb0757f3baf47a61e87856f7e4a3308266"
           }
         },
         {
