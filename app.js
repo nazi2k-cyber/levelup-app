@@ -1030,14 +1030,20 @@ function renderDiaryCalendar() {
     grid.innerHTML = html;
 }
 
+window.closeDiaryViewModal = function() {
+    const m = document.getElementById('diaryViewModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
+
 window.viewDiaryByDate = function(dateStr) {
     const entry = AppState.diary.entries.find(e => e.date.startsWith(dateStr));
     if (!entry) return;
     document.getElementById('diary-view-date').textContent = entry.date;
     document.getElementById('diary-view-text').textContent = entry.text;
-    const modal = document.getElementById('diaryViewModal');
-    modal.classList.remove('d-none');
-    modal.classList.add('d-flex');
+    const m = document.getElementById('diaryViewModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
 };
 
 function renderDiaryList() {
