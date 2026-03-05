@@ -8,7 +8,7 @@ const i18n = {
         login_err_empty: "이메일과 비밀번호를 모두 입력해주세요.", login_err_email: "유효한 이메일 주소를 입력해주세요.", 
         login_err_pw_req: "비밀번호 조건(8자리 이상, 대문자 1개 이상, 특수문자 2개 이상)을 충족해주세요.", pw_mismatch: "비밀번호가 일치하지 않습니다.",
         
-        nav_status: "상태창", nav_quest: "퀘스트", nav_dungeon: "던전", nav_social: "소셜", nav_settings: "설정",
+        nav_status: "상태창", nav_diary: "일기", nav_quest: "퀘스트", nav_dungeon: "던전", nav_social: "소셜", nav_settings: "설정",
         prof_name: "플레이어 (나)", btn_hist: "칭호 이력 조회", avail_pts: "보유 포인트", btn_lvlup: "레벨 업", req_pts: "요구량:",
         tot_score: "종합 스코어", radar_title: "STAT RADAR", stat_hint: "※ 대기 스탯은 레벨업 시 일괄 반영됩니다.",
         str: "근력", int: "지능", cha: "매력", vit: "체력", wlth: "재력", agi: "민첩",
@@ -33,7 +33,11 @@ const i18n = {
         
         // ★ 추가됨: 인스타그램 관련 텍스트 ★
         insta_prompt: "인스타그램 사용자 이름(ID)을 입력하세요.\n(예: levelup_official)\n빈칸 입력 시 링크가 삭제됩니다.",
-        insta_success: "인스타그램 링크가 업데이트되었습니다."
+        insta_success: "인스타그램 링크가 업데이트되었습니다.",
+        diary_title: "일기", diary_hint: "※ 하루의 기록을 남겨보세요",
+        diary_placeholder: "오늘의 일기를 작성하세요... (한글 기준 140자)",
+        diary_save: "저장", diary_empty_err: "내용을 입력해주세요.", diary_limit_err: "140자를 초과했습니다.",
+        diary_no_entries: "작성된 일기가 없습니다.", diary_delete_confirm: "이 일기를 삭제하시겠습니까?"
     },
     en: {
         login_desc: "Access the system, gamify your life.", btn_login_submit: "System Access (Login)", btn_signup_submit: "Register Player (Sign Up)", 
@@ -44,7 +48,7 @@ const i18n = {
         login_err_empty: "Please enter your email and password.", login_err_email: "Please enter a valid email address.",
         login_err_pw_req: "Password must be 8+ characters with at least 1 uppercase and 2 special characters.", pw_mismatch: "Passwords do not match.",
         
-        nav_status: "Status", nav_quest: "Quests", nav_dungeon: "Dungeon", nav_social: "Social", nav_settings: "Settings",
+        nav_status: "Status", nav_diary: "Diary", nav_quest: "Quests", nav_dungeon: "Dungeon", nav_social: "Social", nav_settings: "Settings",
         prof_name: "Player (Me)", btn_hist: "Title History", avail_pts: "Available Pts", btn_lvlup: "Level Up", req_pts: "Required:",
         tot_score: "Total Score", radar_title: "STAT RADAR", stat_hint: "※ Pending stats are applied upon Level Up.",
         str: "STR", int: "INT", cha: "CHA", vit: "VIT", wlth: "WLTH", agi: "AGI",
@@ -68,7 +72,11 @@ const i18n = {
         desc_agi: "Time management, efficiency, and cleaning. (e.g., Pomodoro, Routine)",
         
         insta_prompt: "Enter Instagram Username (ID).\n(e.g., levelup_official)\nLeave blank to remove.",
-        insta_success: "Instagram link updated."
+        insta_success: "Instagram link updated.",
+        diary_title: "Diary", diary_hint: "※ Leave a record of your day",
+        diary_placeholder: "Write today's diary... (up to 140 Korean chars)",
+        diary_save: "Save", diary_empty_err: "Please enter something.", diary_limit_err: "Exceeded 140 characters.",
+        diary_no_entries: "No diary entries yet.", diary_delete_confirm: "Delete this diary entry?"
     },
     ja: {
         login_desc: "시스템에 접속하여 현실을 게임처럼.", btn_login_submit: "시스템 접속 (로그인)", btn_signup_submit: "새 플레이어 등록 (회원가입)", 
@@ -79,7 +87,7 @@ const i18n = {
         login_err_empty: "이메일과 비밀번호를 모두 입력해주세요.", login_err_email: "유효한 이메일 주소를 입력해주세요.", 
         login_err_pw_req: "비밀번호 조건(8자리 이상, 대문자 1개 이상, 특수문자 2개 이상)을 충족해주세요.", pw_mismatch: "비밀번호가 일치하지 않습니다.",
 
-        nav_status: "ステータス", nav_quest: "クエスト", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
+        nav_status: "ステータス", nav_diary: "日記", nav_quest: "クエスト", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
         prof_name: "プレイヤー (私)", btn_hist: "称号履歴", avail_pts: "保有ポイント", btn_lvlup: "レベルUP", req_pts: "必要量:",
         tot_score: "総合スコア", radar_title: "STAT RADAR", stat_hint: "※ 待機ステータスはレベルUP時に反映",
         str: "筋력", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
@@ -103,7 +111,11 @@ const i18n = {
         desc_agi: "時間管理、効率性、片付けなどの関連 (例: ポモドーロ、習慣)",
         
         insta_prompt: "Instagramユーザー名(ID)を入力してください。\n(例: levelup_official)\n空白でリンクが削除されます。",
-        insta_success: "Instagramリンクが更新されました。"
+        insta_success: "Instagramリンクが更新されました。",
+        diary_title: "日記", diary_hint: "※ 今日の記録を残しましょう",
+        diary_placeholder: "今日の日記を書いてください... (韓国語基準140文字)",
+        diary_save: "保存", diary_empty_err: "内容を入力してください。", diary_limit_err: "140文字を超えました。",
+        diary_no_entries: "日記がありません。", diary_delete_confirm: "この日記を削除しますか？"
     }
 };
 

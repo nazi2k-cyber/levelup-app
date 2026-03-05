@@ -181,6 +181,14 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 .d-none { display: none !important; }
 .d-flex { display: flex !important; }
 
+/* 일기 탭 스타일 */
+.diary-entry-card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.diary-entry-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.diary-entry-date { font-size: 0.65rem; color: var(--neon-blue); font-weight: bold; }
+.diary-entry-text { font-size: 0.85rem; color: var(--text-main); line-height: 1.6; word-break: keep-all; white-space: pre-wrap; }
+.diary-delete-btn { background: none; border: none; color: var(--text-sub); font-size: 0.9rem; cursor: pointer; padding: 2px 4px; border-radius: 3px; }
+.diary-delete-btn:hover { color: var(--neon-red); }
+
 /* 작은 화면 대응 */
 @media (max-height: 700px) {
     #status .system-card { padding: 10px; margin-bottom: 8px; }

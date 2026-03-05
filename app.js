@@ -60,6 +60,7 @@ function getInitialAppState() {
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false },
+        diary: { entries: [] },
     };
 }
 
@@ -147,6 +148,9 @@ function bindEvents() {
     
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
+
+    document.getElementById('diary-input').addEventListener('input', updateDiaryCharCount);
+    document.getElementById('btn-diary-save').addEventListener('click', saveDiaryEntry);
 }
 
 // --- 데이터 저장/로드 ---
@@ -166,7 +170,8 @@ async function saveUserData() {
             photoURL: AppState.user.photoURL || null,
             syncEnabled: AppState.user.syncEnabled, 
             stepData: AppState.user.stepData,
-            instaId: AppState.user.instaId || "" 
+            instaId: AppState.user.instaId || "",
+            diaryStr: JSON.stringify(AppState.diary.entries)
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
@@ -199,6 +204,9 @@ async function loadUserDataFromDB(user) {
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
+            if(data.diaryStr) {
+                try { AppState.diary.entries = JSON.parse(data.diaryStr); } catch(e) { AppState.diary.entries = []; }
+            }
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             AppState.user.name = data.name || user.displayName || "신규 헌터";
             if(data.photoURL) {
@@ -636,8 +644,9 @@ function switchTab(tabId, el) {
         mainEl.style.overflowY = 'auto';
     }
     
-    if(tabId === 'social') fetchSocialData(); 
+    if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
+    if(tabId === 'diary') renderDiaryList();
     if(tabId === 'dungeon') {
         updateDungeonStatus();
         window.syncGlobalDungeon(); 
@@ -685,14 +694,17 @@ function changeLanguage(langCode) {
     });
     
     if(document.getElementById('app-container').classList.contains('d-flex')){
-        drawRadarChart(); 
-        renderUsers(AppState.social.sortCriteria); 
-        renderQuestList(); 
-        renderCalendar(); 
+        drawRadarChart();
+        renderUsers(AppState.social.sortCriteria);
+        renderQuestList();
+        renderCalendar();
         renderQuote();
-        updatePointUI(); 
+        updatePointUI();
         updateDungeonStatus();
-        loadPlayerName(); 
+        loadPlayerName();
+        const diaryInput = document.getElementById('diary-input');
+        if (diaryInput) diaryInput.placeholder = i18n[langCode].diary_placeholder || diaryInput.placeholder;
+        renderDiaryList();
     }
 }
 
@@ -916,8 +928,74 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
+// --- ★ 일기 기능 ★ ---
+function countKoreanChars(text) {
+    // Count each Korean character as 1, non-Korean as 0.5 (rounded up)
+    let count = 0;
+    for (const ch of text) {
+        const code = ch.charCodeAt(0);
+        if (code >= 0xAC00 && code <= 0xD7A3) count += 1;
+        else if (code >= 0x3131 && code <= 0x318E) count += 1;
+        else count += 0.5;
+    }
+    return Math.ceil(count);
+}
+
+function updateDiaryCharCount() {
+    const input = document.getElementById('diary-input');
+    const countEl = document.getElementById('diary-char-count');
+    const count = countKoreanChars(input.value);
+    countEl.textContent = `${count} / 140`;
+    countEl.style.color = count > 140 ? 'var(--neon-red)' : 'var(--text-sub)';
+}
+
+function saveDiaryEntry() {
+    const input = document.getElementById('diary-input');
+    const text = input.value.trim();
+    const lang = AppState.currentLang;
+    if (!text) { alert(i18n[lang].diary_empty_err); return; }
+    if (countKoreanChars(text) > 140) { alert(i18n[lang].diary_limit_err); return; }
+
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const entry = { id: Date.now(), date: dateStr, text };
+    AppState.diary.entries.unshift(entry);
+    if (AppState.diary.entries.length > 50) AppState.diary.entries.pop();
+
+    input.value = '';
+    updateDiaryCharCount();
+    saveUserData();
+    renderDiaryList();
+}
+
+window.deleteDiaryEntry = function(id) {
+    if (!confirm(i18n[AppState.currentLang].diary_delete_confirm)) return;
+    AppState.diary.entries = AppState.diary.entries.filter(e => e.id !== id);
+    saveUserData();
+    renderDiaryList();
+};
+
+function renderDiaryList() {
+    const container = document.getElementById('diary-list');
+    if (!container) return;
+    const entries = AppState.diary.entries;
+    if (entries.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:var(--text-sub); font-size:0.8rem; padding:20px 0;">${i18n[AppState.currentLang].diary_no_entries}</div>`;
+        return;
+    }
+    container.innerHTML = entries.map(e => `
+        <div class="diary-entry-card">
+            <div class="diary-entry-header">
+                <span class="diary-entry-date">${e.date}</span>
+                <button class="diary-delete-btn" onclick="window.deleteDiaryEntry(${e.id})">✕</button>
+            </div>
+            <div class="diary-entry-text">${e.text.replace(/\n/g, '<br>')}</div>
+        </div>
+    `).join('');
+}
+
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
-function closeInfoModal() { 
+function closeInfoModal() {
     const m = document.getElementById('infoModal'); 
     m.classList.add('d-none'); 
     m.classList.remove('d-flex'); 

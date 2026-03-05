@@ -120,6 +120,23 @@
 
             </section>
 
+            <section id="diary" class="view-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2 data-i18n="diary_title" style="margin:0;">일기</h2>
+                    <span style="font-size:0.65rem; color:var(--neon-gold);" data-i18n="diary_hint">※ 하루의 기록을 남겨보세요</span>
+                </div>
+                <div class="system-card" style="padding:12px;">
+                    <div style="position:relative;">
+                        <textarea id="diary-input" maxlength="280" placeholder="오늘의 일기를 작성하세요... (한글 기준 140자)" style="width:100%; min-height:120px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:6px; color:var(--text-main); font-size:0.85rem; padding:10px; resize:none; box-sizing:border-box; font-family:inherit; line-height:1.5;" data-i18n-placeholder="diary_placeholder"></textarea>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                        <span id="diary-char-count" style="font-size:0.7rem; color:var(--text-sub);">0 / 140</span>
+                        <button id="btn-diary-save" class="btn-primary" style="padding:6px 16px; font-size:0.8rem;" data-i18n="diary_save">저장</button>
+                    </div>
+                </div>
+                <div id="diary-list" style="margin-top:10px;"></div>
+            </section>
+
             <section id="quests" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -240,6 +257,7 @@
 
         <nav>
             <div class="nav-item active" data-tab="status"><span class="nav-icon">👤</span><span data-i18n="nav_status">상태창</span></div>
+            <div class="nav-item" data-tab="diary"><span class="nav-icon">📝</span><span data-i18n="nav_diary">일기</span></div>
             <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
             <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
@@ -271,7 +289,7 @@
         </div>
     </div>
 
-    <div class="modal-overlay d-none" id="infoModal">
+    <div class="modal-overlay d-none" id="infoModal" onclick="if(event.target===this)closeInfoModal()">
         <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
                 <span id="info-modal-title">정보</span>
