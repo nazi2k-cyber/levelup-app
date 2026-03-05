@@ -36,17 +36,26 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      # 4-1. 고정 debug keystore 준비 (SHA-1 고정용)
+      # 4-1. 고정 debug keystore 준비 (SHA-1 완전 고정)
       - name: 디버그 키스토어 준비
         run: |
-          mkdir -p ~/.android
+          # 레이어 1: Gradle이 debug.keystore를 찾는 모든 기본 경로에 배치
+          # - ~/.android/debug.keystore  (전통적 경로)
+          # - ~/.config/.android/debug.keystore  (XDG 경로, ubuntu runner 실제 사용 경로)
+          mkdir -p ~/.android ~/.config/.android
           base64 -d debug-keystore.b64 > ~/.android/debug.keystore
+          cp ~/.android/debug.keystore ~/.config/.android/debug.keystore
+
           SHA1=$(keytool -list -v -keystore ~/.android/debug.keystore -storepass android 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
-          echo "✅ 키스토어 준비 완료 — SHA-1: $SHA1"
           if [ -z "$SHA1" ]; then
             echo "❌ 키스토어 복원 실패"
             exit 1
           fi
+          echo "✅ 키스토어 배치 완료"
+          echo "   ~/.android/debug.keystore → SHA-1: $SHA1"
+          echo "   ~/.config/.android/debug.keystore → 동일 파일"
+          # 이후 단계에서 비교 검증에 사용
+          echo "EXPECTED_SHA1=$SHA1" >> $GITHUB_ENV
 
       # 5. npm 패키지 설치 (lock 파일 기준 정확한 버전 설치)
       - name: npm 패키지 설치
@@ -147,6 +156,20 @@ jobs:
       # 8-2. Gradle 래퍼 실행 권한 부여
       - name: Gradle 실행 권한 부여
         run: chmod +x android/gradlew
+
+      # 8-3. 빌드 전 SHA-1 사전 검증 (레이어 3: 불일치 시 즉시 실패)
+      - name: 서명 키 사전 검증
+        run: |
+          ACTUAL_SHA1=$(cd android && ./gradlew signingReport 2>/dev/null \
+            | grep -A5 "Variant: debug" | grep "SHA1:" | head -1 | awk '{print $2}')
+          echo "예상 SHA-1: $EXPECTED_SHA1"
+          echo "실제 SHA-1: $ACTUAL_SHA1"
+          if [ "$ACTUAL_SHA1" != "$EXPECTED_SHA1" ]; then
+            echo "❌ SHA-1 불일치 — build.gradle 서명 주입 실패"
+            echo "   Gradle이 우리 keystore가 아닌 다른 keystore를 사용 중입니다."
+            exit 1
+          fi
+          echo "✅ SHA-1 일치 — 서명 키 고정 확인됨"
 
       # 9. Debug APK 빌드
       - name: APK 빌드 (Debug)
