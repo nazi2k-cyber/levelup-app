@@ -36,11 +36,13 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      # 4-1. ubuntu-22.04 이미지 내장 debug keystore SHA-1 확인
-      - name: 키스토어 SHA-1 확인
+      # 4-1. 고정 debug keystore 복원 (SHA-1 고정용)
+      - name: 디버그 키스토어 복원
         run: |
-          SHA1=$(keytool -list -keystore ~/.android/debug.keystore -storepass android 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
-          echo "📋 이미지 내장 키스토어 SHA-1: $SHA1"
+          mkdir -p ~/.android
+          base64 -d debug-keystore.b64 > ~/.android/debug.keystore
+          SHA1=$(keytool -list -v -keystore ~/.android/debug.keystore -storepass android 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
+          echo "✅ 키스토어 복원 완료 — SHA-1: $SHA1"
 
       # 5. npm 패키지 설치 (lock 파일 기준 정확한 버전 설치)
       - name: npm 패키지 설치
