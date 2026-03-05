@@ -60,7 +60,7 @@ function getInitialAppState() {
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false },
-        diary: { entries: [] },
+        diary: { entries: [], calYear: new Date().getFullYear(), calMonth: new Date().getMonth() },
     };
 }
 
@@ -68,6 +68,7 @@ function getInitialAppState() {
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     bindEvents();
+    changeLanguage('ko'); // 초기 화면(로그인) i18n 적용
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -151,6 +152,16 @@ function bindEvents() {
 
     document.getElementById('diary-input').addEventListener('input', updateDiaryCharCount);
     document.getElementById('btn-diary-save').addEventListener('click', saveDiaryEntry);
+    document.getElementById('diary-cal-prev').addEventListener('click', () => {
+        AppState.diary.calMonth--;
+        if (AppState.diary.calMonth < 0) { AppState.diary.calMonth = 11; AppState.diary.calYear--; }
+        renderDiaryCalendar();
+    });
+    document.getElementById('diary-cal-next').addEventListener('click', () => {
+        AppState.diary.calMonth++;
+        if (AppState.diary.calMonth > 11) { AppState.diary.calMonth = 0; AppState.diary.calYear++; }
+        renderDiaryCalendar();
+    });
 }
 
 // --- 데이터 저장/로드 ---
@@ -646,7 +657,7 @@ function switchTab(tabId, el) {
     
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
-    if(tabId === 'diary') renderDiaryList();
+    if(tabId === 'diary') { renderDiaryList(); renderDiaryCalendar(); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
         window.syncGlobalDungeon(); 
@@ -705,6 +716,7 @@ function changeLanguage(langCode) {
         const diaryInput = document.getElementById('diary-input');
         if (diaryInput) diaryInput.placeholder = i18n[langCode].diary_placeholder || diaryInput.placeholder;
         renderDiaryList();
+        renderDiaryCalendar();
     }
 }
 
@@ -957,7 +969,13 @@ function saveDiaryEntry() {
     if (countKoreanChars(text) > 140) { alert(i18n[lang].diary_limit_err); return; }
 
     const now = new Date();
-    const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const todayDateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+    if (AppState.diary.entries.some(e => e.date.startsWith(todayDateStr))) {
+        alert(i18n[lang].diary_already_wrote || '오늘은 이미 일기를 작성했습니다.');
+        return;
+    }
+
+    const dateStr = `${todayDateStr} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     const entry = { id: Date.now(), date: dateStr, text };
     AppState.diary.entries.unshift(entry);
     if (AppState.diary.entries.length > 50) AppState.diary.entries.pop();
@@ -966,6 +984,7 @@ function saveDiaryEntry() {
     updateDiaryCharCount();
     saveUserData();
     renderDiaryList();
+    renderDiaryCalendar();
 }
 
 window.deleteDiaryEntry = function(id) {
@@ -973,6 +992,52 @@ window.deleteDiaryEntry = function(id) {
     AppState.diary.entries = AppState.diary.entries.filter(e => e.id !== id);
     saveUserData();
     renderDiaryList();
+    renderDiaryCalendar();
+};
+
+function renderDiaryCalendar() {
+    const { calYear, calMonth, entries } = AppState.diary;
+    const lang = AppState.currentLang;
+    const dayNames = { ko: ['일','월','화','수','목','금','토'], en: ['Su','Mo','Tu','We','Th','Fr','Sa'], ja: ['日','月','火','水','木','金','土'] };
+    const monthNames = { ko: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'], en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], ja: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'] };
+
+    const monthEl = document.getElementById('diary-cal-month');
+    if (monthEl) monthEl.textContent = `${calYear} ${monthNames[lang][calMonth]}`;
+
+    const grid = document.getElementById('diary-cal-grid');
+    if (!grid) return;
+
+    // Build set of dates that have entries: "YYYY.MM.DD"
+    const entryDates = new Set(entries.map(e => e.date.split(' ')[0]));
+
+    const firstDay = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+
+    let html = `<div class="diary-cal-days">`;
+    dayNames[lang].forEach(d => { html += `<div class="diary-cal-day-header">${d}</div>`; });
+    html += `</div><div class="diary-cal-dates">`;
+
+    for (let i = 0; i < firstDay; i++) html += `<div></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+        const ds = `${calYear}.${String(calMonth+1).padStart(2,'0')}.${String(d).padStart(2,'0')}`;
+        const hasEntry = entryDates.has(ds);
+        const isToday = ds === todayStr;
+        html += `<div class="diary-cal-date${hasEntry ? ' has-entry' : ''}${isToday ? ' is-today' : ''}" ${hasEntry ? `onclick="window.viewDiaryByDate('${ds}')"` : ''}>${d}${hasEntry ? '<span class="diary-cal-dot"></span>' : ''}</div>`;
+    }
+    html += `</div>`;
+    grid.innerHTML = html;
+}
+
+window.viewDiaryByDate = function(dateStr) {
+    const entry = AppState.diary.entries.find(e => e.date.startsWith(dateStr));
+    if (!entry) return;
+    document.getElementById('diary-view-date').textContent = entry.date;
+    document.getElementById('diary-view-text').textContent = entry.text;
+    const modal = document.getElementById('diaryViewModal');
+    modal.classList.remove('d-none');
+    modal.classList.add('d-flex');
 };
 
 function renderDiaryList() {

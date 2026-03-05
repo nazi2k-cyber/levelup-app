@@ -37,7 +37,8 @@ const i18n = {
         diary_title: "일기", diary_hint: "※ 하루의 기록을 남겨보세요",
         diary_placeholder: "오늘의 일기를 작성하세요... (한글 기준 140자)",
         diary_save: "저장", diary_empty_err: "내용을 입력해주세요.", diary_limit_err: "140자를 초과했습니다.",
-        diary_no_entries: "작성된 일기가 없습니다.", diary_delete_confirm: "이 일기를 삭제하시겠습니까?"
+        diary_no_entries: "작성된 일기가 없습니다.", diary_delete_confirm: "이 일기를 삭제하시겠습니까?",
+        diary_already_wrote: "오늘은 이미 일기를 작성했습니다. 하루에 한 번만 작성 가능합니다."
     },
     en: {
         login_desc: "Access the system, gamify your life.", btn_login_submit: "System Access (Login)", btn_signup_submit: "Register Player (Sign Up)", 
@@ -76,7 +77,8 @@ const i18n = {
         diary_title: "Diary", diary_hint: "※ Leave a record of your day",
         diary_placeholder: "Write today's diary... (up to 140 Korean chars)",
         diary_save: "Save", diary_empty_err: "Please enter something.", diary_limit_err: "Exceeded 140 characters.",
-        diary_no_entries: "No diary entries yet.", diary_delete_confirm: "Delete this diary entry?"
+        diary_no_entries: "No diary entries yet.", diary_delete_confirm: "Delete this diary entry?",
+        diary_already_wrote: "You've already written today's diary. Only one entry per day is allowed."
     },
     ja: {
         login_desc: "시스템에 접속하여 현실을 게임처럼.", btn_login_submit: "시스템 접속 (로그인)", btn_signup_submit: "새 플레이어 등록 (회원가입)", 
@@ -115,7 +117,8 @@ const i18n = {
         diary_title: "日記", diary_hint: "※ 今日の記録を残しましょう",
         diary_placeholder: "今日の日記を書いてください... (韓国語基準140文字)",
         diary_save: "保存", diary_empty_err: "内容を入力してください。", diary_limit_err: "140文字を超えました。",
-        diary_no_entries: "日記がありません。", diary_delete_confirm: "この日記を削除しますか？"
+        diary_no_entries: "日記がありません。", diary_delete_confirm: "この日記を削除しますか？",
+        diary_already_wrote: "今日の日記はすでに書きました。1日1回のみ作成可能です。"
     }
 };
 

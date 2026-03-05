@@ -135,6 +135,16 @@
                     </div>
                 </div>
                 <div id="diary-list" style="margin-top:10px;"></div>
+
+                <!-- 일기 캘린더 -->
+                <div class="system-card" style="padding:12px; margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <button id="diary-cal-prev" style="background:none; border:none; color:var(--neon-blue); font-size:1rem; cursor:pointer;">◀</button>
+                        <span id="diary-cal-month" style="font-weight:bold; color:var(--text-main); font-size:0.9rem;"></span>
+                        <button id="diary-cal-next" style="background:none; border:none; color:var(--neon-blue); font-size:1rem; cursor:pointer;">▶</button>
+                    </div>
+                    <div id="diary-cal-grid"></div>
+                </div>
             </section>
 
             <section id="quests" class="view-section">
@@ -296,6 +306,17 @@
                 <button class="modal-close" id="btn-info-close">×</button>
             </div>
             <div class="modal-body" id="info-modal-body" style="overflow-y: auto; max-height: 60vh;"></div>
+        </div>
+    </div>
+
+    <!-- 일기 보기 모달 -->
+    <div class="modal-overlay d-none" id="diaryViewModal" onclick="if(event.target===this)document.getElementById('diaryViewModal').classList.add('d-none')">
+        <div class="modal-content" style="max-width:95%; width:380px; padding:15px;">
+            <div class="modal-header" style="margin-bottom:5px; padding-bottom:5px;">
+                <span id="diary-view-date" style="font-weight:bold; color:var(--neon-blue); font-size:0.85rem;"></span>
+                <button class="modal-close" onclick="document.getElementById('diaryViewModal').classList.add('d-none')">×</button>
+            </div>
+            <div id="diary-view-text" style="color:var(--text-main); line-height:1.7; font-size:0.9rem; padding-top:8px; white-space:pre-wrap; word-break:keep-all;"></div>
         </div>
     </div>
 

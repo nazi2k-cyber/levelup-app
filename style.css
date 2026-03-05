@@ -172,6 +172,7 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 .btn-info-sm {
     background: rgba(0, 217, 255, 0.1); border: 1px solid var(--neon-blue); color: var(--neon-blue);
     border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; cursor: pointer; display: flex; align-items: center; gap: 3px;
+    white-space: nowrap; flex-shrink: 0;
 }
 .info-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; color: var(--text-main); margin-top: 10px; }
 .info-table th, .info-table td { border: 1px solid var(--border-color); padding: 8px; text-align: left; word-break: keep-all; }
@@ -188,6 +189,14 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 .diary-entry-text { font-size: 0.85rem; color: var(--text-main); line-height: 1.6; word-break: keep-all; white-space: pre-wrap; }
 .diary-delete-btn { background: none; border: none; color: var(--text-sub); font-size: 0.9rem; cursor: pointer; padding: 2px 4px; border-radius: 3px; }
 .diary-delete-btn:hover { color: var(--neon-red); }
+.diary-cal-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 4px; }
+.diary-cal-day-header { font-size: 0.65rem; color: var(--text-sub); font-weight: bold; padding: 3px 0; }
+.diary-cal-dates { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 2px; }
+.diary-cal-date { font-size: 0.75rem; color: var(--text-main); padding: 6px 2px; border-radius: 4px; position: relative; display: flex; flex-direction: column; align-items: center; min-height: 28px; }
+.diary-cal-date.has-entry { color: var(--neon-blue); cursor: pointer; font-weight: bold; }
+.diary-cal-date.has-entry:hover { background: rgba(0,217,255,0.1); }
+.diary-cal-date.is-today { background: rgba(0,217,255,0.08); border: 1px solid var(--neon-blue); border-radius: 4px; }
+.diary-cal-dot { width: 4px; height: 4px; background: var(--neon-blue); border-radius: 50%; margin-top: 2px; }
 
 /* 작은 화면 대응 */
 @media (max-height: 700px) {
