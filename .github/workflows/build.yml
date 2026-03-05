@@ -36,37 +36,11 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      # 4-1. 고정 디버그 키스토어 복원 + Gradle init 스크립트로 서명 강제 고정
-      - name: 디버그 키스토어 복원
+      # 4-1. ubuntu-22.04 이미지 내장 debug keystore SHA-1 확인
+      - name: 키스토어 SHA-1 확인
         run: |
-          mkdir -p ~/.android ~/.gradle/init.d
-          base64 -d debug-keystore.b64 > ~/.android/debug.keystore
-          SHA1_CHECK=$(keytool -list -keystore ~/.android/debug.keystore -storepass android 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
-          echo "✅ 키스토어 복원 완료 — SHA-1: $SHA1_CHECK"
-
-          # Gradle init 스크립트: 모든 Android 프로젝트에 debug 서명 강제 적용
-          cat > ~/.gradle/init.d/debug-signing.gradle << 'GRADLE_INIT'
-          allprojects {
-            afterEvaluate {
-              if (it.hasProperty('android')) {
-                android {
-                  signingConfigs {
-                    debug {
-                      storeFile = new File(System.getProperty("user.home") + "/.android/debug.keystore")
-                      storePassword = "android"
-                      keyAlias = "androiddebugkey"
-                      keyPassword = "android"
-                    }
-                  }
-                  buildTypes {
-                    debug { signingConfig = signingConfigs.debug }
-                  }
-                }
-              }
-            }
-          }
-GRADLE_INIT
-          echo "✅ Gradle init 스크립트 생성 완료"
+          SHA1=$(keytool -list -keystore ~/.android/debug.keystore -storepass android 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
+          echo "📋 이미지 내장 키스토어 SHA-1: $SHA1"
 
       # 5. npm 패키지 설치 (lock 파일 기준 정확한 버전 설치)
       - name: npm 패키지 설치
