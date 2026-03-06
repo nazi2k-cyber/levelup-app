@@ -195,8 +195,7 @@ async function saveUserData() {
             syncEnabled: AppState.user.syncEnabled,
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "",
-            diaryStr: JSON.stringify(_diaryCache),
-            diaryRewardedStr: JSON.stringify(_diaryRewardedDates)
+            diaryStr: localStorage.getItem('diary_entries') || '{}'
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
@@ -231,16 +230,7 @@ async function loadUserDataFromDB(user) {
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.diaryStr) {
-                try {
-                    _diaryCache = JSON.parse(data.diaryStr);
-                    localStorage.setItem('diary_entries', data.diaryStr);
-                } catch(e) { _diaryCache = {}; }
-            }
-            if(data.diaryRewardedStr) {
-                try {
-                    _diaryRewardedDates = JSON.parse(data.diaryRewardedStr);
-                    localStorage.setItem('diary_rewarded', data.diaryRewardedStr);
-                } catch(e) { _diaryRewardedDates = {}; }
+                try { localStorage.setItem('diary_entries', data.diaryStr); } catch(e) {}
             }
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             AppState.user.name = data.name || user.displayName || "신규 헌터";
@@ -1207,12 +1197,6 @@ window.openLegalModal = function(type) {
 // --- ★ 다이어리 기능 (탭 기반) ★ ---
 let diaryCalendarDate = new Date(); // current month being viewed
 let diarySelectedDate = getTodayStr();
-let _diaryCache = {}; // in-memory cache (localStorage unreliable in Capacitor WebView)
-let _diaryRewardedDates = {}; // track dates that already received rewards
-
-// Initialize diary cache from localStorage on load
-try { _diaryCache = JSON.parse(localStorage.getItem('diary_entries') || '{}'); } catch(e) { _diaryCache = {}; }
-try { _diaryRewardedDates = JSON.parse(localStorage.getItem('diary_rewarded') || '{}'); } catch(e) { _diaryRewardedDates = {}; }
 
 function getTodayStr() {
     const d = new Date();
@@ -1224,17 +1208,16 @@ function dateToStr(d) {
 }
 
 function getDiaryEntry(dateStr) {
-    return _diaryCache[dateStr] || null;
+    try {
+        const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        return diaries[dateStr] || null;
+    } catch { return null; }
 }
 
 function getAllDiaryEntries() {
-    return _diaryCache;
-}
-
-function _saveDiaryToStorage() {
-    const json = JSON.stringify(_diaryCache);
-    try { localStorage.setItem('diary_entries', json); } catch(e) {}
-    try { localStorage.setItem('diary_rewarded', JSON.stringify(_diaryRewardedDates)); } catch(e) {}
+    try {
+        return JSON.parse(localStorage.getItem('diary_entries') || '{}');
+    } catch { return {}; }
 }
 
 function renderDiaryCalendar() {
@@ -1329,24 +1312,6 @@ function loadDiaryForDate(dateStr) {
     textarea.disabled = isFuture;
     const saveBtn = document.getElementById('btn-diary-tab-save');
     if (saveBtn) saveBtn.disabled = isFuture;
-
-    // Update reward info display
-    const rewardInfo = document.getElementById('diary-reward-info');
-    if (rewardInfo) {
-        if (_diaryRewardedDates[dateStr]) {
-            rewardInfo.innerHTML = '<span style="font-size:1rem;">✅</span><span>보상 수령 완료: <b style="color:var(--neon-gold);">+20P</b> &amp; <b style="color:var(--neon-blue);">INT +0.5</b></span>';
-            rewardInfo.style.borderColor = 'rgba(255,204,0,0.2)';
-            rewardInfo.style.background = 'rgba(255,204,0,0.06)';
-        } else if (isFuture) {
-            rewardInfo.innerHTML = '<span style="font-size:1rem;">🔒</span><span>미래 날짜에는 기록할 수 없습니다.</span>';
-            rewardInfo.style.borderColor = 'rgba(255,255,255,0.1)';
-            rewardInfo.style.background = 'rgba(255,255,255,0.03)';
-        } else {
-            rewardInfo.innerHTML = '<span style="font-size:1rem;">🎁</span><span>일일 기록 보상: <b style="color:var(--neon-gold);">+20P</b> &amp; <b style="color:var(--neon-blue);">INT +0.5</b> <span style="opacity:0.7;">(하루 1회)</span></span>';
-            rewardInfo.style.borderColor = 'rgba(0,217,255,0.15)';
-            rewardInfo.style.background = 'rgba(0,217,255,0.06)';
-        }
-    }
 }
 
 function saveDiaryEntryTab() {
@@ -1362,31 +1327,27 @@ function saveDiaryEntryTab() {
         return;
     }
 
-    // Save to in-memory cache (primary)
-    _diaryCache[dateStr] = { text: text.substring(0, 500), mood, timestamp: Date.now() };
+    try {
+        const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        const isNewEntry = !diaries[dateStr];
+        diaries[dateStr] = { text: text.substring(0, 500), mood, timestamp: Date.now() };
+        localStorage.setItem('diary_entries', JSON.stringify(diaries));
 
-    // Reward: +20P & INT +0.5 (only once per date, tracked separately)
-    let rewarded = false;
-    if (!_diaryRewardedDates[dateStr]) {
-        _diaryRewardedDates[dateStr] = true;
-        AppState.user.points += 20;
-        AppState.user.pendingStats.int += 0.5;
-        rewarded = true;
-        updatePointUI();
-        drawRadarChart();
-        AppLogger.info('[Diary] 보상 지급: +20P, INT +0.5');
-    }
+        // Reward: +20P & INT +0.5 (only for new entries, not edits)
+        if (isNewEntry) {
+            AppState.user.points += 20;
+            AppState.user.pendingStats.int += 0.5;
+            updatePointUI();
+            drawRadarChart();
+            AppLogger.info('[Diary] 보상 지급: +20P, INT +0.5');
+        }
 
-    // Persist to localStorage + Firebase
-    _saveDiaryToStorage();
-    saveUserData();
+        // Save to Firebase (main user document includes diaryStr)
+        saveUserData();
+    } catch(e) { AppLogger.warn('[Diary] Save error: ' + e.message); }
 
     renderDiaryCalendar();
-    if (rewarded) {
-        alert('다이어리가 저장되었습니다!\n보상: +20P, INT +0.5');
-    } else {
-        alert(i18n[AppState.currentLang].diary_saved || '다이어리가 저장되었습니다.');
-    }
+    alert(i18n[AppState.currentLang].diary_saved || '다이어리가 저장되었습니다.');
     AppLogger.info('[Diary] 다이어리 저장 완료: ' + dateStr);
 }
 
