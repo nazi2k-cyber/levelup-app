@@ -89,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderQuestList(); 
             fetchSocialData(); 
             
-            updateDiaryPreview();
             if (AppState.user.syncEnabled) { syncHealthData(false); }
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
@@ -154,18 +153,25 @@ function bindEvents() {
     
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
 
-    // Diary
-    document.getElementById('btn-open-diary').addEventListener('click', openDiaryModal);
-    document.getElementById('btn-diary-save').addEventListener('click', saveDiaryEntry);
-    document.getElementById('diary-text').addEventListener('input', (e) => {
+    // Diary tab
+    document.getElementById('btn-diary-tab-save').addEventListener('click', saveDiaryEntryTab);
+    document.getElementById('diary-tab-text').addEventListener('input', (e) => {
         if (e.target.value.length > 500) e.target.value = e.target.value.substring(0, 500);
-        document.getElementById('diary-char-count').innerText = `${e.target.value.length} / 500`;
+        document.getElementById('diary-tab-char-count').innerText = `${e.target.value.length} / 500`;
     });
-    document.querySelectorAll('.diary-mood-btn').forEach(btn => {
+    document.querySelectorAll('#diary-mood-selector-tab .diary-mood-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.diary-mood-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('#diary-mood-selector-tab .diary-mood-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
         });
+    });
+    document.getElementById('diary-cal-prev').addEventListener('click', () => {
+        diaryCalendarDate.setMonth(diaryCalendarDate.getMonth() - 1);
+        renderDiaryCalendar();
+    });
+    document.getElementById('diary-cal-next').addEventListener('click', () => {
+        diaryCalendarDate.setMonth(diaryCalendarDate.getMonth() + 1);
+        renderDiaryCalendar();
     });
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 }
@@ -657,8 +663,9 @@ function switchTab(tabId, el) {
         mainEl.style.overflowY = 'auto';
     }
     
-    if(tabId === 'social') fetchSocialData(); 
+    if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
+    if(tabId === 'diary') { renderDiaryCalendar(); loadDiaryForDate(diarySelectedDate); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
         window.syncGlobalDungeon(); 
@@ -706,14 +713,15 @@ function changeLanguage(langCode) {
     });
     
     if(document.getElementById('app-container').classList.contains('d-flex')){
-        drawRadarChart(); 
-        renderUsers(AppState.social.sortCriteria); 
-        renderQuestList(); 
-        renderCalendar(); 
+        drawRadarChart();
+        renderUsers(AppState.social.sortCriteria);
+        renderQuestList();
+        renderCalendar();
+        renderDiaryCalendar();
         renderQuote();
-        updatePointUI(); 
+        updatePointUI();
         updateDungeonStatus();
-        loadPlayerName(); 
+        loadPlayerName();
     }
 }
 
@@ -1122,40 +1130,55 @@ function openDungeonInfoModal() {
     m.classList.add('d-flex');
 }
 
-// --- ★ 다이어리 기능 ★ ---
+// --- ★ 약관 모달 (인앱 표시) ★ ---
+const legalContents = {
+    terms: { title: '소비자 약관', file: 'terms.html' },
+    'usage-policy': { title: '이용 정책', file: 'usage-policy.html' },
+    privacy: { title: '개인정보 처리방침', file: 'privacy.html' }
+};
+
+window.openLegalModal = async function(type) {
+    const info = legalContents[type];
+    if (!info) return;
+    const modal = document.getElementById('legalModal');
+    const title = document.getElementById('legal-modal-title');
+    const body = document.getElementById('legal-modal-body');
+    title.innerText = info.title;
+    body.innerHTML = '<p style="color:var(--text-sub);">로딩 중...</p>';
+    modal.classList.remove('d-none');
+    modal.classList.add('d-flex');
+    try {
+        const resp = await fetch(info.file);
+        if (!resp.ok) throw new Error('load failed');
+        const html = await resp.text();
+        const parser = new DOMParser();
+        const doc2 = parser.parseFromString(html, 'text/html');
+        const bodyContent = doc2.querySelector('body');
+        if (bodyContent) {
+            const header = bodyContent.querySelector('.legal-header');
+            if (header) header.remove();
+            body.innerHTML = bodyContent.innerHTML;
+        } else {
+            body.innerHTML = html;
+        }
+    } catch(e) {
+        body.innerHTML = `<p style="color:var(--neon-red);">내용을 불러올 수 없습니다.</p>`;
+        AppLogger.warn('[Legal] Failed to load ' + info.file + ': ' + e.message);
+    }
+};
+
+// --- ★ 다이어리 기능 (탭 기반) ★ ---
+let diaryCalendarDate = new Date(); // current month being viewed
+let diarySelectedDate = getTodayStr();
+
 function getTodayStr() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function openDiaryModal() {
-    const today = getTodayStr();
-    const lang = AppState.currentLang;
-    document.getElementById('diary-date-display').innerText = today;
-
-    // Load existing diary entry for today
-    const saved = getDiaryEntry(today);
-    const textarea = document.getElementById('diary-text');
-    textarea.value = saved ? saved.text : '';
-    document.getElementById('diary-char-count').innerText = `${(textarea.value || '').length} / 500`;
-
-    // Reset mood buttons
-    document.querySelectorAll('.diary-mood-btn').forEach(btn => btn.classList.remove('selected'));
-    if (saved && saved.mood) {
-        const moodBtn = document.querySelector(`.diary-mood-btn[data-mood="${saved.mood}"]`);
-        if (moodBtn) moodBtn.classList.add('selected');
-    }
-
-    const m = document.getElementById('diaryModal');
-    m.classList.remove('d-none');
-    m.classList.add('d-flex');
+function dateToStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
-window.closeDiaryModal = function() {
-    const m = document.getElementById('diaryModal');
-    m.classList.add('d-none');
-    m.classList.remove('d-flex');
-};
 
 function getDiaryEntry(dateStr) {
     try {
@@ -1164,44 +1187,131 @@ function getDiaryEntry(dateStr) {
     } catch { return null; }
 }
 
-function saveDiaryEntry() {
-    const today = getTodayStr();
-    const text = document.getElementById('diary-text').value.trim();
-    const selectedMood = document.querySelector('.diary-mood-btn.selected');
+function getAllDiaryEntries() {
+    try {
+        return JSON.parse(localStorage.getItem('diary_entries') || '{}');
+    } catch { return {}; }
+}
+
+function renderDiaryCalendar() {
+    const year = diaryCalendarDate.getFullYear();
+    const month = diaryCalendarDate.getMonth();
+    const lang = AppState.currentLang;
+
+    const monthNames = {
+        ko: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
+        en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        ja: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+    };
+    const dayNames = {
+        ko: ['일', '월', '화', '수', '목', '금', '토'],
+        en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        ja: ['日', '月', '火', '水', '木', '金', '土']
+    };
+
+    const label = document.getElementById('diary-cal-month-label');
+    if (label) label.innerText = `${year}. ${(monthNames[lang] || monthNames.ko)[month]}`;
+
+    // Weekday headers
+    const weekdaysEl = document.getElementById('diary-cal-weekdays');
+    if (weekdaysEl) {
+        weekdaysEl.innerHTML = (dayNames[lang] || dayNames.ko).map(d => `<span>${d}</span>`).join('');
+    }
+
+    // Calendar grid
+    const grid = document.getElementById('diary-cal-grid');
+    if (!grid) return;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = getTodayStr();
+    const allEntries = getAllDiaryEntries();
+
+    let html = '';
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+        html += '<div class="diary-cal-day empty"></div>';
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+        const ds = dateToStr(new Date(year, month, d));
+        const isToday = ds === todayStr;
+        const isSelected = ds === diarySelectedDate;
+        const hasEntry = !!allEntries[ds];
+        const isFuture = new Date(year, month, d) > new Date();
+        const classes = ['diary-cal-day'];
+        if (isToday) classes.push('today');
+        if (isSelected) classes.push('selected');
+        if (hasEntry) classes.push('has-entry');
+        html += `<div class="${classes.join(' ')}" ${!isFuture ? `onclick="window.selectDiaryDate('${ds}')"` : ''} ${isFuture ? 'style="opacity:0.3;cursor:default;"' : ''}>${d}</div>`;
+    }
+    grid.innerHTML = html;
+
+    // Update entry count for this month
+    const monthEntries = Object.keys(allEntries).filter(k => k.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).length;
+    const countEl = document.getElementById('diary-entry-count');
+    if (countEl) countEl.innerText = `${monthEntries} / ${daysInMonth}`;
+}
+
+window.selectDiaryDate = function(dateStr) {
+    diarySelectedDate = dateStr;
+    loadDiaryForDate(dateStr);
+    renderDiaryCalendar();
+};
+
+function loadDiaryForDate(dateStr) {
+    const saved = getDiaryEntry(dateStr);
+    const textarea = document.getElementById('diary-tab-text');
+    if (!textarea) return;
+
+    textarea.value = saved ? saved.text : '';
+    const charCount = document.getElementById('diary-tab-char-count');
+    if (charCount) charCount.innerText = `${(textarea.value || '').length} / 500`;
+
+    const dateDisplay = document.getElementById('diary-selected-date');
+    if (dateDisplay) dateDisplay.innerText = dateStr;
+
+    // Reset mood buttons in tab
+    document.querySelectorAll('#diary-mood-selector-tab .diary-mood-btn').forEach(btn => btn.classList.remove('selected'));
+    if (saved && saved.mood) {
+        const moodBtn = document.querySelector(`#diary-mood-selector-tab .diary-mood-btn[data-mood="${saved.mood}"]`);
+        if (moodBtn) moodBtn.classList.add('selected');
+    }
+
+    // Disable editing for future dates
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const selected = new Date(dateStr + 'T00:00:00');
+    const isFuture = selected > today;
+    textarea.disabled = isFuture;
+    const saveBtn = document.getElementById('btn-diary-tab-save');
+    if (saveBtn) saveBtn.disabled = isFuture;
+}
+
+function saveDiaryEntryTab() {
+    const dateStr = diarySelectedDate;
+    const textarea = document.getElementById('diary-tab-text');
+    if (!textarea) return;
+    const text = textarea.value.trim();
+    const selectedMood = document.querySelector('#diary-mood-selector-tab .diary-mood-btn.selected');
     const mood = selectedMood ? selectedMood.dataset.mood : '';
 
     if (!text) return;
 
     try {
         const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
-        diaries[today] = { text: text.substring(0, 500), mood, timestamp: Date.now() };
+        diaries[dateStr] = { text: text.substring(0, 500), mood, timestamp: Date.now() };
         localStorage.setItem('diary_entries', JSON.stringify(diaries));
 
         // Also save to Firebase if logged in
         if (auth.currentUser) {
-            const diaryRef = doc(db, "users", auth.currentUser.uid, "diary", today);
-            setDoc(diaryRef, diaries[today]).catch(e => AppLogger.warn('[Diary] Firebase save error: ' + e.message));
+            const diaryRef = doc(db, "users", auth.currentUser.uid, "diary", dateStr);
+            setDoc(diaryRef, diaries[dateStr]).catch(e => AppLogger.warn('[Diary] Firebase save error: ' + e.message));
         }
     } catch(e) { AppLogger.warn('[Diary] Save error: ' + e.message); }
 
-    // Update preview text on status page
-    const preview = document.getElementById('diary-preview');
-    if (preview) preview.innerText = i18n[AppState.currentLang].diary_written || '작성 완료 ✓';
-
-    closeDiaryModal();
-    AppLogger.info('[Diary] 다이어리 저장 완료');
-}
-
-function updateDiaryPreview() {
-    const today = getTodayStr();
-    const saved = getDiaryEntry(today);
-    const preview = document.getElementById('diary-preview');
-    if (!preview) return;
-    if (saved && saved.text) {
-        preview.innerText = i18n[AppState.currentLang].diary_written || '작성 완료 ✓';
-    } else {
-        preview.innerText = i18n[AppState.currentLang].diary_empty || '오늘의 기록을 남겨보세요';
-    }
+    renderDiaryCalendar();
+    alert(i18n[AppState.currentLang].diary_saved || '다이어리가 저장되었습니다.');
+    AppLogger.info('[Diary] 다이어리 저장 완료: ' + dateStr);
 }
 
 function changeTheme() {
