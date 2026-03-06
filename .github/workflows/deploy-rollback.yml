@@ -1,0 +1,393 @@
+name: 배포 및 롤백 워크플로우
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '실행할 작업'
+        required: true
+        type: choice
+        options:
+          - deploy
+          - rollback
+        default: 'deploy'
+      rollback_version:
+        description: '롤백할 버전 태그 (예: deploy-v3). 비우면 직전 버전으로 롤백'
+        required: false
+        type: string
+
+# 동시 배포 방지 — 같은 그룹 내에서는 하나의 워크플로우만 실행
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  # ──────────────────────────────────────────────
+  #  배포 (deploy)
+  # ──────────────────────────────────────────────
+  deploy:
+    if: github.event.inputs.action == 'deploy'
+    runs-on: ubuntu-22.04
+    outputs:
+      version_tag: ${{ steps.tag.outputs.version_tag }}
+      commit_sha: ${{ steps.tag.outputs.commit_sha }}
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 전체 이력 — 태그 조회에 필요
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Java 17 셋업
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Android SDK 환경변수 설정
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+
+      - name: 디버그 키스토어 복원
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p ~/.android
+          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
+            echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+            echo "고정 디버그 키스토어 복원 완료"
+          else
+            if [ ! -f ~/.android/debug.keystore ]; then
+              keytool -genkeypair -v \
+                -keystore ~/.android/debug.keystore \
+                -alias androiddebugkey \
+                -keyalg RSA -keysize 2048 -validity 10000 \
+                -storepass android -keypass android \
+                -dname "CN=Android Debug,O=Android,C=US"
+            fi
+          fi
+
+      - name: npm 패키지 설치
+        run: npm ci
+
+      - name: 웹 빌드 디렉토리 준비
+        run: |
+          mkdir -p www
+          cp index.html app.js style.css data.js logger.js www/
+
+      - name: Google Web Client ID 주입
+        if: env.GOOGLE_WEB_CLIENT_ID != ''
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          sed -i "s|233040099152-REPLACE_WITH_WEB_CLIENT_HASH.apps.googleusercontent.com|$GOOGLE_WEB_CLIENT_ID|g" capacitor.config.json
+
+      - name: Android 플랫폼 추가
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+        env:
+          CI: true
+
+      - name: google-services.json 배치
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ] && echo "$GOOGLE_SERVICES_JSON" | grep -q '"com.levelup.reboot"'; then
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            cp google-services.json android/app/google-services.json
+          fi
+
+      - name: 웹→Android 동기화
+        run: npx cap sync android
+        env:
+          CI: true
+
+      - name: Gradle 실행 권한 부여
+        run: chmod +x android/gradlew
+
+      - name: APK 빌드 (Debug)
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace
+
+      # 배포 버전 태그 생성 (자동 증가)
+      - name: 배포 버전 태그 생성
+        id: tag
+        run: |
+          # 기존 deploy 태그 중 가장 높은 번호 찾기
+          LAST_TAG=$(git tag -l 'deploy-v*' --sort=-version:refname | head -n 1)
+          if [ -z "$LAST_TAG" ]; then
+            NEXT_VERSION=1
+          else
+            LAST_VERSION=${LAST_TAG#deploy-v}
+            NEXT_VERSION=$((LAST_VERSION + 1))
+          fi
+          VERSION_TAG="deploy-v${NEXT_VERSION}"
+          echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "배포 버전: ${VERSION_TAG}"
+
+      # APK를 버전별 아티팩트로 업로드
+      - name: APK 업로드 (버전별 Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ steps.tag.outputs.version_tag }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
+
+      # 배포 메타데이터를 아티팩트로 저장 (롤백 시 참조)
+      - name: 배포 메타데이터 저장
+        run: |
+          mkdir -p deploy-meta
+          cat > deploy-meta/manifest.json << METAEOF
+          {
+            "version": "${{ steps.tag.outputs.version_tag }}",
+            "commit": "${{ steps.tag.outputs.commit_sha }}",
+            "branch": "${{ github.ref_name }}",
+            "deployed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "deployed_by": "${{ github.actor }}",
+            "workflow_run": "${{ github.run_id }}"
+          }
+          METAEOF
+
+      - name: 메타데이터 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-meta-${{ steps.tag.outputs.version_tag }}
+          path: deploy-meta/manifest.json
+          retention-days: 90
+
+      # Git 태그 생성 및 푸시
+      - name: Git 태그 푸시
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.tag.outputs.version_tag }}" \
+            -m "배포: ${{ steps.tag.outputs.version_tag }} (run #${{ github.run_number }})"
+          git push origin "${{ steps.tag.outputs.version_tag }}"
+
+      - name: 배포 완료 요약
+        run: |
+          echo "## 배포 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 버전 | \`${{ steps.tag.outputs.version_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 커밋 | \`${{ steps.tag.outputs.commit_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 브랜치 | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 실행자 | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "롤백하려면 이 워크플로우를 **rollback** 액션으로 실행하세요." >> $GITHUB_STEP_SUMMARY
+
+  # ──────────────────────────────────────────────
+  #  롤백 (rollback)
+  # ──────────────────────────────────────────────
+  rollback:
+    if: github.event.inputs.action == 'rollback'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 롤백 대상 버전 결정
+      - name: 롤백 대상 버전 결정
+        id: resolve
+        run: |
+          if [ -n "${{ github.event.inputs.rollback_version }}" ]; then
+            TARGET_TAG="${{ github.event.inputs.rollback_version }}"
+            # 태그 존재 여부 확인
+            if ! git rev-parse "$TARGET_TAG" >/dev/null 2>&1; then
+              echo "오류: 태그 '$TARGET_TAG'를 찾을 수 없습니다."
+              echo ""
+              echo "사용 가능한 배포 태그 목록:"
+              git tag -l 'deploy-v*' --sort=-version:refname
+              exit 1
+            fi
+          else
+            # 직전 버전 자동 선택 (최신 태그의 바로 이전)
+            ALL_TAGS=$(git tag -l 'deploy-v*' --sort=-version:refname)
+            TAG_COUNT=$(echo "$ALL_TAGS" | grep -c 'deploy-v' || true)
+            if [ "$TAG_COUNT" -lt 2 ]; then
+              echo "오류: 롤백할 이전 버전이 없습니다. (배포 기록: ${TAG_COUNT}개)"
+              echo ""
+              echo "사용 가능한 배포 태그:"
+              echo "$ALL_TAGS"
+              exit 1
+            fi
+            TARGET_TAG=$(echo "$ALL_TAGS" | sed -n '2p')
+            echo "직전 버전으로 자동 롤백: $TARGET_TAG"
+          fi
+
+          TARGET_SHA=$(git rev-parse "$TARGET_TAG")
+          echo "target_tag=${TARGET_TAG}" >> "$GITHUB_OUTPUT"
+          echo "target_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"
+          echo "롤백 대상: ${TARGET_TAG} (${TARGET_SHA})"
+
+      # 해당 버전의 커밋으로 체크아웃
+      - name: 롤백 대상 커밋 체크아웃
+        run: git checkout ${{ steps.resolve.outputs.target_sha }}
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Java 17 셋업
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Android SDK 환경변수 설정
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+
+      - name: 디버그 키스토어 복원
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          mkdir -p ~/.android
+          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
+            echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          else
+            if [ ! -f ~/.android/debug.keystore ]; then
+              keytool -genkeypair -v \
+                -keystore ~/.android/debug.keystore \
+                -alias androiddebugkey \
+                -keyalg RSA -keysize 2048 -validity 10000 \
+                -storepass android -keypass android \
+                -dname "CN=Android Debug,O=Android,C=US"
+            fi
+          fi
+
+      - name: npm 패키지 설치
+        run: npm ci
+
+      - name: 웹 빌드 디렉토리 준비
+        run: |
+          mkdir -p www
+          cp index.html app.js style.css data.js logger.js www/
+
+      - name: Google Web Client ID 주입
+        if: env.GOOGLE_WEB_CLIENT_ID != ''
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          sed -i "s|233040099152-REPLACE_WITH_WEB_CLIENT_HASH.apps.googleusercontent.com|$GOOGLE_WEB_CLIENT_ID|g" capacitor.config.json
+
+      - name: Android 플랫폼 추가
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+        env:
+          CI: true
+
+      - name: google-services.json 배치
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ] && echo "$GOOGLE_SERVICES_JSON" | grep -q '"com.levelup.reboot"'; then
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            cp google-services.json android/app/google-services.json
+          fi
+
+      - name: 웹→Android 동기화
+        run: npx cap sync android
+        env:
+          CI: true
+
+      - name: Gradle 실행 권한 부여
+        run: chmod +x android/gradlew
+
+      - name: APK 빌드 (Debug) — 롤백 버전
+        run: |
+          cd android
+          ./gradlew assembleDebug --stacktrace
+
+      # 롤백 APK 업로드
+      - name: 롤백 APK 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-rollback-to-${{ steps.resolve.outputs.target_tag }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
+
+      # 롤백 태그 기록
+      - name: 롤백 태그 기록
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          ROLLBACK_TAG="rollback-$(date -u +%Y%m%d%H%M%S)-to-${{ steps.resolve.outputs.target_tag }}"
+          git tag -a "$ROLLBACK_TAG" "${{ steps.resolve.outputs.target_sha }}" \
+            -m "롤백: ${{ steps.resolve.outputs.target_tag }} 으로 복원 (run #${{ github.run_number }})"
+          git push origin "$ROLLBACK_TAG"
+          echo "rollback_tag=${ROLLBACK_TAG}" >> "$GITHUB_ENV"
+
+      - name: 롤백 완료 요약
+        run: |
+          echo "## 롤백 완료" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 롤백 대상 | \`${{ steps.resolve.outputs.target_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 커밋 | \`${{ steps.resolve.outputs.target_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 롤백 태그 | \`${rollback_tag}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 실행자 | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 사용 가능한 배포 버전" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          git tag -l 'deploy-v*' --sort=-version:refname >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ──────────────────────────────────────────────
+  #  배포 이력 조회 (항상 실행)
+  # ──────────────────────────────────────────────
+  history:
+    runs-on: ubuntu-22.04
+    needs: [deploy, rollback]
+    if: always() && (needs.deploy.result == 'success' || needs.rollback.result == 'success')
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 배포 이력 출력
+        run: |
+          echo "## 배포 이력" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 태그 | 커밋 | 날짜 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|------|" >> $GITHUB_STEP_SUMMARY
+          for tag in $(git tag -l 'deploy-v*' --sort=-version:refname | head -20); do
+            COMMIT=$(git rev-list -n 1 "$tag" | cut -c1-7)
+            DATE=$(git log -1 --format='%ci' "$tag" | cut -d' ' -f1)
+            echo "| \`$tag\` | \`$COMMIT\` | $DATE |" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 롤백 기록" >> $GITHUB_STEP_SUMMARY
+          ROLLBACK_TAGS=$(git tag -l 'rollback-*' --sort=-version:refname | head -10)
+          if [ -z "$ROLLBACK_TAGS" ]; then
+            echo "롤백 기록이 없습니다." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 태그 | 날짜 |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+            for tag in $ROLLBACK_TAGS; do
+              DATE=$(git log -1 --format='%ci' "$tag" | cut -d' ' -f1)
+              echo "| \`$tag\` | $DATE |" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
