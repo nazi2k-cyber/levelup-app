@@ -183,17 +183,19 @@ async function saveUserData() {
         await setDoc(doc(db, "users", auth.currentUser.uid), {
             name: AppState.user.name,
             stats: AppState.user.stats,
+            pendingStats: AppState.user.pendingStats,
             level: AppState.user.level,
             points: AppState.user.points,
             titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
             questStr: JSON.stringify(AppState.quest.completedState),
             questWeekStart: AppState.quest.weekStart,
-            dungeonStr: JSON.stringify(AppState.dungeon), 
+            dungeonStr: JSON.stringify(AppState.dungeon),
             friends: AppState.user.friends || [],
             photoURL: AppState.user.photoURL || null,
-            syncEnabled: AppState.user.syncEnabled, 
+            syncEnabled: AppState.user.syncEnabled,
             stepData: AppState.user.stepData,
-            instaId: AppState.user.instaId || "" 
+            instaId: AppState.user.instaId || "",
+            diaryStr: localStorage.getItem('diary_entries') || '{}'
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
@@ -222,10 +224,14 @@ async function loadUserDataFromDB(user) {
                 AppState.dungeon.globalParticipants = 0;
                 AppState.dungeon.globalProgress = 0;
             }
+            if(data.pendingStats) AppState.user.pendingStats = data.pendingStats;
             if(data.friends) AppState.user.friends = data.friends;
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
+            if(data.diaryStr) {
+                try { localStorage.setItem('diary_entries', data.diaryStr); } catch(e) {}
+            }
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             AppState.user.name = data.name || user.displayName || "신규 헌터";
             if(data.photoURL) {
@@ -1316,18 +1322,28 @@ function saveDiaryEntryTab() {
     const selectedMood = document.querySelector('#diary-mood-selector-tab .diary-mood-btn.selected');
     const mood = selectedMood ? selectedMood.dataset.mood : '';
 
-    if (!text) return;
+    if (!text) {
+        alert('내용을 입력해주세요.');
+        return;
+    }
 
     try {
         const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        const isNewEntry = !diaries[dateStr];
         diaries[dateStr] = { text: text.substring(0, 500), mood, timestamp: Date.now() };
         localStorage.setItem('diary_entries', JSON.stringify(diaries));
 
-        // Also save to Firebase if logged in
-        if (auth.currentUser) {
-            const diaryRef = doc(db, "users", auth.currentUser.uid, "diary", dateStr);
-            setDoc(diaryRef, diaries[dateStr]).catch(e => AppLogger.warn('[Diary] Firebase save error: ' + e.message));
+        // Reward: +20P & INT +0.5 (only for new entries, not edits)
+        if (isNewEntry) {
+            AppState.user.points += 20;
+            AppState.user.pendingStats.int += 0.5;
+            updatePointUI();
+            drawRadarChart();
+            AppLogger.info('[Diary] 보상 지급: +20P, INT +0.5');
         }
+
+        // Save to Firebase (main user document includes diaryStr)
+        saveUserData();
     } catch(e) { AppLogger.warn('[Diary] Save error: ' + e.message); }
 
     renderDiaryCalendar();
