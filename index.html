@@ -13,11 +13,12 @@
     <div id="login-screen">
         <!-- 상단 로고 -->
         <div class="login-top-logo">
-            <span class="login-logo-icon">⚔️</span><span class="login-logo-text">LEVEL UP</span>
+            <span class="login-logo-icon">⚔️</span><span class="login-logo-text">LEVEL UP</span><span class="login-logo-sub">: REBOOT</span>
         </div>
 
         <!-- 중앙 콘텐츠 -->
         <div class="login-center">
+            <div class="login-brand-badge">BRAVECAT STUDIOS</div>
             <h1 class="login-hero-title" id="login-desc" data-i18n="login_desc">레벨업과 함께<br>최고의 자신을 만들어보세요</h1>
 
             <button class="login-google-btn" id="btn-google-login">
@@ -52,7 +53,10 @@
         </div>
 
         <!-- 하단 사명 -->
-        <div class="login-bottom-brand">BRAVECAT</div>
+        <div class="login-bottom-brand">
+            <div class="login-bottom-brand-name">BRAVECAT</div>
+            <div class="login-bottom-brand-tagline">LEVEL UP YOUR LIFE</div>
+        </div>
     </div>
 
     <!-- 로그인 전 화면 하단 오류 로그 패널 (body 직속 자식 → position:fixed 정상 동작 보장) -->
@@ -129,10 +133,25 @@
                     </div>
                 </div>
 
-                <div class="system-card" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 20px;">
+                <div class="system-card" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 10px;">
                     <div style="font-size: 1.2rem; color: var(--neon-blue); margin-bottom: 8px;">❝</div>
                     <div id="daily-quote" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; line-height: 1.5; word-break: keep-all; font-style: italic;"></div>
                     <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
+                </div>
+
+                <div class="system-card diary-card" style="margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.1rem;">📓</span>
+                            <div>
+                                <div style="font-size:0.85rem; font-weight:bold; color:var(--text-main);" data-i18n="diary_title">오늘의 다이어리</div>
+                                <div id="diary-preview" style="font-size:0.7rem; color:var(--text-sub); margin-top:2px;" data-i18n="diary_empty">오늘의 기록을 남겨보세요</div>
+                            </div>
+                        </div>
+                        <button class="btn-info-sm" id="btn-open-diary" style="padding:6px 12px;">
+                            <span data-i18n="diary_write">기록하기</span>
+                        </button>
+                    </div>
                 </div>
 
             </section>
@@ -264,7 +283,7 @@
         </nav>
     </div>
 
-    <div class="modal-overlay d-none" id="titleModal">
+    <div class="modal-overlay d-none" id="titleModal" onclick="if(event.target===this){document.getElementById('titleModal').classList.add('d-none');document.getElementById('titleModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
                 <span id="title-modal-title" style="font-weight: bold; color: var(--neon-blue);">호칭 시스템 가이드</span>
@@ -288,13 +307,37 @@
         </div>
     </div>
 
-    <div class="modal-overlay d-none" id="infoModal">
+    <div class="modal-overlay d-none" id="infoModal" onclick="if(event.target===this){document.getElementById('infoModal').classList.add('d-none');document.getElementById('infoModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
                 <span id="info-modal-title">정보</span>
                 <button class="modal-close" id="btn-info-close">×</button>
             </div>
             <div class="modal-body" id="info-modal-body" style="overflow-y: auto; max-height: 60vh;"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay d-none" id="diaryModal" onclick="if(event.target===this){closeDiaryModal();}">
+        <div class="modal-content" style="max-width: 95%; width: 420px; padding: 15px;">
+            <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
+                <span style="font-weight:bold; color:var(--neon-blue);">📓 <span data-i18n="diary_modal_title">다이어리</span></span>
+                <button class="modal-close" id="btn-diary-close" onclick="closeDiaryModal()">×</button>
+            </div>
+            <div style="margin-bottom:8px;">
+                <div id="diary-date-display" style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;"></div>
+                <div id="diary-mood-selector" style="display:flex; gap:8px; margin-top:8px;">
+                    <button class="diary-mood-btn" data-mood="great" title="최고">😄</button>
+                    <button class="diary-mood-btn" data-mood="good" title="좋음">🙂</button>
+                    <button class="diary-mood-btn" data-mood="neutral" title="보통">😐</button>
+                    <button class="diary-mood-btn" data-mood="bad" title="나쁨">😞</button>
+                    <button class="diary-mood-btn" data-mood="terrible" title="최악">😫</button>
+                </div>
+            </div>
+            <textarea id="diary-text" style="width:100%; min-height:150px; background:transparent; border:1px solid var(--border-color); border-radius:8px; color:var(--text-main); padding:12px; font-size:0.85rem; resize:vertical; outline:none; box-sizing:border-box; font-family:inherit; line-height:1.6;" data-i18n-placeholder="diary_placeholder" placeholder="오늘 하루를 기록해보세요..."></textarea>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                <span id="diary-char-count" style="font-size:0.7rem; color:var(--text-sub);">0 / 500</span>
+                <button class="btn-primary" id="btn-diary-save" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
+            </div>
         </div>
     </div>
 

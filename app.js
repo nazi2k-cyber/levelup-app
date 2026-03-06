@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderQuestList(); 
             fetchSocialData(); 
             
+            updateDiaryPreview();
             if (AppState.user.syncEnabled) { syncHealthData(false); }
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
@@ -152,6 +153,20 @@ function bindEvents() {
     document.getElementById('btn-logout').addEventListener('click', logout);
     
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
+
+    // Diary
+    document.getElementById('btn-open-diary').addEventListener('click', openDiaryModal);
+    document.getElementById('btn-diary-save').addEventListener('click', saveDiaryEntry);
+    document.getElementById('diary-text').addEventListener('input', (e) => {
+        if (e.target.value.length > 500) e.target.value = e.target.value.substring(0, 500);
+        document.getElementById('diary-char-count').innerText = `${e.target.value.length} / 500`;
+    });
+    document.querySelectorAll('.diary-mood-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.diary-mood-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 }
 
@@ -1107,10 +1122,92 @@ function openDungeonInfoModal() {
     m.classList.add('d-flex');
 }
 
-function changeTheme() { 
-    const light = document.getElementById('theme-toggle').checked; 
-    document.documentElement.setAttribute('data-theme', light ? 'light' : ''); 
-    localStorage.setItem('theme', light ? 'light' : 'dark'); 
+// --- ★ 다이어리 기능 ★ ---
+function getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function openDiaryModal() {
+    const today = getTodayStr();
+    const lang = AppState.currentLang;
+    document.getElementById('diary-date-display').innerText = today;
+
+    // Load existing diary entry for today
+    const saved = getDiaryEntry(today);
+    const textarea = document.getElementById('diary-text');
+    textarea.value = saved ? saved.text : '';
+    document.getElementById('diary-char-count').innerText = `${(textarea.value || '').length} / 500`;
+
+    // Reset mood buttons
+    document.querySelectorAll('.diary-mood-btn').forEach(btn => btn.classList.remove('selected'));
+    if (saved && saved.mood) {
+        const moodBtn = document.querySelector(`.diary-mood-btn[data-mood="${saved.mood}"]`);
+        if (moodBtn) moodBtn.classList.add('selected');
+    }
+
+    const m = document.getElementById('diaryModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+window.closeDiaryModal = function() {
+    const m = document.getElementById('diaryModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
+
+function getDiaryEntry(dateStr) {
+    try {
+        const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        return diaries[dateStr] || null;
+    } catch { return null; }
+}
+
+function saveDiaryEntry() {
+    const today = getTodayStr();
+    const text = document.getElementById('diary-text').value.trim();
+    const selectedMood = document.querySelector('.diary-mood-btn.selected');
+    const mood = selectedMood ? selectedMood.dataset.mood : '';
+
+    if (!text) return;
+
+    try {
+        const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        diaries[today] = { text: text.substring(0, 500), mood, timestamp: Date.now() };
+        localStorage.setItem('diary_entries', JSON.stringify(diaries));
+
+        // Also save to Firebase if logged in
+        if (auth.currentUser) {
+            const diaryRef = doc(db, "users", auth.currentUser.uid, "diary", today);
+            setDoc(diaryRef, diaries[today]).catch(e => AppLogger.warn('[Diary] Firebase save error: ' + e.message));
+        }
+    } catch(e) { AppLogger.warn('[Diary] Save error: ' + e.message); }
+
+    // Update preview text on status page
+    const preview = document.getElementById('diary-preview');
+    if (preview) preview.innerText = i18n[AppState.currentLang].diary_written || '작성 완료 ✓';
+
+    closeDiaryModal();
+    AppLogger.info('[Diary] 다이어리 저장 완료');
+}
+
+function updateDiaryPreview() {
+    const today = getTodayStr();
+    const saved = getDiaryEntry(today);
+    const preview = document.getElementById('diary-preview');
+    if (!preview) return;
+    if (saved && saved.text) {
+        preview.innerText = i18n[AppState.currentLang].diary_written || '작성 완료 ✓';
+    } else {
+        preview.innerText = i18n[AppState.currentLang].diary_empty || '오늘의 기록을 남겨보세요';
+    }
+}
+
+function changeTheme() {
+    const light = document.getElementById('theme-toggle').checked;
+    document.documentElement.setAttribute('data-theme', light ? 'light' : '');
+    localStorage.setItem('theme', light ? 'light' : 'dark');
 }
 
 // --- GPS 및 건강 데이터 설정 ---

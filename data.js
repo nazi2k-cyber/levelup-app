@@ -33,7 +33,10 @@ const i18n = {
         
         // ★ 추가됨: 인스타그램 관련 텍스트 ★
         insta_prompt: "인스타그램 사용자 이름(ID)을 입력하세요.\n(예: levelup_official)\n빈칸 입력 시 링크가 삭제됩니다.",
-        insta_success: "인스타그램 링크가 업데이트되었습니다."
+        insta_success: "인스타그램 링크가 업데이트되었습니다.",
+        diary_title: "오늘의 다이어리", diary_empty: "오늘의 기록을 남겨보세요", diary_write: "기록하기",
+        diary_modal_title: "다이어리", diary_placeholder: "오늘 하루를 기록해보세요...",
+        diary_save: "저장", diary_saved: "다이어리가 저장되었습니다.", diary_written: "작성 완료 ✓"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -68,7 +71,10 @@ const i18n = {
         desc_agi: "Time management, efficiency, and cleaning. (e.g., Pomodoro, Routine)",
         
         insta_prompt: "Enter Instagram Username (ID).\n(e.g., levelup_official)\nLeave blank to remove.",
-        insta_success: "Instagram link updated."
+        insta_success: "Instagram link updated.",
+        diary_title: "Today's Diary", diary_empty: "Write about your day", diary_write: "Write",
+        diary_modal_title: "Diary", diary_placeholder: "How was your day?",
+        diary_save: "Save", diary_saved: "Diary saved.", diary_written: "Written ✓"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -103,7 +109,10 @@ const i18n = {
         desc_agi: "時間管理、効率性、片付けなどの関連 (例: ポモドーロ、習慣)",
         
         insta_prompt: "Instagramユーザー名(ID)を入力してください。\n(例: levelup_official)\n空白でリンクが削除されます。",
-        insta_success: "Instagramリンクが更新されました。"
+        insta_success: "Instagramリンクが更新されました。",
+        diary_title: "今日のダイアリー", diary_empty: "今日の記録を残しましょう", diary_write: "記録する",
+        diary_modal_title: "ダイアリー", diary_placeholder: "今日一日を記録しましょう...",
+        diary_save: "保存", diary_saved: "ダイアリーが保存されました。", diary_written: "記録完了 ✓"
     }
 };
 
