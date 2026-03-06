@@ -115,10 +115,16 @@ function initTheme() {
     }
 }
 
+function showEmailLoginFields() {
+    document.getElementById('login-pw').classList.remove('d-none');
+    document.getElementById('btn-login-submit').classList.remove('d-none');
+}
+
 function bindEvents() {
     document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
     document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
+    document.getElementById('login-email').addEventListener('focus', showEmailLoginFields);
     
     document.querySelectorAll('.nav-item').forEach(el => { 
         el.addEventListener('click', () => switchTab(el.dataset.tab, el)); 
