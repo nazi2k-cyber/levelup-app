@@ -36,44 +36,15 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
-      # 4-1. 고정 디버그 키스토어 복원 (SHA-1 일관성 → Google 로그인 안정화)
-      #       GitHub Secrets에 DEBUG_KEYSTORE_BASE64를 설정하면 매 빌드마다 동일한
-      #       SHA-1이 사용되어 Firebase Console 재등록 불필요.
-      #       생성 방법: base64 -w 0 ~/.android/debug.keystore > keystore.b64
+      # 4-1. 고정 디버그 키스토어 복원 (저장소에 포함된 debug.keystore 사용)
+      #       SHA-1 고정: 00:93:73:FD:F7:90:AF:07:6E:49:EA:D5:DB:68:44:70:82:EF:9D:20
       - name: 디버그 키스토어 복원
-        env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
           mkdir -p ~/.android
-          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
-            echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
-            echo "✅ 고정 디버그 키스토어 복원 완료"
-          else
-            if [ ! -f ~/.android/debug.keystore ]; then
-              keytool -genkeypair -v \
-                -keystore ~/.android/debug.keystore \
-                -alias androiddebugkey \
-                -keyalg RSA -keysize 2048 -validity 10000 \
-                -storepass android -keypass android \
-                -dname "CN=Android Debug,O=Android,C=US"
-              echo "⚠️ DEBUG_KEYSTORE_BASE64 시크릿 미설정 → 새 debug.keystore 생성됨"
-            fi
-            echo ""
-            echo "============================================"
-            echo "⚠️  Google 로그인을 위해 아래 SHA-1을 Firebase Console에 등록하세요"
-            echo "============================================"
-            keytool -list -v -keystore ~/.android/debug.keystore \
-              -alias androiddebugkey -storepass android 2>/dev/null | grep -E "SHA[-]?1:"
-            echo ""
-            echo "등록 방법:"
-            echo "  1. Firebase Console → 프로젝트 설정 → Android 앱 (com.levelup.reboot)"
-            echo "  2. 'SHA 인증서 지문' 섹션에서 위 SHA-1 값 추가"
-            echo "  3. google-services.json을 다시 다운로드하여 저장소에 커밋"
-            echo "  4. (권장) 이 키스토어를 시크릿으로 등록하면 SHA-1이 고정됩니다:"
-            echo "     base64 -w 0 ~/.android/debug.keystore | pbcopy"
-            echo "     → GitHub Settings → Secrets → DEBUG_KEYSTORE_BASE64 에 붙여넣기"
-            echo "============================================"
-          fi
+          cp debug.keystore ~/.android/debug.keystore
+          echo "✅ 고정 디버그 키스토어 복원 완료 (저장소 내 debug.keystore 사용)"
+          keytool -list -v -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey -storepass android 2>/dev/null | grep -E "SHA[-]?1:"
 
       # 5. npm 패키지 설치 (lock 파일 기준 정확한 버전 설치)
       - name: npm 패키지 설치
