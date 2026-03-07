@@ -64,12 +64,17 @@ function getInitialAppState() {
 }
 
 // --- 앱 초기 로드 ---
+let _initializedUid = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     bindEvents();
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            if (_initializedUid === user.uid) return; // 토큰 갱신 등 재발화 시 중복 초기화 방지
+            _initializedUid = user.uid;
+
             AppLogger.info('[Auth] 로그인 감지: ' + (user.email || user.uid));
             await loadUserDataFromDB(user);
             document.getElementById('login-screen').classList.add('d-none');
@@ -77,21 +82,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.add('d-flex');
             const loginPanel = document.getElementById('login-log-panel');
             if (loginPanel) loginPanel.style.display = 'none';
-            
-            document.querySelector('main').style.overflowY = 'auto'; 
-            
-            changeLanguage(AppState.currentLang); 
-            renderCalendar(); 
-            updatePointUI(); 
-            drawRadarChart(); 
+
+            document.querySelector('main').style.overflowY = 'auto';
+
+            changeLanguage(AppState.currentLang);
+            renderCalendar();
+            updatePointUI();
+            drawRadarChart();
             updateDungeonStatus();
-            startRaidTimer(); 
-            renderQuestList(); 
-            fetchSocialData(); 
-            
+            startRaidTimer();
+            renderQuestList();
+            fetchSocialData();
+
             if (AppState.user.syncEnabled) { syncHealthData(false); }
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
+            _initializedUid = null;
             document.getElementById('login-screen').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-none');
             const loginPanel = document.getElementById('login-log-panel');
