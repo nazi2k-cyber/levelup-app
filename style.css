@@ -241,19 +241,24 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 .info-table th { background: var(--bg-dark); color: var(--neon-blue); font-weight: bold; position: sticky; top: -1px; z-index: 5; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .info-table tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 
-/* 다이어리 탭 캘린더 */
-.diary-cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.diary-cal-nav { background: none; border: 1px solid var(--border-color); color: var(--neon-blue); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; }
-.diary-cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
-.diary-cal-weekdays span { text-align: center; font-size: 0.65rem; color: var(--text-sub); padding: 4px 0; }
-.diary-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.diary-cal-day { text-align: center; padding: 6px 0; border-radius: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-main); border: 1px solid transparent; transition: 0.2s; position: relative; min-height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.diary-cal-day:hover { border-color: var(--neon-blue); }
-.diary-cal-day.today { background: rgba(0, 217, 255, 0.1); border-color: var(--neon-blue); font-weight: bold; }
-.diary-cal-day.selected { background: rgba(255, 204, 0, 0.15); border-color: var(--neon-gold); }
-.diary-cal-day.has-entry::after { content: ""; width: 5px; height: 5px; background: var(--neon-gold); border-radius: 50%; position: absolute; bottom: 3px; }
-.diary-cal-day.empty { cursor: default; }
-.diary-cal-day.other-month { color: var(--text-sub); opacity: 0.4; }
+/* 플래너 주간 캘린더 선택일 */
+.cal-day.planner-selected { background: rgba(255, 204, 0, 0.15); border-color: var(--neon-gold); }
+.cal-day.planner-selected .cal-name,
+.cal-day.planner-selected .cal-date { color: var(--neon-gold); }
+
+/* 플래너 타임박스 그리드 */
+.planner-timebox-grid { display: flex; flex-direction: column; gap: 3px; max-height: 400px; overflow-y: auto; scrollbar-width: none; padding-right: 2px; }
+.planner-timebox-grid::-webkit-scrollbar { display: none; }
+.timebox-row { display: flex; align-items: center; gap: 8px; }
+.timebox-label { font-size: 0.68rem; color: var(--neon-blue); font-family: monospace; width: 40px; flex-shrink: 0; font-weight: bold; letter-spacing: 0.5px; }
+.timebox-input { flex: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main); padding: 5px 8px; font-size: 0.75rem; outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
+.timebox-input:focus { border-color: var(--neon-blue); background: rgba(0,217,255,0.03); }
+.timebox-input.has-content { border-color: rgba(255, 204, 0, 0.5); background: rgba(255, 204, 0, 0.03); }
+.timebox-input:disabled { opacity: 0.4; cursor: not-allowed; }
+[data-theme="light"] .timebox-input { background: rgba(0,0,0,0.02); }
+[data-theme="light"] .timebox-input.has-content { background: rgba(212,160,23,0.05); }
+
+/* 무드 버튼 (플래너 재사용) */
 .diary-mood-btn {
     width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border-color);
     background: transparent; font-size: 1.2rem; cursor: pointer; transition: 0.2s;

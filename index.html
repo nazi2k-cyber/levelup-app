@@ -218,24 +218,24 @@
 
             <section id="diary" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="diary_tab_title" style="margin:0;">📓 Diary</h2>
-                    <span id="diary-entry-count" style="font-size:0.7rem; color:var(--neon-gold);">0 / 30</span>
+                    <h2 data-i18n="diary_tab_title" style="margin:0;">🗓️ 플래너</h2>
+                    <span id="planner-week-label" style="font-size:0.7rem; color:var(--neon-gold);"></span>
                 </div>
 
-                <div class="system-card" id="diary-calendar-card">
-                    <div class="diary-cal-header">
-                        <button class="diary-cal-nav" id="diary-cal-prev">&lt;</button>
-                        <span id="diary-cal-month-label" style="font-size:0.9rem; font-weight:bold; color:var(--neon-blue);"></span>
-                        <button class="diary-cal-nav" id="diary-cal-next">&gt;</button>
+                <!-- 주간 플래너 캘린더 (퀘스트 탭 주간 진척도 형태) -->
+                <div class="system-card calendar-wrapper">
+                    <div class="cal-header">
+                        <span data-i18n="planner_weekly">주간 플래너</span>
+                        <span style="font-size:0.75rem; color:var(--text-sub);" id="planner-cal-month"></span>
                     </div>
-                    <div class="diary-cal-weekdays" id="diary-cal-weekdays"></div>
-                    <div class="diary-cal-grid" id="diary-cal-grid"></div>
+                    <div class="cal-grid" id="planner-calendar-grid"></div>
                 </div>
 
-                <div class="system-card" id="diary-write-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <div id="diary-selected-date" style="font-size:0.85rem; font-weight:bold; color:var(--neon-gold);"></div>
-                        <div id="diary-mood-selector-tab" style="display:flex; gap:6px;">
+                <!-- 타임박스 플래너 (일론 머스크 스타일) -->
+                <div class="system-card" id="planner-write-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div id="planner-selected-date" style="font-size:0.9rem; font-weight:bold; color:var(--neon-gold);"></div>
+                        <div id="planner-mood-selector" style="display:flex; gap:6px;">
                             <button class="diary-mood-btn" data-mood="great" title="최고">😄</button>
                             <button class="diary-mood-btn" data-mood="good" title="좋음">🙂</button>
                             <button class="diary-mood-btn" data-mood="neutral" title="보통">😐</button>
@@ -243,10 +243,10 @@
                             <button class="diary-mood-btn" data-mood="terrible" title="최악">😫</button>
                         </div>
                     </div>
-                    <textarea id="diary-tab-text" style="width:100%; min-height:120px; background:transparent; border:1px solid var(--border-color); border-radius:8px; color:var(--text-main); padding:12px; font-size:0.85rem; resize:vertical; outline:none; box-sizing:border-box; font-family:inherit; line-height:1.6;" data-i18n-placeholder="diary_placeholder" placeholder="오늘 하루를 기록해보세요..." maxlength="500"></textarea>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                        <span id="diary-tab-char-count" style="font-size:0.7rem; color:var(--text-sub);">0 / 500</span>
-                        <button class="btn-primary" id="btn-diary-tab-save" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
+                    <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                        <span style="font-size:0.7rem; color:var(--text-sub);" data-i18n="planner_reward">저장 시 +20P & AGI +0.5</span>
+                        <button class="btn-primary" id="btn-planner-save" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
                     </div>
                 </div>
             </section>
@@ -300,7 +300,7 @@
         <nav>
             <div class="nav-item active" data-tab="status"><span class="nav-icon">👤</span><span data-i18n="nav_status">상태창</span></div>
             <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
-            <div class="nav-item" data-tab="diary"><span class="nav-icon">📓</span><span data-i18n="nav_diary">다이어리</span></div>
+            <div class="nav-item" data-tab="diary"><span class="nav-icon">🗓️</span><span data-i18n="nav_diary">플래너</span></div>
             <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
             <div class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>

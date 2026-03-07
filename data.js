@@ -8,7 +8,7 @@ const i18n = {
         login_err_empty: "이메일과 비밀번호를 모두 입력해주세요.", login_err_email: "유효한 이메일 주소를 입력해주세요.", 
         login_err_pw_req: "비밀번호 조건(8자리 이상, 대문자 1개 이상, 특수문자 2개 이상)을 충족해주세요.", pw_mismatch: "비밀번호가 일치하지 않습니다.",
         
-        nav_status: "상태창", nav_quest: "퀘스트", nav_diary: "다이어리", nav_dungeon: "던전", nav_social: "소셜", nav_settings: "설정",
+        nav_status: "상태창", nav_quest: "퀘스트", nav_diary: "플래너", nav_dungeon: "던전", nav_social: "소셜", nav_settings: "설정",
         prof_name: "플레이어 (나)", btn_hist: "칭호 이력 조회", avail_pts: "보유 포인트", btn_lvlup: "레벨 업", req_pts: "요구량:",
         tot_score: "종합 스코어", radar_title: "STAT RADAR", stat_hint: "※ 대기 스탯은 레벨업 시 일괄 반영됩니다.",
         str: "근력", int: "지능", cha: "매력", vit: "체력", wlth: "재력", agi: "민첩",
@@ -36,8 +36,10 @@ const i18n = {
         insta_success: "인스타그램 링크가 업데이트되었습니다.",
         diary_title: "오늘의 다이어리", diary_empty: "오늘의 기록을 남겨보세요", diary_write: "기록하기",
         diary_modal_title: "다이어리", diary_placeholder: "오늘 하루를 기록해보세요...",
-        diary_save: "저장", diary_saved: "다이어리가 저장되었습니다.", diary_written: "작성 완료 ✓",
-        diary_tab_title: "📓 Diary"
+        diary_save: "저장", diary_saved: "플래너가 저장되었습니다.", diary_written: "작성 완료 ✓",
+        diary_tab_title: "🗓️ 플래너",
+        planner_weekly: "주간 플래너", planner_reward: "저장 시 +20P & AGI +0.5",
+        planner_placeholder: "할 일을 입력하세요"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -48,7 +50,7 @@ const i18n = {
         login_err_empty: "Please enter your email and password.", login_err_email: "Please enter a valid email address.",
         login_err_pw_req: "Password must be 8+ characters with at least 1 uppercase and 2 special characters.", pw_mismatch: "Passwords do not match.",
         
-        nav_status: "Status", nav_quest: "Quests", nav_diary: "Diary", nav_dungeon: "Dungeon", nav_social: "Social", nav_settings: "Settings",
+        nav_status: "Status", nav_quest: "Quests", nav_diary: "Planner", nav_dungeon: "Dungeon", nav_social: "Social", nav_settings: "Settings",
         prof_name: "Player (Me)", btn_hist: "Title History", avail_pts: "Available Pts", btn_lvlup: "Level Up", req_pts: "Required:",
         tot_score: "Total Score", radar_title: "STAT RADAR", stat_hint: "※ Pending stats are applied upon Level Up.",
         str: "STR", int: "INT", cha: "CHA", vit: "VIT", wlth: "WLTH", agi: "AGI",
@@ -75,8 +77,10 @@ const i18n = {
         insta_success: "Instagram link updated.",
         diary_title: "Today's Diary", diary_empty: "Write about your day", diary_write: "Write",
         diary_modal_title: "Diary", diary_placeholder: "How was your day?",
-        diary_save: "Save", diary_saved: "Diary saved.", diary_written: "Written ✓",
-        diary_tab_title: "📓 Diary"
+        diary_save: "Save", diary_saved: "Planner saved.", diary_written: "Written ✓",
+        diary_tab_title: "🗓️ Planner",
+        planner_weekly: "Weekly Planner", planner_reward: "Save: +20P & AGI +0.5",
+        planner_placeholder: "Enter task"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -87,7 +91,7 @@ const i18n = {
         login_err_empty: "이메일과 비밀번호를 모두 입력해주세요.", login_err_email: "유효한 이메일 주소를 입력해주세요.", 
         login_err_pw_req: "비밀번호 조건(8자리 이상, 대문자 1개 이상, 특수문자 2개 이상)을 충족해주세요.", pw_mismatch: "비밀번호가 일치하지 않습니다.",
 
-        nav_status: "ステータス", nav_quest: "クエスト", nav_diary: "ダイアリー", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
+        nav_status: "ステータス", nav_quest: "クエスト", nav_diary: "プランナー", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
         prof_name: "プレイヤー (私)", btn_hist: "称号履歴", avail_pts: "保有ポイント", btn_lvlup: "レベルUP", req_pts: "必要量:",
         tot_score: "総合スコア", radar_title: "STAT RADAR", stat_hint: "※ 待機ステータスはレベルUP時に反映",
         str: "筋력", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
@@ -112,10 +116,12 @@ const i18n = {
         
         insta_prompt: "Instagramユーザー名(ID)を入力してください。\n(例: levelup_official)\n空白でリンクが削除されます。",
         insta_success: "Instagramリンクが更新されました。",
-        diary_title: "今日のダイアリー", diary_empty: "今日の記録を残しましょう", diary_write: "記録する",
-        diary_modal_title: "ダイアリー", diary_placeholder: "今日一日を記録しましょう...",
-        diary_save: "保存", diary_saved: "ダイアリーが保存されました。", diary_written: "記録完了 ✓",
-        diary_tab_title: "📓 ダイアリー"
+        diary_title: "今日のプランナー", diary_empty: "今日の予定を記入しましょう", diary_write: "記録する",
+        diary_modal_title: "プランナー", diary_placeholder: "タスクを入力してください...",
+        diary_save: "保存", diary_saved: "プランナーが保存されました。", diary_written: "記録完了 ✓",
+        diary_tab_title: "🗓️ プランナー",
+        planner_weekly: "週間プランナー", planner_reward: "保存: +20P & AGI +0.5",
+        planner_placeholder: "タスクを入力"
     }
 };
 

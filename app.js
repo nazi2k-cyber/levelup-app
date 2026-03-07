@@ -153,25 +153,13 @@ function bindEvents() {
     
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
 
-    // Diary tab
-    document.getElementById('btn-diary-tab-save').addEventListener('click', saveDiaryEntryTab);
-    document.getElementById('diary-tab-text').addEventListener('input', (e) => {
-        if (e.target.value.length > 500) e.target.value = e.target.value.substring(0, 500);
-        document.getElementById('diary-tab-char-count').innerText = `${e.target.value.length} / 500`;
-    });
-    document.querySelectorAll('#diary-mood-selector-tab .diary-mood-btn').forEach(btn => {
+    // Planner tab
+    document.getElementById('btn-planner-save').addEventListener('click', savePlannerEntry);
+    document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('#diary-mood-selector-tab .diary-mood-btn').forEach(b => b.classList.remove('selected'));
+            document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
         });
-    });
-    document.getElementById('diary-cal-prev').addEventListener('click', () => {
-        diaryCalendarDate.setMonth(diaryCalendarDate.getMonth() - 1);
-        renderDiaryCalendar();
-    });
-    document.getElementById('diary-cal-next').addEventListener('click', () => {
-        diaryCalendarDate.setMonth(diaryCalendarDate.getMonth() + 1);
-        renderDiaryCalendar();
     });
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 }
@@ -671,7 +659,7 @@ function switchTab(tabId, el) {
     
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
-    if(tabId === 'diary') { renderDiaryCalendar(); loadDiaryForDate(diarySelectedDate); }
+    if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
         window.syncGlobalDungeon(); 
@@ -1194,8 +1182,7 @@ window.openLegalModal = function(type) {
     modal.classList.add('d-flex');
 };
 
-// --- ★ 다이어리 기능 (탭 기반) ★ ---
-let diaryCalendarDate = new Date(); // current month being viewed
+// --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
 let diarySelectedDate = getTodayStr();
 
 function getTodayStr() {
@@ -1220,135 +1207,149 @@ function getAllDiaryEntries() {
     } catch { return {}; }
 }
 
-function renderDiaryCalendar() {
-    const year = diaryCalendarDate.getFullYear();
-    const month = diaryCalendarDate.getMonth();
-    const lang = AppState.currentLang;
+// 주간 플래너 캘린더 렌더링 (퀘스트 탭 주간 진척도 형태)
+function renderPlannerCalendar() {
+    const container = document.getElementById('planner-calendar-grid');
+    if (!container) return;
 
-    const monthNames = {
-        ko: ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'],
-        en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        ja: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
-    };
+    const today = new Date();
+    const currentDay = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDay);
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthEl = document.getElementById('planner-cal-month');
+    if (monthEl) monthEl.innerText = `${startOfWeek.getFullYear()} ${monthNames[startOfWeek.getMonth()]}`;
+
     const dayNames = {
-        ko: ['일', '월', '화', '수', '목', '금', '토'],
-        en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-        ja: ['日', '月', '火', '水', '木', '金', '土']
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+        ja: ["日","月","火","水","木","金","土"]
     };
 
-    const label = document.getElementById('diary-cal-month-label');
-    if (label) label.innerText = `${year}. ${(monthNames[lang] || monthNames.ko)[month]}`;
-
-    // Weekday headers
-    const weekdaysEl = document.getElementById('diary-cal-weekdays');
-    if (weekdaysEl) {
-        weekdaysEl.innerHTML = (dayNames[lang] || dayNames.ko).map(d => `<span>${d}</span>`).join('');
-    }
-
-    // Calendar grid
-    const grid = document.getElementById('diary-cal-grid');
-    if (!grid) return;
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const todayStr = getTodayStr();
     const allEntries = getAllDiaryEntries();
 
-    let html = '';
-    // Empty cells before first day
-    for (let i = 0; i < firstDay; i++) {
-        html += '<div class="diary-cal-day empty"></div>';
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-        const ds = dateToStr(new Date(year, month, d));
-        const isToday = ds === todayStr;
-        const isSelected = ds === diarySelectedDate;
-        const hasEntry = !!allEntries[ds];
-        const isFuture = new Date(year, month, d) > new Date();
-        const classes = ['diary-cal-day'];
-        if (isToday) classes.push('today');
-        if (isSelected) classes.push('selected');
-        if (hasEntry) classes.push('has-entry');
-        html += `<div class="${classes.join(' ')}" ${!isFuture ? `onclick="window.selectDiaryDate('${ds}')"` : ''} ${isFuture ? 'style="opacity:0.3;cursor:default;"' : ''}>${d}</div>`;
-    }
-    grid.innerHTML = html;
+    container.innerHTML = Array.from({length: 7}, (_, i) => {
+        const iterDate = new Date(startOfWeek);
+        iterDate.setDate(startOfWeek.getDate() + i);
+        const dateStr = dateToStr(iterDate);
+        const isToday = (i === currentDay);
+        const isSelected = dateStr === diarySelectedDate;
+        const entry = allEntries[dateStr];
+        const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
 
-    // Update entry count for this month
-    const monthEntries = Object.keys(allEntries).filter(k => k.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).length;
-    const countEl = document.getElementById('diary-entry-count');
-    if (countEl) countEl.innerText = `${monthEntries} / ${daysInMonth}`;
+        return `
+            <div class="cal-day ${isToday ? 'today' : ''} ${isSelected ? 'planner-selected' : ''}"
+                 onclick="window.selectPlannerDate('${dateStr}')" style="cursor:pointer;">
+                <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
+                <div class="cal-date">${iterDate.getDate()}</div>
+                <div class="cal-score">${hasEntry ? '✓' : '·'}</div>
+            </div>
+        `;
+    }).join('');
 }
 
-window.selectDiaryDate = function(dateStr) {
+// 타임박스 그리드 렌더링 (30분 단위, 06:00~23:30)
+function renderTimeboxGrid(dateStr) {
+    const grid = document.getElementById('planner-timebox-grid');
+    if (!grid) return;
+
+    const entry = getDiaryEntry(dateStr);
+    const blocks = (entry && entry.blocks) ? entry.blocks : {};
+    const lang = AppState.currentLang;
+    const placeholder = (i18n[lang] && i18n[lang].planner_placeholder) || '할 일을 입력하세요';
+
+    const timeSlots = [];
+    for (let h = 6; h < 24; h++) {
+        timeSlots.push(`${String(h).padStart(2,'0')}:00`);
+        timeSlots.push(`${String(h).padStart(2,'0')}:30`);
+    }
+
+    grid.innerHTML = timeSlots.map(time => {
+        const val = blocks[time] || '';
+        const safeVal = val.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+        return `
+            <div class="timebox-row">
+                <span class="timebox-label">${time}</span>
+                <input class="timebox-input${val ? ' has-content' : ''}"
+                       type="text"
+                       data-time="${time}"
+                       value="${safeVal}"
+                       placeholder="${placeholder}"
+                       maxlength="60"
+                       oninput="this.classList.toggle('has-content', this.value.length > 0)">
+            </div>
+        `;
+    }).join('');
+}
+
+window.selectPlannerDate = function(dateStr) {
     diarySelectedDate = dateStr;
-    loadDiaryForDate(dateStr);
-    renderDiaryCalendar();
+    renderPlannerCalendar();
+    loadPlannerForDate(dateStr);
 };
 
-function loadDiaryForDate(dateStr) {
-    const saved = getDiaryEntry(dateStr);
-    const textarea = document.getElementById('diary-tab-text');
-    if (!textarea) return;
-
-    textarea.value = saved ? saved.text : '';
-    const charCount = document.getElementById('diary-tab-char-count');
-    if (charCount) charCount.innerText = `${(textarea.value || '').length} / 500`;
-
-    const dateDisplay = document.getElementById('diary-selected-date');
+function loadPlannerForDate(dateStr) {
+    const dateDisplay = document.getElementById('planner-selected-date');
     if (dateDisplay) dateDisplay.innerText = dateStr;
 
-    // Reset mood buttons in tab
-    document.querySelectorAll('#diary-mood-selector-tab .diary-mood-btn').forEach(btn => btn.classList.remove('selected'));
+    // 무드 버튼 리셋
+    document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => btn.classList.remove('selected'));
+    const saved = getDiaryEntry(dateStr);
     if (saved && saved.mood) {
-        const moodBtn = document.querySelector(`#diary-mood-selector-tab .diary-mood-btn[data-mood="${saved.mood}"]`);
+        const moodBtn = document.querySelector(`#planner-mood-selector .diary-mood-btn[data-mood="${saved.mood}"]`);
         if (moodBtn) moodBtn.classList.add('selected');
     }
 
-    // Disable editing for future dates
+    // 타임박스 그리드 렌더링
+    renderTimeboxGrid(dateStr);
+
+    // 미래 날짜 비활성화
     const today = new Date();
     today.setHours(0,0,0,0);
     const selected = new Date(dateStr + 'T00:00:00');
     const isFuture = selected > today;
-    textarea.disabled = isFuture;
-    const saveBtn = document.getElementById('btn-diary-tab-save');
+    document.querySelectorAll('#planner-timebox-grid .timebox-input').forEach(input => {
+        input.disabled = isFuture;
+    });
+    const saveBtn = document.getElementById('btn-planner-save');
     if (saveBtn) saveBtn.disabled = isFuture;
 }
 
-function saveDiaryEntryTab() {
+function savePlannerEntry() {
     const dateStr = diarySelectedDate;
-    const textarea = document.getElementById('diary-tab-text');
-    if (!textarea) return;
-    const text = textarea.value.trim();
-    const selectedMood = document.querySelector('#diary-mood-selector-tab .diary-mood-btn.selected');
-    const mood = selectedMood ? selectedMood.dataset.mood : '';
+    const inputs = document.querySelectorAll('#planner-timebox-grid .timebox-input');
+    const blocks = {};
+    inputs.forEach(input => {
+        const val = input.value.trim();
+        if (val) blocks[input.dataset.time] = val;
+    });
 
-    if (!text) {
-        alert('내용을 입력해주세요.');
-        return;
-    }
+    const selectedMood = document.querySelector('#planner-mood-selector .diary-mood-btn.selected');
+    const mood = selectedMood ? selectedMood.dataset.mood : '';
 
     try {
         const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
         const isNewEntry = !diaries[dateStr];
-        diaries[dateStr] = { text: text.substring(0, 500), mood, timestamp: Date.now() };
+        const text = Object.entries(blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500);
+        diaries[dateStr] = { text, mood, timestamp: Date.now(), blocks };
         localStorage.setItem('diary_entries', JSON.stringify(diaries));
 
-        // Reward: +20P & INT +0.5 (only for new entries, not edits)
-        if (isNewEntry) {
+        // 보상: +20P & AGI +0.5 (신규 항목이고 내용이 있을 때만)
+        if (isNewEntry && Object.keys(blocks).length > 0) {
             AppState.user.points += 20;
-            AppState.user.pendingStats.int += 0.5;
+            AppState.user.pendingStats.agi += 0.5;
             updatePointUI();
             drawRadarChart();
-            AppLogger.info('[Diary] 보상 지급: +20P, INT +0.5');
+            AppLogger.info('[Planner] 보상 지급: +20P, AGI +0.5');
         }
 
-        // Save to Firebase (main user document includes diaryStr)
         saveUserData();
-    } catch(e) { AppLogger.warn('[Diary] Save error: ' + e.message); }
+    } catch(e) { AppLogger.warn('[Planner] Save error: ' + e.message); }
 
-    renderDiaryCalendar();
-    alert(i18n[AppState.currentLang].diary_saved || '다이어리가 저장되었습니다.');
-    AppLogger.info('[Diary] 다이어리 저장 완료: ' + dateStr);
+    renderPlannerCalendar();
+    alert(i18n[AppState.currentLang].diary_saved || '플래너가 저장되었습니다.');
+    AppLogger.info('[Planner] 플래너 저장 완료: ' + dateStr);
 }
 
 function changeTheme() {
