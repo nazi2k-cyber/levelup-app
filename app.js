@@ -1403,7 +1403,7 @@ function renderTimeboxGrid(dateStr) {
         const val00 = blocks[t00] || '';
         const val30 = blocks[t30] || '';
         return `<div class="timebox-row">
-            <span class="timebox-label">${h}</span>
+            <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
             <select class="timebox-select${val00 ? ' has-content' : ''}"
                     data-time="${t00}"
                     ${isFuture ? 'disabled' : ''}
