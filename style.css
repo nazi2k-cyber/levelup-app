@@ -246,28 +246,37 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 .cal-day.planner-selected .cal-name,
 .cal-day.planner-selected .cal-date { color: var(--neon-gold); }
 
-/* 플래너 Top Priorities + Brain Dump 상단 영역 */
-.planner-top-section { display: flex; gap: 8px; margin-bottom: 10px; }
-.planner-priorities-box { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.planner-braindump-box { flex: 1; display: flex; flex-direction: column; }
+/* 플래너 통합 태스크 목록 */
 .planner-section-title { font-size: 0.65rem; font-weight: bold; color: var(--neon-blue); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-.planner-priority-input {
-    width: 100%; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);
+.planner-unified-box { margin-bottom: 10px; }
+.planner-task-item { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+.task-rank-btn {
+    width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+    border: 1px solid var(--border-color); background: transparent;
+    color: var(--text-sub); cursor: pointer; font-size: 0.7rem; font-weight: bold;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    padding: 0;
+}
+.task-rank-btn.ranked { border-color: var(--neon-gold); background: rgba(255,204,0,0.15); color: var(--neon-gold); }
+.task-rank-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.planner-task-input {
+    flex: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);
     border-radius: 4px; color: var(--text-main); padding: 5px 8px; font-size: 0.75rem;
-    outline: none; box-sizing: border-box; font-family: inherit; transition: border-color 0.15s;
+    outline: none; box-sizing: border-box; font-family: inherit; transition: border-color 0.15s; min-width: 0;
 }
-.planner-priority-input:focus { border-color: var(--neon-gold); background: rgba(255,204,0,0.03); }
-.planner-priority-input::placeholder { color: var(--text-sub); }
-.planner-braindump-input {
-    flex: 1; width: 100%; min-height: 80px; background: rgba(255,255,255,0.02);
-    border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main);
-    padding: 5px 8px; font-size: 0.75rem; outline: none; resize: none;
-    box-sizing: border-box; font-family: inherit; transition: border-color 0.15s; line-height: 1.4;
+.planner-task-input:focus { border-color: var(--neon-gold); background: rgba(255,204,0,0.03); }
+.planner-task-input::placeholder { color: var(--text-sub); }
+.planner-task-input:disabled { opacity: 0.4; cursor: not-allowed; }
+.task-remove-btn {
+    width: 20px; height: 20px; flex-shrink: 0; border: none; background: transparent;
+    color: var(--neon-red); cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;
 }
-.planner-braindump-input:focus { border-color: var(--neon-blue); background: rgba(0,217,255,0.02); }
-.planner-braindump-input::placeholder { color: var(--text-sub); }
-[data-theme="light"] .planner-priority-input,
-[data-theme="light"] .planner-braindump-input { background: rgba(0,0,0,0.02); }
+.btn-add-task {
+    font-size: 0.7rem; padding: 3px 9px; border: 1px solid var(--neon-blue);
+    background: rgba(0,217,255,0.08); color: var(--neon-blue); border-radius: 4px; cursor: pointer;
+}
+.btn-add-task:disabled { opacity: 0.4; cursor: not-allowed; }
+[data-theme="light"] .planner-task-input { background: rgba(0,0,0,0.02); }
 
 /* 타임박스 그리드 헤더 */
 .timebox-grid-header { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; padding: 0 1px; }
@@ -279,12 +288,17 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 .planner-timebox-grid::-webkit-scrollbar { display: none; }
 .timebox-row { display: flex; align-items: center; gap: 4px; }
 .timebox-label { font-size: 0.68rem; color: var(--neon-blue); font-family: monospace; width: 28px; flex-shrink: 0; font-weight: bold; text-align: right; }
-.timebox-input { flex: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 4px; color: var(--text-main); padding: 4px 6px; font-size: 0.72rem; outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; min-width: 0; }
-.timebox-input:focus { border-color: var(--neon-blue); background: rgba(0,217,255,0.03); }
-.timebox-input.has-content { border-color: rgba(255, 204, 0, 0.5); background: rgba(255, 204, 0, 0.03); }
-.timebox-input:disabled { opacity: 0.4; cursor: not-allowed; }
-[data-theme="light"] .timebox-input { background: rgba(0,0,0,0.02); }
-[data-theme="light"] .timebox-input.has-content { background: rgba(212,160,23,0.05); }
+.timebox-select {
+    flex: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);
+    border-radius: 4px; color: var(--text-main); padding: 4px 4px; font-size: 0.68rem;
+    outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; min-width: 0;
+    cursor: pointer; appearance: none; -webkit-appearance: none;
+}
+.timebox-select:focus { border-color: var(--neon-blue); background: rgba(0,217,255,0.03); }
+.timebox-select.has-content { border-color: rgba(255, 204, 0, 0.5); background: rgba(255, 204, 0, 0.03); }
+.timebox-select:disabled { opacity: 0.4; cursor: not-allowed; }
+[data-theme="light"] .timebox-select { background: rgba(0,0,0,0.02); }
+[data-theme="light"] .timebox-select.has-content { background: rgba(212,160,23,0.05); }
 
 /* 무드 버튼 (플래너 재사용) */
 .diary-mood-btn {

@@ -245,18 +245,13 @@
                         </div>
                     </div>
 
-                    <!-- Top Priorities + Brain Dump 영역 -->
-                    <div class="planner-top-section">
-                        <div class="planner-priorities-box">
-                            <div class="planner-section-title">⭐ Top Priorities</div>
-                            <input class="planner-priority-input" id="priority-1" type="text" placeholder="1순위 목표" maxlength="50">
-                            <input class="planner-priority-input" id="priority-2" type="text" placeholder="2순위 목표" maxlength="50">
-                            <input class="planner-priority-input" id="priority-3" type="text" placeholder="3순위 목표" maxlength="50">
+                    <!-- 통합 우선순위 태스크 목록 -->
+                    <div class="planner-unified-box">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <div class="planner-section-title" style="margin-bottom:0;">⭐ 우선순위 태스크</div>
+                            <button class="btn-add-task" id="btn-add-task">+ 추가</button>
                         </div>
-                        <div class="planner-braindump-box">
-                            <div class="planner-section-title">🧠 Brain Dump</div>
-                            <textarea class="planner-braindump-input" id="brain-dump" placeholder="생각, 아이디어, 할 일..." maxlength="300"></textarea>
-                        </div>
+                        <div id="planner-tasks-list"></div>
                     </div>
 
                     <!-- 타임박스 그리드 헤더 -->

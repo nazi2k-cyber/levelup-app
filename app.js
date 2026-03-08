@@ -64,12 +64,17 @@ function getInitialAppState() {
 }
 
 // --- 앱 초기 로드 ---
+let _initializedUid = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     bindEvents();
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            if (_initializedUid === user.uid) return; // 토큰 갱신 등 재발화 시 중복 초기화 방지
+            _initializedUid = user.uid;
+
             AppLogger.info('[Auth] 로그인 감지: ' + (user.email || user.uid));
             await loadUserDataFromDB(user);
             document.getElementById('login-screen').classList.add('d-none');
@@ -77,21 +82,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('app-container').classList.add('d-flex');
             const loginPanel = document.getElementById('login-log-panel');
             if (loginPanel) loginPanel.style.display = 'none';
-            
-            document.querySelector('main').style.overflowY = 'auto'; 
-            
-            changeLanguage(AppState.currentLang); 
-            renderCalendar(); 
-            updatePointUI(); 
-            drawRadarChart(); 
+
+            document.querySelector('main').style.overflowY = 'auto';
+
+            changeLanguage(AppState.currentLang);
+            renderCalendar();
+            updatePointUI();
+            drawRadarChart();
             updateDungeonStatus();
-            startRaidTimer(); 
-            renderQuestList(); 
-            fetchSocialData(); 
-            
+            startRaidTimer();
+            renderQuestList();
+            fetchSocialData();
+
             if (AppState.user.syncEnabled) { syncHealthData(false); }
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
+            _initializedUid = null;
             document.getElementById('login-screen').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-none');
             const loginPanel = document.getElementById('login-log-panel');
@@ -155,6 +161,7 @@ function bindEvents() {
 
     // Planner tab
     document.getElementById('btn-planner-save').addEventListener('click', savePlannerEntry);
+    document.getElementById('btn-add-task').addEventListener('click', window.addPlannerTask);
     document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(b => b.classList.remove('selected'));
@@ -723,7 +730,7 @@ function changeLanguage(langCode) {
         renderUsers(AppState.social.sortCriteria);
         renderQuestList();
         renderCalendar();
-        renderDiaryCalendar();
+        renderPlannerCalendar();
         renderQuote();
         updatePointUI();
         updateDungeonStatus();
@@ -1204,6 +1211,8 @@ window.openLegalModal = function(type) {
 
 // --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
 let diarySelectedDate = getTodayStr();
+// plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯)
+let plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
 
 function getTodayStr() {
     const d = new Date();
@@ -1269,41 +1278,145 @@ function renderPlannerCalendar() {
     }).join('');
 }
 
-// 타임박스 그리드 렌더링 (시간 단위 행, :00 / :30 두 열 - 05:00~23:30)
+// 선택 날짜가 미래인지 확인
+function isSelectedDateFuture() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const selected = new Date(diarySelectedDate + 'T00:00:00');
+    return selected > today;
+}
+
+// 현재 plannerTasks에서 드롭다운 옵션 목록 생성
+function getTaskOptions() {
+    const ranked = plannerTasks
+        .map((t, i) => ({ ...t, idx: i }))
+        .filter(t => t.ranked && t.text.trim())
+        .sort((a, b) => a.rankOrder - b.rankOrder);
+    const unranked = plannerTasks.filter(t => !t.ranked && t.text.trim());
+    let rankNum = 1;
+    return [
+        ...ranked.map(t => ({ text: t.text.trim(), label: `${rankNum++}. ${t.text.trim()}` })),
+        ...unranked.map(t => ({ text: t.text.trim(), label: `· ${t.text.trim()}` }))
+    ];
+}
+
+// 이미 렌더링된 타임박스 드롭다운의 옵션 목록만 갱신
+function updateTimeboxDropdownOptions() {
+    const options = getTaskOptions();
+    const optHTML = ['<option value="">-- 없음 --</option>',
+        ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}">${o.label}</option>`)
+    ].join('');
+    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = optHTML;
+        if (cur) sel.value = cur;
+    });
+}
+
+// 우선순위 태스크 목록 렌더링
+function renderPlannerTasks() {
+    const container = document.getElementById('planner-tasks-list');
+    if (!container) return;
+    const isFuture = isSelectedDateFuture();
+
+    // 순위 번호 계산 (rankOrder 순서대로 1,2,3...)
+    const rankedSorted = plannerTasks
+        .map((t, i) => ({ ...t, idx: i }))
+        .filter(t => t.ranked)
+        .sort((a, b) => a.rankOrder - b.rankOrder);
+    const rankMap = {};
+    rankedSorted.forEach((t, i) => { rankMap[t.idx] = i + 1; });
+
+    container.innerHTML = plannerTasks.map((task, idx) => {
+        const rankNum = rankMap[idx];
+        const rankLabel = rankNum ? rankNum : '·';
+        const isRanked = !!rankNum;
+        const canRemove = idx >= 6;
+        return `<div class="planner-task-item">
+            <button class="task-rank-btn${isRanked ? ' ranked' : ''}"
+                    onclick="window.toggleTaskRank(${idx})"
+                    ${isFuture ? 'disabled' : ''}>${rankLabel}</button>
+            <input class="planner-task-input" type="text"
+                   value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
+                   placeholder="할 일 입력..."
+                   maxlength="50"
+                   oninput="window.updateTaskText(${idx}, this.value)"
+                   ${isFuture ? 'disabled' : ''}>
+            ${canRemove ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
+        </div>`;
+    }).join('');
+
+    updateTimeboxDropdownOptions();
+}
+
+window.toggleTaskRank = function(idx) {
+    if (plannerTasks[idx].ranked) {
+        plannerTasks[idx].ranked = false;
+        plannerTasks[idx].rankOrder = 0;
+    } else {
+        const maxOrder = plannerTasks.filter(t => t.ranked).reduce((m, t) => Math.max(m, t.rankOrder), 0);
+        plannerTasks[idx].ranked = true;
+        plannerTasks[idx].rankOrder = maxOrder + 1;
+    }
+    renderPlannerTasks();
+};
+
+window.updateTaskText = function(idx, val) {
+    plannerTasks[idx].text = val;
+    updateTimeboxDropdownOptions();
+};
+
+window.addPlannerTask = function() {
+    plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    renderPlannerTasks();
+};
+
+window.removeTask = function(idx) {
+    if (idx < 6) return;
+    plannerTasks.splice(idx, 1);
+    renderPlannerTasks();
+};
+
+// 타임박스 그리드 렌더링 - 드롭다운 방식 (05:00~23:30)
 function renderTimeboxGrid(dateStr) {
     const grid = document.getElementById('planner-timebox-grid');
     if (!grid) return;
 
     const entry = getDiaryEntry(dateStr);
     const blocks = (entry && entry.blocks) ? entry.blocks : {};
-    const lang = AppState.currentLang;
-    const placeholder = (i18n[lang] && i18n[lang].planner_placeholder) || '...';
+    const isFuture = isSelectedDateFuture();
+    const options = getTaskOptions();
+
+    const makeOpts = (currentVal) => {
+        const opts = ['<option value="">-- 없음 --</option>',
+            ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`)
+        ].join('');
+        return opts;
+    };
 
     const rows = [];
-    for (let h = 5; h < 24; h++) {
-        rows.push(h);
-    }
+    for (let h = 5; h < 24; h++) rows.push(h);
 
     grid.innerHTML = rows.map(h => {
         const t00 = `${String(h).padStart(2,'0')}:00`;
         const t30 = `${String(h).padStart(2,'0')}:30`;
         const val00 = blocks[t00] || '';
         const val30 = blocks[t30] || '';
-        const safe00 = val00.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-        const safe30 = val30.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-        return `
-            <div class="timebox-row">
-                <span class="timebox-label">${h}</span>
-                <input class="timebox-input${val00 ? ' has-content' : ''}"
-                       type="text" data-time="${t00}" value="${safe00}"
-                       placeholder="${placeholder}" maxlength="40"
-                       oninput="this.classList.toggle('has-content', this.value.length > 0)">
-                <input class="timebox-input${val30 ? ' has-content' : ''}"
-                       type="text" data-time="${t30}" value="${safe30}"
-                       placeholder="${placeholder}" maxlength="40"
-                       oninput="this.classList.toggle('has-content', this.value.length > 0)">
-            </div>
-        `;
+        return `<div class="timebox-row">
+            <span class="timebox-label">${h}</span>
+            <select class="timebox-select${val00 ? ' has-content' : ''}"
+                    data-time="${t00}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val00)}
+            </select>
+            <select class="timebox-select${val30 ? ' has-content' : ''}"
+                    data-time="${t30}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val30)}
+            </select>
+        </div>`;
     }).join('');
 }
 
@@ -1325,59 +1438,70 @@ function loadPlannerForDate(dateStr) {
         if (moodBtn) moodBtn.classList.add('selected');
     }
 
-    // Top Priorities 로드
-    const p1 = document.getElementById('priority-1');
-    const p2 = document.getElementById('priority-2');
-    const p3 = document.getElementById('priority-3');
-    const bd = document.getElementById('brain-dump');
-    const priorities = (saved && saved.priorities) ? saved.priorities : ['', '', ''];
-    if (p1) p1.value = priorities[0] || '';
-    if (p2) p2.value = priorities[1] || '';
-    if (p3) p3.value = priorities[2] || '';
-    if (bd) bd.value = (saved && saved.brainDump) ? saved.brainDump : '';
+    // 태스크 로드 (새 형식 우선, 구 형식 마이그레이션)
+    if (saved && saved.tasks && Array.isArray(saved.tasks)) {
+        plannerTasks = saved.tasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    } else if (saved && (saved.priorities || saved.brainDump)) {
+        // 구 형식 마이그레이션: priorities(3개) + brainDump 텍스트
+        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+        const oldPriorities = saved.priorities || [];
+        oldPriorities.forEach((p, i) => {
+            if (p && i < 6) { plannerTasks[i].text = p; plannerTasks[i].ranked = true; plannerTasks[i].rankOrder = i + 1; }
+        });
+        // brainDump 줄 단위로 빈 슬롯에 채우기
+        if (saved.brainDump) {
+            saved.brainDump.split('\n').forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                const slot = plannerTasks.findIndex(t => !t.text);
+                if (slot >= 0) plannerTasks[slot].text = trimmed;
+                else plannerTasks.push({ text: trimmed, ranked: false, rankOrder: 0 });
+            });
+        }
+    } else {
+        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+    }
 
-    // 타임박스 그리드 렌더링
+    // 태스크 목록 렌더링 (이 안에서 updateTimeboxDropdownOptions도 호출됨)
+    renderPlannerTasks();
+
+    // 타임박스 그리드 렌더링 (태스크 옵션 준비된 후)
     renderTimeboxGrid(dateStr);
 
     // 미래 날짜 비활성화
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const selected = new Date(dateStr + 'T00:00:00');
-    const isFuture = selected > today;
-    const disableAll = (el) => { if (el) el.disabled = isFuture; };
-    document.querySelectorAll('#planner-timebox-grid .timebox-input').forEach(input => { input.disabled = isFuture; });
-    disableAll(p1); disableAll(p2); disableAll(p3); disableAll(bd);
+    const isFuture = isSelectedDateFuture();
+    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => { sel.disabled = isFuture; });
     const saveBtn = document.getElementById('btn-planner-save');
     if (saveBtn) saveBtn.disabled = isFuture;
+    const addBtn = document.getElementById('btn-add-task');
+    if (addBtn) addBtn.disabled = isFuture;
 }
 
 async function savePlannerEntry() {
     const dateStr = diarySelectedDate;
 
-    // 타임박스 블록 수집
-    const inputs = document.querySelectorAll('#planner-timebox-grid .timebox-input');
+    // 타임박스 드롭다운 블록 수집
+    const selects = document.querySelectorAll('#planner-timebox-grid .timebox-select');
     const blocks = {};
-    inputs.forEach(input => {
-        const val = input.value.trim();
-        if (val) blocks[input.dataset.time] = val;
+    selects.forEach(sel => {
+        const val = sel.value.trim();
+        if (val) blocks[sel.dataset.time] = val;
     });
 
-    // Top Priorities 수집
-    const p1 = document.getElementById('priority-1');
-    const p2 = document.getElementById('priority-2');
-    const p3 = document.getElementById('priority-3');
-    const bd = document.getElementById('brain-dump');
-    const priorities = [
-        p1 ? p1.value.trim() : '',
-        p2 ? p2.value.trim() : '',
-        p3 ? p3.value.trim() : ''
-    ];
-    const brainDump = bd ? bd.value.trim() : '';
+    // 태스크 데이터 수집
+    const tasksData = plannerTasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+    // 하위 호환 priorities 배열 (순위 지정된 항목만 순서대로)
+    const rankedByOrder = tasksData
+        .filter(t => t.ranked && t.text)
+        .sort((a, b) => a.rankOrder - b.rankOrder)
+        .map(t => t.text);
+    const brainDump = '';
 
     const selectedMood = document.querySelector('#planner-mood-selector .diary-mood-btn.selected');
     const mood = selectedMood ? selectedMood.dataset.mood : '';
 
-    const hasContent = Object.keys(blocks).length > 0 || priorities.some(p => p) || brainDump;
+    const hasContent = Object.keys(blocks).length > 0 || tasksData.some(t => t.text);
 
     try {
         let diaries;
@@ -1396,7 +1520,10 @@ async function savePlannerEntry() {
 
         const text = Object.entries(blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500);
         diaries[dateStr] = {
-            text, mood, timestamp: Date.now(), blocks, priorities, brainDump
+            text, mood, timestamp: Date.now(), blocks,
+            tasks: tasksData,
+            priorities: rankedByOrder,
+            brainDump
         };
 
         try {
