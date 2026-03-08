@@ -164,41 +164,6 @@
                 </div>
             </section>
 
-            <section id="dungeon" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="raid_title" style="margin:0;">Local Raid</h2>
-                        <button class="btn-info-sm" id="btn-dungeon-info">ℹ️ <span data-i18n="btn_dungeon_info">가이드</span></button>
-                    </div>
-                    <span class="dungeon-timer d-none" id="raid-timer">01:59:59</span>
-                </div>
-                
-                <div class="system-card dungeon-banner" id="dungeon-banner"></div>
-                <div class="system-card dungeon-active d-none" id="dungeon-active-board" style="display: block;">
-                    <div class="active-header">
-                        <span class="blink-text text-red">⚠️ ANOMALY DETECTED</span>
-                        <span id="active-stat-badge" class="quest-stat-tag">STR</span>
-                    </div>
-                    <h3 id="active-raid-title" style="margin: 10px 0; font-size: 1.1rem; color: var(--text-main); word-break: keep-all; line-height: 1.3;">이상 현상 발생</h3>
-                    <p id="active-raid-desc" style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px; word-break: keep-all; line-height: 1.4;">목표를 달성하여 시스템 붕괴를 막으십시오.</p>
-                    
-                    <div class="raid-progress-box">
-                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:5px;">
-                            <span>연합 달성률 (<span id="raid-part-count" style="color:var(--neon-gold);">0</span>명 합류)</span>
-                            <span id="raid-progress-text" style="color:var(--neon-blue); font-weight:bold;">0%</span>
-                        </div>
-                        <div class="progress-bg" style="height: 10px;"><div class="progress-fill" id="raid-progress-bar" style="width: 0%;"></div></div>
-                    </div>
-
-                    <button id="btn-raid-action" class="btn-primary" style="margin-top: 15px; border: 1px solid var(--neon-blue); background: rgba(0, 217, 255, 0.1); color: var(--neon-blue);">
-                        데이터 동기화 (기여하기)
-                    </button>
-                    <button id="btn-raid-complete" class="btn-primary d-none" style="margin-top: 15px; background: var(--neon-gold); color: black;">
-                        전리품 획득
-                    </button>
-                </div>
-            </section>
-
             <section id="social" class="view-section">
                 <div class="social-header">
                     <button class="social-tab-btn active" data-mode="global" data-i18n="soc_global">🏆 글로벌 랭킹</button>
@@ -327,7 +292,6 @@
             <div class="nav-item active" data-tab="status"><span class="nav-icon">👤</span><span data-i18n="nav_status">상태창</span></div>
             <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
             <div class="nav-item" data-tab="diary"><span class="nav-icon">🗓️</span><span data-i18n="nav_diary">플래너</span></div>
-            <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
             <div class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
         </nav>

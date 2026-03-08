@@ -8,20 +8,19 @@ const i18n = {
         login_err_empty: "이메일과 비밀번호를 모두 입력해주세요.", login_err_email: "유효한 이메일 주소를 입력해주세요.", 
         login_err_pw_req: "비밀번호 조건(8자리 이상, 대문자 1개 이상, 특수문자 2개 이상)을 충족해주세요.", pw_mismatch: "비밀번호가 일치하지 않습니다.",
         
-        nav_status: "상태창", nav_quest: "퀘스트", nav_diary: "플래너", nav_dungeon: "던전", nav_social: "소셜", nav_settings: "설정",
+        nav_status: "상태창", nav_quest: "퀘스트", nav_diary: "플래너", nav_social: "소셜", nav_settings: "설정",
         prof_name: "플레이어 (나)", btn_hist: "칭호 이력 조회", avail_pts: "보유 포인트", btn_lvlup: "레벨 업", req_pts: "요구량:",
         tot_score: "종합 스코어", radar_title: "STAT RADAR", stat_hint: "※ 대기 스탯은 레벨업 시 일괄 반영됩니다.",
         str: "근력", int: "지능", cha: "매력", vit: "체력", wlth: "재력", agi: "민첩",
         quest_title: "Daily Quests", quest_hint: "※ 완료 시 +20P & 스탯 +0.5", cal_title: "주간 진척도",
-        raid_title: "Local Raid", raid_boss: "⚠️ 연합 보스 출현", raid_desc1: "이상 현상이 감지되었습니다.", raid_desc2: "연합 목표를 달성하고 전리품을 획득하세요.", raid_part: "참여 인원: ", raid_btn: "레이드 입장하기", raid_joined: "참여 완료", raid_success: "레이드 완료!", raid_waiting: "던전 출현 대기 중...", raid_time_info: "출현 시간: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 글로벌 랭킹", soc_friend: "👥 내 친구", sort_tot: "종합스코어", sort_str: "근력", sort_int: "지능", sort_cha: "매력", sort_vit: "체력", sort_wlth: "재력", sort_agi: "민첩",
         set_title: "System Settings", set_lang: "언어 (Language)", set_theme: "라이트 모드", set_push: "푸시 알림 수신", set_gps: "앱 실행 시 현위치 탐색", set_sync: "구글 피트니스 앱 동기화", set_logout: "로그아웃",
         no_friend: "등록된 친구가 없습니다.", btn_add: "친구 추가", btn_added: "친구 ✓", gps_on: "위치 권한 활성화됨", gps_off: "위치 탐색 중지됨", gps_err: "위치 정보 오류", gps_denied: "위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.", gps_denied_confirm: "위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?", gps_unavailable: "위치 정보를 사용할 수 없습니다. GPS 신호를 확인해주세요.", gps_timeout: "위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.", gps_no_support: "위치 서비스를 지원하지 않는 기기입니다.", gps_searching: "위치 탐색 중...", gps_retrying: "위치 재탐색 중...", modal_title: "칭호 이력 조회",
         name_prompt: "새로운 닉네임을 입력하세요.\n(※ 1개월에 1회만 변경 가능합니다.)", name_err: "명칭 변경은 1개월에 한 번만 가능합니다.", sync_req: "동기화 요청 중...", sync_done: "동기화 완료 (포인트 지급)", sync_off: "동기화 해제됨",
         
-        btn_quest_info: "가이드", btn_dungeon_info: "가이드",
-        modal_quest_title: "주간 퀘스트 목록", modal_dungeon_title: "이상 현상 목록",
-        th_day: "요일", th_stat: "스탯", th_quest: "퀘스트 명", th_raid: "이상 현상", th_req: "요구 데이터",
+        btn_quest_info: "가이드",
+        modal_quest_title: "주간 퀘스트 목록",
+        th_day: "요일", th_stat: "스탯", th_quest: "퀘스트 명",
 
         btn_status_info: "가이드", modal_status_title: "스탯(능력치) 가이드", th_desc: "상세 설명",
         desc_str: "물리적 힘, 신체 단련, 근력 운동 관련 수치 (예: 헬스, 러닝)",
@@ -50,20 +49,19 @@ const i18n = {
         login_err_empty: "Please enter your email and password.", login_err_email: "Please enter a valid email address.",
         login_err_pw_req: "Password must be 8+ characters with at least 1 uppercase and 2 special characters.", pw_mismatch: "Passwords do not match.",
         
-        nav_status: "Status", nav_quest: "Quests", nav_diary: "Planner", nav_dungeon: "Dungeon", nav_social: "Social", nav_settings: "Settings",
+        nav_status: "Status", nav_quest: "Quests", nav_diary: "Planner", nav_social: "Social", nav_settings: "Settings",
         prof_name: "Player (Me)", btn_hist: "Title History", avail_pts: "Available Pts", btn_lvlup: "Level Up", req_pts: "Required:",
         tot_score: "Total Score", radar_title: "STAT RADAR", stat_hint: "※ Pending stats are applied upon Level Up.",
         str: "STR", int: "INT", cha: "CHA", vit: "VIT", wlth: "WLTH", agi: "AGI",
         quest_title: "Daily Quests", quest_hint: "※ Earn +20P & +0.5 pending stat per quest", cal_title: "Weekly Progress",
-        raid_title: "Local Raid", raid_boss: "⚠️ Alliance Boss", raid_desc1: "Anomaly detected.", raid_desc2: "Achieve alliance goals to get loot.", raid_part: "Participants: ", raid_btn: "Enter Raid", raid_joined: "Joined", raid_success: "Raid Success!", raid_waiting: "Waiting for Dungeon...", raid_time_info: "Open Hours: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 Global Rank", soc_friend: "👥 My Friends", sort_tot: "Total", sort_str: "STR", sort_int: "INT", sort_cha: "CHA", sort_vit: "VIT", sort_wlth: "WLTH", sort_agi: "AGI",
         set_title: "System Settings", set_lang: "Language", set_theme: "Light Theme", set_push: "Push Notifications", set_gps: "Auto Location Tracking", set_sync: "Google Fit Sync", set_logout: "Logout",
         no_friend: "No friends registered.", btn_add: "Add Friend", btn_added: "Friend ✓", gps_on: "Location tracking on", gps_off: "Location tracking off", gps_err: "Location Error", gps_denied: "Location permission denied. Please enable it in settings.", gps_denied_confirm: "Location permission is denied.\nWould you like to open app settings to allow it?", gps_unavailable: "Location unavailable. Please check GPS signal.", gps_timeout: "Location search timed out. Please try again.", gps_no_support: "This device does not support location services.", gps_searching: "Searching location...", gps_retrying: "Retrying location...", modal_title: "Title History",
         name_prompt: "Enter new player name.\n(Can be changed once a month)", name_err: "Name can only be changed once a month.", sync_req: "Requesting sync...", sync_done: "Sync complete", sync_off: "Sync disabled",
 
-        btn_quest_info: "Guide", btn_dungeon_info: "Guide",
-        modal_quest_title: "Weekly Quests", modal_dungeon_title: "Anomaly List",
-        th_day: "Day", th_stat: "Stat", th_quest: "Quest", th_raid: "Anomaly", th_req: "Requirement",
+        btn_quest_info: "Guide",
+        modal_quest_title: "Weekly Quests",
+        th_day: "Day", th_stat: "Stat", th_quest: "Quest",
 
         btn_status_info: "Guide", modal_status_title: "Stats Guide", th_desc: "Description",
         desc_str: "Physical strength, workouts, and fitness. (e.g., Gym, Running)",
@@ -91,20 +89,19 @@ const i18n = {
         login_err_empty: "이메일과 비밀번호를 모두 입력해주세요.", login_err_email: "유효한 이메일 주소를 입력해주세요.", 
         login_err_pw_req: "비밀번호 조건(8자리 이상, 대문자 1개 이상, 특수문자 2개 이상)을 충족해주세요.", pw_mismatch: "비밀번호가 일치하지 않습니다.",
 
-        nav_status: "ステータス", nav_quest: "クエスト", nav_diary: "プランナー", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
+        nav_status: "ステータス", nav_quest: "クエスト", nav_diary: "プランナー", nav_social: "ソーシャル", nav_settings: "設定",
         prof_name: "プレイヤー (私)", btn_hist: "称号履歴", avail_pts: "保有ポイント", btn_lvlup: "レベルUP", req_pts: "必要量:",
         tot_score: "総合スコア", radar_title: "STAT RADAR", stat_hint: "※ 待機ステータスはレベルUP時に反映",
         str: "筋력", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
         quest_title: "デイリークエスト", quest_hint: "※ 完了で +20P & 待機ステータス+0.5", cal_title: "週間進捗度",
-        raid_title: "ローカルレイド", raid_boss: "⚠️ 連合ボス出現", raid_desc1: "異常現象を感知。", raid_desc2: "連合の目標を達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 グローバルランク", soc_friend: "👥 マイフレンド", sort_tot: "総合", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷",
         set_title: "システム設定", set_lang: "言語 (Language)", set_theme: "ライトモード", set_push: "プッシュ通知受信", set_gps: "起動時の位置情報取得", set_sync: "Google Fit 同期", set_logout: "ログアウト",
         no_friend: "友達がいません。", btn_add: "友達追加", btn_added: "友達 ✓", gps_on: "位置情報有効", gps_off: "位置情報停止", gps_err: "位置情報エラー", gps_denied: "位置情報の権限が拒否されました。設定で許可してください。", gps_denied_confirm: "位置情報の権限が拒否されています。\nアプリ設定で位置情報を許可しますか？", gps_unavailable: "位置情報が利用できません。GPS信号を確認してください。", gps_timeout: "位置情報の取得がタイムアウトしました。再試行してください。", gps_no_support: "この端末は位置情報サービスに対応していません。", gps_searching: "位置情報を検索中...", gps_retrying: "位置情報を再検索中...", modal_title: "称号履歴",
         name_prompt: "新しいプレイヤー名を入力してください。\n(月に1回のみ変更可能)", name_err: "名前の変更は月に1回のみ可能です。", sync_req: "同期を要求中...", sync_done: "同期完了", sync_off: "同期解除",
 
-        btn_quest_info: "ガイド", btn_dungeon_info: "ガイド",
-        modal_quest_title: "週間クエスト一覧", modal_dungeon_title: "異常現象一覧",
-        th_day: "曜日", th_stat: "ステータス", th_quest: "クエスト名", th_raid: "異常現象", th_req: "要求データ",
+        btn_quest_info: "ガイド",
+        modal_quest_title: "週間クエスト一覧",
+        th_day: "曜日", th_stat: "ステータス", th_quest: "クエスト名",
 
         btn_status_info: "ガイド", modal_status_title: "ステータスガイド", th_desc: "詳細説明",
         desc_str: "物理的な力、運動、筋力トレーニング関連 (例: ジム、ランニング)",
@@ -146,57 +143,5 @@ const weeklyQuestData = [
     [ { stat: "STR", title: {ko:"야외 러닝", en:"Run", ja:"ラン"}, desc: {ko:"5km 조깅", en:"5km jog", ja:"5km"} }, { stat: "STR", title: {ko:"요가", en:"Yoga", ja:"ヨガ"}, desc: {ko:"15분 유연성", en:"15 min flex", ja:"15分"} }, { stat: "INT", title: {ko:"취미", en:"Hobby", ja:"趣味"}, desc: {ko:"유튜브 30분", en:"30 min YT", ja:"30分"} }, { stat: "INT", title: {ko:"뇌 휴식", en:"Brain Rest", ja:"脳休息"}, desc: {ko:"활자 없는 시간", en:"No text", ja:"活字なし"} }, { stat: "CHA", title: {ko:"지인 만남", en:"Meet", ja:"会う"}, desc: {ko:"친구 연락", en:"Contact friend", ja:"連絡"} }, { stat: "CHA", title: {ko:"취향 공유", en:"Share", ja:"共有"}, desc: {ko:"추천하기", en:"Recommend", ja:"推薦"} }, { stat: "VIT", title: {ko:"낮잠", en:"Nap", ja:"昼寝"}, desc: {ko:"파워 낮잠", en:"Power nap", ja:"仮眠"} }, { stat: "VIT", title: {ko:"햇빛 쬐기", en:"Sun", ja:"日光浴"}, desc: {ko:"15분 야외", en:"15 mins out", ja:"15分"} }, { stat: "WLTH", title: {ko:"부동산/임장", en:"Real Estate", ja:"不動産"}, desc: {ko:"시세 보기", en:"Check prices", ja:"相場"} }, { stat: "WLTH", title: {ko:"주말 예산", en:"Budget", ja:"予算"}, desc: {ko:"한도 설정", en:"Set limit", ja:"限度"} }, { stat: "AGI", title: {ko:"밀프렙", en:"Meal Prep", ja:"作り置き"}, desc: {ko:"재료 손질", en:"Prep food", ja:"準備"} }, { stat: "AGI", title: {ko:"집안일", en:"Chores", ja:"家事"}, desc: {ko:"대청소", en:"Cleaning", ja:"掃除"} } ]
 ];
 
-const seoulStations = [
-    { name: {ko: "강남역", en: "Gangnam Stn", ja: "江南駅"}, lat: 37.4979, lng: 127.0276 },
-    { name: {ko: "홍대입구역", en: "Hongdae Stn", ja: "弘大入口駅"}, lat: 37.5568, lng: 126.9242 },
-    { name: {ko: "잠실역", en: "Jamsil Stn", ja: "蚕室駅"}, lat: 37.5133, lng: 127.1001 },
-    { name: {ko: "여의도역", en: "Yeouido Stn", ja: "汝矣島駅"}, lat: 37.5216, lng: 126.9241 },
-    { name: {ko: "신도림역", en: "Sindorim Stn", ja: "新道林駅"}, lat: 37.5088, lng: 126.8912 }
-];
-
-const raidMissions = {
-    str: {
-        stat: "STR", color: "var(--neon-red)",
-        title: {ko: "물리 법칙 붕괴: 중력 이상 현상", en: "Physics Collapse: Gravity Anomaly", ja: "物理法則崩壊: 重력異常"},
-        desc1: {ko: "해당 구역에 강력한 무기력장(게으름)이 퍼지고 있습니다.", en: "Strong lethargy field is expanding.", ja: "無気力場が広がっています。"},
-        desc2: {ko: "헌터 연합 합산 1만보 걷기 또는 홈트/짐 30분 운동 기록을 동기화하여 중력장을 상쇄하십시오.", en: "Sync 10k steps or 30m workout data.", ja: "1万歩または30分運動データを同期せよ。"},
-        actionText: {ko: "운동 데이터 송신", en: "Transmit Workout Data", ja: "運動データ送信"}
-    },
-    int: {
-        stat: "INT", color: "var(--neon-blue)",
-        title: {ko: "정보 왜곡 지대: 인지 마비 안개", en: "Info Distortion: Cognitive Fog", ja: "情報歪曲: 認知麻痺の霧"},
-        desc1: {ko: "집단 지성을 저하시키는 왜곡장이 감지되었습니다.", en: "Field degrading collective intelligence detected.", ja: "集団知性を低下させる歪曲場を感知。"},
-        desc2: {ko: "독서 1챕터, 아티클 요약, 또는 30분 이상의 어학/학습 기록을 업로드하여 왜곡을 돌파하십시오.", en: "Upload 1 chapter read or 30m study log.", ja: "読書1章または30分の学習記録をアップロードせよ。"},
-        actionText: {ko: "학습 로그 업로드", en: "Upload Study Log", ja: "学習ログアップロード"}
-    },
-    cha: {
-        stat: "CHA", color: "var(--neon-purple)",
-        title: {ko: "고립의 장벽: 단절의 넥서스", en: "Wall of Isolation: Disconnect Nexus", ja: "孤立の障壁: 断絶のネクサス"},
-        desc1: {ko: "현대인들을 단절시키는 고립의 장벽이 세워졌습니다.", en: "Barrier of isolation disconnecting people.", ja: "人々を断絶させる孤立の障壁。"},
-        desc2: {ko: "지인에게 안부 메시지 전송, 동료에게 감사 표현, 또는 커피 한 잔의 여유를 인증하여 연결망을 복구하십시오.", en: "Message a friend, show gratitude, or share coffee.", ja: "友人に連絡するか、感謝を伝えよ. "},
-        actionText: {ko: "소셜 버프 발동", en: "Activate Social Buff", ja: "ソーシャルバフ発動"}
-    },
-    vit: {
-        stat: "VIT", color: "#00ff66",
-        title: {ko: "생명력 탈취 역장: 피로의 늪", en: "Vitality Drain Field: Swamp of Fatigue", ja: "生命力奪取 역장: 疲労の沼"},
-        desc1: {ko: "주변 헌터들의 생명력을 서서히 흡수하는 만성 피로 구역입니다.", en: "Zone absorbing hunters' vitality.", ja: "ハンターの生命力を吸収する力場。"},
-        desc2: {ko: "물 2리터 마시기, 영양제 섭취, 또는 7시간 수면 기록을 시스템에 증명하여 역장을 정화하십시오.", en: "Drink 2L water, take vitamins, or sleep 7h.", ja: "水2L、サプリ、または7時間睡眠を証明せよ。"},
-        actionText: {ko: "회복 데이터 증명", en: "Prove Recovery Data", ja: "回復データ証明"}
-    },
-    wlth: {
-        stat: "WLTH", color: "var(--neon-gold)",
-        title: {ko: "자본 유출 넥서스: 가치 붕괴 포털", en: "Capital Leak Nexus: Value Collapse Portal", ja: "資本流出ネクサス: 価値崩壊ポータル"},
-        desc1: {ko: "해당 좌표에서 경제적 가치(통장 잔고)가 줄줄 새고 있습니다.", en: "Economic value is leaking here.", ja: "経済的価値が漏出しています。"},
-        desc2: {ko: "오늘 하루 불필요한 지출 방어(무지출), 소액 저축, 또는 경제 뉴스 1편 스크랩을 통해 포털을 닫으십시오.", en: "No-spend day, micro-save, or read eco news.", ja: "無支出、少額貯蓄、または経済ニュースを読め。"},
-        actionText: {ko: "자산 방어 프로토콜 가동", en: "Activate Asset Defense", ja: "資産防御プロトコル稼働"}
-    },
-    agi: {
-        stat: "AGI", color: "#ff8c00",
-        title: {ko: "시간 지연 게이트: 타임 패러독스", en: "Time Dilation Gate: Time Paradox", ja: "時間遅延ゲート: タイムパラドックス"},
-        desc1: {ko: "이 구역의 일 처리 속도가 심각하게 지연되고 있습니다.", en: "Productivity is severely delayed here.", ja: "この区域の生産性が深刻に遅延しています。"},
-        desc2: {ko: "뽀모도로(25분 집중) 1세트 완료, 혹은 밀린 업무/집안일 3가지 처리 로그를 전송해 시간을 가속하십시오.", en: "1 Pomodoro or complete 3 pending tasks.", ja: "ポモドーロ1回またはタスク3つ完了せよ。"},
-        actionText: {ko: "효율성 로그 전송", en: "Transmit Efficiency Log", ja: "効率ログ送信"}
-    }
-};
 
 const mockSocialData = [];

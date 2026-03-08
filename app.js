@@ -59,7 +59,6 @@ function getInitialAppState() {
             weekStart: getWeekStartDate()
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false },
     };
 }
 
@@ -80,14 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.querySelector('main').style.overflowY = 'auto'; 
             
-            changeLanguage(AppState.currentLang); 
-            renderCalendar(); 
-            updatePointUI(); 
-            drawRadarChart(); 
-            updateDungeonStatus();
-            startRaidTimer(); 
-            renderQuestList(); 
-            fetchSocialData(); 
+            changeLanguage(AppState.currentLang);
+            renderCalendar();
+            updatePointUI();
+            drawRadarChart();
+            renderQuestList();
+            fetchSocialData();
             
             if (AppState.user.syncEnabled) { syncHealthData(false); }
         } else {
@@ -99,12 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    setInterval(() => {
-        updateDungeonStatus();
-        if(document.getElementById('dungeon').classList.contains('active')) {
-            window.syncGlobalDungeon();
-        }
-    }, 30000); 
 });
 
 function initTheme() {
@@ -138,7 +129,6 @@ function bindEvents() {
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
     document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
-    document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
@@ -151,8 +141,6 @@ function bindEvents() {
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
     
-    document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
-
     // Planner tab
     document.getElementById('btn-planner-save').addEventListener('click', savePlannerEntry);
     document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => {
@@ -161,7 +149,6 @@ function bindEvents() {
             btn.classList.add('selected');
         });
     });
-    document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 }
 
 // --- 데이터 저장/로드 ---
@@ -177,7 +164,6 @@ async function saveUserData() {
             titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
             questStr: JSON.stringify(AppState.quest.completedState),
             questWeekStart: AppState.quest.weekStart,
-            dungeonStr: JSON.stringify(AppState.dungeon),
             friends: AppState.user.friends || [],
             photoURL: AppState.user.photoURL || null,
             syncEnabled: AppState.user.syncEnabled,
@@ -194,23 +180,18 @@ async function loadUserDataFromDB(user) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             if(data.stats) AppState.user.stats = data.stats;
-            if(data.level) AppState.user.level = data.level;
-            if(data.points) AppState.user.points = data.points;
+            if(data.level !== undefined && data.level !== null) AppState.user.level = data.level;
+            if(data.points !== undefined && data.points !== null) AppState.user.points = data.points;
             if(data.titleHistoryStr) {
                 try { AppState.user.titleHistory = JSON.parse(data.titleHistoryStr); } catch(e) { AppState.user.titleHistory = [{level:1, title:{ko:"각성자"}}]; }
             }
             if(data.questStr) {
-                const savedWeek = data.questWeekStart || "";
-                if(savedWeek === getWeekStartDate()) {
-                    AppState.quest.completedState = JSON.parse(data.questStr);
-                }
-            }
-            if(data.dungeonStr) {
-                AppState.dungeon = JSON.parse(data.dungeonStr);
-                if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
-                if(AppState.dungeon.hasContributed === undefined) AppState.dungeon.hasContributed = false; 
-                AppState.dungeon.globalParticipants = 0;
-                AppState.dungeon.globalProgress = 0;
+                try {
+                    const savedWeek = data.questWeekStart || "";
+                    if(savedWeek === getWeekStartDate()) {
+                        AppState.quest.completedState = JSON.parse(data.questStr);
+                    }
+                } catch(e) { AppLogger.error('[DB] questStr 파싱 실패', e.message); }
             }
             if(data.pendingStats) AppState.user.pendingStats = data.pendingStats;
             if(data.friends) AppState.user.friends = data.friends;
@@ -401,260 +382,9 @@ function renderCalendar() {
     }).join('');
 }
 
-// --- 던전 로직 ---
-let raidTimerInterval = null;
-
-function getFixedDungeonData(dateStr, slot) {
-    const seedStr = dateStr + "_slot" + slot;
-    let hash = 0;
-    for (let i = 0; i < seedStr.length; i++) {
-        hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    hash = Math.abs(hash);
-    return {
-        stationIdx: hash % seoulStations.length,
-        targetStat: statKeys[hash % statKeys.length]
-    };
-}
-
-function startRaidTimer() {
-    if(raidTimerInterval) clearInterval(raidTimerInterval);
-    
-    raidTimerInterval = setInterval(() => {
-        const timerEl = document.getElementById('raid-timer');
-        if(!timerEl || AppState.dungeon.slot === 0) return;
-
-        const now = new Date();
-        let endHour = 0;
-
-        if (AppState.dungeon.slot === 1) endHour = 9;
-        else if (AppState.dungeon.slot === 2) endHour = 14;
-        else if (AppState.dungeon.slot === 3) endHour = 21;
-
-        const endTime = new Date(now);
-        endTime.setHours(endHour, 0, 0, 0);
-
-        const diff = endTime.getTime() - now.getTime();
-
-        if (diff <= 0) {
-            timerEl.innerText = "00:00:00";
-            updateDungeonStatus(); 
-        } else {
-            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((diff % (1000 * 60)) / 1000);
-            timerEl.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        }
-    }, 1000);
-}
-
-window.syncGlobalDungeon = async () => {
-    if (AppState.dungeon.slot === 0 || !auth.currentUser) return;
-    try {
-        const snap = await getDocs(collection(db, "users"));
-        let realParticipants = 0;
-        let realProgressCount = 0;
-        const targetDate = AppState.dungeon.lastGeneratedDate;
-        const targetSlot = AppState.dungeon.slot;
-
-        snap.docs.forEach(doc => {
-            const data = doc.data();
-            if (data.dungeonStr) {
-                try {
-                    const dng = JSON.parse(data.dungeonStr);
-                    if (dng.lastGeneratedDate === targetDate && dng.slot === targetSlot && dng.isJoined) {
-                        realParticipants++;
-                        if (dng.hasContributed) realProgressCount++; 
-                    }
-                } catch(e) {}
-            }
-        });
-
-        AppState.dungeon.globalParticipants = realParticipants;
-        AppState.dungeon.globalProgress = Math.min(100, (realProgressCount / AppState.dungeon.maxParticipants) * 100);
-
-        if (document.getElementById('dungeon').classList.contains('active')) {
-            renderDungeon();
-        }
-    } catch (e) {
-        console.error("글로벌 동기화 에러:", e);
-        AppLogger.error('[Dungeon] 글로벌 동기화 실패', e.stack || e.message);
-    }
-};
-
-function updateDungeonStatus() {
-    const now = new Date();
-    const h = now.getHours();
-    const m = now.getMinutes();
-    const timeVal = h + m / 60;
-    
-    let currentSlot = 0;
-    if (timeVal >= 6 && timeVal < 9) currentSlot = 1; 
-    else if (timeVal >= 11 && timeVal < 14) currentSlot = 2; 
-    else if (timeVal >= 18 && timeVal < 21) currentSlot = 3;
-
-    const dateStr = now.toDateString(); 
-    if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
-        AppState.dungeon.lastGeneratedDate = dateStr; 
-        AppState.dungeon.slot = currentSlot;
-        
-        if (currentSlot > 0) { 
-            const fixedData = getFixedDungeonData(dateStr, currentSlot);
-            AppState.dungeon.stationIdx = fixedData.stationIdx;
-            AppState.dungeon.targetStat = fixedData.targetStat;
-            
-            AppState.dungeon.maxParticipants = 5; 
-            
-            AppState.dungeon.isJoined = false; 
-            AppState.dungeon.hasContributed = false;
-            AppState.dungeon.isCleared = false; 
-            
-            AppState.dungeon.globalParticipants = 0;
-            AppState.dungeon.globalProgress = 0;
-        } else {
-            AppState.dungeon.isJoined = false;
-        }
-        saveUserData();
-    }
-    renderDungeon();
-    
-    if (currentSlot > 0) {
-        window.syncGlobalDungeon();
-    }
-}
-
-function renderDungeon() {
-    const banner = document.getElementById('dungeon-banner');
-    const activeBoard = document.getElementById('dungeon-active-board');
-    const timer = document.getElementById('raid-timer');
-    if(!banner || !activeBoard) return;
-
-    if (AppState.dungeon.slot === 0) {
-        if(timer) timer.classList.add('d-none');
-        activeBoard.classList.add('d-none'); 
-        banner.classList.remove('d-none');
-        
-        const timeStr = AppState.currentLang === 'ko' ? "출현 시간: 06:00~09:00 | 11:00~14:00 | 18:00~21:00" : "Open: 06:00~09:00 | 11:00~14:00 | 18:00~21:00";
-        banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${timeStr}</p>`;
-    } else {
-        const m = raidMissions[AppState.dungeon.targetStat];
-        const st = seoulStations[AppState.dungeon.stationIdx];
-        
-        if (!AppState.dungeon.isJoined) {
-            if(timer) timer.classList.add('d-none');
-            activeBoard.classList.add('d-none'); 
-            banner.classList.remove('d-none');
-            
-            const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
-            
-            const isFull = AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants;
-            const joinBtnHtml = isFull 
-                ? `<button disabled class="btn-primary" style="background:#333; border-color:#333; margin-top:10px; color:#888; font-weight:bold; cursor:not-allowed;">정원 초과 (입장 불가)</button>`
-                : `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>`;
-
-            banner.innerHTML = `
-                <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
-                <h3 class="raid-boss-title" style="color:${m.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${st.name[AppState.currentLang]} - ${m.title[AppState.currentLang]}</h3>
-                <div class="map-container" style="width:100%; height:180px; border-radius:6px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border-color);">
-                    <iframe src="${mapUrl}" style="width:100%; height:100%; border:none;" allowfullscreen="" loading="lazy"></iframe>
-                </div>
-                <p style="font-size: 0.8rem; margin-bottom: 5px; color:var(--text-main); word-break:keep-all;">${m.desc1[AppState.currentLang]}</p>
-                <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">
-                    ${i18n[AppState.currentLang].raid_part} 
-                    <span class="text-blue">${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}</span> 명
-                </div>
-                ${joinBtnHtml}
-            `;
-        } else {
-            if(timer) timer.classList.remove('d-none');
-            banner.classList.add('d-none'); 
-            activeBoard.classList.remove('d-none'); 
-            
-            document.getElementById('active-stat-badge').innerText = m.stat;
-            document.getElementById('active-stat-badge').style.borderColor = m.color;
-            document.getElementById('active-stat-badge').style.color = m.color;
-            document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
-            document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
-            
-            document.getElementById('raid-part-count').innerText = `${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}`;
-            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.globalProgress}%`;
-            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.globalProgress}%`;
-            
-            const btnAction = document.getElementById('btn-raid-action');
-            const btnComplete = document.getElementById('btn-raid-complete');
-            
-            if (AppState.dungeon.globalProgress >= 100) {
-                btnAction.classList.add('d-none');
-                btnComplete.classList.remove('d-none');
-                
-                if(AppState.dungeon.isCleared) {
-                    btnComplete.innerText = "정산 완료";
-                    btnComplete.disabled = true;
-                    btnComplete.style.background = "#444";
-                    btnComplete.style.color = "#888";
-                } else {
-                    btnComplete.innerText = "전리품 획득";
-                    btnComplete.disabled = false;
-                    btnComplete.style.background = "var(--neon-gold)";
-                    btnComplete.style.color = "black";
-                }
-            } else {
-                btnAction.classList.remove('d-none');
-                btnComplete.classList.add('d-none');
-                
-                if (AppState.dungeon.hasContributed) {
-                    btnAction.innerText = "데이터 전송 완료";
-                    btnAction.disabled = true;
-                    btnAction.style.opacity = "0.5";
-                } else {
-                    btnAction.innerText = m.actionText[AppState.currentLang];
-                    btnAction.disabled = false;
-                    btnAction.style.opacity = "1";
-                }
-            }
-        }
-    }
-}
-
-window.joinDungeon = async () => {
-    if(AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants) {
-        alert("이미 정원이 초과되었습니다.");
-        return;
-    }
-    AppState.dungeon.isJoined = true;
-    await saveUserData(); 
-    await window.syncGlobalDungeon(); 
-};
-
-window.simulateRaidAction = async () => {
-    if (AppState.dungeon.hasContributed || AppState.dungeon.globalProgress >= 100) return;
-    
-    const btn = document.getElementById('btn-raid-action');
-    btn.innerText = `데이터 전송 중...`;
-    btn.disabled = true;
-
-    AppState.dungeon.hasContributed = true;
-    await saveUserData(); 
-    await window.syncGlobalDungeon(); 
-};
-
-window.completeDungeon = () => {
-    if(AppState.dungeon.isCleared) return;
-    const target = AppState.dungeon.targetStat;
-    const pts = 200;
-    const statInc = 2.0;
-    
-    AppState.user.points += pts;
-    AppState.user.pendingStats[target] += statInc;
-    AppState.dungeon.isCleared = true;
-    
-    saveUserData(); 
-    renderDungeon(); 
-    updatePointUI();
-    alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
-};
-
 // --- 공통 UI ---
+
+
 function switchTab(tabId, el) {
     document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -672,10 +402,6 @@ function switchTab(tabId, el) {
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
     if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); }
-    if(tabId === 'dungeon') {
-        updateDungeonStatus();
-        window.syncGlobalDungeon(); 
-    }
 }
 
 function updatePointUI() {
@@ -726,7 +452,6 @@ function changeLanguage(langCode) {
         renderDiaryCalendar();
         renderQuote();
         updatePointUI();
-        updateDungeonStatus();
         loadPlayerName();
     }
 }
@@ -840,10 +565,12 @@ function renderUsers(criteria, btn = null) {
 }
 
 window.toggleFriend = async (id) => {
-    const isFriend = AppState.user.friends.includes(id);
-    await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) });
-    AppState.user.friends = isFriend ? AppState.user.friends.filter(f=>f!==id) : [...AppState.user.friends, id];
-    fetchSocialData();
+    try {
+        const isFriend = AppState.user.friends.includes(id);
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) });
+        AppState.user.friends = isFriend ? AppState.user.friends.filter(f=>f!==id) : [...AppState.user.friends, id];
+        fetchSocialData();
+    } catch(e) { console.error("친구 토글 실패:", e); AppLogger.error('[DB] 친구 토글 실패', e.stack || e.message); }
 };
 
 function toggleSocialMode(mode, btn) { 
@@ -1098,47 +825,6 @@ function openQuestInfoModal() {
     });
     
     body.innerHTML = html + `</tbody></table>`;
-    const m = document.getElementById('infoModal'); 
-    m.classList.remove('d-none'); 
-    m.classList.add('d-flex');
-}
-
-function openDungeonInfoModal() {
-    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title || "이상 현상 목록";
-    const body = document.getElementById('info-modal-body');
-    
-    const timeInfoHtml = `
-        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:8px; border-radius:6px; margin-bottom:10px; text-align:center;">
-            <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:3px;">🕒 던전 시스템 개방 시간 (KST)</div>
-            <div style="font-weight:bold; color:var(--neon-blue); font-size:0.8rem; letter-spacing:0.5px;">
-                06:00~09:00  |  11:00~14:00  |  18:00~21:00
-            </div>
-        </div>
-    `;
-
-    let html = `<table class="info-table">
-        <thead>
-            <tr>
-                <th>${i18n[AppState.currentLang].th_stat}</th>
-                <th>${i18n[AppState.currentLang].th_raid}</th>
-                <th>${i18n[AppState.currentLang].th_req}</th>
-            </tr>
-        </thead>
-        <tbody>`;
-    
-    Object.keys(raidMissions).forEach(k => { 
-        const m = raidMissions[k];
-        const title = m.title[AppState.currentLang] || m.title.ko;
-        const reqTask = m.desc2[AppState.currentLang] || m.desc2.ko;
-
-        html += `<tr>
-            <td style="text-align:center; vertical-align:middle;"><span class="quest-stat-tag" style="border-color:${m.color}; color:${m.color};">${m.stat}</span></td>
-            <td style="word-break:keep-all; font-weight:bold; color:var(--text-main);">${title}</td>
-            <td style="word-break:keep-all; color:var(--text-sub); font-size:0.75rem;">${reqTask}</td>
-        </tr>`; 
-    });
-    
-    body.innerHTML = timeInfoHtml + html + `</tbody></table>`;
     const m = document.getElementById('infoModal'); 
     m.classList.remove('d-none'); 
     m.classList.add('d-flex');
