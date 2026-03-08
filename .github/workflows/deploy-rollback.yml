@@ -154,7 +154,7 @@ jobs:
 
           # === Health Connect Gradle 의존성 ===
           if ! grep -q "health.connect" "$BUILD_GRADLE"; then
-            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.1.0-alpha10"' "$BUILD_GRADLE"
+            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.0.0-alpha11"' "$BUILD_GRADLE"
           fi
           if grep -q "compileSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "compileSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
             sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
@@ -407,7 +407,7 @@ jobs:
 
           # Health Connect 의존성
           if ! grep -q "health.connect" "$BUILD_GRADLE"; then
-            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.1.0-alpha10"' "$BUILD_GRADLE"
+            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.0.0-alpha11"' "$BUILD_GRADLE"
           fi
           if grep -q "compileSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "compileSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
             sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
