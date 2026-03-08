@@ -1863,6 +1863,41 @@ async function tryHealthConnectSteps() {
     }
 }
 
+/**
+ * Google Fit 네이티브 SDK를 통한 걸음 수 조회 시도
+ * Health Connect가 사용 불가한 기기에서 Google Fit SDK (History API) 사용
+ * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
+ */
+async function tryGoogleFitNativeSteps() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return null;
+
+    try {
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (!GoogleFit) return null;
+
+        // Google Fit SDK 사용 가능 여부 확인
+        const availability = await GoogleFit.isAvailable();
+        if (!availability.available || !availability.hasPermissions) {
+            if (window.AppLogger) AppLogger.info('[GoogleFit] SDK not available or no permissions, falling back to REST API');
+            return null;
+        }
+
+        // 걸음 수 조회
+        const result = await GoogleFit.getTodaySteps();
+        if (result.fallbackToRest) {
+            if (window.AppLogger) AppLogger.info('[GoogleFit] Fallback to REST API: ' + (result.error || 'unknown'));
+            return null;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[GoogleFit] Native steps: ${result.steps} (source: ${result.source})`);
+        return result.steps;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[GoogleFit] Native error: ' + (e.message || JSON.stringify(e)));
+        return null;
+    }
+}
+
 async function syncHealthData(showMsg = false) {
     if (!AppState.user.syncEnabled) return;
 
@@ -1882,13 +1917,24 @@ async function syncHealthData(showMsg = false) {
     let totalStepsToday = 0;
     let dataSource = 'none';
 
-    // 1단계: Health Connect (네이티브 Android) 시도
+    // 1단계: Health Connect (네이티브 Android 14+) 시도
     const nativeSteps = await tryHealthConnectSteps();
     if (nativeSteps !== null) {
         totalStepsToday = nativeSteps;
         dataSource = 'health_connect';
-    } else {
-        // 2단계: Google Fit REST API 폴백
+    }
+
+    // 2단계: Google Fit 네이티브 SDK 시도 (Health Connect 실패 시)
+    if (dataSource === 'none') {
+        const fitNativeSteps = await tryGoogleFitNativeSteps();
+        if (fitNativeSteps !== null) {
+            totalStepsToday = fitNativeSteps;
+            dataSource = 'google_fit_native';
+        }
+    }
+
+    if (dataSource === 'none') {
+        // 3단계: Google Fit REST API 폴백
         const token = localStorage.getItem('gfit_token');
         if (!token) {
             if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">권한 없음. 다시 로그인 필요</span>`;
