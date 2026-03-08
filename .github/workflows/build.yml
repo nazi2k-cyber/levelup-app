@@ -90,11 +90,129 @@ jobs:
             echo "   → Firebase 콘솔에서 Android 앱(com.levelup.reboot)을 등록 후 시크릿을 업데이트하세요."
           fi
 
+      # 7-2. 네이티브 플러그인 소스 주입 (커스텀 Capacitor 플러그인)
+      - name: 네이티브 플러그인 소스 주입
+        run: |
+          PLUGIN_DIR="android/app/src/main/java/com/levelup/reboot/plugins"
+          mkdir -p "$PLUGIN_DIR"
+          cp native-plugins/*.java "$PLUGIN_DIR/"
+          echo "✅ 네이티브 플러그인 주입 완료:"
+          ls -la "$PLUGIN_DIR/"
+
       # 8. 웹 소스를 Android 프로젝트에 동기화
       - name: 웹→Android 동기화
         run: npx cap sync android
         env:
           CI: true
+
+      # 8-0. AndroidManifest.xml 권한 자동 주입 (GPS + 피트니스)
+      - name: Android 권한 자동 주입
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+          # 위치 권한 주입 (GPS 네이티브 지원)
+          if ! grep -q "ACCESS_FINE_LOCATION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' "$MANIFEST"
+            echo "✅ 위치 권한 (FINE/COARSE_LOCATION) 주입 완료"
+          else
+            echo "ℹ️ 위치 권한이 이미 존재합니다"
+          fi
+
+          # 활동 인식 권한 (Google Fit / Health Connect 걸음 수 데이터)
+          if ! grep -q "ACTIVITY_RECOGNITION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />' "$MANIFEST"
+            echo "✅ ACTIVITY_RECOGNITION 권한 주입 완료"
+          else
+            echo "ℹ️ ACTIVITY_RECOGNITION 권한이 이미 존재합니다"
+          fi
+
+          # Health Connect 권한 (Android 14+ 건강 데이터 접근)
+          if ! grep -q "health.permission.read.Steps" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.health.READ_STEPS" />' "$MANIFEST"
+            echo "✅ Health Connect READ_STEPS 권한 주입 완료"
+          else
+            echo "ℹ️ Health Connect 권한이 이미 존재합니다"
+          fi
+
+          # Health Connect intent-filter 주입 (앱이 Health Connect에 연동되도록)
+          if ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST"; then
+            sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"
+            echo "✅ Health Connect intent-filter 주입 완료"
+          fi
+
+          echo ""
+          echo "📋 최종 AndroidManifest.xml 권한 목록:"
+          grep "uses-permission" "$MANIFEST" || true
+          echo ""
+          grep "intent-filter" "$MANIFEST" || true
+
+      # 8-0-1. MainActivity.java에 커스텀 플러그인 등록 자동 주입
+      - name: 커스텀 플러그인 등록 주입 (MainActivity.java)
+        run: |
+          MAIN_ACTIVITY="android/app/src/main/java/com/levelup/reboot/MainActivity.java"
+
+          # Capacitor는 빈 클래스를 생성하므로 import + onCreate 포함 전체 파일 교체
+          if ! grep -q "registerPlugin(AppSettingsPlugin" "$MAIN_ACTIVITY"; then
+            cat > "$MAIN_ACTIVITY" << 'JAVAEOF'
+package com.levelup.reboot;
+
+import com.getcapacitor.BridgeActivity;
+import com.levelup.reboot.plugins.AppSettingsPlugin;
+import com.levelup.reboot.plugins.HealthConnectPlugin;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(HealthConnectPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+JAVAEOF
+            echo "✅ 플러그인 등록 (AppSettings, HealthConnect) 주입 완료"
+          else
+            echo "ℹ️ 플러그인 등록이 이미 존재합니다"
+          fi
+
+          echo ""
+          echo "📋 최종 MainActivity.java:"
+          cat "$MAIN_ACTIVITY"
+
+      # 8-0-2. Health Connect 라이브러리 Gradle 의존성 주입
+      - name: Health Connect Gradle 의존성 주입
+        run: |
+          BUILD_GRADLE="android/app/build.gradle"
+
+          # Health Connect 라이브러리 추가
+          if ! grep -q "health.connect" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.0.0-alpha11"' "$BUILD_GRADLE"
+            echo "✅ Health Connect 라이브러리 의존성 추가 완료"
+          else
+            echo "ℹ️ Health Connect 의존성이 이미 존재합니다"
+          fi
+
+          # compileSdkVersion을 34 이상으로 업그레이드 (Health Connect 필수)
+          if grep -q "compileSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "compileSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
+            sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
+            sed -i 's/compileSdkVersion\s*3[0-3]/compileSdkVersion 34/' "$BUILD_GRADLE"
+            echo "✅ compileSdkVersion → 34 업그레이드 완료"
+          fi
+
+          # targetSdkVersion을 34로 업그레이드
+          if grep -q "targetSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "targetSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
+            sed -i 's/targetSdk\s*=\s*3[0-3]/targetSdk = 34/' "$BUILD_GRADLE"
+            sed -i 's/targetSdkVersion\s*3[0-3]/targetSdkVersion 34/' "$BUILD_GRADLE"
+            echo "✅ targetSdkVersion → 34 업그레이드 완료"
+          fi
+
+          # minSdkVersion을 26 이상으로 업그레이드 (Health Connect 필수)
+          # variables.gradle에서 실제 숫자값이 정의됨
+          sed -i 's/minSdkVersion\s*=\s*[0-9]\+/minSdkVersion = 26/' android/variables.gradle
+          echo "✅ minSdkVersion → 26 업그레이드 완료"
+
+          echo ""
+          echo "📋 Gradle dependencies 확인:"
+          grep -A 5 "dependencies {" "$BUILD_GRADLE" | head -10
 
       # 8. Gradle 래퍼 실행 권한 부여
       - name: Gradle 실행 권한 부여

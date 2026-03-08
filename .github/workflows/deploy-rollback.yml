@@ -106,10 +106,79 @@ jobs:
             cp google-services.json android/app/google-services.json
           fi
 
+      # 네이티브 플러그인 소스 주입
+      - name: 네이티브 플러그인 소스 주입
+        run: |
+          PLUGIN_DIR="android/app/src/main/java/com/levelup/reboot/plugins"
+          mkdir -p "$PLUGIN_DIR"
+          if [ -d native-plugins ] && ls native-plugins/*.java 1>/dev/null 2>&1; then
+            cp native-plugins/*.java "$PLUGIN_DIR/"
+            echo "✅ 네이티브 플러그인 주입 완료"
+          fi
+
       - name: 웹→Android 동기화
         run: npx cap sync android
         env:
           CI: true
+
+      # Android 네이티브 권한 및 플러그인 자동 주입
+      - name: Android 권한 및 네이티브 플러그인 자동 주입
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          MAIN_ACTIVITY="android/app/src/main/java/com/levelup/reboot/MainActivity.java"
+          BUILD_GRADLE="android/app/build.gradle"
+
+          # === AndroidManifest.xml 권한 주입 ===
+          if ! grep -q "ACCESS_FINE_LOCATION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' "$MANIFEST"
+          fi
+          if ! grep -q "ACTIVITY_RECOGNITION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />' "$MANIFEST"
+          fi
+          if ! grep -q "health.permission.read.Steps" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.health.READ_STEPS" />' "$MANIFEST"
+          fi
+          if ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST"; then
+            sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"
+          fi
+          echo "✅ 권한 주입 완료"
+
+          # === MainActivity.java 플러그인 등록 (전체 파일 교체) ===
+          if ! grep -q "registerPlugin(AppSettingsPlugin" "$MAIN_ACTIVITY"; then
+            cat > "$MAIN_ACTIVITY" << 'JAVAEOF'
+package com.levelup.reboot;
+
+import com.getcapacitor.BridgeActivity;
+import com.levelup.reboot.plugins.AppSettingsPlugin;
+import com.levelup.reboot.plugins.HealthConnectPlugin;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(HealthConnectPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+JAVAEOF
+          fi
+          echo "✅ 플러그인 등록 주입 완료"
+
+          # === Health Connect Gradle 의존성 ===
+          if ! grep -q "health.connect" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.0.0-alpha11"' "$BUILD_GRADLE"
+          fi
+          if grep -q "compileSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "compileSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
+            sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
+            sed -i 's/compileSdkVersion\s*3[0-3]/compileSdkVersion 34/' "$BUILD_GRADLE"
+          fi
+          if grep -q "targetSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "targetSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
+            sed -i 's/targetSdk\s*=\s*3[0-3]/targetSdk = 34/' "$BUILD_GRADLE"
+            sed -i 's/targetSdkVersion\s*3[0-3]/targetSdkVersion 34/' "$BUILD_GRADLE"
+          fi
+          # minSdkVersion을 26 이상으로 업그레이드 (Health Connect 필수)
+          sed -i 's/minSdkVersion\s*=\s*[0-9]\+/minSdkVersion = 26/' android/variables.gradle
+          echo "✅ Gradle 의존성 주입 완료"
 
       - name: Gradle 실행 권한 부여
         run: chmod +x android/gradlew
@@ -306,10 +375,77 @@ jobs:
             cp google-services.json android/app/google-services.json
           fi
 
+      # 네이티브 플러그인 소스 주입 (롤백 버전)
+      - name: 네이티브 플러그인 소스 주입
+        run: |
+          PLUGIN_DIR="android/app/src/main/java/com/levelup/reboot/plugins"
+          mkdir -p "$PLUGIN_DIR"
+          if [ -d native-plugins ] && ls native-plugins/*.java 1>/dev/null 2>&1; then
+            cp native-plugins/*.java "$PLUGIN_DIR/"
+            echo "✅ 네이티브 플러그인 주입 완료"
+          fi
+
       - name: 웹→Android 동기화
         run: npx cap sync android
         env:
           CI: true
+
+      # Android 네이티브 권한 및 플러그인 자동 주입 (롤백)
+      - name: Android 권한 및 네이티브 플러그인 자동 주입
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          MAIN_ACTIVITY="android/app/src/main/java/com/levelup/reboot/MainActivity.java"
+          BUILD_GRADLE="android/app/build.gradle"
+
+          # 권한 주입
+          if ! grep -q "ACCESS_FINE_LOCATION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' "$MANIFEST"
+          fi
+          if ! grep -q "ACTIVITY_RECOGNITION" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />' "$MANIFEST"
+          fi
+          if ! grep -q "health.permission.read.Steps" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.health.READ_STEPS" />' "$MANIFEST"
+          fi
+          if ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST"; then
+            sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"
+          fi
+
+          # 플러그인 등록 (전체 파일 교체)
+          if ! grep -q "registerPlugin(AppSettingsPlugin" "$MAIN_ACTIVITY"; then
+            cat > "$MAIN_ACTIVITY" << 'JAVAEOF'
+package com.levelup.reboot;
+
+import com.getcapacitor.BridgeActivity;
+import com.levelup.reboot.plugins.AppSettingsPlugin;
+import com.levelup.reboot.plugins.HealthConnectPlugin;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(HealthConnectPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+JAVAEOF
+          fi
+
+          # Health Connect 의존성
+          if ! grep -q "health.connect" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.0.0-alpha11"' "$BUILD_GRADLE"
+          fi
+          if grep -q "compileSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "compileSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
+            sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
+            sed -i 's/compileSdkVersion\s*3[0-3]/compileSdkVersion 34/' "$BUILD_GRADLE"
+          fi
+          if grep -q "targetSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "targetSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
+            sed -i 's/targetSdk\s*=\s*3[0-3]/targetSdk = 34/' "$BUILD_GRADLE"
+            sed -i 's/targetSdkVersion\s*3[0-3]/targetSdkVersion 34/' "$BUILD_GRADLE"
+          fi
+          # minSdkVersion을 26 이상으로 업그레이드 (Health Connect 필수)
+          sed -i 's/minSdkVersion\s*=\s*[0-9]\+/minSdkVersion = 26/' android/variables.gradle
+          echo "✅ 롤백 빌드: 권한 및 플러그인 주입 완료"
 
       - name: Gradle 실행 권한 부여
         run: chmod +x android/gradlew

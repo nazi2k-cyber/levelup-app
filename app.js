@@ -1605,6 +1605,58 @@ async function toggleGPS() {
         return;
     }
 
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    // 네이티브 Capacitor Geolocation 플러그인 사용 (Android)
+    if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation) {
+        const { Geolocation } = window.Capacitor.Plugins;
+        statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
+
+        try {
+            // 1단계: 네이티브 권한 요청
+            const permResult = await Geolocation.requestPermissions();
+            if (window.AppLogger) AppLogger.info('[GPS] Native permission result: ' + JSON.stringify(permResult));
+
+            if (permResult.location === 'denied') {
+                statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
+                gpsToggle.checked = false;
+                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
+                if (confirm(confirmMsg)) {
+                    openAppSettings();
+                }
+                return;
+            }
+
+            // 2단계: 네이티브 위치 획득
+            const position = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 300000
+            });
+
+            if (window.AppLogger) AppLogger.info(`[GPS] Native location: lat=${position.coords.latitude}, lng=${position.coords.longitude}`);
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
+            return;
+        } catch (e) {
+            if (window.AppLogger) AppLogger.error('[GPS] Native geolocation error: ' + (e.message || JSON.stringify(e)));
+
+            // 권한 거부 에러 처리
+            if (e.message && (e.message.includes('denied') || e.message.includes('permission'))) {
+                statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
+                gpsToggle.checked = false;
+                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
+                if (confirm(confirmMsg)) {
+                    openAppSettings();
+                }
+                return;
+            }
+
+            // 기타 에러 → Web API 폴백
+            if (window.AppLogger) AppLogger.info('[GPS] Falling back to Web Geolocation API');
+        }
+    }
+
+    // 웹 Geolocation API 폴백 (브라우저 또는 네이티브 실패 시)
     if (!("geolocation" in navigator)) {
         statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_no_support || '위치 서비스를 지원하지 않는 기기입니다.'}</span>`;
         gpsToggle.checked = false;
@@ -1612,35 +1664,26 @@ async function toggleGPS() {
         return;
     }
 
-    // 1단계: 권한 상태 사전 확인 (Permissions API 지원 시)
+    // 웹 환경: 권한 상태 사전 확인
     if (navigator.permissions && navigator.permissions.query) {
         try {
             const permStatus = await navigator.permissions.query({ name: 'geolocation' });
 
             if (permStatus.state === 'denied') {
-                // 권한이 이미 거부된 상태 → 시스템 설정으로 안내
                 if (window.AppLogger) AppLogger.info('[GPS] Permission already denied, redirecting to settings');
-                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
                 statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
                 gpsToggle.checked = false;
-
+                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
                 if (confirm(confirmMsg)) {
                     openAppSettings();
                 }
                 return;
             }
-
-            // 'granted' 또는 'prompt' → 정상 진행
-            if (permStatus.state === 'granted') {
-                if (window.AppLogger) AppLogger.info('[GPS] Permission already granted');
-            }
         } catch (e) {
-            // Permissions API 미지원 시 무시하고 진행
             if (window.AppLogger) AppLogger.info('[GPS] Permissions API not available, proceeding with geolocation request');
         }
     }
 
-    // 2단계: 위치 탐색 시도
     statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
 
     const geoOptions = {
@@ -1693,7 +1736,6 @@ async function toggleGPS() {
                 errMsg = lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.';
                 gpsToggle.checked = false;
                 if (window.AppLogger) AppLogger.error(`[GPS] Permission denied: ${error.message}`);
-                // 권한 거부 → 설정 이동 확인
                 statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
                 const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
                 if (confirm(confirmMsg)) {
@@ -1787,6 +1829,40 @@ async function requestFitnessScope() {
     }
 }
 
+/**
+ * Health Connect (네이티브)를 통한 걸음 수 조회 시도
+ * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
+ */
+async function tryHealthConnectSteps() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return null;
+
+    try {
+        const { HealthConnect } = window.Capacitor.Plugins;
+        if (!HealthConnect) return null;
+
+        // Health Connect SDK 사용 가능 여부 확인
+        const availability = await HealthConnect.isAvailable();
+        if (!availability.available) {
+            if (window.AppLogger) AppLogger.info('[HealthConnect] SDK not available, falling back to REST API');
+            return null;
+        }
+
+        // 걸음 수 조회
+        const result = await HealthConnect.getTodaySteps();
+        if (result.fallbackToRest) {
+            if (window.AppLogger) AppLogger.info('[HealthConnect] Fallback to REST API: ' + (result.error || 'unknown'));
+            return null;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[HealthConnect] Native steps: ${result.steps} (source: ${result.source})`);
+        return result.steps;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[HealthConnect] Error: ' + (e.message || JSON.stringify(e)));
+        return null;
+    }
+}
+
 async function syncHealthData(showMsg = false) {
     if (!AppState.user.syncEnabled) return;
 
@@ -1796,82 +1872,97 @@ async function syncHealthData(showMsg = false) {
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`;
     }
 
-    const token = localStorage.getItem('gfit_token');
-    if (!token) {
-        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">권한 없음. 다시 로그인 필요</span>`;
-        AppState.user.syncEnabled = false;
-        document.getElementById('sync-toggle').checked = false;
-        saveUserData();
-        return;
-    }
-
     const now = new Date();
     const todayStr = now.toDateString();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const endOfDay = now.getTime();
 
     if (!AppState.user.stepData || AppState.user.stepData.date !== todayStr) {
         AppState.user.stepData = { date: todayStr, rewardedSteps: 0 };
     }
 
-    try {
-        const response = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                aggregateBy: [{ dataTypeName: 'com.google.step_count.delta', dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps' }],
-                bucketByTime: { durationMillis: 86400000 },
-                startTimeMillis: startOfDay,
-                endTimeMillis: endOfDay
-            })
-        });
+    let totalStepsToday = 0;
+    let dataSource = 'none';
 
-        if (!response.ok) throw new Error("구글 인증 토큰 만료");
+    // 1단계: Health Connect (네이티브 Android) 시도
+    const nativeSteps = await tryHealthConnectSteps();
+    if (nativeSteps !== null) {
+        totalStepsToday = nativeSteps;
+        dataSource = 'health_connect';
+    } else {
+        // 2단계: Google Fit REST API 폴백
+        const token = localStorage.getItem('gfit_token');
+        if (!token) {
+            if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">권한 없음. 다시 로그인 필요</span>`;
+            AppState.user.syncEnabled = false;
+            document.getElementById('sync-toggle').checked = false;
+            saveUserData();
+            return;
+        }
 
-        const data = await response.json();
-        let totalStepsToday = 0;
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endOfDay = now.getTime();
 
-        if (data.bucket && data.bucket.length > 0) {
-            data.bucket.forEach(b => {
-                if (b.dataset && b.dataset[0] && b.dataset[0].point) {
-                    b.dataset[0].point.forEach(p => {
-                        totalStepsToday += p.value[0].intVal;
-                    });
-                }
+        try {
+            const response = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    aggregateBy: [{ dataTypeName: 'com.google.step_count.delta', dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps' }],
+                    bucketByTime: { durationMillis: 86400000 },
+                    startTimeMillis: startOfDay,
+                    endTimeMillis: endOfDay
+                })
             });
-        }
 
-        const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
+            if (!response.ok) throw new Error("구글 인증 토큰 만료");
 
-        if (unrewardedSteps >= 1000) {
-            const rewardChunks = Math.floor(unrewardedSteps / 1000);
-            const earnedPoints = rewardChunks * 10;
-            const earnedStr = rewardChunks * 0.5;
+            const data = await response.json();
 
-            AppState.user.points += earnedPoints;
-            AppState.user.pendingStats.str += earnedStr;
-            AppState.user.stepData.rewardedSteps += (rewardChunks * 1000);
-
-            if (showMsg) {
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료: 총 ${totalStepsToday.toLocaleString()}보<br>추가 보상: +${earnedPoints}P, STR +${earnedStr}</span>`;
+            if (data.bucket && data.bucket.length > 0) {
+                data.bucket.forEach(b => {
+                    if (b.dataset && b.dataset[0] && b.dataset[0].point) {
+                        b.dataset[0].point.forEach(p => {
+                            totalStepsToday += p.value[0].intVal;
+                        });
+                    }
+                });
             }
-            updatePointUI();
-            drawRadarChart();
-        } else {
-            if (showMsg) {
-                if(totalStepsToday === 0) {
-                    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">걸음 수 기록이 없습니다. (0보)</span>`;
-                } else {
-                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료: 총 ${totalStepsToday.toLocaleString()}보<br>(다음 보상까지 ${1000 - unrewardedSteps}보 남음)</span>`;
-                }
-            }
+            dataSource = 'google_fit_rest';
+        } catch (error) {
+            console.error("동기화 에러:", error);
+            if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">동기화 실패. 구글 재로그인 필요.</span>`;
+            document.getElementById('sync-toggle').checked = false;
+            AppState.user.syncEnabled = false;
+            return;
         }
-        saveUserData();
-
-    } catch (error) {
-        console.error("동기화 에러:", error);
-        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">동기화 실패. 구글 재로그인 필요.</span>`;
-        document.getElementById('sync-toggle').checked = false;
-        AppState.user.syncEnabled = false;
     }
+
+    // 보상 계산
+    const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
+
+    if (unrewardedSteps >= 1000) {
+        const rewardChunks = Math.floor(unrewardedSteps / 1000);
+        const earnedPoints = rewardChunks * 10;
+        const earnedStr = rewardChunks * 0.5;
+
+        AppState.user.points += earnedPoints;
+        AppState.user.pendingStats.str += earnedStr;
+        AppState.user.stepData.rewardedSteps += (rewardChunks * 1000);
+
+        if (showMsg) {
+            const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료 (${sourceLabel}): 총 ${totalStepsToday.toLocaleString()}보<br>추가 보상: +${earnedPoints}P, STR +${earnedStr}</span>`;
+        }
+        updatePointUI();
+        drawRadarChart();
+    } else {
+        if (showMsg) {
+            if(totalStepsToday === 0) {
+                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">걸음 수 기록이 없습니다. (0보)</span>`;
+            } else {
+                const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료 (${sourceLabel}): 총 ${totalStepsToday.toLocaleString()}보<br>(다음 보상까지 ${1000 - unrewardedSteps}보 남음)</span>`;
+            }
+        }
+    }
+    saveUserData();
 }
