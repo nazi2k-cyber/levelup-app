@@ -174,6 +174,22 @@
                 </div>
                 
                 <div class="system-card dungeon-banner" id="dungeon-banner"></div>
+
+                <!-- 던전 테스트 모드 (서버 전체 영향) -->
+                <div class="system-card" id="dungeon-test-panel" style="margin-top:12px; border:1px solid var(--neon-gold); background:rgba(255,204,0,0.05); padding:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.85rem; color:var(--neon-gold); font-weight:bold;">TEST MODE (서버 전체)</span>
+                        <label class="switch"><input type="checkbox" id="dungeon-test-toggle" onchange="window.toggleDungeonTestMode()"><span class="slider"></span></label>
+                    </div>
+                    <select id="dungeon-test-station" class="custom-select" style="display:none; margin-top:10px; width:100%;" onchange="window.changeDungeonTestStation()">
+                        <option value="0">강남역 (Gangnam)</option>
+                        <option value="1">홍대입구역 (Hongdae)</option>
+                        <option value="2">잠실역 (Jamsil)</option>
+                        <option value="3">여의도역 (Yeouido)</option>
+                        <option value="4">신도림역 (Sindorim)</option>
+                    </select>
+                    <p style="font-size:0.65rem; color:var(--text-sub); margin-top:6px; margin-bottom:0;">ON: 시간대 무관 던전 입장 / 역 선택 가능</p>
+                </div>
                 <div class="system-card dungeon-active d-none" id="dungeon-active-board" style="display: block;">
                     <div class="active-header">
                         <span class="blink-text text-red">⚠️ ANOMALY DETECTED</span>

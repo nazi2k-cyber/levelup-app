@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
@@ -80,10 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.querySelector('main').style.overflowY = 'auto'; 
             
-            changeLanguage(AppState.currentLang); 
-            renderCalendar(); 
-            updatePointUI(); 
-            drawRadarChart(); 
+            changeLanguage(AppState.currentLang);
+            renderCalendar();
+            updatePointUI();
+            drawRadarChart();
+            listenDungeonTestMode();
             updateDungeonStatus();
             startRaidTimer(); 
             renderQuestList(); 
@@ -401,6 +402,62 @@ function renderCalendar() {
     }).join('');
 }
 
+// --- 던전 테스트 모드 (서버 전체 영향) ---
+let dungeonTestMode = { enabled: false, stationIdx: 0 };
+let dungeonTestUnsubscribe = null;
+
+function listenDungeonTestMode() {
+    if (dungeonTestUnsubscribe) dungeonTestUnsubscribe();
+    dungeonTestUnsubscribe = onSnapshot(doc(db, "settings", "dungeonTest"), (snap) => {
+        if (snap.exists()) {
+            const data = snap.data();
+            dungeonTestMode.enabled = !!data.enabled;
+            dungeonTestMode.stationIdx = data.stationIdx || 0;
+        } else {
+            dungeonTestMode.enabled = false;
+            dungeonTestMode.stationIdx = 0;
+        }
+        // UI 반영
+        const toggle = document.getElementById('dungeon-test-toggle');
+        if (toggle) toggle.checked = dungeonTestMode.enabled;
+        const dropdown = document.getElementById('dungeon-test-station');
+        if (dropdown) {
+            dropdown.style.display = dungeonTestMode.enabled ? 'block' : 'none';
+            dropdown.value = dungeonTestMode.stationIdx;
+        }
+        updateDungeonStatus();
+    }, (err) => {
+        console.error("던전 테스트 모드 리스너 에러:", err);
+    });
+}
+
+window.toggleDungeonTestMode = async () => {
+    const toggle = document.getElementById('dungeon-test-toggle');
+    const newEnabled = toggle.checked;
+    try {
+        await setDoc(doc(db, "settings", "dungeonTest"), {
+            enabled: newEnabled,
+            stationIdx: dungeonTestMode.stationIdx
+        }, { merge: true });
+    } catch (e) {
+        console.error("던전 테스트 모드 저장 실패:", e);
+        toggle.checked = !newEnabled;
+    }
+};
+
+window.changeDungeonTestStation = async () => {
+    const dropdown = document.getElementById('dungeon-test-station');
+    const newIdx = parseInt(dropdown.value, 10);
+    try {
+        await setDoc(doc(db, "settings", "dungeonTest"), {
+            enabled: dungeonTestMode.enabled,
+            stationIdx: newIdx
+        }, { merge: true });
+    } catch (e) {
+        console.error("던전 테스트 역 변경 실패:", e);
+    }
+};
+
 // --- 던전 로직 ---
 let raidTimerInterval = null;
 
@@ -431,6 +488,12 @@ function startRaidTimer() {
         else if (AppState.dungeon.slot === 2) endHour = 14;
         else if (AppState.dungeon.slot === 3) endHour = 21;
 
+        // 테스트 모드: 타이머를 99:59:59 고정 표시
+        if (dungeonTestMode.enabled) {
+            timerEl.innerText = "99:59:59";
+            return;
+        }
+
         const endTime = new Date(now);
         endTime.setHours(endHour, 0, 0, 0);
 
@@ -438,7 +501,7 @@ function startRaidTimer() {
 
         if (diff <= 0) {
             timerEl.innerText = "00:00:00";
-            updateDungeonStatus(); 
+            updateDungeonStatus();
         } else {
             const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -487,28 +550,33 @@ function updateDungeonStatus() {
     const h = now.getHours();
     const m = now.getMinutes();
     const timeVal = h + m / 60;
-    
+
     let currentSlot = 0;
-    if (timeVal >= 6 && timeVal < 9) currentSlot = 1; 
-    else if (timeVal >= 11 && timeVal < 14) currentSlot = 2; 
+    if (timeVal >= 6 && timeVal < 9) currentSlot = 1;
+    else if (timeVal >= 11 && timeVal < 14) currentSlot = 2;
     else if (timeVal >= 18 && timeVal < 21) currentSlot = 3;
 
-    const dateStr = now.toDateString(); 
+    // 테스트 모드 ON: 시간대 무관 강제 슬롯 1 활성화 + 선택 역 사용
+    if (dungeonTestMode.enabled && currentSlot === 0) {
+        currentSlot = 1;
+    }
+
+    const dateStr = now.toDateString();
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
-        AppState.dungeon.lastGeneratedDate = dateStr; 
+        AppState.dungeon.lastGeneratedDate = dateStr;
         AppState.dungeon.slot = currentSlot;
-        
-        if (currentSlot > 0) { 
+
+        if (currentSlot > 0) {
             const fixedData = getFixedDungeonData(dateStr, currentSlot);
             AppState.dungeon.stationIdx = fixedData.stationIdx;
             AppState.dungeon.targetStat = fixedData.targetStat;
-            
-            AppState.dungeon.maxParticipants = 5; 
-            
-            AppState.dungeon.isJoined = false; 
+
+            AppState.dungeon.maxParticipants = 5;
+
+            AppState.dungeon.isJoined = false;
             AppState.dungeon.hasContributed = false;
-            AppState.dungeon.isCleared = false; 
-            
+            AppState.dungeon.isCleared = false;
+
             AppState.dungeon.globalParticipants = 0;
             AppState.dungeon.globalProgress = 0;
         } else {
@@ -516,8 +584,14 @@ function updateDungeonStatus() {
         }
         saveUserData();
     }
+
+    // 테스트 모드: 선택된 역으로 강제 변경
+    if (dungeonTestMode.enabled && currentSlot > 0) {
+        AppState.dungeon.stationIdx = dungeonTestMode.stationIdx;
+    }
+
     renderDungeon();
-    
+
     if (currentSlot > 0) {
         window.syncGlobalDungeon();
     }
@@ -1478,6 +1552,79 @@ async function toggleGPS() {
         return;
     }
 
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    // 네이티브 (Android APK) 환경: Capacitor Geolocation 플러그인 사용
+    if (isNative) {
+        statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
+        if (window.AppLogger) AppLogger.info('[GPS] Native platform detected, using Capacitor Geolocation');
+
+        try {
+            const { Geolocation } = window.Capacitor.Plugins;
+            if (!Geolocation) {
+                // Capacitor Geolocation 플러그인 미설치 → 웹 API 폴백
+                if (window.AppLogger) AppLogger.warn('[GPS] Capacitor Geolocation plugin not available, falling back to web API');
+                attemptWebGeolocation(gpsToggle, statusDiv, lang);
+                return;
+            }
+
+            // 권한 확인
+            const permResult = await Geolocation.checkPermissions();
+            if (window.AppLogger) AppLogger.info('[GPS] Native permission status: ' + JSON.stringify(permResult));
+
+            if (permResult.location === 'denied') {
+                // 권한 요청 시도
+                const reqResult = await Geolocation.requestPermissions();
+                if (reqResult.location === 'denied') {
+                    const errMsg = lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.';
+                    statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
+                    gpsToggle.checked = false;
+                    const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
+                    if (confirm(confirmMsg)) {
+                        openAppSettings();
+                    }
+                    return;
+                }
+            }
+
+            // 위치 취득 (Android GPS 네이티브)
+            let retryCount = 0;
+            const maxRetries = 2;
+
+            async function attemptNativeGeo() {
+                try {
+                    const position = await Geolocation.getCurrentPosition({
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 300000
+                    });
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
+                    if (window.AppLogger) AppLogger.info(`[GPS] Native location acquired: ${position.coords.latitude}, ${position.coords.longitude}`);
+                } catch (e) {
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        if (window.AppLogger) AppLogger.info(`[GPS] Native timeout, retrying (${retryCount}/${maxRetries})...`);
+                        statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_retrying || '위치 재탐색 중...'} (${retryCount}/${maxRetries})</span>`;
+                        await attemptNativeGeo();
+                    } else {
+                        const errMsg = lang.gps_timeout || '위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.';
+                        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
+                        gpsToggle.checked = false;
+                        if (window.AppLogger) AppLogger.error('[GPS] Native geolocation failed: ' + (e.message || e));
+                    }
+                }
+            }
+            await attemptNativeGeo();
+
+        } catch (e) {
+            if (window.AppLogger) AppLogger.error('[GPS] Native GPS error: ' + (e.message || e));
+            // 네이티브 실패 시 웹 API 폴백
+            attemptWebGeolocation(gpsToggle, statusDiv, lang);
+        }
+        return;
+    }
+
+    // 웹 브라우저 환경: 기존 navigator.geolocation 사용
     if (!("geolocation" in navigator)) {
         statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_no_support || '위치 서비스를 지원하지 않는 기기입니다.'}</span>`;
         gpsToggle.checked = false;
@@ -1485,35 +1632,11 @@ async function toggleGPS() {
         return;
     }
 
-    // 1단계: 권한 상태 사전 확인 (Permissions API 지원 시)
-    if (navigator.permissions && navigator.permissions.query) {
-        try {
-            const permStatus = await navigator.permissions.query({ name: 'geolocation' });
+    attemptWebGeolocation(gpsToggle, statusDiv, lang);
+}
 
-            if (permStatus.state === 'denied') {
-                // 권한이 이미 거부된 상태 → 시스템 설정으로 안내
-                if (window.AppLogger) AppLogger.info('[GPS] Permission already denied, redirecting to settings');
-                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
-                statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
-                gpsToggle.checked = false;
-
-                if (confirm(confirmMsg)) {
-                    openAppSettings();
-                }
-                return;
-            }
-
-            // 'granted' 또는 'prompt' → 정상 진행
-            if (permStatus.state === 'granted') {
-                if (window.AppLogger) AppLogger.info('[GPS] Permission already granted');
-            }
-        } catch (e) {
-            // Permissions API 미지원 시 무시하고 진행
-            if (window.AppLogger) AppLogger.info('[GPS] Permissions API not available, proceeding with geolocation request');
-        }
-    }
-
-    // 2단계: 위치 탐색 시도
+function attemptWebGeolocation(gpsToggle, statusDiv, lang) {
+    // 웹 브라우저 기반 geolocation
     statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
 
     const geoOptions = {
@@ -1529,17 +1652,17 @@ async function toggleGPS() {
         navigator.geolocation.getCurrentPosition(
             () => {
                 statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
-                if (window.AppLogger) AppLogger.info('[GPS] Location acquired successfully');
+                if (window.AppLogger) AppLogger.info('[GPS] Web location acquired successfully');
             },
             (error) => {
                 if (error.code === error.TIMEOUT && retryCount < maxRetries) {
                     retryCount++;
-                    if (window.AppLogger) AppLogger.info(`[GPS] Timeout, retrying (${retryCount}/${maxRetries})...`);
+                    if (window.AppLogger) AppLogger.info(`[GPS] Web timeout, retrying (${retryCount}/${maxRetries})...`);
                     statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_retrying || '위치 재탐색 중...'} (${retryCount}/${maxRetries})</span>`;
                     navigator.geolocation.getCurrentPosition(
                         () => {
                             statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
-                            if (window.AppLogger) AppLogger.info('[GPS] Location acquired on retry');
+                            if (window.AppLogger) AppLogger.info('[GPS] Web location acquired on retry');
                         },
                         (retryErr) => {
                             if (retryErr.code === retryErr.TIMEOUT && retryCount < maxRetries) {
@@ -1566,7 +1689,6 @@ async function toggleGPS() {
                 errMsg = lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.';
                 gpsToggle.checked = false;
                 if (window.AppLogger) AppLogger.error(`[GPS] Permission denied: ${error.message}`);
-                // 권한 거부 → 설정 이동 확인
                 statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
                 const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
                 if (confirm(confirmMsg)) {
