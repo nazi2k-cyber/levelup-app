@@ -151,16 +151,24 @@ jobs:
         run: |
           MAIN_ACTIVITY="android/app/src/main/java/com/levelup/reboot/MainActivity.java"
 
-          # import 문 추가
-          if ! grep -q "AppSettingsPlugin" "$MAIN_ACTIVITY"; then
-            sed -i '/^import com.getcapacitor.BridgeActivity;/a\import com.levelup.reboot.plugins.AppSettingsPlugin;\nimport com.levelup.reboot.plugins.HealthConnectPlugin;' "$MAIN_ACTIVITY"
-            echo "✅ 플러그인 import 문 추가 완료"
-          fi
-
-          # onCreate에서 플러그인 등록
+          # Capacitor는 빈 클래스를 생성하므로 import + onCreate 포함 전체 파일 교체
           if ! grep -q "registerPlugin(AppSettingsPlugin" "$MAIN_ACTIVITY"; then
-            # onCreate 메서드 오버라이드 추가
-            sed -i '/public class MainActivity extends BridgeActivity/a\    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        registerPlugin(AppSettingsPlugin.class);\n        registerPlugin(HealthConnectPlugin.class);\n        super.onCreate(savedInstanceState);\n    }' "$MAIN_ACTIVITY"
+            cat > "$MAIN_ACTIVITY" << 'JAVAEOF'
+package com.levelup.reboot;
+
+import com.getcapacitor.BridgeActivity;
+import com.levelup.reboot.plugins.AppSettingsPlugin;
+import com.levelup.reboot.plugins.HealthConnectPlugin;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(android.os.Bundle savedInstanceState) {
+        registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(HealthConnectPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+JAVAEOF
             echo "✅ 플러그인 등록 (AppSettings, HealthConnect) 주입 완료"
           else
             echo "ℹ️ 플러그인 등록이 이미 존재합니다"
