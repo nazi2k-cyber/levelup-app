@@ -20,10 +20,8 @@ const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Google Fit 전용 provider (fitness scope 포함) - 동기화 활성화 시에만 사용
-const googleFitProvider = new GoogleAuthProvider();
-googleFitProvider.addScope('https://www.googleapis.com/auth/fitness.activity.read');
-googleFitProvider.setCustomParameters({ prompt: 'consent' });
+// Google Fit: 네이티브 앱 플러그인(Health Connect / Google Fit SDK)만 사용
+// REST API 폴백 제거됨 — 모든 건강 데이터는 네이티브 SDK를 통해 조회
 
 // --- 상태 관리 객체 ---
 function getWeekStartDate() {
@@ -1607,175 +1605,88 @@ async function toggleGPS() {
 
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
-    // 네이티브 Capacitor Geolocation 플러그인 사용 (Android)
-    if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation) {
-        const { Geolocation } = window.Capacitor.Plugins;
-        statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
-
-        try {
-            // 1단계: 네이티브 권한 요청
-            const permResult = await Geolocation.requestPermissions();
-            if (window.AppLogger) AppLogger.info('[GPS] Native permission result: ' + JSON.stringify(permResult));
-
-            if (permResult.location === 'denied') {
-                statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
-                gpsToggle.checked = false;
-                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
-                if (confirm(confirmMsg)) {
-                    openAppSettings();
-                }
-                return;
-            }
-
-            // 2단계: 네이티브 위치 획득
-            const position = await Geolocation.getCurrentPosition({
-                enableHighAccuracy: false,
-                timeout: 10000,
-                maximumAge: 300000
-            });
-
-            if (window.AppLogger) AppLogger.info(`[GPS] Native location: lat=${position.coords.latitude}, lng=${position.coords.longitude}`);
-            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
-            return;
-        } catch (e) {
-            if (window.AppLogger) AppLogger.error('[GPS] Native geolocation error: ' + (e.message || JSON.stringify(e)));
-
-            // 권한 거부 에러 처리
-            if (e.message && (e.message.includes('denied') || e.message.includes('permission'))) {
-                statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
-                gpsToggle.checked = false;
-                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
-                if (confirm(confirmMsg)) {
-                    openAppSettings();
-                }
-                return;
-            }
-
-            // 기타 에러 → Web API 폴백
-            if (window.AppLogger) AppLogger.info('[GPS] Falling back to Web Geolocation API');
-        }
-    }
-
-    // 웹 Geolocation API 폴백 (브라우저 또는 네이티브 실패 시)
-    if (!("geolocation" in navigator)) {
-        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_no_support || '위치 서비스를 지원하지 않는 기기입니다.'}</span>`;
+    // 네이티브 Capacitor Geolocation 플러그인만 사용 (앱 전용)
+    if (!isNative || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Geolocation) {
+        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_no_support || '위치 서비스를 지원하지 않는 환경입니다. 앱에서 이용해주세요.'}</span>`;
         gpsToggle.checked = false;
-        if (window.AppLogger) AppLogger.warn('[GPS] Geolocation API not supported');
+        if (window.AppLogger) AppLogger.warn('[GPS] Native Geolocation plugin not available');
         return;
     }
 
-    // 웹 환경: 권한 상태 사전 확인
-    if (navigator.permissions && navigator.permissions.query) {
-        try {
-            const permStatus = await navigator.permissions.query({ name: 'geolocation' });
-
-            if (permStatus.state === 'denied') {
-                if (window.AppLogger) AppLogger.info('[GPS] Permission already denied, redirecting to settings');
-                statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
-                gpsToggle.checked = false;
-                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
-                if (confirm(confirmMsg)) {
-                    openAppSettings();
-                }
-                return;
-            }
-        } catch (e) {
-            if (window.AppLogger) AppLogger.info('[GPS] Permissions API not available, proceeding with geolocation request');
-        }
-    }
-
+    const { Geolocation } = window.Capacitor.Plugins;
     statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
 
-    const geoOptions = {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 300000
-    };
+    try {
+        // 1단계: 네이티브 권한 요청
+        const permResult = await Geolocation.requestPermissions();
+        if (window.AppLogger) AppLogger.info('[GPS] Native permission result: ' + JSON.stringify(permResult));
 
-    let retryCount = 0;
-    const maxRetries = 2;
+        if (permResult.location === 'denied') {
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
+            gpsToggle.checked = false;
+            const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
+            if (confirm(confirmMsg)) {
+                openAppSettings();
+            }
+            return;
+        }
 
-    function attemptGeoLocation() {
-        navigator.geolocation.getCurrentPosition(
-            () => {
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
-                if (window.AppLogger) AppLogger.info('[GPS] Location acquired successfully');
-            },
-            (error) => {
-                if (error.code === error.TIMEOUT && retryCount < maxRetries) {
-                    retryCount++;
-                    if (window.AppLogger) AppLogger.info(`[GPS] Timeout, retrying (${retryCount}/${maxRetries})...`);
-                    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_retrying || '위치 재탐색 중...'} (${retryCount}/${maxRetries})</span>`;
-                    navigator.geolocation.getCurrentPosition(
-                        () => {
-                            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
-                            if (window.AppLogger) AppLogger.info('[GPS] Location acquired on retry');
-                        },
-                        (retryErr) => {
-                            if (retryErr.code === retryErr.TIMEOUT && retryCount < maxRetries) {
-                                retryCount++;
-                                attemptGeoLocation();
-                            } else {
-                                handleGeoError(retryErr);
-                            }
-                        },
-                        { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 }
-                    );
-                    return;
-                }
-                handleGeoError(error);
-            },
-            geoOptions
-        );
-    }
+        // 2단계: 네이티브 위치 획득
+        const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 300000
+        });
 
-    function handleGeoError(error) {
-        let errMsg;
-        switch (error.code) {
-            case error.PERMISSION_DENIED:
-                errMsg = lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.';
-                gpsToggle.checked = false;
-                if (window.AppLogger) AppLogger.error(`[GPS] Permission denied: ${error.message}`);
-                statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
-                const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
-                if (confirm(confirmMsg)) {
-                    openAppSettings();
-                }
-                return;
-            case error.POSITION_UNAVAILABLE:
-                errMsg = lang.gps_unavailable || '위치 정보를 사용할 수 없습니다. GPS 신호를 확인해주세요.';
-                break;
-            case error.TIMEOUT:
-                errMsg = lang.gps_timeout || '위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.';
-                break;
-            default:
-                errMsg = lang.gps_err || '위치 정보 오류';
-                break;
+        if (window.AppLogger) AppLogger.info(`[GPS] Native location: lat=${position.coords.latitude}, lng=${position.coords.longitude}`);
+        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.error('[GPS] Native geolocation error: ' + (e.message || JSON.stringify(e)));
+
+        if (e.message && (e.message.includes('denied') || e.message.includes('permission'))) {
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
+            gpsToggle.checked = false;
+            const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
+            if (confirm(confirmMsg)) {
+                openAppSettings();
+            }
+            return;
+        }
+
+        // 기타 에러 (타임아웃, GPS 신호 없음 등)
+        let errMsg = lang.gps_err || '위치 정보 오류';
+        if (e.message && e.message.includes('timeout')) {
+            errMsg = lang.gps_timeout || '위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.';
         }
         statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
         gpsToggle.checked = false;
-        if (window.AppLogger) AppLogger.error(`[GPS] Error code=${error.code}: ${error.message}`);
     }
-
-    attemptGeoLocation();
 }
 
 async function toggleHealthSync() {
     const toggle = document.getElementById('sync-toggle');
     const statusDiv = document.getElementById('sync-status');
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
     if (toggle.checked) {
-        // Google Fit 토큰이 없으면 fitness scope 권한 요청
-        if (!localStorage.getItem('gfit_token')) {
+        // 네이티브 앱 환경 확인
+        if (!isNative) {
+            toggle.checked = false;
             statusDiv.style.display = 'flex';
-            statusDiv.innerHTML = `<span style="color:var(--text-sub);">Google Fit 권한 요청 중...</span>`;
-            const granted = await requestFitnessScope();
-            if (!granted) {
-                toggle.checked = false;
-                statusDiv.innerHTML = `<span style="color:var(--neon-red);">Google Fit 권한이 필요합니다.</span>`;
-                return;
-            }
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 동기화는 앱에서만 사용 가능합니다.</span>`;
+            return;
         }
+
+        // 네이티브 건강 데이터 권한 요청 (Health Connect / Google Fit SDK)
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">건강 데이터 권한 요청 중...</span>`;
+        const granted = await requestFitnessScope();
+        if (!granted) {
+            toggle.checked = false;
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 권한이 필요합니다.</span>`;
+            return;
+        }
+
         AppState.user.syncEnabled = true;
         saveUserData();
         syncHealthData(true);
@@ -1787,45 +1698,38 @@ async function toggleHealthSync() {
     }
 }
 
-// Google Fit fitness scope를 별도로 요청하는 함수
+// 네이티브 건강 데이터 권한 요청 (Health Connect → Google Fit SDK 순서)
 async function requestFitnessScope() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return false;
 
-    if (isNative) {
-        try {
-            const { GoogleAuth } = window.Capacitor.Plugins;
-            if (!GoogleAuth) return false;
-            await GoogleAuth.initialize({
-                clientId: '233040099152-htr1tnuqmpadikjvj9hbitf4tuh0ako5.apps.googleusercontent.com',
-                scopes: ['profile', 'email', 'https://www.googleapis.com/auth/fitness.activity.read'],
-                grantOfflineAccess: true
-            });
-            const googleUser = await GoogleAuth.signIn();
-            const accessToken = googleUser.authentication.accessToken;
-            if (accessToken) {
-                localStorage.setItem('gfit_token', accessToken);
+    try {
+        // 1단계: Health Connect 권한 시도
+        const { HealthConnect } = window.Capacitor.Plugins;
+        if (HealthConnect) {
+            const availability = await HealthConnect.isAvailable();
+            if (availability.available) {
+                await HealthConnect.requestPermissions();
+                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료');
                 return true;
             }
-            return false;
-        } catch (e) {
-            const errCode = String(e.code || (e.error && e.error.code) || '');
-            if (errCode === '12501') return false; // 사용자 취소
-            AppLogger.error('Google Fit 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
-            return false;
         }
-    } else {
-        try {
-            const result = await signInWithPopup(auth, googleFitProvider);
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            if (credential?.accessToken) {
-                localStorage.setItem('gfit_token', credential.accessToken);
-                return true;
-            }
-            return false;
-        } catch (e) {
-            console.error('Google Fit 권한 요청 실패:', e);
-            return false;
+
+        // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (GoogleFit) {
+            await GoogleFit.requestPermissions();
+            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
+            return true;
         }
+
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 건강 데이터 플러그인을 찾을 수 없음');
+        return false;
+    } catch (e) {
+        const errCode = String(e.code || (e.error && e.error.code) || '');
+        if (errCode === '12501') return false; // 사용자 취소
+        AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
+        return false;
     }
 }
 
@@ -1933,53 +1837,11 @@ async function syncHealthData(showMsg = false) {
         }
     }
 
+    // 네이티브 SDK에서 데이터를 가져오지 못한 경우
     if (dataSource === 'none') {
-        // 3단계: Google Fit REST API 폴백
-        const token = localStorage.getItem('gfit_token');
-        if (!token) {
-            if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">권한 없음. 다시 로그인 필요</span>`;
-            AppState.user.syncEnabled = false;
-            document.getElementById('sync-toggle').checked = false;
-            saveUserData();
-            return;
-        }
-
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const endOfDay = now.getTime();
-
-        try {
-            const response = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    aggregateBy: [{ dataTypeName: 'com.google.step_count.delta', dataSourceId: 'derived:com.google.step_count.delta:com.google.android.gms:estimated_steps' }],
-                    bucketByTime: { durationMillis: 86400000 },
-                    startTimeMillis: startOfDay,
-                    endTimeMillis: endOfDay
-                })
-            });
-
-            if (!response.ok) throw new Error("구글 인증 토큰 만료");
-
-            const data = await response.json();
-
-            if (data.bucket && data.bucket.length > 0) {
-                data.bucket.forEach(b => {
-                    if (b.dataset && b.dataset[0] && b.dataset[0].point) {
-                        b.dataset[0].point.forEach(p => {
-                            totalStepsToday += p.value[0].intVal;
-                        });
-                    }
-                });
-            }
-            dataSource = 'google_fit_rest';
-        } catch (error) {
-            console.error("동기화 에러:", error);
-            if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">동기화 실패. 구글 재로그인 필요.</span>`;
-            document.getElementById('sync-toggle').checked = false;
-            AppState.user.syncEnabled = false;
-            return;
-        }
+        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
+        return;
     }
 
     // 보상 계산
