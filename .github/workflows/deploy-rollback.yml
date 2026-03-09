@@ -150,12 +150,14 @@ package com.levelup.reboot;
 
 import com.getcapacitor.BridgeActivity;
 import com.levelup.reboot.plugins.AppSettingsPlugin;
+import com.levelup.reboot.plugins.GoogleFitPlugin;
 import com.levelup.reboot.plugins.HealthConnectPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(android.os.Bundle savedInstanceState) {
         registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(GoogleFitPlugin.class);
         registerPlugin(HealthConnectPlugin.class);
         super.onCreate(savedInstanceState);
     }
@@ -167,6 +169,12 @@ JAVAEOF
           # === Health Connect Gradle 의존성 ===
           if ! grep -q "health.connect" "$BUILD_GRADLE"; then
             sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.0.0-alpha11"' "$BUILD_GRADLE"
+          fi
+
+          # === Google Fit SDK 의존성 (Health Connect 미지원 기기용) ===
+          if ! grep -q "play-services-fitness" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-fitness:21.2.0"' "$BUILD_GRADLE"
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-auth:21.3.0"' "$BUILD_GRADLE"
           fi
           if grep -q "compileSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "compileSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
             sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
@@ -418,12 +426,14 @@ package com.levelup.reboot;
 
 import com.getcapacitor.BridgeActivity;
 import com.levelup.reboot.plugins.AppSettingsPlugin;
+import com.levelup.reboot.plugins.GoogleFitPlugin;
 import com.levelup.reboot.plugins.HealthConnectPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(android.os.Bundle savedInstanceState) {
         registerPlugin(AppSettingsPlugin.class);
+        registerPlugin(GoogleFitPlugin.class);
         registerPlugin(HealthConnectPlugin.class);
         super.onCreate(savedInstanceState);
     }
@@ -434,6 +444,12 @@ JAVAEOF
           # Health Connect 의존성
           if ! grep -q "health.connect" "$BUILD_GRADLE"; then
             sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.0.0-alpha11"' "$BUILD_GRADLE"
+          fi
+
+          # Google Fit SDK 의존성 (Health Connect 미지원 기기용)
+          if ! grep -q "play-services-fitness" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-fitness:21.2.0"' "$BUILD_GRADLE"
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-auth:21.3.0"' "$BUILD_GRADLE"
           fi
           if grep -q "compileSdk\s*=\s*3[0-3]" "$BUILD_GRADLE" || grep -q "compileSdkVersion\s*3[0-3]" "$BUILD_GRADLE"; then
             sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
