@@ -55,6 +55,10 @@ jobs:
         run: |
           mkdir -p www
           cp index.html app.js style.css data.js logger.js www/
+          # 추가 웹 파일 복사 (존재하는 경우만)
+          for f in ads.txt privacy.html terms.html usage-policy.html; do
+            [ -f "$f" ] && cp "$f" www/ && echo "  ✅ $f 복사됨"
+          done
 
       # 6-1. Google OAuth Web Client ID를 capacitor.config.json에 주입
       - name: Google Web Client ID 주입
@@ -202,8 +206,10 @@ JAVAEOF
           fi
 
           # Google Fit SDK 라이브러리 추가 (네이티브 피트니스 데이터 접근)
+          # 주의: sed a\ 명령에서 \n은 리터럴로 처리되므로 두 번으로 분리
           if ! grep -q "play-services-fitness" "$BUILD_GRADLE"; then
-            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-fitness:21.2.0"\n    implementation "com.google.android.gms:play-services-auth:21.3.0"' "$BUILD_GRADLE"
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-fitness:21.2.0"' "$BUILD_GRADLE"
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-auth:21.3.0"' "$BUILD_GRADLE"
             echo "✅ Google Fit SDK 의존성 추가 완료"
           else
             echo "ℹ️ Google Fit SDK 의존성이 이미 존재합니다"
