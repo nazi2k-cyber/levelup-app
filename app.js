@@ -409,6 +409,21 @@ function renderCalendar() {
 // --- 던전 로직 ---
 let raidTimerInterval = null;
 
+// Haversine 공식: 두 GPS 좌표 간 거리(km) 계산
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371; // 지구 반지름 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 테스트용: 던전 위치를 발산역(index 5)으로 고정, 반경 2km
+const DUNGEON_FIXED_STATION_IDX = 5; // 발산역
+const DUNGEON_RADIUS_KM = 2;
+
 function getFixedDungeonData(dateStr, slot) {
     const seedStr = dateStr + "_slot" + slot;
     let hash = 0;
@@ -417,44 +432,23 @@ function getFixedDungeonData(dateStr, slot) {
     }
     hash = Math.abs(hash);
     return {
-        stationIdx: hash % seoulStations.length,
+        stationIdx: DUNGEON_FIXED_STATION_IDX, // 테스트: 발산역 고정
         targetStat: statKeys[hash % statKeys.length]
     };
 }
 
 function startRaidTimer() {
     if(raidTimerInterval) clearInterval(raidTimerInterval);
-    
-    raidTimerInterval = setInterval(() => {
-        const timerEl = document.getElementById('raid-timer');
-        if(!timerEl || AppState.dungeon.slot === 0) return;
 
-        const now = new Date();
-        let endHour = 0;
-
-        if (AppState.dungeon.slot === 1) endHour = 9;
-        else if (AppState.dungeon.slot === 2) endHour = 14;
-        else if (AppState.dungeon.slot === 3) endHour = 21;
-
-        const endTime = new Date(now);
-        endTime.setHours(endHour, 0, 0, 0);
-
-        const diff = endTime.getTime() - now.getTime();
-
-        if (diff <= 0) {
-            timerEl.innerText = "00:00:00";
-            updateDungeonStatus(); 
-        } else {
-            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((diff % (1000 * 60)) / 1000);
-            timerEl.innerText = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        }
-    }, 1000);
+    // 테스트: 시간 제한 해제 — 타이머 대신 상시 개방 표시
+    const timerEl = document.getElementById('raid-timer');
+    if (timerEl) {
+        timerEl.innerText = "상시 개방";
+    }
 }
 
 window.syncGlobalDungeon = async () => {
-    if (AppState.dungeon.slot === 0 || !auth.currentUser) return;
+    if (!auth.currentUser) return;
     try {
         const snap = await getDocs(collection(db, "users"));
         let realParticipants = 0;
@@ -489,43 +483,31 @@ window.syncGlobalDungeon = async () => {
 
 function updateDungeonStatus() {
     const now = new Date();
-    const h = now.getHours();
-    const m = now.getMinutes();
-    const timeVal = h + m / 60;
-    
-    let currentSlot = 0;
-    if (timeVal >= 6 && timeVal < 9) currentSlot = 1; 
-    else if (timeVal >= 11 && timeVal < 14) currentSlot = 2; 
-    else if (timeVal >= 18 && timeVal < 21) currentSlot = 3;
 
-    const dateStr = now.toDateString(); 
+    // 테스트: 시간 제한 해제 — 항상 슬롯 1 (상시 활성)
+    const currentSlot = 1;
+
+    const dateStr = now.toDateString();
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
-        AppState.dungeon.lastGeneratedDate = dateStr; 
+        AppState.dungeon.lastGeneratedDate = dateStr;
         AppState.dungeon.slot = currentSlot;
-        
-        if (currentSlot > 0) { 
-            const fixedData = getFixedDungeonData(dateStr, currentSlot);
-            AppState.dungeon.stationIdx = fixedData.stationIdx;
-            AppState.dungeon.targetStat = fixedData.targetStat;
-            
-            AppState.dungeon.maxParticipants = 5; 
-            
-            AppState.dungeon.isJoined = false; 
-            AppState.dungeon.hasContributed = false;
-            AppState.dungeon.isCleared = false; 
-            
-            AppState.dungeon.globalParticipants = 0;
-            AppState.dungeon.globalProgress = 0;
-        } else {
-            AppState.dungeon.isJoined = false;
-        }
+
+        const fixedData = getFixedDungeonData(dateStr, currentSlot);
+        AppState.dungeon.stationIdx = fixedData.stationIdx;
+        AppState.dungeon.targetStat = fixedData.targetStat;
+
+        AppState.dungeon.maxParticipants = 5;
+
+        AppState.dungeon.isJoined = false;
+        AppState.dungeon.hasContributed = false;
+        AppState.dungeon.isCleared = false;
+
+        AppState.dungeon.globalParticipants = 0;
+        AppState.dungeon.globalProgress = 0;
         saveUserData();
     }
     renderDungeon();
-    
-    if (currentSlot > 0) {
-        window.syncGlobalDungeon();
-    }
+    window.syncGlobalDungeon();
 }
 
 function renderDungeon() {
@@ -536,11 +518,10 @@ function renderDungeon() {
 
     if (AppState.dungeon.slot === 0) {
         if(timer) timer.classList.add('d-none');
-        activeBoard.classList.add('d-none'); 
+        activeBoard.classList.add('d-none');
         banner.classList.remove('d-none');
-        
-        const timeStr = AppState.currentLang === 'ko' ? "출현 시간: 06:00~09:00 | 11:00~14:00 | 18:00~21:00" : "Open: 06:00~09:00 | 11:00~14:00 | 18:00~21:00";
-        banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3><p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px;">${timeStr}</p>`;
+
+        banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3>`;
     } else {
         const m = raidMissions[AppState.dungeon.targetStat];
         const st = seoulStations[AppState.dungeon.stationIdx];
@@ -564,8 +545,9 @@ function renderDungeon() {
                     <iframe src="${mapUrl}" style="width:100%; height:100%; border:none;" allowfullscreen="" loading="lazy"></iframe>
                 </div>
                 <p style="font-size: 0.8rem; margin-bottom: 5px; color:var(--text-main); word-break:keep-all;">${m.desc1[AppState.currentLang]}</p>
+                <p style="font-size: 0.75rem; margin-bottom: 8px; color:var(--neon-gold); word-break:keep-all;">⚠️ ${st.name[AppState.currentLang]} 반경 ${DUNGEON_RADIUS_KM}km 이내 GPS 위치 확인 필요</p>
                 <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">
-                    ${i18n[AppState.currentLang].raid_part} 
+                    ${i18n[AppState.currentLang].raid_part}
                     <span class="text-blue">${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}</span> 명
                 </div>
                 ${joinBtnHtml}
@@ -626,9 +608,51 @@ window.joinDungeon = async () => {
         alert("이미 정원이 초과되었습니다.");
         return;
     }
+
+    // GPS 위치 확인: 던전 역 반경 2km 이내만 입장 가능
+    const station = seoulStations[AppState.dungeon.stationIdx];
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    if (!isNative || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Geolocation) {
+        alert("위치 서비스를 사용할 수 없습니다. 앱에서 GPS를 활성화해주세요.");
+        return;
+    }
+
+    try {
+        const { Geolocation } = window.Capacitor.Plugins;
+        const permResult = await Geolocation.requestPermissions();
+        if (permResult.location === 'denied') {
+            alert("위치 권한이 거부되었습니다. 설정에서 위치 권한을 허용해주세요.");
+            return;
+        }
+
+        const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+        });
+
+        const dist = getDistanceKm(
+            position.coords.latitude, position.coords.longitude,
+            station.lat, station.lng
+        );
+
+        if (dist > DUNGEON_RADIUS_KM) {
+            const stName = station.name[AppState.currentLang] || station.name.ko;
+            alert(`[입장 불가] ${stName} 반경 ${DUNGEON_RADIUS_KM}km 이내에서만 입장 가능합니다.\n현재 거리: ${dist.toFixed(1)}km`);
+            return;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[Dungeon] GPS 확인 완료 - 거리: ${dist.toFixed(2)}km`);
+    } catch (e) {
+        if (window.AppLogger) AppLogger.error('[Dungeon] GPS 확인 실패: ' + (e.message || JSON.stringify(e)));
+        alert("위치 정보를 가져올 수 없습니다. GPS를 확인해주세요.");
+        return;
+    }
+
     AppState.dungeon.isJoined = true;
-    await saveUserData(); 
-    await window.syncGlobalDungeon(); 
+    await saveUserData();
+    await window.syncGlobalDungeon();
 };
 
 window.simulateRaidAction = async () => {

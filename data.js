@@ -151,7 +151,8 @@ const seoulStations = [
     { name: {ko: "홍대입구역", en: "Hongdae Stn", ja: "弘大入口駅"}, lat: 37.5568, lng: 126.9242 },
     { name: {ko: "잠실역", en: "Jamsil Stn", ja: "蚕室駅"}, lat: 37.5133, lng: 127.1001 },
     { name: {ko: "여의도역", en: "Yeouido Stn", ja: "汝矣島駅"}, lat: 37.5216, lng: 126.9241 },
-    { name: {ko: "신도림역", en: "Sindorim Stn", ja: "新道林駅"}, lat: 37.5088, lng: 126.8912 }
+    { name: {ko: "신도림역", en: "Sindorim Stn", ja: "新道林駅"}, lat: 37.5088, lng: 126.8912 },
+    { name: {ko: "발산역", en: "Balsan Stn", ja: "鉢山駅"}, lat: 37.5583, lng: 126.8384 }
 ];
 
 const raidMissions = {
