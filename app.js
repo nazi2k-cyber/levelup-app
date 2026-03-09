@@ -1119,7 +1119,8 @@ function openTitleModal() {
 function openStatusInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
     const body = document.getElementById('info-modal-body');
-    let html = `<table class="info-table"><thead><tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_desc}</th></tr></thead><tbody>`;
+    let html = `<p style="font-size:0.75rem; color:var(--neon-gold); margin:0 0 8px 0;">${i18n[AppState.currentLang].stat_hint}</p>`;
+    html += `<table class="info-table"><thead><tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_desc}</th></tr></thead><tbody>`;
     statKeys.forEach(k => { 
         html += `<tr><td style="text-align:center"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${k.toUpperCase()}</span><br><b style="font-size:0.75rem; color:var(--text-main); display:inline-block; margin-top:3px;">${i18n[AppState.currentLang][k]}</b></td><td style="color:var(--text-sub); line-height:1.5;">${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; 
     });
@@ -1134,7 +1135,8 @@ function openQuestInfoModal() {
     const body = document.getElementById('info-modal-body');
     const dayNames = { ko: ["일","월","화","수","목","금","토"], en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja: ["日","月","火","水","木","金","土"] };
     
-    let html = `<table class="info-table">
+    let html = `<p style="font-size:0.75rem; color:var(--neon-gold); margin:0 0 8px 0;">${i18n[AppState.currentLang].quest_hint}</p>`;
+    html += `<table class="info-table">
         <thead>
             <tr>
                 <th>${i18n[AppState.currentLang].th_day}</th>
