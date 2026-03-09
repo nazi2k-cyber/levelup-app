@@ -1,8 +1,13 @@
 package com.levelup.reboot.plugins;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
+
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -30,25 +35,15 @@ import java.util.concurrent.TimeUnit;
 /**
  * Capacitor 커스텀 플러그인: Google Fit Android SDK를 통한 걸음 수 조회
  *
- * - REST API 대신 네이티브 Google Fit SDK (History API)를 사용
- * - Health Connect가 사용 불가한 기기에서 걸음 수 데이터를 직접 읽음
- * - Google Sign-In 계정의 fitness scope를 기반으로 데이터 접근
- * - handleOnActivityResult로 권한 요청 결과를 올바르게 처리
- *
- * 사용법 (app.js에서):
- *   const { GoogleFit } = Capacitor.Plugins;
- *   const result = await GoogleFit.getTodaySteps();
- *
- * 등록 (MainActivity.java에서 - GitHub Actions에서 자동 주입):
- *   import com.levelup.reboot.plugins.GoogleFitPlugin;
- *   this.registerPlugin(GoogleFitPlugin.class);
+ * - Android 10+ 에서 ACTIVITY_RECOGNITION 런타임 권한을 먼저 요청 후 Google Fit OAuth 진행
+ * - 권한 미승인 시 fallbackToRest: true 반환 → app.js에서 REST API 폴백 처리
  */
 @CapacitorPlugin(name = "GoogleFit")
 public class GoogleFitPlugin extends Plugin {
     private static final String TAG = "GoogleFitPlugin";
     private static final int GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1001;
+    private static final int ACTIVITY_RECOGNITION_REQUEST_CODE = 1002;
 
-    // 권한 요청 결과를 처리하기 위해 PluginCall을 저장
     private PluginCall savedPermissionsCall = null;
 
     private FitnessOptions getFitnessOptions() {
@@ -58,17 +53,19 @@ public class GoogleFitPlugin extends Plugin {
                 .build();
     }
 
-    /**
-     * Google Fit SDK 사용 가능 여부 확인
-     * - Google Play Services 및 Google 계정 로그인 상태 확인
-     */
+    /** ACTIVITY_RECOGNITION 런타임 권한 승인 여부 확인 */
+    private boolean hasActivityRecognitionPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true;
+        return ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACTIVITY_RECOGNITION)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Google Fit SDK 사용 가능 여부 확인 */
     @PluginMethod()
     public void isAvailable(PluginCall call) {
         JSObject result = new JSObject();
         try {
-            FitnessOptions fitnessOptions = getFitnessOptions();
             GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(getContext());
-
             if (account == null) {
                 result.put("available", false);
                 result.put("hasPermissions", false);
@@ -76,10 +73,11 @@ public class GoogleFitPlugin extends Plugin {
                 call.resolve(result);
                 return;
             }
-
-            boolean hasPermissions = GoogleSignIn.hasPermissions(account, fitnessOptions);
+            boolean hasOAuth = GoogleSignIn.hasPermissions(account, getFitnessOptions());
+            boolean hasAR = hasActivityRecognitionPermission();
             result.put("available", true);
-            result.put("hasPermissions", hasPermissions);
+            result.put("hasPermissions", hasOAuth && hasAR);
+            result.put("hasActivityRecognition", hasAR);
             result.put("accountEmail", account.getEmail() != null ? account.getEmail() : "");
         } catch (Exception e) {
             Log.w(TAG, "Google Fit SDK 확인 실패: " + e.getMessage());
@@ -92,11 +90,52 @@ public class GoogleFitPlugin extends Plugin {
 
     /**
      * Google Fit 권한 요청
-     * - fitness.activity.read scope에 대한 OAuth 동의 화면 표시
-     * - 결과는 handleOnActivityResult에서 처리
+     * 1단계: ACTIVITY_RECOGNITION 런타임 권한 (Android 10+)
+     * 2단계: Google Fit OAuth 동의 화면
      */
     @PluginMethod()
     public void requestPermissions(PluginCall call) {
+        // 1단계: ACTIVITY_RECOGNITION 런타임 권한이 없으면 먼저 요청
+        if (!hasActivityRecognitionPermission()) {
+            call.setKeepAlive(true);
+            savedPermissionsCall = call;
+            pluginRequestPermissions(
+                    new String[]{Manifest.permission.ACTIVITY_RECOGNITION},
+                    ACTIVITY_RECOGNITION_REQUEST_CODE
+            );
+            return;
+        }
+        // 이미 권한 있음 → Google Fit OAuth 진행
+        requestGoogleFitOAuth(call);
+    }
+
+    /**
+     * ACTIVITY_RECOGNITION 권한 요청 결과 처리 후 Google Fit OAuth로 이어서 진행
+     */
+    @Override
+    protected void handleRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.handleRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == ACTIVITY_RECOGNITION_REQUEST_CODE && savedPermissionsCall != null) {
+            boolean granted = grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+
+            if (granted) {
+                Log.i(TAG, "ACTIVITY_RECOGNITION 권한 승인됨 → Google Fit OAuth 진행");
+                requestGoogleFitOAuth(savedPermissionsCall);
+            } else {
+                Log.w(TAG, "ACTIVITY_RECOGNITION 권한 거부됨");
+                JSObject result = new JSObject();
+                result.put("granted", false);
+                result.put("reason", "ACTIVITY_RECOGNITION 권한이 거부되었습니다. 앱 설정에서 허용해 주세요.");
+                savedPermissionsCall.resolve(result);
+                savedPermissionsCall = null;
+            }
+        }
+    }
+
+    /** Google Fit OAuth 동의 화면 표시 */
+    private void requestGoogleFitOAuth(PluginCall call) {
         try {
             FitnessOptions fitnessOptions = getFitnessOptions();
             GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(getContext());
@@ -106,6 +145,7 @@ public class GoogleFitPlugin extends Plugin {
                 result.put("granted", false);
                 result.put("reason", "Google 계정에 로그인되어 있지 않습니다. 먼저 로그인해 주세요.");
                 call.resolve(result);
+                savedPermissionsCall = null;
                 return;
             }
 
@@ -114,30 +154,26 @@ public class GoogleFitPlugin extends Plugin {
                 result.put("granted", true);
                 result.put("message", "이미 Google Fit 권한이 부여되어 있습니다.");
                 call.resolve(result);
+                savedPermissionsCall = null;
                 return;
             }
 
-            // PluginCall을 저장하여 onActivityResult에서 결과 반환
             call.setKeepAlive(true);
             savedPermissionsCall = call;
-
-            // Google Fit 권한 요청 다이얼로그 표시
             GoogleSignIn.requestPermissions(
                     getActivity(),
                     GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
                     account,
                     fitnessOptions
             );
-
         } catch (Exception e) {
-            Log.e(TAG, "Google Fit 권한 요청 실패: " + e.getMessage());
+            Log.e(TAG, "Google Fit OAuth 요청 실패: " + e.getMessage());
             call.reject("Google Fit 권한 요청 실패: " + e.getMessage());
+            savedPermissionsCall = null;
         }
     }
 
-    /**
-     * Activity 결과 처리 (권한 요청 결과 수신)
-     */
+    /** Google Fit OAuth 결과 처리 */
     @Override
     protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
         super.handleOnActivityResult(requestCode, resultCode, data);
@@ -150,24 +186,36 @@ public class GoogleFitPlugin extends Plugin {
             if (resultCode == Activity.RESULT_OK) {
                 result.put("granted", true);
                 result.put("message", "Google Fit 권한이 부여되었습니다.");
-                Log.i(TAG, "Google Fit 권한 부여 완료");
+                Log.i(TAG, "Google Fit OAuth 승인 완료");
             } else {
                 result.put("granted", false);
                 result.put("message", "Google Fit 권한 요청이 거부되었습니다.");
-                Log.w(TAG, "Google Fit 권한 거부됨 (resultCode=" + resultCode + ")");
+                Log.w(TAG, "Google Fit OAuth 거부됨 (resultCode=" + resultCode + ")");
             }
             call.resolve(result);
         }
     }
 
     /**
-     * 오늘의 걸음 수 데이터 조회 (Google Fit History API)
-     * - 오늘 자정부터 현재까지의 총 걸음 수를 집계하여 반환
+     * 오늘의 걸음 수 조회 (Google Fit History API)
+     * ACTIVITY_RECOGNITION 권한 또는 OAuth 미승인 시 fallbackToRest: true 반환
      */
     @PluginMethod()
     public void getTodaySteps(PluginCall call) {
         new Thread(() -> {
             try {
+                // ACTIVITY_RECOGNITION 런타임 권한 확인
+                if (!hasActivityRecognitionPermission()) {
+                    JSObject result = new JSObject();
+                    result.put("steps", 0);
+                    result.put("available", false);
+                    result.put("needsPermission", true);
+                    result.put("missingPermission", "ACTIVITY_RECOGNITION");
+                    result.put("fallbackToRest", true);
+                    call.resolve(result);
+                    return;
+                }
+
                 FitnessOptions fitnessOptions = getFitnessOptions();
                 GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(getContext());
 
@@ -181,7 +229,6 @@ public class GoogleFitPlugin extends Plugin {
                     return;
                 }
 
-                // 오늘 자정부터 현재까지
                 LocalDate today = LocalDate.now();
                 long startOfDay = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
                 long now = System.currentTimeMillis();
