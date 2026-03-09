@@ -420,7 +420,7 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 테스트용: 던전 위치를 발산역(index 5)으로 고정, 반경 2km
+// 던전 위치: 발산역(index 5) 고정, 반경 2km
 const DUNGEON_FIXED_STATION_IDX = 5; // 발산역
 const DUNGEON_RADIUS_KM = 2;
 
@@ -432,7 +432,7 @@ function getFixedDungeonData(dateStr, slot) {
     }
     hash = Math.abs(hash);
     return {
-        stationIdx: DUNGEON_FIXED_STATION_IDX, // 테스트: 발산역 고정
+        stationIdx: DUNGEON_FIXED_STATION_IDX, // 발산역 고정
         targetStat: statKeys[hash % statKeys.length]
     };
 }
@@ -440,11 +440,33 @@ function getFixedDungeonData(dateStr, slot) {
 function startRaidTimer() {
     if(raidTimerInterval) clearInterval(raidTimerInterval);
 
-    // 테스트: 시간 제한 해제 — 타이머 대신 상시 개방 표시
     const timerEl = document.getElementById('raid-timer');
-    if (timerEl) {
-        timerEl.innerText = "상시 개방";
+    if (!timerEl) return;
+
+    function updateTimer() {
+        const now = new Date();
+        const kstOffset = 9 * 60;
+        const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+        const kstMinutes = (utcMinutes + kstOffset) % (24 * 60);
+        const kstHour = Math.floor(kstMinutes / 60);
+
+        if (kstHour >= 6) {
+            // 개방 중: 24:00(자정)까지 남은 시간 표시
+            const remainMin = (24 * 60) - kstMinutes;
+            const h = Math.floor(remainMin / 60);
+            const m = remainMin % 60;
+            timerEl.innerText = `마감까지 ${h}시간 ${m}분`;
+        } else {
+            // 비개방: 06:00까지 남은 시간 표시
+            const remainMin = (6 * 60) - kstMinutes;
+            const h = Math.floor(remainMin / 60);
+            const m = remainMin % 60;
+            timerEl.innerText = `개방까지 ${h}시간 ${m}분`;
+        }
     }
+
+    updateTimer();
+    raidTimerInterval = setInterval(updateTimer, 60000);
 }
 
 window.syncGlobalDungeon = async () => {
@@ -484,8 +506,14 @@ window.syncGlobalDungeon = async () => {
 function updateDungeonStatus() {
     const now = new Date();
 
-    // 테스트: 시간 제한 해제 — 항상 슬롯 1 (상시 활성)
-    const currentSlot = 1;
+    // 개방시간: 06:00~24:00 KST
+    const kstOffset = 9 * 60; // KST = UTC+9
+    const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const kstMinutes = (utcMinutes + kstOffset) % (24 * 60);
+    const kstHour = Math.floor(kstMinutes / 60);
+
+    // 06:00~24:00 → kstHour 6~23 (24:00은 다음날 00:00이므로 23시까지)
+    const currentSlot = (kstHour >= 6) ? 1 : 0;
 
     const dateStr = now.toDateString();
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
@@ -1140,7 +1168,7 @@ function openDungeonInfoModal() {
         <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:8px; border-radius:6px; margin-bottom:10px; text-align:center;">
             <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:3px;">🕒 던전 시스템 개방 시간 (KST)</div>
             <div style="font-weight:bold; color:var(--neon-blue); font-size:0.8rem; letter-spacing:0.5px;">
-                06:00~09:00  |  11:00~14:00  |  18:00~21:00
+                06:00 ~ 24:00
             </div>
         </div>
     `;
