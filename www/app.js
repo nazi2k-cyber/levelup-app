@@ -1,0 +1,1938 @@
+// --- Firebase SDK 초기화 ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
+    authDomain: "levelup-app-53d02.firebaseapp.com",
+    projectId: "levelup-app-53d02",
+    storageBucket: "levelup-app-53d02.firebasestorage.app",
+    messagingSenderId: "233040099152",
+    appId: "1:233040099152:web:82310514d26c8c6d52de55",
+    measurementId: "G-4DBGG03CCJ"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Google Fit: 네이티브 앱 플러그인(Health Connect / Google Fit SDK)만 사용
+// REST API 폴백 제거됨 — 모든 건강 데이터는 네이티브 SDK를 통해 조회
+
+// --- 상태 관리 객체 ---
+function getWeekStartDate() {
+    const today = new Date();
+    const day = today.getDay();
+    const start = new Date(today);
+    start.setDate(today.getDate() - day);
+    return `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
+}
+
+let AppState = getInitialAppState();
+
+function getInitialAppState() {
+    return {
+        isLoginMode: true,
+        currentLang: 'ko',
+        user: {
+            name: "신규 헌터",
+            level: 1,
+            points: 50,
+            stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+            pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+            titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
+            photoURL: null, 
+            friends: [],
+            syncEnabled: false,
+            gpsEnabled: false,
+            stepData: { date: "", rewardedSteps: 0 },
+            instaId: "" 
+        },
+        quest: {
+            currentDayOfWeek: new Date().getDay(),
+            completedState: Array.from({length: 7}, () => Array(12).fill(false)),
+            weekStart: getWeekStartDate()
+        },
+        social: { mode: 'global', sortCriteria: 'total', users: [] },
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false },
+    };
+}
+
+// --- 앱 초기 로드 ---
+let _initializedUid = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    bindEvents();
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            if (_initializedUid === user.uid) return; // 토큰 갱신 등 재발화 시 중복 초기화 방지
+            _initializedUid = user.uid;
+
+            AppLogger.info('[Auth] 로그인 감지: ' + (user.email || user.uid));
+            await loadUserDataFromDB(user);
+            document.getElementById('login-screen').classList.add('d-none');
+            document.getElementById('app-container').classList.remove('d-none');
+            document.getElementById('app-container').classList.add('d-flex');
+            const loginPanel = document.getElementById('login-log-panel');
+            if (loginPanel) loginPanel.style.display = 'none';
+
+            document.querySelector('main').style.overflowY = 'auto';
+
+            changeLanguage(AppState.currentLang);
+            renderCalendar();
+            updatePointUI();
+            drawRadarChart();
+            updateDungeonStatus();
+            startRaidTimer();
+            renderQuestList();
+            fetchSocialData();
+
+            if (AppState.user.syncEnabled) { syncHealthData(false); }
+        } else {
+            AppLogger.info('[Auth] 로그아웃 상태');
+            _initializedUid = null;
+            document.getElementById('login-screen').classList.remove('d-none');
+            document.getElementById('app-container').classList.add('d-none');
+            const loginPanel = document.getElementById('login-log-panel');
+            if (loginPanel) loginPanel.style.display = 'flex';
+        }
+    });
+
+    setInterval(() => {
+        updateDungeonStatus();
+        if(document.getElementById('dungeon').classList.contains('active')) {
+            window.syncGlobalDungeon();
+        }
+    }, 30000); 
+});
+
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.getElementById('theme-toggle').checked = true;
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+}
+
+function showEmailLoginFields() {
+    document.getElementById('login-pw').classList.remove('d-none');
+    document.getElementById('btn-login-submit').classList.remove('d-none');
+}
+
+function bindEvents() {
+    document.getElementById('btn-login-submit').addEventListener('click', simulateLogin);
+    document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
+    document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
+    document.getElementById('login-email').addEventListener('focus', showEmailLoginFields);
+    
+    document.querySelectorAll('.nav-item').forEach(el => { 
+        el.addEventListener('click', () => switchTab(el.dataset.tab, el)); 
+    });
+
+    document.getElementById('btn-edit-name').addEventListener('click', changePlayerName);
+    document.getElementById('btn-edit-insta').addEventListener('click', changeInstaId);
+    document.getElementById('imageUpload').addEventListener('change', loadProfileImage); 
+    
+    document.getElementById('prof-title-badge').addEventListener('click', openTitleModal);
+    document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
+    document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
+    document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
+    document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
+    document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
+
+    document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
+    document.querySelectorAll('.social-tab-btn').forEach(btn => { btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn)); });
+    document.querySelectorAll('.rank-tab-btn').forEach(btn => { btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn)); });
+
+    document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
+    document.getElementById('theme-toggle').addEventListener('change', changeTheme);
+    document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
+    document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
+    document.getElementById('btn-logout').addEventListener('click', logout);
+    
+    document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
+
+    // Planner tab
+    document.getElementById('btn-planner-save').addEventListener('click', savePlannerEntry);
+    document.getElementById('btn-add-task').addEventListener('click', window.addPlannerTask);
+    document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+    document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
+}
+
+// --- 데이터 저장/로드 ---
+async function saveUserData() {
+    if(!auth.currentUser) return;
+    try {
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
+            name: AppState.user.name,
+            stats: AppState.user.stats,
+            pendingStats: AppState.user.pendingStats,
+            level: AppState.user.level,
+            points: AppState.user.points,
+            titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
+            questStr: JSON.stringify(AppState.quest.completedState),
+            questWeekStart: AppState.quest.weekStart,
+            dungeonStr: JSON.stringify(AppState.dungeon),
+            friends: AppState.user.friends || [],
+            photoURL: AppState.user.photoURL || null,
+            syncEnabled: AppState.user.syncEnabled,
+            gpsEnabled: AppState.user.gpsEnabled,
+            stepData: AppState.user.stepData,
+            instaId: AppState.user.instaId || "",
+            diaryStr: localStorage.getItem('diary_entries') || '{}'
+        }, { merge: true });
+    } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
+}
+
+async function loadUserDataFromDB(user) {
+    try {
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if(data.stats) AppState.user.stats = data.stats;
+            if(data.level) AppState.user.level = data.level;
+            if(data.points) AppState.user.points = data.points;
+            if(data.titleHistoryStr) {
+                try { AppState.user.titleHistory = JSON.parse(data.titleHistoryStr); } catch(e) { AppState.user.titleHistory = [{level:1, title:{ko:"각성자"}}]; }
+            }
+            if(data.questStr) {
+                const savedWeek = data.questWeekStart || "";
+                if(savedWeek === getWeekStartDate()) {
+                    AppState.quest.completedState = JSON.parse(data.questStr);
+                }
+            }
+            if(data.dungeonStr) {
+                AppState.dungeon = JSON.parse(data.dungeonStr);
+                if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
+                if(AppState.dungeon.hasContributed === undefined) AppState.dungeon.hasContributed = false; 
+                AppState.dungeon.globalParticipants = 0;
+                AppState.dungeon.globalProgress = 0;
+            }
+            if(data.pendingStats) AppState.user.pendingStats = data.pendingStats;
+            if(data.friends) AppState.user.friends = data.friends;
+            if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
+            if(data.gpsEnabled !== undefined) AppState.user.gpsEnabled = data.gpsEnabled;
+            if(data.stepData) AppState.user.stepData = data.stepData;
+            if(data.instaId) AppState.user.instaId = data.instaId;
+            if(data.diaryStr) {
+                try {
+                    // 로컬 데이터가 더 최신일 수 있으므로 타임스탬프 기준으로 병합
+                    const dbDiaries = JSON.parse(data.diaryStr);
+                    let localDiaries = {};
+                    try { localDiaries = JSON.parse(localStorage.getItem('diary_entries') || '{}'); } catch(e) {}
+                    const merged = Object.assign({}, dbDiaries);
+                    Object.keys(localDiaries).forEach(d => {
+                        if (!merged[d] || (localDiaries[d].timestamp || 0) > (merged[d].timestamp || 0)) {
+                            merged[d] = localDiaries[d];
+                        }
+                    });
+                    localStorage.setItem('diary_entries', JSON.stringify(merged));
+                } catch(e) {}
+            }
+            document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
+            document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
+            AppState.user.name = data.name || user.displayName || "신규 헌터";
+            if(data.photoURL) {
+                AppState.user.photoURL = data.photoURL;
+                document.getElementById('profilePreview').src = data.photoURL;
+            }
+        }
+        loadPlayerName();
+    } catch(e) { console.error("데이터 로드 에러:", e); AppLogger.error('[DB] 데이터 로드 실패', e.stack || e.message); }
+}
+
+function loadPlayerName() { 
+    const nameEl = document.getElementById('prof-name');
+    if(nameEl) {
+        nameEl.textContent = AppState.user.name; 
+        nameEl.removeAttribute('data-i18n'); 
+    }
+}
+
+function changePlayerName() {
+    const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
+    if (newName && newName.trim() !== "") {
+        AppState.user.name = newName.trim();
+        loadPlayerName(); 
+        saveUserData().then(() => fetchSocialData());
+    }
+}
+
+function changeInstaId() {
+    const newId = prompt(i18n[AppState.currentLang].insta_prompt || "인스타 ID를 입력하세요", AppState.user.instaId);
+    if (newId !== null) { 
+        AppState.user.instaId = newId.trim().replace('@', ''); 
+        saveUserData().then(() => fetchSocialData());
+    }
+}
+
+// --- 스탯 레이더 ---
+function drawRadarChart() {
+    const centerX = 50, centerY = 50, radius = 33; 
+    const angles = []; 
+    for(let i=0; i<6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
+    
+    const gridGroup = document.getElementById('radarGrid'); 
+    const axesGroup = document.getElementById('radarAxes');
+    
+    if(gridGroup.innerHTML === '') { 
+        let gridHtml = ''; let axesHtml = '';
+        for (let level = 1; level <= 5; level++) {
+            const r = radius * (level / 5); let points = "";
+            for (let i = 0; i < 6; i++) points += `${centerX + r * Math.cos(angles[i])},${centerY + r * Math.sin(angles[i])} `;
+            gridHtml += `<polygon points="${points.trim()}" class="radar-bg-line"></polygon>`;
+        }
+        for (let i = 0; i < 6; i++) axesHtml += `<line x1="50" y1="50" x2="${centerX + radius * Math.cos(angles[i])}" y2="${centerY + radius * Math.sin(angles[i])}" class="radar-bg-line"></line>`;
+        gridGroup.innerHTML = gridHtml; axesGroup.innerHTML = axesHtml;
+    }
+    
+    const pointsGroup = document.getElementById('radarPoints'); 
+    const labelsGroup = document.getElementById('radarLabels');
+    let pointsHtml = ''; let labelsHtml = ''; let dataPoints = ""; let totalSum = 0;
+    
+    for (let i = 0; i < 6; i++) {
+        const key = statKeys[i]; 
+        const val = Number(AppState.user.stats[key]) || 0; 
+        totalSum += val;
+        
+        const r = radius * (val / 100); 
+        const x = centerX + r * Math.cos(angles[i]); 
+        const y = centerY + r * Math.sin(angles[i]);
+        dataPoints += `${x},${y} `; 
+        pointsHtml += `<circle cx="${x}" cy="${y}" r="1.2" class="radar-point"></circle>`;
+        
+        const labelRadius = radius + 9; 
+        const lx = centerX + labelRadius * Math.cos(angles[i]); 
+        const ly = centerY + labelRadius * Math.sin(angles[i]) + 2; 
+        let anchor = "middle"; 
+        if(i===1 || i===2) anchor = "start"; 
+        if(i===4 || i===5) anchor = "end";   
+        
+        labelsHtml += `<text x="${lx}" y="${ly - 3}" text-anchor="${anchor}" class="radar-label">${i18n[AppState.currentLang][key]}</text><text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" class="radar-value">${val}</text>`;
+    }
+    
+    pointsGroup.innerHTML = pointsHtml; 
+    labelsGroup.innerHTML = labelsHtml;
+    
+    const playerPolygon = document.getElementById('playerPolygon');
+    if(!playerPolygon.getAttribute('points')) playerPolygon.setAttribute('points', "50,50 50,50 50,50 50,50 50,50 50,50"); 
+    setTimeout(() => { playerPolygon.setAttribute('points', dataPoints.trim()); }, 50);
+    
+    const totalScoreEl = document.getElementById('totalScore');
+    if(totalScoreEl) totalScoreEl.innerHTML = `${totalSum}`;
+}
+
+// --- 퀘스트 로직 ---
+function renderQuestList() {
+    const container = document.getElementById('quest-list-container');
+    if(!container) return;
+    
+    const day = AppState.quest.currentDayOfWeek;
+    const quests = weeklyQuestData[day];
+    
+    container.innerHTML = quests.map((q, i) => {
+        const isDone = AppState.quest.completedState[day][i];
+        return `
+            <div class="quest-row ${isDone ? 'done' : ''}" onclick="window.toggleQuest(${i})">
+                <div>
+                    <div class="quest-title"><span class="quest-stat-tag">${q.stat}</span>${q.title[AppState.currentLang]}</div>
+                    <div class="quest-desc">${q.desc[AppState.currentLang]}</div>
+                </div>
+                <div class="quest-checkbox"></div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.toggleQuest = (i) => {
+    const day = AppState.quest.currentDayOfWeek;
+    const state = AppState.quest.completedState[day];
+    state[i] = !state[i];
+    
+    const q = weeklyQuestData[day][i];
+    const factor = state[i] ? 1 : -1;
+    
+    AppState.user.points += (20 * factor);
+    AppState.user.pendingStats[q.stat.toLowerCase()] += (0.5 * factor);
+    
+    saveUserData(); 
+    renderQuestList(); 
+    renderCalendar(); 
+    updatePointUI();
+};
+
+function renderCalendar() {
+    const container = document.getElementById('calendar-grid');
+    if(!container) return;
+    
+    const today = new Date();
+    const currentDay = today.getDay(); 
+    
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDay);
+    
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthEl = document.getElementById('cal-month');
+    if(monthEl) {
+        monthEl.innerText = `${startOfWeek.getFullYear()} ${monthNames[startOfWeek.getMonth()]}`;
+    }
+    
+    const dayNames = { 
+        ko: ["일","월","화","수","목","금","토"], 
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], 
+        ja: ["日","月","火","水","木","金","土"] 
+    };
+    
+    container.innerHTML = AppState.quest.completedState.map((s, i) => {
+        const iterDate = new Date(startOfWeek);
+        iterDate.setDate(startOfWeek.getDate() + i); 
+        const isToday = (i === AppState.quest.currentDayOfWeek);
+        const count = s.filter(v=>v).length;
+        
+        return `
+            <div class="cal-day ${isToday ? 'today' : ''}">
+                <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
+                <div class="cal-date">${iterDate.getDate()}</div>
+                <div class="cal-score">${count}/12</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// --- 던전 로직 ---
+let raidTimerInterval = null;
+
+// Haversine 공식: 두 GPS 좌표 간 거리(km) 계산
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371; // 지구 반지름 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// 던전 위치: 발산역(index 5) 고정, 반경 2km
+const DUNGEON_FIXED_STATION_IDX = 5; // 발산역
+const DUNGEON_RADIUS_KM = 2;
+
+function getFixedDungeonData(dateStr, slot) {
+    const seedStr = dateStr + "_slot" + slot;
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+        hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    hash = Math.abs(hash);
+    return {
+        stationIdx: DUNGEON_FIXED_STATION_IDX, // 발산역 고정
+        targetStat: statKeys[hash % statKeys.length]
+    };
+}
+
+function startRaidTimer() {
+    if(raidTimerInterval) clearInterval(raidTimerInterval);
+
+    const timerEl = document.getElementById('raid-timer');
+    if (!timerEl) return;
+
+    function updateTimer() {
+        const now = new Date();
+        const kstOffset = 9 * 60;
+        const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+        const kstMinutes = (utcMinutes + kstOffset) % (24 * 60);
+        const kstHour = Math.floor(kstMinutes / 60);
+
+        if (kstHour >= 6) {
+            // 개방 중: 24:00(자정)까지 남은 시간 표시
+            const remainMin = (24 * 60) - kstMinutes;
+            const h = Math.floor(remainMin / 60);
+            const m = remainMin % 60;
+            timerEl.innerText = `마감까지 ${h}시간 ${m}분`;
+        } else {
+            // 비개방: 06:00까지 남은 시간 표시
+            const remainMin = (6 * 60) - kstMinutes;
+            const h = Math.floor(remainMin / 60);
+            const m = remainMin % 60;
+            timerEl.innerText = `개방까지 ${h}시간 ${m}분`;
+        }
+    }
+
+    updateTimer();
+    raidTimerInterval = setInterval(updateTimer, 60000);
+}
+
+window.syncGlobalDungeon = async () => {
+    if (!auth.currentUser) return;
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        let realParticipants = 0;
+        let realProgressCount = 0;
+        const targetDate = AppState.dungeon.lastGeneratedDate;
+        const targetSlot = AppState.dungeon.slot;
+
+        snap.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.dungeonStr) {
+                try {
+                    const dng = JSON.parse(data.dungeonStr);
+                    if (dng.lastGeneratedDate === targetDate && dng.slot === targetSlot && dng.isJoined) {
+                        realParticipants++;
+                        if (dng.hasContributed) realProgressCount++; 
+                    }
+                } catch(e) {}
+            }
+        });
+
+        AppState.dungeon.globalParticipants = realParticipants;
+        AppState.dungeon.globalProgress = Math.min(100, (realProgressCount / AppState.dungeon.maxParticipants) * 100);
+
+        if (document.getElementById('dungeon').classList.contains('active')) {
+            renderDungeon();
+        }
+    } catch (e) {
+        console.error("글로벌 동기화 에러:", e);
+        AppLogger.error('[Dungeon] 글로벌 동기화 실패', e.stack || e.message);
+    }
+};
+
+function updateDungeonStatus() {
+    const now = new Date();
+
+    // 개방시간: 06:00~24:00 KST
+    const kstOffset = 9 * 60; // KST = UTC+9
+    const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const kstMinutes = (utcMinutes + kstOffset) % (24 * 60);
+    const kstHour = Math.floor(kstMinutes / 60);
+
+    // 06:00~24:00 → kstHour 6~23 (24:00은 다음날 00:00이므로 23시까지)
+    const currentSlot = (kstHour >= 6) ? 1 : 0;
+
+    const dateStr = now.toDateString();
+    if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
+        AppState.dungeon.lastGeneratedDate = dateStr;
+        AppState.dungeon.slot = currentSlot;
+
+        const fixedData = getFixedDungeonData(dateStr, currentSlot);
+        AppState.dungeon.stationIdx = fixedData.stationIdx;
+        AppState.dungeon.targetStat = fixedData.targetStat;
+
+        AppState.dungeon.maxParticipants = 5;
+
+        AppState.dungeon.isJoined = false;
+        AppState.dungeon.hasContributed = false;
+        AppState.dungeon.isCleared = false;
+
+        AppState.dungeon.globalParticipants = 0;
+        AppState.dungeon.globalProgress = 0;
+        saveUserData();
+    }
+    renderDungeon();
+    window.syncGlobalDungeon();
+}
+
+function renderDungeon() {
+    const banner = document.getElementById('dungeon-banner');
+    const activeBoard = document.getElementById('dungeon-active-board');
+    const timer = document.getElementById('raid-timer');
+    if(!banner || !activeBoard) return;
+
+    if (AppState.dungeon.slot === 0) {
+        if(timer) timer.classList.add('d-none');
+        activeBoard.classList.add('d-none');
+        banner.classList.remove('d-none');
+
+        banner.innerHTML = `<h3 style="color:var(--text-sub); margin:0; padding:20px 0;">${i18n[AppState.currentLang].raid_waiting}</h3>`;
+    } else {
+        const m = raidMissions[AppState.dungeon.targetStat];
+        const st = seoulStations[AppState.dungeon.stationIdx];
+        
+        if (!AppState.dungeon.isJoined) {
+            if(timer) timer.classList.add('d-none');
+            activeBoard.classList.add('d-none'); 
+            banner.classList.remove('d-none');
+            
+            const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
+            
+            const isFull = AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants;
+            const joinBtnHtml = isFull 
+                ? `<button disabled class="btn-primary" style="background:#333; border-color:#333; margin-top:10px; color:#888; font-weight:bold; cursor:not-allowed;">정원 초과 (입장 불가)</button>`
+                : `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>`;
+
+            banner.innerHTML = `
+                <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
+                <h3 class="raid-boss-title" style="color:${m.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${st.name[AppState.currentLang]} - ${m.title[AppState.currentLang]}</h3>
+                <div class="map-container" style="width:100%; height:180px; border-radius:6px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border-color);">
+                    <iframe src="${mapUrl}" style="width:100%; height:100%; border:none;" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+                <p style="font-size: 0.8rem; margin-bottom: 5px; color:var(--text-main); word-break:keep-all;">${m.desc1[AppState.currentLang]}</p>
+                <p style="font-size: 0.75rem; margin-bottom: 8px; color:var(--neon-gold); word-break:keep-all;">⚠️ ${st.name[AppState.currentLang]} 반경 ${DUNGEON_RADIUS_KM}km 이내 GPS 위치 확인 필요</p>
+                <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">
+                    ${i18n[AppState.currentLang].raid_part}
+                    <span class="text-blue">${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}</span> 명
+                </div>
+                ${joinBtnHtml}
+            `;
+        } else {
+            if(timer) timer.classList.remove('d-none');
+            banner.classList.add('d-none'); 
+            activeBoard.classList.remove('d-none'); 
+            
+            document.getElementById('active-stat-badge').innerText = m.stat;
+            document.getElementById('active-stat-badge').style.borderColor = m.color;
+            document.getElementById('active-stat-badge').style.color = m.color;
+            document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
+            document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
+            
+            document.getElementById('raid-part-count').innerText = `${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}`;
+            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.globalProgress}%`;
+            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.globalProgress}%`;
+            
+            const btnAction = document.getElementById('btn-raid-action');
+            const btnComplete = document.getElementById('btn-raid-complete');
+            
+            if (AppState.dungeon.globalProgress >= 100) {
+                btnAction.classList.add('d-none');
+                btnComplete.classList.remove('d-none');
+                
+                if(AppState.dungeon.isCleared) {
+                    btnComplete.innerText = "정산 완료";
+                    btnComplete.disabled = true;
+                    btnComplete.style.background = "#444";
+                    btnComplete.style.color = "#888";
+                } else {
+                    btnComplete.innerText = "전리품 획득";
+                    btnComplete.disabled = false;
+                    btnComplete.style.background = "var(--neon-gold)";
+                    btnComplete.style.color = "black";
+                }
+            } else {
+                btnAction.classList.remove('d-none');
+                btnComplete.classList.add('d-none');
+                
+                if (AppState.dungeon.hasContributed) {
+                    btnAction.innerText = "데이터 전송 완료";
+                    btnAction.disabled = true;
+                    btnAction.style.opacity = "0.5";
+                } else {
+                    btnAction.innerText = m.actionText[AppState.currentLang];
+                    btnAction.disabled = false;
+                    btnAction.style.opacity = "1";
+                }
+            }
+        }
+    }
+}
+
+window.joinDungeon = async () => {
+    if(AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants) {
+        alert("이미 정원이 초과되었습니다.");
+        return;
+    }
+
+    // GPS 위치 확인: 던전 역 반경 2km 이내만 입장 가능
+    const station = seoulStations[AppState.dungeon.stationIdx];
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    if (!isNative || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Geolocation) {
+        alert("위치 서비스를 사용할 수 없습니다. 앱에서 GPS를 활성화해주세요.");
+        return;
+    }
+
+    try {
+        const { Geolocation } = window.Capacitor.Plugins;
+        const permResult = await Geolocation.requestPermissions();
+        if (permResult.location === 'denied') {
+            alert("위치 권한이 거부되었습니다. 설정에서 위치 권한을 허용해주세요.");
+            return;
+        }
+
+        const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
+        });
+
+        const dist = getDistanceKm(
+            position.coords.latitude, position.coords.longitude,
+            station.lat, station.lng
+        );
+
+        if (dist > DUNGEON_RADIUS_KM) {
+            const stName = station.name[AppState.currentLang] || station.name.ko;
+            alert(`[입장 불가] ${stName} 반경 ${DUNGEON_RADIUS_KM}km 이내에서만 입장 가능합니다.\n현재 거리: ${dist.toFixed(1)}km`);
+            return;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[Dungeon] GPS 확인 완료 - 거리: ${dist.toFixed(2)}km`);
+    } catch (e) {
+        if (window.AppLogger) AppLogger.error('[Dungeon] GPS 확인 실패: ' + (e.message || JSON.stringify(e)));
+        alert("위치 정보를 가져올 수 없습니다. GPS를 확인해주세요.");
+        return;
+    }
+
+    AppState.dungeon.isJoined = true;
+    await saveUserData();
+    await window.syncGlobalDungeon();
+};
+
+window.simulateRaidAction = async () => {
+    if (AppState.dungeon.hasContributed || AppState.dungeon.globalProgress >= 100) return;
+    
+    const btn = document.getElementById('btn-raid-action');
+    btn.innerText = `데이터 전송 중...`;
+    btn.disabled = true;
+
+    AppState.dungeon.hasContributed = true;
+    await saveUserData(); 
+    await window.syncGlobalDungeon(); 
+};
+
+window.completeDungeon = () => {
+    if(AppState.dungeon.isCleared) return;
+    const target = AppState.dungeon.targetStat;
+    const pts = 200;
+    const statInc = 2.0;
+    
+    AppState.user.points += pts;
+    AppState.user.pendingStats[target] += statInc;
+    AppState.dungeon.isCleared = true;
+    
+    saveUserData(); 
+    renderDungeon(); 
+    updatePointUI();
+    alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
+};
+
+// --- 공통 UI ---
+function switchTab(tabId, el) {
+    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    
+    const mainEl = document.querySelector('main');
+    if(tabId === 'status') {
+        mainEl.style.overflowY = 'auto';
+        drawRadarChart(); updatePointUI(); renderQuote();
+    } else {
+        mainEl.style.overflowY = 'auto';
+    }
+    
+    if(tabId === 'social') fetchSocialData();
+    if(tabId === 'quests') { renderQuestList(); renderCalendar(); }
+    if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); }
+    if(tabId === 'dungeon') {
+        updateDungeonStatus();
+        window.syncGlobalDungeon(); 
+    }
+}
+
+function updatePointUI() {
+    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
+    document.getElementById('sys-level').innerText = `Lv. ${AppState.user.level}`;
+    document.getElementById('display-pts').innerText = AppState.user.points;
+    document.getElementById('display-req-pts').innerText = req;
+    document.getElementById('btn-levelup').disabled = AppState.user.points < req;
+    
+    const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title;
+    const titleText = typeof titleObj === 'object' ? titleObj[AppState.currentLang] || titleObj.ko : titleObj;
+    document.getElementById('prof-title-badge').innerHTML = `${titleText} ℹ️`;
+}
+
+function processLevelUp() {
+    const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
+    if(AppState.user.points < req) return;
+    AppState.user.points -= req; AppState.user.level++;
+    statKeys.forEach(k => { 
+        AppState.user.stats[k] = Math.min(100, (Number(AppState.user.stats[k])||0) + (Number(AppState.user.pendingStats[k])||0)); 
+        AppState.user.pendingStats[k] = 0; 
+    });
+    const top = statKeys.map(k => ({k, v:AppState.user.stats[k]})).sort((a,b) => b.v - a.v);
+    const newTitle = { 
+        ko: `${titleVocab[top[0].k].ko.pre[0]} ${titleVocab[top[1].k].ko.suf[0]}`,
+        en: `${titleVocab[top[0].k].en.pre[0]} ${titleVocab[top[1].k].en.suf[0]}`
+    };
+    AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitle });
+    
+    AppLogger.info('[LevelUp] 레벨 ' + AppState.user.level + ' 달성');
+    saveUserData(); updatePointUI(); drawRadarChart();
+    alert("Level Up!");
+    // 호칭 가이드 모달창 자동 표시(openTitleModal()) 삭제 완료
+}
+
+function changeLanguage(langCode) {
+    AppState.currentLang = langCode;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[langCode][key]) el.innerHTML = i18n[langCode][key];
+    });
+    
+    if(document.getElementById('app-container').classList.contains('d-flex')){
+        drawRadarChart();
+        renderUsers(AppState.social.sortCriteria);
+        renderQuestList();
+        renderCalendar();
+        renderPlannerCalendar();
+        renderQuote();
+        updatePointUI();
+        updateDungeonStatus();
+        loadPlayerName();
+    }
+}
+
+// --- 외부 API 연동 명언 ---
+async function renderQuote() {
+    const quoteEl = document.getElementById('daily-quote');
+    const authorEl = document.getElementById('daily-quote-author');
+    if(!quoteEl || !authorEl) return;
+
+    // 이미 명언이 표시되어 있으면 다시 로드하지 않음
+    if(quoteEl.innerText && quoteEl.innerText !== "위성 통신망에서 데이터를 수신 중입니다..." && quoteEl.style.opacity !== '0') return;
+
+    try {
+        quoteEl.innerText = "위성 통신망에서 데이터를 수신 중입니다...";
+        quoteEl.style.opacity = 1;
+        authorEl.innerText = "";
+
+        let apiUrl = 'https://korean-advice-open-api.vercel.app/api/advice';
+        if (AppState.currentLang === 'en' || AppState.currentLang === 'ja') {
+            apiUrl = 'https://dummyjson.com/quotes/random';
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(apiUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error("API 통신 에러");
+
+        const data = await response.json();
+        const quoteText = data.message || data.quote;
+        const quoteAuthor = data.author || "Unknown";
+
+        quoteEl.style.opacity = 0;
+        authorEl.style.opacity = 0;
+
+        setTimeout(() => {
+            quoteEl.innerText = `"${quoteText}"`;
+            authorEl.innerText = `- ${quoteAuthor} -`;
+            quoteEl.style.opacity = 1;
+            quoteEl.style.transition = "opacity 0.5s ease-in";
+            authorEl.style.opacity = 1;
+            authorEl.style.transition = "opacity 0.5s ease-in";
+        }, 300);
+
+    } catch (error) {
+        console.error("명언 API 호출 실패:", error);
+        quoteEl.innerText = `"어떠한 시련 속에서도 꾸준함은 시스템을 지탱하는 가장 강력한 무기이다."`;
+        authorEl.innerText = `- System Offline -`;
+        quoteEl.style.opacity = 1;
+        authorEl.style.opacity = 1;
+    }
+}
+
+// --- 소셜 탭 ---
+async function fetchSocialData() {
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        AppState.social.users = snap.docs.map(d => {
+            const data = d.data();
+            let title = "각성자";
+            if (data.titleHistoryStr) {
+                try {
+                    const hist = JSON.parse(data.titleHistoryStr);
+                    const last = hist[hist.length - 1].title;
+                    title = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last;
+                } catch(e) {}
+            }
+            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, isFriend: AppState.user.friends.includes(d.id), isMe: auth.currentUser?.uid === d.id };
+        });
+        renderUsers(AppState.social.sortCriteria);
+    } catch(e) { console.error("소셜 로드 에러", e); }
+}
+
+function renderUsers(criteria, btn = null) {
+    if(btn) { 
+        AppState.social.sortCriteria = criteria; 
+        document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); 
+    }
+    const container = document.getElementById('user-list-container');
+    if(!container) return;
+
+    let list = AppState.social.users.map(u => {
+        const s = u.stats;
+        const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
+        return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0 };
+    });
+
+    if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
+    list.sort((a,b) => b[criteria] - a[criteria]);
+
+    const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: #ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+
+    container.innerHTML = list.map((u, i) => `
+        <div class="user-card ${u.isMe ? 'my-rank' : ''}">
+            <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
+            <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
+                ${u.photoURL ? `<img src="${u.photoURL}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                <div class="user-info" style="margin-left:0;">
+                    <div class="title-badge" style="font-size:0.6rem;">${u.title}</div>
+                    <div style="font-size:0.9rem; display:flex; align-items:center;">
+                        ${u.name} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${u.instaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${u[criteria]}</div>
+            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${u.id}')">${u.isFriend ? '친구✓' : '추가'}</button>` : ''}
+        </div>
+    `).join('');
+}
+
+window.toggleFriend = async (id) => {
+    const isFriend = AppState.user.friends.includes(id);
+    await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) });
+    AppState.user.friends = isFriend ? AppState.user.friends.filter(f=>f!==id) : [...AppState.user.friends, id];
+    fetchSocialData();
+};
+
+function toggleSocialMode(mode, btn) { 
+    AppState.social.mode = mode; 
+    document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active')); 
+    btn.classList.add('active'); 
+    renderUsers(AppState.social.sortCriteria); 
+}
+
+// --- 로그인/인증 로직 ---
+async function simulateLogin() {
+    const email = document.getElementById('login-email').value;
+    const pw = document.getElementById('login-pw').value;
+    const btn = document.getElementById('btn-login-submit');
+    if(!email || !pw) { alert("이메일과 비밀번호를 입력해주세요."); return; }
+    btn.innerText = "Processing..."; btn.disabled = true;
+    try {
+        if(!AppState.isLoginMode) { 
+            const pwConfirm = document.getElementById('login-pw-confirm').value;
+            if(pw !== pwConfirm) throw new Error("비밀번호 불일치");
+            await createUserWithEmailAndPassword(auth, email, pw);
+        } else { await signInWithEmailAndPassword(auth, email, pw); }
+    } catch (e) { alert("인증 오류: " + e.message); } 
+    finally { btn.innerText = AppState.isLoginMode ? "시스템 접속" : "회원가입"; btn.disabled = false; }
+}
+
+async function simulateGoogleLogin() {
+    // Capacitor 네이티브 앱(Android/iOS) 환경인지 확인
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    if (isNative) {
+        // ── 안드로이드 앱: capacitor-google-auth 플러그인 사용 ──
+        try {
+            const { GoogleAuth } = window.Capacitor.Plugins;
+            if (!GoogleAuth) {
+                alert("GoogleAuth 플러그인 없음. 'npm install @codetrix-studio/capacitor-google-auth && npx cap sync android' 실행 필요");
+                return;
+            }
+            // v3.x requires explicit initialization before signIn()
+            // Without this, GoogleSignInClient remains null → NullPointerException
+            // 주의: 프로그래밍 방식에서는 'clientId'를 사용 (capacitor.config.json의 'serverClientId'와 키 이름이 다름)
+            await GoogleAuth.initialize({
+                clientId: '233040099152-htr1tnuqmpadikjvj9hbitf4tuh0ako5.apps.googleusercontent.com',
+                scopes: ['profile', 'email'],
+                grantOfflineAccess: true
+            });
+            const googleUser = await GoogleAuth.signIn();
+            const idToken = googleUser.authentication.idToken;
+            const credential = GoogleAuthProvider.credential(idToken);
+            const result = await signInWithCredential(auth, credential);
+            AppLogger.info('[Auth] 앱 구글 로그인 성공: ' + result.user.email);
+        } catch (e) {
+            const errCode = String(e.code || (e.error && e.error.code) || '');
+            const errRaw = e.message || JSON.stringify(e);
+            AppLogger.error('앱 구글 로그인 실패: ' + errRaw, (e.stack || '') + '\ncode=' + errCode);
+            let errMsg = errRaw;
+            if (errCode === '12501') {
+                // 사용자가 로그인 취소 → 알림 없이 조용히 종료
+                AppLogger.info('[Auth] 구글 로그인 취소 (사용자)');
+                return;
+            }
+            if (errCode === '10') {
+                errMsg = 'DEVELOPER_ERROR (코드 10)\n\n' +
+                    'APK 서명 SHA-1 지문이 Firebase에 등록되지 않았습니다.\n\n' +
+                    '해결 방법:\n' +
+                    '1. GitHub Actions 빌드 로그 → "SHA-1 지문 출력" 단계에서 SHA-1 확인\n' +
+                    '2. Firebase Console → 프로젝트 설정 → Android 앱(com.levelup.reboot)\n' +
+                    '3. "SHA 인증서 지문" 섹션에 SHA-1 추가\n' +
+                    '4. google-services.json 다시 다운로드 → 저장소에 커밋 후 재빌드';
+            }
+            alert("Google 로그인 실패:\n" + errMsg);
+        }
+    } else {
+        // ── 웹 브라우저: 기존 Popup 방식 유지 ──
+        try {
+            await signInWithPopup(auth, googleProvider);
+        } catch (e) {
+            console.error("웹 구글 로그인 실패:", e);
+            alert("Google 로그인 실패: " + e.message);
+        }
+    }
+}
+
+async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+
+function toggleAuthMode() {
+    AppState.isLoginMode = !AppState.isLoginMode;
+    const btnSubmit = document.getElementById('btn-login-submit');
+    const toggleText = document.getElementById('auth-toggle-btn');
+    document.getElementById('login-pw-confirm').classList.toggle('d-none', AppState.isLoginMode);
+    btnSubmit.innerText = AppState.isLoginMode ? "시스템 접속" : "플레이어 등록";
+    toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
+}
+
+async function loadProfileImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 150; canvas.height = 150;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 150, 150);
+            const base64 = canvas.toDataURL('image/jpeg', 0.6); 
+            document.getElementById('profilePreview').src = base64;
+            AppState.user.photoURL = base64;
+            await saveUserData();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
+function closeInfoModal() { 
+    const m = document.getElementById('infoModal'); 
+    m.classList.add('d-none'); 
+    m.classList.remove('d-flex'); 
+}
+
+function closeTitleModal() { 
+    const m = document.getElementById('titleModal'); 
+    m.classList.add('d-none'); 
+    m.classList.remove('d-flex');
+}
+
+function openTitleModal() {
+    const container = document.getElementById('title-guide-container');
+    const lang = AppState.currentLang; 
+
+    // 언어별 텍스트 데이터 정의
+    const textData = {
+        ko: {
+            title: "호칭 시스템 가이드",
+            desc: "💡 <b style='color:var(--neon-blue);'>호칭 조합 공식</b><br>레벨업 시 보유한 스탯 점수를 기준으로 <b>[1위 스탯의 접두사] + [2위 스탯의 접미사]</b>가 결합되어 고유 호칭이 부여됩니다.",
+            th_stat: "스탯", th_1st: "🥇 1위 (접두사)", th_2nd: "🥈 2위 (접미사)",
+            str_1: "강인한", str_2: "전사 / 호랑이",
+            int_1: "예리한", int_2: "학자 / 올빼미",
+            cha_1: "매혹적인", cha_2: "셀럽 / 여우",
+            vit_1: "지치지 않는", vit_2: "거북이 / 곰",
+            wlth_1: "부유한", wlth_2: "자본가 / 귀족",
+            agi_1: "날렵한", agi_2: "그림자 / 표범",
+            footer: "※ 스탯 동점 시 시스템 내부 우선순위에 따름"
+        },
+        en: {
+            title: "Title System Guide",
+            desc: "💡 <b style='color:var(--neon-blue);'>Title Combination Rule</b><br>Upon leveling up, your unique title is generated by combining <b>[Prefix of 1st Stat] + [Suffix of 2nd Stat]</b> based on your stat points.",
+            th_stat: "Stat", th_1st: "🥇 1st (Prefix)", th_2nd: "🥈 2nd (Suffix)",
+            str_1: "Strong", str_2: "Warrior / Tiger",
+            int_1: "Sharp", int_2: "Scholar / Owl",
+            cha_1: "Charming", cha_2: "Celeb / Fox",
+            vit_1: "Tenacious", vit_2: "Turtle / Bear",
+            wlth_1: "Wealthy", wlth_2: "Capitalist / Noble",
+            agi_1: "Agile", agi_2: "Shadow / Panther",
+            footer: "※ In case of a tie, internal system priority applies."
+        },
+        ja: {
+            title: "称号システムガイド",
+            desc: "💡 <b style='color:var(--neon-blue);'>称号の組み合わせルール</b><br>レベルアップ時、ステータスポイントに基づき<b>【1位の接頭辞】＋【2位の接尾辞】</b>が組み合わされ、固有の称号が付与されます。",
+            th_stat: "ステータス", th_1st: "🥇 1位 (接頭辞)", th_2nd: "🥈 2位 (接尾辞)",
+            str_1: "強靭な", str_2: "戦士 / 虎",
+            int_1: "鋭い", int_2: "学者 / 梟",
+            cha_1: "魅惑的な", cha_2: "セレブ / 狐",
+            vit_1: "疲れない", vit_2: "亀 / 熊",
+            wlth_1: "裕福な", wlth_2: "資本家 / 貴族",
+            agi_1: "俊敏な", agi_2: "影 / 豹",
+            footer: "※ 同点の場合はシステム内部の優先順位に従います。"
+        }
+    };
+
+    // 현재 언어에 맞는 데이터 선택 (없으면 기본값 ko)
+    const l = textData[lang] || textData.ko;
+
+    // 모달창 상단 제목 업데이트
+    const titleEl = document.getElementById('title-modal-title');
+    if (titleEl) titleEl.innerText = l.title;
+
+    // 다국어 적용 HTML 생성
+    const html = `
+        <div style="font-size:0.8rem; color:var(--text-main); background: rgba(0, 217, 255, 0.05); border: 1px solid var(--neon-blue); padding: 12px; border-radius: 6px; margin-bottom:15px; line-height:1.5; word-break:keep-all;">
+            ${l.desc}
+        </div>
+
+        <table class="info-table">
+            <thead>
+                <tr>
+                    <th>${l.th_stat}</th>
+                    <th>${l.th_1st}</th>
+                    <th>${l.th_2nd}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">STR</span></td><td>${l.str_1}</td><td>${l.str_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">INT</span></td><td>${l.int_1}</td><td>${l.int_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">CHA</span></td><td>${l.cha_1}</td><td>${l.cha_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">VIT</span></td><td>${l.vit_1}</td><td>${l.vit_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">WLTH</span></td><td>${l.wlth_1}</td><td>${l.wlth_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">AGI</span></td><td>${l.agi_1}</td><td>${l.agi_2}</td></tr>
+            </tbody>
+        </table>
+        <div style="font-size:0.7rem; color:var(--text-sub); margin-top:10px; text-align:right;">${l.footer}</div>
+    `;
+
+    container.innerHTML = html;
+    const m = document.getElementById('titleModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+function openStatusInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_status_title;
+    const body = document.getElementById('info-modal-body');
+    let html = `<p style="font-size:0.75rem; color:var(--neon-gold); margin:0 0 8px 0;">${i18n[AppState.currentLang].stat_hint}</p>`;
+    html += `<table class="info-table"><thead><tr><th>${i18n[AppState.currentLang].th_stat}</th><th>${i18n[AppState.currentLang].th_desc}</th></tr></thead><tbody>`;
+    statKeys.forEach(k => { 
+        html += `<tr><td style="text-align:center"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${k.toUpperCase()}</span><br><b style="font-size:0.75rem; color:var(--text-main); display:inline-block; margin-top:3px;">${i18n[AppState.currentLang][k]}</b></td><td style="color:var(--text-sub); line-height:1.5;">${i18n[AppState.currentLang]['desc_'+k]}</td></tr>`; 
+    });
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal'); 
+    m.classList.remove('d-none'); 
+    m.classList.add('d-flex');
+}
+
+function openQuestInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_quest_title || "주간 퀘스트 목록";
+    const body = document.getElementById('info-modal-body');
+    const dayNames = { ko: ["일","월","화","수","목","금","토"], en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja: ["日","月","火","水","木","金","土"] };
+    
+    let html = `<p style="font-size:0.75rem; color:var(--neon-gold); margin:0 0 8px 0;">${i18n[AppState.currentLang].quest_hint}</p>`;
+    html += `<table class="info-table">
+        <thead>
+            <tr>
+                <th>${i18n[AppState.currentLang].th_day}</th>
+                <th>${i18n[AppState.currentLang].th_stat}</th>
+                <th>${i18n[AppState.currentLang].th_quest}</th>
+            </tr>
+        </thead>
+        <tbody>`;
+    
+    weeklyQuestData.forEach((dayQuests, i) => { 
+        dayQuests.forEach((q, j) => {
+            const rowSpan = j === 0 ? `<td rowspan="${dayQuests.length}" style="text-align:center; vertical-align:middle; background:rgba(255,255,255,0.05);"><b>${dayNames[AppState.currentLang][i]}</b></td>` : '';
+            const title = q.title[AppState.currentLang] || q.title.ko;
+            const desc = q.desc[AppState.currentLang] || q.desc.ko;
+
+            html += `<tr>
+                ${rowSpan}
+                <td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">${q.stat}</span></td>
+                <td><b style="color:var(--text-main);">${title}</b><br><span style="font-size:0.65rem; color:var(--text-sub);">${desc}</span></td>
+            </tr>`; 
+        }); 
+    });
+    
+    body.innerHTML = html + `</tbody></table>`;
+    const m = document.getElementById('infoModal'); 
+    m.classList.remove('d-none'); 
+    m.classList.add('d-flex');
+}
+
+function openDungeonInfoModal() {
+    document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title || "이상 현상 목록";
+    const body = document.getElementById('info-modal-body');
+    
+    const timeInfoHtml = `
+        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:8px; border-radius:6px; margin-bottom:10px; text-align:center;">
+            <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:3px;">🕒 던전 시스템 개방 시간 (KST)</div>
+            <div style="font-weight:bold; color:var(--neon-blue); font-size:0.8rem; letter-spacing:0.5px;">
+                06:00 ~ 24:00
+            </div>
+        </div>
+    `;
+
+    let html = `<table class="info-table">
+        <thead>
+            <tr>
+                <th>${i18n[AppState.currentLang].th_stat}</th>
+                <th>${i18n[AppState.currentLang].th_raid}</th>
+                <th>${i18n[AppState.currentLang].th_req}</th>
+            </tr>
+        </thead>
+        <tbody>`;
+    
+    Object.keys(raidMissions).forEach(k => { 
+        const m = raidMissions[k];
+        const title = m.title[AppState.currentLang] || m.title.ko;
+        const reqTask = m.desc2[AppState.currentLang] || m.desc2.ko;
+
+        html += `<tr>
+            <td style="text-align:center; vertical-align:middle;"><span class="quest-stat-tag" style="border-color:${m.color}; color:${m.color};">${m.stat}</span></td>
+            <td style="word-break:keep-all; font-weight:bold; color:var(--text-main);">${title}</td>
+            <td style="word-break:keep-all; color:var(--text-sub); font-size:0.75rem;">${reqTask}</td>
+        </tr>`; 
+    });
+    
+    body.innerHTML = timeInfoHtml + html + `</tbody></table>`;
+    const m = document.getElementById('infoModal'); 
+    m.classList.remove('d-none'); 
+    m.classList.add('d-flex');
+}
+
+// --- ★ 약관 모달 (인앱 표시 - 인라인) ★ ---
+const legalContents = {
+    terms: {
+        title: '소비자 약관',
+        html: `<div class="legal-date" style="font-size:0.75rem;color:#888;margin-bottom:20px;">시행일: 2025년 3월 1일 | 최종 수정: 2026년 3월 1일</div>
+<div class="section" style="margin-bottom:16px;"><p>본 소비자 약관(이하 "약관")은 <b>BRAVECAT</b>(이하 "회사")이 제공하는 <b>LEVEL UP: REBOOT</b> 모바일 애플리케이션(이하 "서비스")의 이용 조건을 규정합니다. 서비스를 이용함으로써 본 약관에 동의하는 것으로 간주됩니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">1. 서비스 개요</h2><p>LEVEL UP: REBOOT는 일상 생활의 자기계발 활동을 게임화(Gamification)하여 사용자의 동기 부여와 습관 형성을 돕는 모바일 애플리케이션입니다.</p><ul style="padding-left:20px;margin-bottom:10px;"><li>일일 퀘스트 시스템을 통한 자기계발 목표 관리</li><li>능력치(스탯) 시스템을 통한 성장 시각화</li><li>소셜 기능을 통한 커뮤니티 참여</li><li>던전/레이드 시스템을 통한 협력 콘텐츠</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">2. 계정 및 이용 자격</h2><h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">2.1 이용 자격</h3><p>서비스를 이용하려면 만 18세 이상이어야 합니다.</p><h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">2.2 계정 관리</h3><p>사용자는 본인의 계정 정보를 안전하게 관리할 책임이 있으며, 계정을 통해 발생하는 모든 활동에 대한 책임은 사용자 본인에게 있습니다.</p><h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">2.3 계정 생성</h3><p>계정은 이메일/비밀번호 또는 Google OAuth를 통해 생성할 수 있습니다. 하나의 자연인은 하나의 계정만 생성하여야 합니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">3. 서비스 이용</h2><p>서비스의 기본 기능은 무료로 제공됩니다. 회사는 운영상 또는 기술상의 필요에 따라 서비스를 변경하거나 중단할 수 있습니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">4. 건강 및 면책 사항</h2><p>본 서비스는 건강 보조 및 동기 부여 목적으로만 제공됩니다. 의학적 조언, 진단, 치료를 대체하지 않습니다. 퀘스트 수행 중 발생하는 신체적 부상이나 손해에 대해 회사는 일절 책임지지 않습니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">5. 위치 정보</h2><p>던전/레이드 기능을 위해 사용자의 위치 정보를 수집할 수 있습니다. 위치 정보 수집은 사용자의 명시적 동의 하에만 이루어집니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">6. 금지 행위</h2><ul style="padding-left:20px;"><li>서비스의 정상적인 운영을 방해하는 행위</li><li>다른 사용자의 개인정보를 무단으로 수집하는 행위</li><li>자동화된 수단을 이용한 부정 이용</li><li>서비스 데이터를 임의로 조작하는 행위</li><li>타인을 사칭하거나 허위 정보를 제공하는 행위</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">7. 계정 정지 및 해지</h2><p>회사는 약관 위반 시 사전 통지 없이 서비스 이용을 제한하거나 계정을 정지 또는 삭제할 수 있습니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">8. 책임 제한</h2><p>회사는 서비스를 "있는 그대로(AS IS)" 제공하며, 서비스의 완전성, 정확성, 신뢰성에 대해 보증하지 않습니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">9. 약관 변경</h2><p>회사는 필요한 경우 약관을 변경할 수 있으며, 변경된 약관은 서비스 내 공지를 통해 고지합니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">10. 준거법 및 분쟁 해결</h2><p>본 약관은 대한민국 법률에 따라 해석되며, 서울중앙지방법원을 제1심 관할 법원으로 합니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">11. 문의</h2><p><b>BRAVECAT</b><br>이메일: support@bravecat.studio</p></div>`
+    },
+    'usage-policy': {
+        title: '이용 정책',
+        html: `<div class="legal-date" style="font-size:0.75rem;color:#888;margin-bottom:20px;">시행일: 2025년 3월 1일 | 최종 수정: 2026년 3월 1일</div>
+<div class="section" style="margin-bottom:16px;"><p>본 이용 정책(이하 "정책")은 <b>BRAVECAT</b>이 운영하는 <b>LEVEL UP: REBOOT</b> 서비스(이하 "서비스")의 올바른 이용 기준을 정합니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">1. 기본 이용 원칙</h2><ul style="padding-left:20px;"><li>정직하고 성실하게 서비스를 이용할 것</li><li>다른 사용자의 권리를 존중할 것</li><li>서비스의 공정한 운영에 기여할 것</li><li>관련 법률 및 규정을 준수할 것</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">2. 금지되는 행위</h2><h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">2.1 데이터 조작 및 부정 행위</h3><ul style="padding-left:20px;"><li>퀘스트 완료 데이터를 허위로 기록하는 행위</li><li>자동화 도구를 사용하여 퀘스트를 완료하거나 포인트를 획득하는 행위</li><li>Google Fit 데이터를 조작하는 행위</li><li>GPS 위치 정보를 위조하는 행위</li><li>레이드/던전 참여를 부정하게 조작하는 행위</li></ul><h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">2.2 커뮤니티 행위 기준</h3><ul style="padding-left:20px;"><li>다른 사용자에 대한 괴롭힘, 비방, 차별적 언행</li><li>불쾌하거나 유해한 프로필 이미지 또는 닉네임 사용</li><li>스팸, 광고, 또는 상업적 목적의 메시지 전송</li><li>타인의 개인정보를 무단으로 공개하는 행위</li></ul><h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">2.3 기술적 남용</h3><ul style="padding-left:20px;"><li>서비스의 보안 시스템을 우회하는 행위</li><li>서비스 서버에 과도한 부하를 발생시키는 행위</li><li>소스 코드를 무단으로 역설계하는 행위</li><li>다중 계정을 생성하여 서비스를 남용하는 행위</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">3. 소셜 기능 이용 기준</h2><p>랭킹은 공정한 경쟁을 위해 운영됩니다. 친구 기능은 상호 존중을 기반으로 이용되어야 합니다. 인스타그램 연동은 사용자의 선택 사항입니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">4. 던전/레이드 이용 기준</h2><p>던전/레이드는 특정 시간대(06:00~08:00, 11:30~13:30, 19:00~21:00 KST)에 운영되는 협동 콘텐츠입니다. 허위 참여 및 데이터 조작은 금지됩니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">5. 위반 시 조치</h2><ol style="padding-left:20px;"><li><b>경고:</b> 경미한 위반 시 사전 경고</li><li><b>기능 제한:</b> 특정 기능 이용 일시 제한</li><li><b>데이터 초기화:</b> 부정 획득 포인트/스탯/랭킹 초기화</li><li><b>계정 정지:</b> 심각한 위반 시 계정 정지</li><li><b>영구 차단:</b> 반복/중대 위반 시 영구 삭제</li></ol></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">6. 신고 및 문의</h2><p><b>BRAVECAT</b><br>이메일: report@bravecat.studio</p></div>`
+    },
+    privacy: {
+        title: '개인정보 처리방침',
+        html: `<div class="legal-date" style="font-size:0.75rem;color:#888;margin-bottom:20px;">시행일: 2025년 3월 1일 | 최종 수정: 2026년 3월 1일</div>
+<div class="section" style="margin-bottom:16px;"><p><b>BRAVECAT</b>(이하 "회사")은 <b>LEVEL UP: REBOOT</b> 서비스 이용자의 개인정보를 중요시하며, 「개인정보 보호법」 등 관련 법령을 준수합니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">1. 수집하는 개인정보 항목</h2><ul style="padding-left:20px;"><li><b>필수 정보:</b> 이메일 주소, 비밀번호(암호화 저장)</li><li><b>Google 로그인:</b> Google 계정 이메일, 프로필 이름, 프로필 사진 URL</li><li><b>프로필 정보:</b> 닉네임, 프로필 사진, 인스타그램 ID</li><li><b>서비스 이용 정보:</b> 퀘스트 완료 기록, 포인트, 스탯, 레벨, 칭호 이력</li><li><b>위치 정보:</b> GPS 좌표(사용자 동의 후)</li><li><b>건강 정보:</b> 일일 걸음 수(Google Fit 연동 시)</li><li><b>기기 정보:</b> 기기 유형, OS 버전, 앱 버전</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">2. 수집 및 이용 목적</h2><ul style="padding-left:20px;"><li><b>서비스 제공:</b> 계정 생성 및 관리, 퀘스트 시스템 운영</li><li><b>소셜 기능:</b> 글로벌 랭킹, 친구 시스템</li><li><b>던전/레이드:</b> 위치 기반 레이드 매칭</li><li><b>건강 연동:</b> Google Fit 데이터를 포인트로 환산</li><li><b>서비스 개선:</b> 이용 통계 분석, 오류 진단</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">3. 보유 및 이용 기간</h2><ul style="padding-left:20px;"><li>계정 정보: 회원 탈퇴 시까지 (탈퇴 후 30일 이내 파기)</li><li>서비스 이용 기록: 최종 접속일로부터 1년</li><li>위치 정보: 수집 후 즉시 처리, 미보관</li><li>건강 데이터: 포인트 환산 완료 시 삭제</li><li>오류 로그: 수집일로부터 90일</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">4. 제3자 제공</h2><p>원칙적으로 제3자에게 제공하지 않습니다. 사용자 동의가 있거나 법적 의무가 있는 경우에만 예외로 합니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">5. 처리 위탁</h2><ul style="padding-left:20px;"><li>Google Firebase: 사용자 인증, 데이터베이스 호스팅</li><li>Google Cloud Platform: 클라우드 인프라, 데이터 저장</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">6. 사용자의 권리</h2><ul style="padding-left:20px;"><li>열람 요구: 본인의 개인정보 처리 현황 열람</li><li>정정 요구: 부정확한 개인정보의 정정</li><li>삭제 요구: 불필요한 개인정보의 삭제</li><li>동의 철회: 위치/건강 정보 수집 동의 철회 (앱 설정에서 가능)</li></ul></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">7. 안전성 확보 조치</h2><p>비밀번호 암호화 저장, SSL/TLS 암호화 통신, 데이터베이스 접근 권한 관리, Google Cloud 보안 인프라 활용 등의 조치를 취하고 있습니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">8. 국외 이전</h2><p>서비스는 Google Firebase(미국 소재)를 통해 데이터를 저장하므로, 미국에 위치한 서버에 이전 및 보관될 수 있습니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">9. 개인정보 보호책임자</h2><p><b>BRAVECAT</b><br>이메일: privacy@bravecat.studio</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">10. 권익 침해 구제</h2><ul style="padding-left:20px;"><li>개인정보 침해신고센터 (한국인터넷진흥원): 118</li><li>개인정보 분쟁조정위원회: 1833-6972</li><li>대검찰청 사이버수사과: 1301</li><li>경찰청 사이버안전국: 182</li></ul></div>`
+    }
+};
+
+window.openLegalModal = function(type) {
+    const info = legalContents[type];
+    if (!info) return;
+    const modal = document.getElementById('legalModal');
+    const title = document.getElementById('legal-modal-title');
+    const body = document.getElementById('legal-modal-body');
+    title.innerText = info.title;
+    body.innerHTML = info.html;
+    modal.classList.remove('d-none');
+    modal.classList.add('d-flex');
+};
+
+// --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
+let diarySelectedDate = getTodayStr();
+// plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯)
+let plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+
+function getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function dateToStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getDiaryEntry(dateStr) {
+    try {
+        const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        return diaries[dateStr] || null;
+    } catch { return null; }
+}
+
+function getAllDiaryEntries() {
+    try {
+        return JSON.parse(localStorage.getItem('diary_entries') || '{}');
+    } catch { return {}; }
+}
+
+// 주간 플래너 캘린더 렌더링 (퀘스트 탭 주간 진척도 형태)
+function renderPlannerCalendar() {
+    const container = document.getElementById('planner-calendar-grid');
+    if (!container) return;
+
+    const today = new Date();
+    const currentDay = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDay);
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthEl = document.getElementById('planner-cal-month');
+    if (monthEl) monthEl.innerText = `${startOfWeek.getFullYear()} ${monthNames[startOfWeek.getMonth()]}`;
+
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+
+    const allEntries = getAllDiaryEntries();
+
+    container.innerHTML = Array.from({length: 7}, (_, i) => {
+        const iterDate = new Date(startOfWeek);
+        iterDate.setDate(startOfWeek.getDate() + i);
+        const dateStr = dateToStr(iterDate);
+        const isToday = (i === currentDay);
+        const isSelected = dateStr === diarySelectedDate;
+        const entry = allEntries[dateStr];
+        const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
+
+        return `
+            <div class="cal-day ${isToday ? 'today' : ''} ${isSelected ? 'planner-selected' : ''}"
+                 onclick="window.selectPlannerDate('${dateStr}')" style="cursor:pointer;">
+                <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
+                <div class="cal-date">${iterDate.getDate()}</div>
+                <div class="cal-score">${hasEntry ? '✓' : '·'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 선택 날짜가 미래인지 확인
+function isSelectedDateFuture() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const selected = new Date(diarySelectedDate + 'T00:00:00');
+    return selected > today;
+}
+
+// 현재 plannerTasks에서 드롭다운 옵션 목록 생성
+function getTaskOptions() {
+    const ranked = plannerTasks
+        .map((t, i) => ({ ...t, idx: i }))
+        .filter(t => t.ranked && t.text.trim())
+        .sort((a, b) => a.rankOrder - b.rankOrder);
+    const unranked = plannerTasks.filter(t => !t.ranked && t.text.trim());
+    let rankNum = 1;
+    return [
+        ...ranked.map(t => ({ text: t.text.trim(), label: `${rankNum++}. ${t.text.trim()}` })),
+        ...unranked.map(t => ({ text: t.text.trim(), label: `· ${t.text.trim()}` }))
+    ];
+}
+
+// 이미 렌더링된 타임박스 드롭다운의 옵션 목록만 갱신
+function updateTimeboxDropdownOptions() {
+    const options = getTaskOptions();
+    const optHTML = ['<option value="">-- 없음 --</option>',
+        ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}">${o.label}</option>`)
+    ].join('');
+    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = optHTML;
+        if (cur) sel.value = cur;
+    });
+}
+
+// 우선순위 태스크 목록 렌더링
+function renderPlannerTasks() {
+    const container = document.getElementById('planner-tasks-list');
+    if (!container) return;
+    const isFuture = isSelectedDateFuture();
+
+    // 순위 번호 계산 (rankOrder 순서대로 1,2,3...)
+    const rankedSorted = plannerTasks
+        .map((t, i) => ({ ...t, idx: i }))
+        .filter(t => t.ranked)
+        .sort((a, b) => a.rankOrder - b.rankOrder);
+    const rankMap = {};
+    rankedSorted.forEach((t, i) => { rankMap[t.idx] = i + 1; });
+
+    container.innerHTML = plannerTasks.map((task, idx) => {
+        const rankNum = rankMap[idx];
+        const rankLabel = rankNum ? rankNum : '·';
+        const isRanked = !!rankNum;
+        const canRemove = idx >= 6;
+        return `<div class="planner-task-item">
+            <button class="task-rank-btn${isRanked ? ' ranked' : ''}"
+                    onclick="window.toggleTaskRank(${idx})"
+                    ${isFuture ? 'disabled' : ''}>${rankLabel}</button>
+            <input class="planner-task-input" type="text"
+                   value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
+                   placeholder="할 일 입력..."
+                   maxlength="50"
+                   oninput="window.updateTaskText(${idx}, this.value)"
+                   ${isFuture ? 'disabled' : ''}>
+            ${canRemove ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
+        </div>`;
+    }).join('');
+
+    updateTimeboxDropdownOptions();
+}
+
+window.toggleTaskRank = function(idx) {
+    if (plannerTasks[idx].ranked) {
+        plannerTasks[idx].ranked = false;
+        plannerTasks[idx].rankOrder = 0;
+    } else {
+        const maxOrder = plannerTasks.filter(t => t.ranked).reduce((m, t) => Math.max(m, t.rankOrder), 0);
+        plannerTasks[idx].ranked = true;
+        plannerTasks[idx].rankOrder = maxOrder + 1;
+    }
+    renderPlannerTasks();
+};
+
+window.updateTaskText = function(idx, val) {
+    plannerTasks[idx].text = val;
+    updateTimeboxDropdownOptions();
+};
+
+window.addPlannerTask = function() {
+    plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    renderPlannerTasks();
+};
+
+window.removeTask = function(idx) {
+    if (idx < 6) return;
+    plannerTasks.splice(idx, 1);
+    renderPlannerTasks();
+};
+
+// 타임박스 그리드 렌더링 - 드롭다운 방식 (05:00~23:30)
+function renderTimeboxGrid(dateStr) {
+    const grid = document.getElementById('planner-timebox-grid');
+    if (!grid) return;
+
+    const entry = getDiaryEntry(dateStr);
+    const blocks = (entry && entry.blocks) ? entry.blocks : {};
+    const isFuture = isSelectedDateFuture();
+    const options = getTaskOptions();
+
+    const makeOpts = (currentVal) => {
+        const opts = ['<option value="">-- 없음 --</option>',
+            ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`)
+        ].join('');
+        return opts;
+    };
+
+    const rows = [];
+    for (let h = 5; h < 24; h++) rows.push(h);
+
+    grid.innerHTML = rows.map(h => {
+        const t00 = `${String(h).padStart(2,'0')}:00`;
+        const t30 = `${String(h).padStart(2,'0')}:30`;
+        const val00 = blocks[t00] || '';
+        const val30 = blocks[t30] || '';
+        return `<div class="timebox-row">
+            <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
+            <select class="timebox-select${val00 ? ' has-content' : ''}"
+                    data-time="${t00}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val00)}
+            </select>
+            <select class="timebox-select${val30 ? ' has-content' : ''}"
+                    data-time="${t30}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val30)}
+            </select>
+        </div>`;
+    }).join('');
+}
+
+window.selectPlannerDate = function(dateStr) {
+    diarySelectedDate = dateStr;
+    renderPlannerCalendar();
+    loadPlannerForDate(dateStr);
+};
+
+function loadPlannerForDate(dateStr) {
+    const dateDisplay = document.getElementById('planner-selected-date');
+    if (dateDisplay) dateDisplay.innerText = dateStr;
+
+    // 무드 버튼 리셋
+    document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => btn.classList.remove('selected'));
+    const saved = getDiaryEntry(dateStr);
+    if (saved && saved.mood) {
+        const moodBtn = document.querySelector(`#planner-mood-selector .diary-mood-btn[data-mood="${saved.mood}"]`);
+        if (moodBtn) moodBtn.classList.add('selected');
+    }
+
+    // 태스크 로드 (새 형식 우선, 구 형식 마이그레이션)
+    if (saved && saved.tasks && Array.isArray(saved.tasks)) {
+        plannerTasks = saved.tasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    } else if (saved && (saved.priorities || saved.brainDump)) {
+        // 구 형식 마이그레이션: priorities(3개) + brainDump 텍스트
+        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+        const oldPriorities = saved.priorities || [];
+        oldPriorities.forEach((p, i) => {
+            if (p && i < 6) { plannerTasks[i].text = p; plannerTasks[i].ranked = true; plannerTasks[i].rankOrder = i + 1; }
+        });
+        // brainDump 줄 단위로 빈 슬롯에 채우기
+        if (saved.brainDump) {
+            saved.brainDump.split('\n').forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                const slot = plannerTasks.findIndex(t => !t.text);
+                if (slot >= 0) plannerTasks[slot].text = trimmed;
+                else plannerTasks.push({ text: trimmed, ranked: false, rankOrder: 0 });
+            });
+        }
+    } else {
+        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+    }
+
+    // 태스크 목록 렌더링 (이 안에서 updateTimeboxDropdownOptions도 호출됨)
+    renderPlannerTasks();
+
+    // 타임박스 그리드 렌더링 (태스크 옵션 준비된 후)
+    renderTimeboxGrid(dateStr);
+
+    // 미래 날짜 비활성화
+    const isFuture = isSelectedDateFuture();
+    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => { sel.disabled = isFuture; });
+    const saveBtn = document.getElementById('btn-planner-save');
+    if (saveBtn) saveBtn.disabled = isFuture;
+    const addBtn = document.getElementById('btn-add-task');
+    if (addBtn) addBtn.disabled = isFuture;
+}
+
+async function savePlannerEntry() {
+    const dateStr = diarySelectedDate;
+
+    // 타임박스 드롭다운 블록 수집
+    const selects = document.querySelectorAll('#planner-timebox-grid .timebox-select');
+    const blocks = {};
+    selects.forEach(sel => {
+        const val = sel.value.trim();
+        if (val) blocks[sel.dataset.time] = val;
+    });
+
+    // 태스크 데이터 수집
+    const tasksData = plannerTasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+    // 하위 호환 priorities 배열 (순위 지정된 항목만 순서대로)
+    const rankedByOrder = tasksData
+        .filter(t => t.ranked && t.text)
+        .sort((a, b) => a.rankOrder - b.rankOrder)
+        .map(t => t.text);
+    const brainDump = '';
+
+    const selectedMood = document.querySelector('#planner-mood-selector .diary-mood-btn.selected');
+    const mood = selectedMood ? selectedMood.dataset.mood : '';
+
+    const hasContent = Object.keys(blocks).length > 0 || tasksData.some(t => t.text);
+
+    try {
+        let diaries;
+        try {
+            diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        } catch(parseErr) {
+            AppLogger.warn('[Planner] diary_entries 파싱 오류, 초기화: ' + parseErr.message);
+            diaries = {};
+        }
+
+        // 보상: 하루 1회만 - diary_entries와 분리된 별도 키로 관리 (Firebase 덮어쓰기 영향 없음)
+        let plannerRewards = {};
+        try { plannerRewards = JSON.parse(localStorage.getItem('planner_rewards') || '{}'); } catch(e) {}
+        const alreadyRewarded = plannerRewards[dateStr] === true;
+        const giveReward = !alreadyRewarded && hasContent;
+
+        const text = Object.entries(blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500);
+        diaries[dateStr] = {
+            text, mood, timestamp: Date.now(), blocks,
+            tasks: tasksData,
+            priorities: rankedByOrder,
+            brainDump
+        };
+
+        try {
+            localStorage.setItem('diary_entries', JSON.stringify(diaries));
+        } catch(storageErr) {
+            AppLogger.error('[Planner] localStorage 저장 실패: ' + storageErr.message);
+            alert('저장 공간이 부족합니다. 오래된 데이터를 정리해 주세요.');
+            return;
+        }
+
+        if (giveReward) {
+            plannerRewards[dateStr] = true;
+            localStorage.setItem('planner_rewards', JSON.stringify(plannerRewards));
+            AppState.user.points += 20;
+            AppState.user.pendingStats.agi += 0.5;
+            updatePointUI();
+            drawRadarChart();
+            AppLogger.info('[Planner] 보상 지급: +20P, AGI +0.5');
+        }
+
+        await saveUserData();
+        AppLogger.info('[Planner] 플래너 저장 완료: ' + dateStr);
+    } catch(e) {
+        AppLogger.error('[Planner] Save error: ' + (e.stack || e.message));
+        alert('저장 중 오류가 발생했습니다: ' + e.message);
+        return;
+    }
+
+    renderPlannerCalendar();
+    alert(i18n[AppState.currentLang].diary_saved || '플래너가 저장되었습니다.');
+}
+
+function changeTheme() {
+    const light = document.getElementById('theme-toggle').checked;
+    document.documentElement.setAttribute('data-theme', light ? 'light' : '');
+    localStorage.setItem('theme', light ? 'light' : 'dark');
+}
+
+// --- GPS 및 건강 데이터 설정 ---
+
+/** 앱 설정 화면 열기 (Capacitor native → Android 앱 상세 설정) */
+function openAppSettings() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return;
+
+    try {
+        // Capacitor Android 환경: 네이티브 브릿지를 통해 앱 설정 화면 호출
+        const cap = window.Capacitor;
+
+        // 방법 1: @capacitor/app 플러그인이 설치된 경우
+        if (cap.Plugins && cap.Plugins.App && cap.Plugins.App.openUrl) {
+            // Android intent URI → 앱 상세 설정 화면
+            cap.Plugins.App.openUrl({ url: `package:${cap.config && cap.config.appId ? cap.config.appId : 'com.levelup.reboot'}` });
+            return;
+        }
+
+        // 방법 2: Capacitor 네이티브 브릿지 직접 호출 (커스텀 플러그인 AppSettings)
+        if (cap.toNative) {
+            cap.toNative('AppSettings', 'open', { callbackId: 'openSettings' });
+            return;
+        }
+
+        // 방법 3: 폴백 - Android intent:// scheme
+        window.location.href = `intent://settings/app_detail#Intent;scheme=package;S.android.intent.extra.PACKAGE_NAME=com.levelup.reboot;end`;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[GPS] Failed to open native settings: ' + e.message);
+    }
+}
+
+async function toggleGPS() {
+    const gpsToggle = document.getElementById('gps-toggle');
+    const isChecked = gpsToggle.checked;
+    const statusDiv = document.getElementById('gps-status');
+    const lang = i18n[AppState.currentLang];
+    statusDiv.style.display = 'flex';
+
+    if (!isChecked) {
+        AppState.user.gpsEnabled = false;
+        saveUserData();
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.gps_off || '위치 탐색 중지됨'}</span>`;
+        return;
+    }
+
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    // 네이티브 Capacitor Geolocation 플러그인만 사용 (앱 전용)
+    if (!isNative || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Geolocation) {
+        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_no_support || '위치 서비스를 지원하지 않는 환경입니다. 앱에서 이용해주세요.'}</span>`;
+        gpsToggle.checked = false;
+        if (window.AppLogger) AppLogger.warn('[GPS] Native Geolocation plugin not available');
+        return;
+    }
+
+    const { Geolocation } = window.Capacitor.Plugins;
+    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
+
+    try {
+        // 1단계: 네이티브 권한 요청
+        const permResult = await Geolocation.requestPermissions();
+        if (window.AppLogger) AppLogger.info('[GPS] Native permission result: ' + JSON.stringify(permResult));
+
+        if (permResult.location === 'denied') {
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
+            gpsToggle.checked = false;
+            const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
+            if (confirm(confirmMsg)) {
+                openAppSettings();
+            }
+            return;
+        }
+
+        // 2단계: 네이티브 위치 획득
+        const position = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 300000
+        });
+
+        if (window.AppLogger) AppLogger.info(`[GPS] Native location: lat=${position.coords.latitude}, lng=${position.coords.longitude}`);
+        AppState.user.gpsEnabled = true;
+        saveUserData();
+        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.error('[GPS] Native geolocation error: ' + (e.message || JSON.stringify(e)));
+
+        if (e.message && (e.message.includes('denied') || e.message.includes('permission'))) {
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
+            gpsToggle.checked = false;
+            const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
+            if (confirm(confirmMsg)) {
+                openAppSettings();
+            }
+            return;
+        }
+
+        // 기타 에러 (타임아웃, GPS 신호 없음 등)
+        let errMsg = lang.gps_err || '위치 정보 오류';
+        if (e.message && e.message.includes('timeout')) {
+            errMsg = lang.gps_timeout || '위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.';
+        }
+        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
+        gpsToggle.checked = false;
+    }
+}
+
+async function toggleHealthSync() {
+    const toggle = document.getElementById('sync-toggle');
+    const statusDiv = document.getElementById('sync-status');
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    if (toggle.checked) {
+        // 네이티브 앱 환경 확인
+        if (!isNative) {
+            toggle.checked = false;
+            statusDiv.style.display = 'flex';
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 동기화는 앱에서만 사용 가능합니다.</span>`;
+            return;
+        }
+
+        // 네이티브 건강 데이터 권한 요청 (Health Connect / Google Fit SDK)
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">건강 데이터 권한 요청 중...</span>`;
+        const granted = await requestFitnessScope();
+        if (!granted) {
+            toggle.checked = false;
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 권한이 필요합니다.</span>`;
+            return;
+        }
+
+        AppState.user.syncEnabled = true;
+        saveUserData();
+        syncHealthData(true);
+    } else {
+        AppState.user.syncEnabled = false;
+        saveUserData();
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off || '동기화 해제됨'}</span>`;
+    }
+}
+
+// 네이티브 건강 데이터 권한 요청 (Health Connect → Google Fit SDK 순서)
+async function requestFitnessScope() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return false;
+
+    try {
+        // 1단계: Health Connect 권한 시도
+        const { HealthConnect } = window.Capacitor.Plugins;
+        if (HealthConnect) {
+            const availability = await HealthConnect.isAvailable();
+            if (availability.available) {
+                await HealthConnect.requestPermissions();
+                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료');
+                return true;
+            }
+        }
+
+        // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (GoogleFit) {
+            await GoogleFit.requestPermissions();
+            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
+            return true;
+        }
+
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 건강 데이터 플러그인을 찾을 수 없음');
+        return false;
+    } catch (e) {
+        const errCode = String(e.code || (e.error && e.error.code) || '');
+        if (errCode === '12501') return false; // 사용자 취소
+        AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
+        return false;
+    }
+}
+
+/**
+ * Health Connect (네이티브)를 통한 걸음 수 조회 시도
+ * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
+ */
+async function tryHealthConnectSteps() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return null;
+
+    try {
+        const { HealthConnect } = window.Capacitor.Plugins;
+        if (!HealthConnect) return null;
+
+        // Health Connect SDK 사용 가능 여부 확인
+        const availability = await HealthConnect.isAvailable();
+        if (!availability.available) {
+            if (window.AppLogger) AppLogger.info('[HealthConnect] SDK not available, falling back to REST API');
+            return null;
+        }
+
+        // 걸음 수 조회
+        const result = await HealthConnect.getTodaySteps();
+        if (result.fallbackToRest) {
+            if (window.AppLogger) AppLogger.info('[HealthConnect] Fallback to REST API: ' + (result.error || 'unknown'));
+            return null;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[HealthConnect] Native steps: ${result.steps} (source: ${result.source})`);
+        return result.steps;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[HealthConnect] Error: ' + (e.message || JSON.stringify(e)));
+        return null;
+    }
+}
+
+/**
+ * Google Fit 네이티브 SDK를 통한 걸음 수 조회 시도
+ * Health Connect가 사용 불가한 기기에서 Google Fit SDK (History API) 사용
+ * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
+ */
+async function tryGoogleFitNativeSteps() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return null;
+
+    try {
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (!GoogleFit) return null;
+
+        // Google Fit SDK 사용 가능 여부 확인
+        const availability = await GoogleFit.isAvailable();
+        if (!availability.available || !availability.hasPermissions) {
+            if (window.AppLogger) AppLogger.info('[GoogleFit] SDK not available or no permissions, falling back to REST API');
+            return null;
+        }
+
+        // 걸음 수 조회
+        const result = await GoogleFit.getTodaySteps();
+        if (result.fallbackToRest) {
+            if (window.AppLogger) AppLogger.info('[GoogleFit] Fallback to REST API: ' + (result.error || 'unknown'));
+            return null;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[GoogleFit] Native steps: ${result.steps} (source: ${result.source})`);
+        return result.steps;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[GoogleFit] Native error: ' + (e.message || JSON.stringify(e)));
+        return null;
+    }
+}
+
+async function syncHealthData(showMsg = false) {
+    if (!AppState.user.syncEnabled) return;
+
+    const statusDiv = document.getElementById('sync-status');
+    if(showMsg) {
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`;
+    }
+
+    const now = new Date();
+    const todayStr = now.toDateString();
+
+    if (!AppState.user.stepData || AppState.user.stepData.date !== todayStr) {
+        AppState.user.stepData = { date: todayStr, rewardedSteps: 0 };
+    }
+
+    let totalStepsToday = 0;
+    let dataSource = 'none';
+
+    // 1단계: Health Connect (네이티브 Android 14+) 시도
+    const nativeSteps = await tryHealthConnectSteps();
+    if (nativeSteps !== null) {
+        totalStepsToday = nativeSteps;
+        dataSource = 'health_connect';
+    }
+
+    // 2단계: Google Fit 네이티브 SDK 시도 (Health Connect 실패 시)
+    if (dataSource === 'none') {
+        const fitNativeSteps = await tryGoogleFitNativeSteps();
+        if (fitNativeSteps !== null) {
+            totalStepsToday = fitNativeSteps;
+            dataSource = 'google_fit_native';
+        }
+    }
+
+    // 네이티브 SDK에서 데이터를 가져오지 못한 경우
+    if (dataSource === 'none') {
+        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
+        return;
+    }
+
+    // 보상 계산
+    const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
+
+    if (unrewardedSteps >= 1000) {
+        const rewardChunks = Math.floor(unrewardedSteps / 1000);
+        const earnedPoints = rewardChunks * 10;
+        const earnedStr = rewardChunks * 0.5;
+
+        AppState.user.points += earnedPoints;
+        AppState.user.pendingStats.str += earnedStr;
+        AppState.user.stepData.rewardedSteps += (rewardChunks * 1000);
+
+        if (showMsg) {
+            const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료 (${sourceLabel}): 총 ${totalStepsToday.toLocaleString()}보<br>추가 보상: +${earnedPoints}P, STR +${earnedStr}</span>`;
+        }
+        updatePointUI();
+        drawRadarChart();
+    } else {
+        if (showMsg) {
+            if(totalStepsToday === 0) {
+                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">걸음 수 기록이 없습니다. (0보)</span>`;
+            } else {
+                const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료 (${sourceLabel}): 총 ${totalStepsToday.toLocaleString()}보<br>(다음 보상까지 ${1000 - unrewardedSteps}보 남음)</span>`;
+            }
+        }
+    }
+    saveUserData();
+}

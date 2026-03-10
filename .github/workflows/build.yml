@@ -103,6 +103,34 @@ jobs:
           echo "✅ 네이티브 플러그인 주입 완료:"
           ls -la "$PLUGIN_DIR/"
 
+      # 7-3. 커스텀 앱 아이콘 적용 (res/ 폴더의 levelup 아이콘을 Android mipmap에 복사)
+      - name: 커스텀 앱 아이콘 적용
+        run: |
+          RES_DIR="android/app/src/main/res"
+
+          # 각 해상도별 아이콘 파일 복사
+          for density in hdpi mdpi xhdpi xxhdpi xxxhdpi; do
+            for icon in levelup.png levelup_foreground.png levelup_background.png levelup_monochrome.png; do
+              src="res/mipmap-${density}/${icon}"
+              dst="${RES_DIR}/mipmap-${density}/${icon}"
+              if [ -f "$src" ]; then
+                cp "$src" "$dst"
+                echo "  ✅ ${density}/${icon} 복사됨"
+              fi
+            done
+          done
+
+          # adaptive icon XML 복사 (anydpi-v26)
+          cp res/mipmap-anydpi-v26/levelup.xml "${RES_DIR}/mipmap-anydpi-v26/levelup.xml"
+          echo "  ✅ mipmap-anydpi-v26/levelup.xml 복사됨"
+
+          # AndroidManifest.xml에서 아이콘 참조를 levelup으로 변경
+          MANIFEST="${RES_DIR}/../AndroidManifest.xml"
+          sed -i 's|android:icon="@mipmap/ic_launcher"|android:icon="@mipmap/levelup"|g' "$MANIFEST"
+          sed -i 's|android:roundIcon="@mipmap/ic_launcher_round"|android:roundIcon="@mipmap/levelup"|g' "$MANIFEST"
+          echo "✅ AndroidManifest.xml 아이콘 참조 업데이트 완료"
+          grep -E "android:icon|android:roundIcon" "$MANIFEST"
+
       # 8. 웹 소스를 Android 프로젝트에 동기화
       - name: 웹→Android 동기화
         run: npx cap sync android
