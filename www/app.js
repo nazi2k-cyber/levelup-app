@@ -169,6 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const loginPanel = document.getElementById('login-log-panel');
             if (loginPanel) loginPanel.style.display = 'none';
 
+            // 개발자 계정만 로그 섹션 표시
+            const isDev = user.email === 'nazi2k@gmail.com';
+            const settingsLogCard = document.getElementById('settings-log-card');
+            if (settingsLogCard) settingsLogCard.style.display = isDev ? 'block' : 'none';
+
             document.querySelector('main').style.overflowY = 'auto';
 
             changeLanguage(AppState.currentLang);
@@ -186,8 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
             _initializedUid = null;
             document.getElementById('login-screen').classList.remove('d-none');
             document.getElementById('app-container').classList.add('d-none');
+            // 로그아웃 시 로그 패널 숨김 (개발자 외 접근 차단)
             const loginPanel = document.getElementById('login-log-panel');
-            if (loginPanel) loginPanel.style.display = 'flex';
+            if (loginPanel) loginPanel.style.display = 'none';
         }
     });
 
