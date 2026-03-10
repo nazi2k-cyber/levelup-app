@@ -79,7 +79,8 @@ jobs:
       - name: 웹 빌드 디렉토리 준비
         run: |
           mkdir -p www
-          cp index.html app.js style.css data.js logger.js www/
+          cp app.html www/index.html
+          cp app.js style.css data.js logger.js www/
 
       - name: Google Web Client ID 주입
         if: env.GOOGLE_WEB_CLIENT_ID != ''
@@ -354,7 +355,8 @@ jobs:
       - name: 웹 빌드 디렉토리 준비
         run: |
           mkdir -p www
-          cp index.html app.js style.css data.js logger.js www/
+          cp app.html www/index.html
+          cp app.js style.css data.js logger.js www/
 
       - name: Google Web Client ID 주입
         if: env.GOOGLE_WEB_CLIENT_ID != ''
