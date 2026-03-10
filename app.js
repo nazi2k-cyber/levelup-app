@@ -217,7 +217,13 @@ function bindEvents() {
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
     document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
     document.getElementById('login-email').addEventListener('focus', showEmailLoginFields);
-    
+    document.getElementById('login-pw').addEventListener('input', function() {
+        const hint = document.getElementById('pw-hint');
+        if (!hint.classList.contains('d-none')) {
+            hint.classList.toggle('valid', validatePassword(this.value));
+        }
+    });
+
     document.querySelectorAll('.nav-item').forEach(el => {
         el.addEventListener('click', () => { if (!_navDragJustEnded) switchTab(el.dataset.tab, el); });
     });
@@ -1030,6 +1036,10 @@ function toggleSocialMode(mode, btn) {
 }
 
 // --- 로그인/인증 로직 ---
+function validatePassword(pw) {
+    return pw.length >= 8 && /[A-Z]/.test(pw) && (pw.match(/[^A-Za-z0-9]/g) || []).length >= 2;
+}
+
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -1037,7 +1047,8 @@ async function simulateLogin() {
     if(!email || !pw) { alert("이메일과 비밀번호를 입력해주세요."); return; }
     btn.innerText = "Processing..."; btn.disabled = true;
     try {
-        if(!AppState.isLoginMode) { 
+        if(!AppState.isLoginMode) {
+            if(!validatePassword(pw)) throw new Error("비밀번호는 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함해야 합니다.");
             const pwConfirm = document.getElementById('login-pw-confirm').value;
             if(pw !== pwConfirm) throw new Error("비밀번호 불일치");
             await createUserWithEmailAndPassword(auth, email, pw);
