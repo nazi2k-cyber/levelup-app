@@ -267,6 +267,17 @@ function bindEvents() {
             btn.classList.add('selected');
         });
     });
+    // 플래너 탭 전환 (우선순위 / 시간표)
+    document.querySelectorAll('.planner-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.planner-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.planner-tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.getAttribute('data-planner-tab');
+            const target = document.getElementById('planner-tab-' + tab);
+            if (target) target.classList.add('active');
+        });
+    });
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 }
 

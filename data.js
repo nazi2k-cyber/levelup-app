@@ -38,6 +38,7 @@ const i18n = {
         diary_modal_title: "다이어리", diary_placeholder: "오늘 하루를 기록해보세요...",
         diary_save: "저장", diary_saved: "플래너가 저장되었습니다.", diary_written: "작성 완료 ✓",
         diary_tab_title: "🗓️ 플래너",
+        planner_tab_priority: "⭐ 우선순위 태스크", planner_tab_schedule: "🕐 시간표",
         planner_weekly: "주간 플래너", planner_reward: "저장 시 +20P & AGI +0.5",
         planner_placeholder: "할 일을 입력하세요",
         raid_reward_label: "클리어 보상", raid_reward_points: "결속 포인트", raid_reward_stat: "성장 데이터", raid_reward_condition: "달성 조건"
@@ -80,6 +81,7 @@ const i18n = {
         diary_modal_title: "Diary", diary_placeholder: "How was your day?",
         diary_save: "Save", diary_saved: "Planner saved.", diary_written: "Written ✓",
         diary_tab_title: "🗓️ Planner",
+        planner_tab_priority: "⭐ Priority Tasks", planner_tab_schedule: "🕐 Schedule",
         planner_weekly: "Weekly Planner", planner_reward: "Save: +20P & AGI +0.5",
         planner_placeholder: "Enter task",
         raid_reward_label: "Clear Reward", raid_reward_points: "Bond Points", raid_reward_stat: "Growth Data", raid_reward_condition: "Condition"
@@ -122,6 +124,7 @@ const i18n = {
         diary_modal_title: "プランナー", diary_placeholder: "タスクを入力してください...",
         diary_save: "保存", diary_saved: "プランナーが保存されました。", diary_written: "記録完了 ✓",
         diary_tab_title: "🗓️ プランナー",
+        planner_tab_priority: "⭐ 優先タスク", planner_tab_schedule: "🕐 スケジュール",
         planner_weekly: "週間プランナー", planner_reward: "保存: +20P & AGI +0.5",
         planner_placeholder: "タスクを入力",
         raid_reward_label: "クリア報酬", raid_reward_points: "結束ポイント", raid_reward_stat: "成長データ", raid_reward_condition: "達成条件"

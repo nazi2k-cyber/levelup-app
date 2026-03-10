@@ -258,14 +258,26 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .cal-day.planner-selected .cal-name,
 .cal-day.planner-selected .cal-date { color: var(--neon-gold); }
 
+/* 플래너 탭 바 */
+.planner-tab-bar { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+.planner-tab-btn {
+    flex: 1; padding: 10px 0; font-size: 0.85rem; font-weight: bold; color: var(--text-sub);
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+}
+.planner-tab-btn.active { color: var(--neon-gold); border-bottom-color: var(--neon-gold); }
+.planner-tab-btn:not(.active):hover { color: var(--text-main); }
+.planner-tab-content { display: none; }
+.planner-tab-content.active { display: block; }
+
 /* 플래너 통합 태스크 목록 */
 .planner-section-title { font-size: 0.65rem; font-weight: bold; color: var(--neon-blue); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
 .planner-unified-box { margin-bottom: 10px; }
-.planner-task-item { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+.planner-task-item { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
 .task-rank-btn {
-    width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+    width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%;
     border: 1px solid var(--border-color); background: transparent;
-    color: var(--text-sub); cursor: pointer; font-size: 0.7rem; font-weight: bold;
+    color: var(--text-sub); cursor: pointer; font-size: 0.8rem; font-weight: bold;
     display: flex; align-items: center; justify-content: center; transition: all 0.15s;
     padding: 0;
 }
@@ -273,7 +285,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .task-rank-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .planner-task-input {
     flex: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);
-    border-radius: 4px; color: var(--text-main); padding: 5px 8px; font-size: 0.75rem;
+    border-radius: 4px; color: var(--text-main); padding: 7px 10px; font-size: 0.88rem;
     outline: none; box-sizing: border-box; font-family: inherit; transition: border-color 0.15s; min-width: 0;
 }
 .planner-task-input:focus { border-color: var(--neon-gold); background: rgba(255,204,0,0.03); }
@@ -284,7 +296,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     color: var(--neon-red); cursor: pointer; font-size: 1rem; padding: 0; line-height: 1;
 }
 .btn-add-task {
-    font-size: 0.7rem; padding: 3px 9px; border: 1px solid var(--neon-blue);
+    font-size: 0.8rem; padding: 4px 12px; border: 1px solid var(--neon-blue);
     background: rgba(0,217,255,0.08); color: var(--neon-blue); border-radius: 4px; cursor: pointer;
 }
 .btn-add-task:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -293,16 +305,16 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 /* 타임박스 그리드 헤더 */
 .timebox-grid-header { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; padding: 0 1px; }
 .timebox-hour-col { width: 44px; flex-shrink: 0; }
-.timebox-col-header { flex: 1; text-align: center; font-size: 0.65rem; color: var(--neon-blue); font-weight: bold; letter-spacing: 1px; }
+.timebox-col-header { flex: 1; text-align: center; font-size: 0.78rem; color: var(--neon-blue); font-weight: bold; letter-spacing: 1px; }
 
 /* 플래너 타임박스 그리드 - 두 열 레이아웃 */
 .planner-timebox-grid { display: flex; flex-direction: column; gap: 2px; max-height: 360px; overflow-y: auto; scrollbar-width: none; padding-right: 2px; }
 .planner-timebox-grid::-webkit-scrollbar { display: none; }
 .timebox-row { display: flex; align-items: center; gap: 4px; }
-.timebox-label { font-size: 0.68rem; color: var(--neon-blue); font-family: monospace; width: 44px; flex-shrink: 0; font-weight: bold; text-align: right; }
+.timebox-label { font-size: 0.8rem; color: var(--neon-blue); font-family: monospace; width: 48px; flex-shrink: 0; font-weight: bold; text-align: right; }
 .timebox-select {
     flex: 1; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);
-    border-radius: 4px; color: var(--text-main); padding: 4px 4px; font-size: 0.68rem;
+    border-radius: 4px; color: var(--text-main); padding: 5px 5px; font-size: 0.8rem;
     outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; min-width: 0;
     cursor: pointer; appearance: none; -webkit-appearance: none;
 }

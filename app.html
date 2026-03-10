@@ -251,24 +251,34 @@
                         </div>
                     </div>
 
-                    <!-- 통합 우선순위 태스크 목록 -->
-                    <div class="planner-unified-box">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <div class="planner-section-title" style="margin-bottom:0;">⭐ 우선순위 태스크</div>
-                            <button class="btn-add-task" id="btn-add-task">+ 추가</button>
+                    <!-- 플래너 탭 버튼 -->
+                    <div class="planner-tab-bar">
+                        <button class="planner-tab-btn active" data-planner-tab="priority" data-i18n="planner_tab_priority">⭐ 우선순위 태스크</button>
+                        <button class="planner-tab-btn" data-planner-tab="schedule" data-i18n="planner_tab_schedule">🕐 시간표</button>
+                    </div>
+
+                    <!-- 우선순위 태스크 탭 -->
+                    <div class="planner-tab-content active" id="planner-tab-priority">
+                        <div class="planner-unified-box">
+                            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:6px;">
+                                <button class="btn-add-task" id="btn-add-task">+ 추가</button>
+                            </div>
+                            <div id="planner-tasks-list"></div>
                         </div>
-                        <div id="planner-tasks-list"></div>
                     </div>
 
-                    <!-- 타임박스 그리드 헤더 -->
-                    <div class="timebox-grid-header">
-                        <span class="timebox-hour-col"></span>
-                        <span class="timebox-col-header">:00</span>
-                        <span class="timebox-col-header">:30</span>
-                    </div>
+                    <!-- 시간표 탭 -->
+                    <div class="planner-tab-content" id="planner-tab-schedule">
+                        <!-- 타임박스 그리드 헤더 -->
+                        <div class="timebox-grid-header">
+                            <span class="timebox-hour-col"></span>
+                            <span class="timebox-col-header">:00</span>
+                            <span class="timebox-col-header">:30</span>
+                        </div>
 
-                    <!-- 타임박스 그리드 -->
-                    <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
+                        <!-- 타임박스 그리드 -->
+                        <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
+                    </div>
 
                     <!-- 저장 버튼 -->
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
