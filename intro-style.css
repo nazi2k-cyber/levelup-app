@@ -346,6 +346,71 @@ body {
     line-height: 1.7;
 }
 
+/* ===== Screenshots Section ===== */
+.screenshots-section {
+    padding: 100px 0;
+    background: var(--bg-primary);
+    overflow: hidden;
+}
+
+.screenshots-carousel {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    margin: 0 -24px;
+    padding: 0 24px;
+}
+
+.screenshots-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.screenshots-track {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+.screenshot-item {
+    flex-shrink: 0;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.5s, transform 0.5s;
+}
+
+.screenshot-item.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.screenshot-item:nth-child(2) { transition-delay: 0.1s; }
+.screenshot-item:nth-child(3) { transition-delay: 0.2s; }
+.screenshot-item:nth-child(4) { transition-delay: 0.3s; }
+.screenshot-item:nth-child(5) { transition-delay: 0.4s; }
+
+.screenshot-phone {
+    width: 200px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.screenshot-phone:hover {
+    transform: translateY(-8px) scale(1.03);
+    border-color: rgba(0, 217, 255, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 217, 255, 0.15);
+}
+
+.screenshot-phone img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
 /* ===== Stats Section ===== */
 .stats-section {
     padding: 100px 0;
@@ -632,6 +697,14 @@ body {
     .recommend-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .screenshots-track {
+        justify-content: flex-start;
+    }
+
+    .screenshot-phone {
+        width: 180px;
+    }
 }
 
 @media (max-width: 600px) {
@@ -645,6 +718,15 @@ body {
     .stats-grid,
     .recommend-grid {
         grid-template-columns: 1fr;
+    }
+
+    .screenshot-phone {
+        width: 160px;
+    }
+
+    .screenshots-track {
+        justify-content: flex-start;
+        gap: 16px;
     }
 
     .lang-banner {

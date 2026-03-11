@@ -28,6 +28,7 @@
             </div>
             <div class="nav-links">
                 <a href="#features">기능</a>
+                <a href="#screenshots">스크린샷</a>
                 <a href="#stats">스탯</a>
                 <a href="app.html" class="nav-cta">웹에서 시작</a>
             </div>
@@ -108,6 +109,46 @@
                     <div class="feature-icon">🗓️</div>
                     <h3 class="feature-title">성장 다이어리</h3>
                     <p class="feature-desc">일일 성취를 기록하고 그래프로 시각화합니다. 주간, 월간 성장 추이를 한눈에 확인하세요.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section class="screenshots-section" id="screenshots">
+        <div class="section-inner">
+            <div class="section-header">
+                <span class="section-badge">APP PREVIEW</span>
+                <h2 class="section-title">앱 미리보기</h2>
+                <p class="section-desc">실제 앱 화면을 확인해보세요</p>
+            </div>
+            <div class="screenshots-carousel">
+                <div class="screenshots-track">
+                    <div class="screenshot-item">
+                        <div class="screenshot-phone">
+                            <img src="store-listing/Screenshot_20260311_071407_LEVEL%20UP%20REBOOT.jpg" alt="LEVEL UP: REBOOT 스크린샷 1" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <div class="screenshot-phone">
+                            <img src="store-listing/Screenshot_20260311_071502_LEVEL%20UP%20REBOOT.jpg" alt="LEVEL UP: REBOOT 스크린샷 2" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <div class="screenshot-phone">
+                            <img src="store-listing/Screenshot_20260311_071522_LEVEL%20UP%20REBOOT.jpg" alt="LEVEL UP: REBOOT 스크린샷 3" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <div class="screenshot-phone">
+                            <img src="store-listing/Screenshot_20260311_071546_LEVEL%20UP%20REBOOT.jpg" alt="LEVEL UP: REBOOT 스크린샷 4" loading="lazy">
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <div class="screenshot-phone">
+                            <img src="store-listing/Screenshot_20260311_074641_LEVEL%20UP%20REBOOT.jpg" alt="LEVEL UP: REBOOT 스크린샷 5" loading="lazy">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -251,7 +292,7 @@
         }, { threshold: 0.1 });
 
         document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.feature-card, .stat-card, .recommend-card, .section-header').forEach(function(el) {
+            document.querySelectorAll('.feature-card, .stat-card, .recommend-card, .screenshot-item, .section-header').forEach(function(el) {
                 observer.observe(el);
             });
         });
