@@ -62,7 +62,7 @@
     </div>
 
     <!-- 로그인 전 화면 하단 오류 로그 패널 (body 직속 자식 → position:fixed 정상 동작 보장) -->
-    <div id="login-log-panel" style="position:fixed;bottom:0;left:0;right:0;padding:8px 12px;display:none;gap:8px;align-items:center;justify-content:center;background:rgba(5,5,8,0.92);border-top:1px solid #1a1a2a;z-index:9999;">
+    <div id="login-log-panel" style="position:fixed;bottom:0;left:0;right:0;padding:8px 12px;display:flex;gap:8px;align-items:center;justify-content:center;background:rgba(5,5,8,0.92);border-top:1px solid #1a1a2a;z-index:9999;">
         <span style="font-size:0.7rem;color:#555;">오류 로그</span>
         <span id="login-log-badge" style="font-size:0.72rem;color:#00d9ff;font-weight:bold;">0개</span>
         <button onclick="AppLogger.openViewer()" style="background:rgba(0,217,255,0.08);border:1px solid #00d9ff;color:#00d9ff;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.72rem;">로그 보기</button>
