@@ -311,6 +311,14 @@
                             <button class="planner-photo-remove d-none" id="planner-photo-remove" onclick="window.removePlannerPhoto()">✕</button>
                         </div>
 
+                        <!-- 사진 캡션 텍스트 -->
+                        <div class="planner-caption-box">
+                            <textarea id="planner-caption" class="planner-caption-input" maxlength="280"
+                                      placeholder="오늘의 한마디를 남겨보세요..."
+                                      oninput="window.updateCaptionCounter()"></textarea>
+                            <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
+                        </div>
+
                         <!-- 타임박스 그리드 헤더 -->
                         <div class="timebox-grid-header">
                             <span class="timebox-hour-col"></span>

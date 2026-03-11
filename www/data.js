@@ -73,7 +73,9 @@ const i18n = {
         reels_posted: "릴스에 포스팅되었습니다!",
         reels_already_posted: "오늘은 이미 포스팅했습니다.",
         reels_reset_info: "매일 00:00(KST) 초기화",
-        planner_photo_required: "사진 추가 (필수)"
+        planner_photo_required: "사진 추가 (필수)",
+        planner_caption_placeholder: "오늘의 한마디를 남겨보세요...",
+        planner_caption_limit_ko: "한글 140자 / 영문 280자"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -145,7 +147,9 @@ const i18n = {
         reels_posted: "Posted to Reels!",
         reels_already_posted: "You have already posted today.",
         reels_reset_info: "Resets daily at 00:00 (KST)",
-        planner_photo_required: "Add Photo (Required)"
+        planner_photo_required: "Add Photo (Required)",
+        planner_caption_placeholder: "Write a short caption...",
+        planner_caption_limit_ko: "280 chars (English) / 140 chars (Korean)"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -217,7 +221,9 @@ const i18n = {
         reels_posted: "リールに投稿されました！",
         reels_already_posted: "今日はすでに投稿済みです。",
         reels_reset_info: "毎日00:00(KST)にリセット",
-        planner_photo_required: "写真追加（必須）"
+        planner_photo_required: "写真追加（必須）",
+        planner_caption_placeholder: "今日の一言を残しましょう...",
+        planner_caption_limit_ko: "全角140字 / 半角280字"
     }
 };
 

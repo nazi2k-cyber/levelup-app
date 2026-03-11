@@ -2265,6 +2265,13 @@ function loadPlannerForDate(dateStr) {
         plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
     }
 
+    // 캡션 복원
+    const captionEl = document.getElementById('planner-caption');
+    if (captionEl) {
+        captionEl.value = (saved && saved.caption) ? saved.caption : '';
+        window.updateCaptionCounter();
+    }
+
     // 사진 복원
     if (saved && saved.photo) {
         plannerPhotoData = saved.photo;
@@ -2347,7 +2354,8 @@ async function savePlannerEntry() {
             tasks: tasksData,
             priorities: rankedByOrder,
             brainDump,
-            photo: plannerPhotoData || (diaries[dateStr]?.photo || null)
+            photo: plannerPhotoData || (diaries[dateStr]?.photo || null),
+            caption: (document.getElementById('planner-caption')?.value || '').trim()
         };
 
         try {
@@ -2424,6 +2432,45 @@ window.removePlannerPhoto = function() {
     placeholder.classList.remove('d-none');
     removeBtn.classList.add('d-none');
     document.getElementById('plannerPhotoUpload').value = '';
+};
+
+// 캡션 글자 수 카운터 (한글 140자 / 영문 280자 제한)
+// 한글(2바이트 문자)은 2로, 영문/숫자(1바이트)는 1로 계산하여 최대 280 기준
+function getCaptionByteLength(str) {
+    let len = 0;
+    for (let i = 0; i < str.length; i++) {
+        len += str.charCodeAt(i) > 127 ? 2 : 1;
+    }
+    return len;
+}
+
+window.updateCaptionCounter = function() {
+    const textarea = document.getElementById('planner-caption');
+    const counter = document.getElementById('planner-caption-counter');
+    if (!textarea || !counter) return;
+
+    let text = textarea.value;
+    const byteLen = getCaptionByteLength(text);
+    const maxBytes = 280;
+
+    // 초과 시 잘라내기
+    if (byteLen > maxBytes) {
+        let trimmed = '';
+        let currentLen = 0;
+        for (let i = 0; i < text.length; i++) {
+            const charLen = text.charCodeAt(i) > 127 ? 2 : 1;
+            if (currentLen + charLen > maxBytes) break;
+            trimmed += text[i];
+            currentLen += charLen;
+        }
+        textarea.value = trimmed;
+        text = trimmed;
+    }
+
+    const used = getCaptionByteLength(text);
+    const koEquiv = Math.ceil(used / 2);
+    counter.innerText = `${koEquiv} / 140`;
+    counter.style.color = used >= maxBytes * 0.9 ? 'var(--neon-red)' : 'var(--text-sub)';
 };
 
 // --- ★ 릴스 기능 ★ ---
@@ -2534,11 +2581,13 @@ async function postToReels() {
     }
 
     // 포스트 생성
+    const caption = (entry.caption || '').trim();
     const post = {
         uid: auth.currentUser.uid,
         dateKST: todayKST,
         timestamp: Date.now(),
         photo: photoData,
+        caption: caption,
         blocks: entry.blocks,
         tasks: entry.tasks || [],
         mood: entry.mood || '',
@@ -2597,6 +2646,7 @@ async function renderReelsFeed() {
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
             ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${post.photo}" alt="Timetable"></div>` : ''}
+            ${post.caption ? `<div class="reels-caption">${post.caption.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
             <div class="reels-timetable">
                 <div class="reels-timetable-title">📋 ${i18n[lang]?.planner_tab_schedule || '시간표'}</div>
                 ${blockSummary}
