@@ -59,7 +59,7 @@ function getInitialAppState() {
             weekStart: getWeekStartDate()
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
-        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false },
+        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0 },
     };
 }
 
@@ -327,8 +327,10 @@ async function loadUserDataFromDB(user) {
             }
             if(data.dungeonStr) {
                 AppState.dungeon = JSON.parse(data.dungeonStr);
-                if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5; 
-                if(AppState.dungeon.hasContributed === undefined) AppState.dungeon.hasContributed = false; 
+                if(!AppState.dungeon.maxParticipants) AppState.dungeon.maxParticipants = 5;
+                if(AppState.dungeon.hasContributed === undefined) AppState.dungeon.hasContributed = false;
+                if(!AppState.dungeon.bossMaxHP) AppState.dungeon.bossMaxHP = isBossRush() ? 10 : 5;
+                if(AppState.dungeon.bossDamageDealt === undefined) AppState.dungeon.bossDamageDealt = 0;
                 AppState.dungeon.globalParticipants = 0;
                 AppState.dungeon.globalProgress = 0;
             }
@@ -394,6 +396,13 @@ function getStreakMultiplier(streak) {
 function applyStreakAndDecay() {
     const today = getTodayStr();
     const lastActive = AppState.user.streak.lastActiveDate;
+    // lastActiveDate가 없으면(신규 유저/기존 유저 최초) 감소 없이 오늘로 설정
+    if (!lastActive) {
+        AppState.user.streak.lastActiveDate = today;
+        AppState.user.streak.multiplier = getStreakMultiplier(AppState.user.streak.currentStreak);
+        renderStreakBadge();
+        return;
+    }
     const gap = getDaysBetween(lastActive, today);
 
     if (gap > 1) {
@@ -401,9 +410,9 @@ function applyStreakAndDecay() {
         if (AppState.user.streak.currentStreak > 0) {
             AppState.user.streak.currentStreak = 0;
         }
-        // 3일 이상 미접속 시 스탯 감소
+        // 3일 이상 미접속 시 스탯 감소 (최대 30일분으로 제한)
         if (gap > 3) {
-            const decayDays = gap - 3;
+            const decayDays = Math.min(gap - 3, 30);
             const decayAmount = decayDays * 0.1;
             let decayed = false;
             statKeys.forEach(k => {
