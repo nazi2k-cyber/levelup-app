@@ -62,7 +62,20 @@ const i18n = {
 
         // P4: 일일 보너스 룰렛
         roulette_title: "일일 보너스 룰렛", roulette_spin: "스핀!", roulette_desc: "퀘스트 1개 이상 완료 후 하루 1회 스핀 가능",
-        roulette_locked: "퀘스트를 완료하면 스핀 가능", roulette_used: "오늘 스핀 완료", roulette_result: "보상 획득!"
+        roulette_locked: "퀘스트를 완료하면 스핀 가능", roulette_used: "오늘 스핀 완료", roulette_result: "보상 획득!",
+
+        // 릴스 탭
+        nav_reels: "릴스", reels_title: "🎬 릴스", reels_post_btn: "타임테이블 포스팅",
+        reels_post_hint: "오늘의 시간표를 완성하고 사진을 추가하면 포스팅할 수 있습니다",
+        reels_empty: "아직 포스팅이 없습니다. 타임테이블을 완성하고 포스팅해보세요!",
+        reels_no_timetable: "먼저 플래너에서 오늘의 시간표를 작성하고 저장해주세요.",
+        reels_no_photo: "시간표에 사진을 추가해야 포스팅할 수 있습니다.",
+        reels_posted: "릴스에 포스팅되었습니다!",
+        reels_already_posted: "오늘은 이미 포스팅했습니다.",
+        reels_reset_info: "매일 00:00(KST) 초기화",
+        planner_photo_required: "사진 추가 (필수)",
+        planner_caption_placeholder: "오늘의 한마디를 남겨보세요...",
+        planner_caption_limit_ko: "한글 140자 / 영문 280자"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -123,7 +136,20 @@ const i18n = {
 
         // P4: Daily Bonus Roulette
         roulette_title: "Daily Bonus Roulette", roulette_spin: "SPIN!", roulette_desc: "Complete 1+ quest to unlock daily spin",
-        roulette_locked: "Complete a quest to spin", roulette_used: "Spin used today", roulette_result: "Reward!"
+        roulette_locked: "Complete a quest to spin", roulette_used: "Spin used today", roulette_result: "Reward!",
+
+        // Reels tab
+        nav_reels: "Reels", reels_title: "🎬 Reels", reels_post_btn: "Post Timetable",
+        reels_post_hint: "Complete your timetable and add a photo to post",
+        reels_empty: "No posts yet. Complete your timetable and share it!",
+        reels_no_timetable: "Please create and save today's timetable in the Planner first.",
+        reels_no_photo: "You must add a photo to your timetable before posting.",
+        reels_posted: "Posted to Reels!",
+        reels_already_posted: "You have already posted today.",
+        reels_reset_info: "Resets daily at 00:00 (KST)",
+        planner_photo_required: "Add Photo (Required)",
+        planner_caption_placeholder: "Write a short caption...",
+        planner_caption_limit_ko: "280 chars (English) / 140 chars (Korean)"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -184,7 +210,20 @@ const i18n = {
 
         // P4: デイリーボーナスルーレット
         roulette_title: "デイリーボーナスルーレット", roulette_spin: "スピン！", roulette_desc: "クエスト1つ以上完了で1日1回スピン可能",
-        roulette_locked: "クエストを完了するとスピン可能", roulette_used: "本日スピン済", roulette_result: "報酬獲得！"
+        roulette_locked: "クエストを完了するとスピン可能", roulette_used: "本日スピン済", roulette_result: "報酬獲得！",
+
+        // リールタブ
+        nav_reels: "リール", reels_title: "🎬 リール", reels_post_btn: "タイムテーブル投稿",
+        reels_post_hint: "タイムテーブルを完成し、写真を追加すると投稿できます",
+        reels_empty: "まだ投稿がありません。タイムテーブルを完成して共有しましょう！",
+        reels_no_timetable: "まずプランナーで今日のタイムテーブルを作成・保存してください。",
+        reels_no_photo: "投稿するにはタイムテーブルに写真を追加してください。",
+        reels_posted: "リールに投稿されました！",
+        reels_already_posted: "今日はすでに投稿済みです。",
+        reels_reset_info: "毎日00:00(KST)にリセット",
+        planner_photo_required: "写真追加（必須）",
+        planner_caption_placeholder: "今日の一言を残しましょう...",
+        planner_caption_limit_ko: "全角140字 / 半角280字"
     }
 };
 

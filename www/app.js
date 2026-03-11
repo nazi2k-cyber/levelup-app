@@ -67,7 +67,7 @@ function getInitialAppState() {
 let _initializedUid = null;
 
 // --- 탭 순서 관리 ---
-const DEFAULT_NAV_ORDER = ['status', 'diary', 'quests', 'dungeon', 'social', 'settings'];
+const DEFAULT_NAV_ORDER = ['status', 'diary', 'quests', 'dungeon', 'reels', 'social', 'settings'];
 
 function loadNavOrder() {
     const saved = localStorage.getItem('navTabOrder');
@@ -283,6 +283,11 @@ function bindEvents() {
         });
     });
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
+
+    // Reels tab
+    document.getElementById('btn-reels-post').addEventListener('click', postToReels);
+    // Planner photo upload
+    document.getElementById('plannerPhotoUpload').addEventListener('change', loadPlannerPhoto);
 }
 
 // --- 데이터 저장/로드 ---
@@ -1120,6 +1125,7 @@ function switchTab(tabId, el) {
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); renderWeeklyChallenges(); renderRoulette(); }
     if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); }
+    if(tabId === 'reels') { renderReelsFeed(); updateReelsResetTimer(); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
         window.syncGlobalDungeon(); 
@@ -2259,6 +2265,34 @@ function loadPlannerForDate(dateStr) {
         plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
     }
 
+    // 캡션 복원
+    const captionEl = document.getElementById('planner-caption');
+    if (captionEl) {
+        captionEl.value = (saved && saved.caption) ? saved.caption : '';
+        window.updateCaptionCounter();
+    }
+
+    // 사진 복원
+    if (saved && saved.photo) {
+        plannerPhotoData = saved.photo;
+        const preview = document.getElementById('planner-photo-preview');
+        const placeholder = document.getElementById('planner-photo-placeholder');
+        const removeBtn = document.getElementById('planner-photo-remove');
+        if (preview) { preview.src = saved.photo; preview.classList.remove('d-none'); }
+        if (placeholder) placeholder.classList.add('d-none');
+        if (removeBtn) removeBtn.classList.remove('d-none');
+    } else {
+        plannerPhotoData = null;
+        const preview = document.getElementById('planner-photo-preview');
+        const placeholder = document.getElementById('planner-photo-placeholder');
+        const removeBtn = document.getElementById('planner-photo-remove');
+        if (preview) { preview.classList.add('d-none'); preview.src = ''; }
+        if (placeholder) placeholder.classList.remove('d-none');
+        if (removeBtn) removeBtn.classList.add('d-none');
+        const fileInput = document.getElementById('plannerPhotoUpload');
+        if (fileInput) fileInput.value = '';
+    }
+
     // 태스크 목록 렌더링 (이 안에서 updateTimeboxDropdownOptions도 호출됨)
     renderPlannerTasks();
 
@@ -2319,7 +2353,9 @@ async function savePlannerEntry() {
             text, mood, timestamp: Date.now(), blocks,
             tasks: tasksData,
             priorities: rankedByOrder,
-            brainDump
+            brainDump,
+            photo: plannerPhotoData || (diaries[dateStr]?.photo || null),
+            caption: (document.getElementById('planner-caption')?.value || '').trim()
         };
 
         try {
@@ -2351,6 +2387,328 @@ async function savePlannerEntry() {
 
     renderPlannerCalendar();
     alert(i18n[AppState.currentLang].diary_saved || '플래너가 저장되었습니다.');
+}
+
+// --- ★ 플래너 사진 기능 (타임테이블 사진 필수) ★ ---
+let plannerPhotoData = null; // base64
+
+function loadPlannerPhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxSize = 600;
+            let w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+                if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                else { w = Math.round(w * maxSize / h); h = maxSize; }
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            plannerPhotoData = canvas.toDataURL('image/jpeg', 0.7);
+            const preview = document.getElementById('planner-photo-preview');
+            const placeholder = document.getElementById('planner-photo-placeholder');
+            const removeBtn = document.getElementById('planner-photo-remove');
+            preview.src = plannerPhotoData;
+            preview.classList.remove('d-none');
+            placeholder.classList.add('d-none');
+            removeBtn.classList.remove('d-none');
+        };
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+window.removePlannerPhoto = function() {
+    plannerPhotoData = null;
+    const preview = document.getElementById('planner-photo-preview');
+    const placeholder = document.getElementById('planner-photo-placeholder');
+    const removeBtn = document.getElementById('planner-photo-remove');
+    preview.classList.add('d-none');
+    preview.src = '';
+    placeholder.classList.remove('d-none');
+    removeBtn.classList.add('d-none');
+    document.getElementById('plannerPhotoUpload').value = '';
+};
+
+// 캡션 글자 수 카운터 (한글 140자 / 영문 280자 제한)
+// 한글(2바이트 문자)은 2로, 영문/숫자(1바이트)는 1로 계산하여 최대 280 기준
+function getCaptionByteLength(str) {
+    let len = 0;
+    for (let i = 0; i < str.length; i++) {
+        len += str.charCodeAt(i) > 127 ? 2 : 1;
+    }
+    return len;
+}
+
+window.updateCaptionCounter = function() {
+    const textarea = document.getElementById('planner-caption');
+    const counter = document.getElementById('planner-caption-counter');
+    if (!textarea || !counter) return;
+
+    let text = textarea.value;
+    const byteLen = getCaptionByteLength(text);
+    const maxBytes = 280;
+
+    // 초과 시 잘라내기
+    if (byteLen > maxBytes) {
+        let trimmed = '';
+        let currentLen = 0;
+        for (let i = 0; i < text.length; i++) {
+            const charLen = text.charCodeAt(i) > 127 ? 2 : 1;
+            if (currentLen + charLen > maxBytes) break;
+            trimmed += text[i];
+            currentLen += charLen;
+        }
+        textarea.value = trimmed;
+        text = trimmed;
+    }
+
+    const used = getCaptionByteLength(text);
+    const koEquiv = Math.ceil(used / 2);
+    counter.innerText = `${koEquiv} / 140`;
+    counter.style.color = used >= maxBytes * 0.9 ? 'var(--neon-red)' : 'var(--text-sub)';
+};
+
+// --- ★ 릴스 기능 ★ ---
+
+// KST 기준 오늘 날짜 문자열
+function getTodayKST() {
+    const now = new Date();
+    const kst = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+    return `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,'0')}-${String(kst.getDate()).padStart(2,'0')}`;
+}
+
+// 릴스 데이터 로드 (localStorage)
+function getReelsData() {
+    try {
+        const data = JSON.parse(localStorage.getItem('reels_posts') || '{}');
+        // KST 자정 리셋 체크
+        const todayKST = getTodayKST();
+        if (data._lastDate && data._lastDate !== todayKST) {
+            // 날짜가 바뀌었으면 리셋
+            localStorage.setItem('reels_posts', JSON.stringify({ _lastDate: todayKST, posts: [] }));
+            return { _lastDate: todayKST, posts: [] };
+        }
+        if (!data._lastDate) data._lastDate = todayKST;
+        if (!data.posts) data.posts = [];
+        return data;
+    } catch { return { _lastDate: getTodayKST(), posts: [] }; }
+}
+
+function saveReelsData(data) {
+    localStorage.setItem('reels_posts', JSON.stringify(data));
+}
+
+// Firestore에 릴스 포스트 저장/로드
+async function saveReelsToFirestore(post) {
+    if (!auth.currentUser) return;
+    try {
+        const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+        let existingPosts = [];
+        if (userDoc.exists() && userDoc.data().reelsStr) {
+            try { existingPosts = JSON.parse(userDoc.data().reelsStr); } catch(e) {}
+        }
+        // 오늘 KST 기준 포스트만 유지
+        const todayKST = getTodayKST();
+        existingPosts = existingPosts.filter(p => p.dateKST === todayKST);
+        existingPosts.push(post);
+        await updateDoc(doc(db, "users", auth.currentUser.uid), {
+            reelsStr: JSON.stringify(existingPosts)
+        });
+    } catch(e) { AppLogger.error('[Reels] Firestore 저장 실패: ' + (e.message || e)); }
+}
+
+async function fetchAllReelsPosts() {
+    const todayKST = getTodayKST();
+    const posts = [];
+    try {
+        const snap = await getDocs(collection(db, "users"));
+        snap.docs.forEach(d => {
+            const data = d.data();
+            if (data.reelsStr) {
+                try {
+                    const userPosts = JSON.parse(data.reelsStr);
+                    userPosts.forEach(p => {
+                        if (p.dateKST === todayKST) {
+                            posts.push({
+                                ...p,
+                                uid: d.id,
+                                userName: data.name || '헌터',
+                                userPhoto: data.photoURL || null,
+                                userLevel: data.level || 1
+                            });
+                        }
+                    });
+                } catch(e) {}
+            }
+        });
+    } catch(e) { AppLogger.error('[Reels] 피드 로드 실패: ' + (e.message || e)); }
+    // 최신순 정렬
+    posts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    return posts;
+}
+
+// 릴스 포스팅
+async function postToReels() {
+    const lang = AppState.currentLang;
+    const todayKST = getTodayKST();
+
+    // 이미 오늘 포스팅했는지 체크
+    const reelsData = getReelsData();
+    const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
+    if (myPost) {
+        alert(i18n[lang].reels_already_posted);
+        return;
+    }
+
+    // 오늘 타임테이블이 있는지 체크
+    const todayStr = getTodayStr();
+    const entry = getDiaryEntry(todayStr);
+    if (!entry || !entry.blocks || Object.keys(entry.blocks).length === 0) {
+        alert(i18n[lang].reels_no_timetable);
+        return;
+    }
+
+    // 사진이 있는지 체크 (저장된 것 또는 현재 업로드)
+    const photoData = plannerPhotoData || (entry.photo || null);
+    if (!photoData) {
+        alert(i18n[lang].reels_no_photo);
+        return;
+    }
+
+    // 포스트 생성
+    const caption = (entry.caption || '').trim();
+    const post = {
+        uid: auth.currentUser.uid,
+        dateKST: todayKST,
+        timestamp: Date.now(),
+        photo: photoData,
+        caption: caption,
+        blocks: entry.blocks,
+        tasks: entry.tasks || [],
+        mood: entry.mood || '',
+        userName: AppState.user.name,
+        userPhoto: AppState.user.photoURL || null,
+        userLevel: AppState.user.level
+    };
+
+    // 로컬 저장
+    reelsData.posts.push(post);
+    saveReelsData(reelsData);
+
+    // Firestore 저장
+    await saveReelsToFirestore(post);
+
+    alert(i18n[lang].reels_posted);
+    renderReelsFeed();
+}
+
+// 릴스 피드 렌더링
+async function renderReelsFeed() {
+    const container = document.getElementById('reels-feed');
+    if (!container) return;
+    const lang = AppState.currentLang;
+
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);">로딩 중...</div>';
+
+    const posts = await fetchAllReelsPosts();
+
+    if (posts.length === 0) {
+        container.innerHTML = `<div class="system-card" style="text-align:center; padding:30px; color:var(--text-sub);">
+            <div style="font-size:2rem; margin-bottom:10px;">🎬</div>
+            <div>${i18n[lang].reels_empty}</div>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = posts.map(post => {
+        const profileSrc = post.userPhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+        const isMe = post.uid === auth.currentUser?.uid;
+
+        // 시간표 블록 요약 (최대 6개)
+        const blockEntries = Object.entries(post.blocks || {}).sort(([a],[b]) => a.localeCompare(b));
+        const blockSummary = blockEntries.slice(0, 6).map(([time, task]) =>
+            `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${task.replace(/</g,'&lt;')}</span></div>`
+        ).join('');
+        const moreCount = blockEntries.length > 6 ? blockEntries.length - 6 : 0;
+
+        return `<div class="system-card reels-card">
+            <div class="reels-header">
+                <img class="reels-avatar" src="${profileSrc}" alt="">
+                <div class="reels-user-info">
+                    <div class="reels-username">${(post.userName || '헌터').replace(/</g,'&lt;')}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
+                    <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
+                </div>
+                <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
+            </div>
+            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${post.photo}" alt="Timetable"></div>` : ''}
+            ${post.caption ? `<div class="reels-caption">${post.caption.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
+            <div class="reels-timetable">
+                <div class="reels-timetable-title">📋 ${i18n[lang]?.planner_tab_schedule || '시간표'}</div>
+                ${blockSummary}
+                ${moreCount > 0 ? `<div style="font-size:0.65rem; color:var(--text-sub); text-align:right;">+${moreCount} more</div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function getMoodEmoji(mood) {
+    const map = { great: '😄', good: '🙂', neutral: '😐', bad: '😞', terrible: '😫' };
+    return map[mood] || '';
+}
+
+function formatReelsTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// 릴스 리셋 타이머 (다음 00:00 KST까지)
+function updateReelsResetTimer() {
+    const timerEl = document.getElementById('reels-reset-timer');
+    if (!timerEl) return;
+
+    function update() {
+        const now = new Date();
+        // KST = UTC + 9
+        const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+        const kstMidnight = new Date(kstNow);
+        kstMidnight.setDate(kstMidnight.getDate() + 1);
+        kstMidnight.setHours(0, 0, 0, 0);
+
+        const diff = kstMidnight - kstNow;
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const lang = AppState.currentLang;
+        timerEl.innerText = `${i18n[lang]?.reels_reset_info || '매일 00:00(KST) 초기화'} | ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    }
+    update();
+    // 릴스 탭 활성시 1초마다 업데이트
+    if (window._reelsTimerInterval) clearInterval(window._reelsTimerInterval);
+    window._reelsTimerInterval = setInterval(() => {
+        if (document.getElementById('reels').classList.contains('active')) {
+            update();
+            // 자정 체크 - 날짜 넘어가면 자동 리셋
+            checkReelsReset();
+        }
+    }, 1000);
+}
+
+// 00:00 KST 데이터 리셋 체크
+function checkReelsReset() {
+    const todayKST = getTodayKST();
+    const reelsData = getReelsData();
+    if (reelsData._lastDate !== todayKST) {
+        // 날짜가 바뀜 → 리셋
+        localStorage.setItem('reels_posts', JSON.stringify({ _lastDate: todayKST, posts: [] }));
+        renderReelsFeed();
+    }
 }
 
 function changeTheme() {
