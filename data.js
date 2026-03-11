@@ -54,7 +54,15 @@ const i18n = {
         // 크리티컬 & 루트
         critical_hit: "크리티컬!", loot_drop: "전리품 획득!", loot_common: "일반", loot_uncommon: "고급", loot_rare: "희귀", loot_legendary: "전설",
         daily_clear_bonus: "일일 퀘스트 올클리어!",
-        loot_bonus_points: "보너스 포인트", loot_stat_boost: "스탯 부스트", loot_title_fragment: "칭호 조각"
+        loot_bonus_points: "보너스 포인트", loot_stat_boost: "스탯 부스트", loot_title_fragment: "칭호 조각",
+
+        // P3: 주간 도전과제
+        challenge_title: "주간 도전과제", challenge_progress: "진행", challenge_complete: "완료!", challenge_reward: "보상 수령",
+        challenge_claimed: "수령 완료", challenge_reset_info: "매주 일요일 자동 초기화",
+
+        // P4: 일일 보너스 룰렛
+        roulette_title: "일일 보너스 룰렛", roulette_spin: "스핀!", roulette_desc: "퀘스트 1개 이상 완료 후 하루 1회 스핀 가능",
+        roulette_locked: "퀘스트를 완료하면 스핀 가능", roulette_used: "오늘 스핀 완료", roulette_result: "보상 획득!"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -107,7 +115,15 @@ const i18n = {
 
         critical_hit: "CRITICAL!", loot_drop: "Loot Drop!", loot_common: "Common", loot_uncommon: "Uncommon", loot_rare: "Rare", loot_legendary: "Legendary",
         daily_clear_bonus: "Daily Quest All Clear!",
-        loot_bonus_points: "Bonus Points", loot_stat_boost: "Stat Boost", loot_title_fragment: "Title Fragment"
+        loot_bonus_points: "Bonus Points", loot_stat_boost: "Stat Boost", loot_title_fragment: "Title Fragment",
+
+        // P3: Weekly Challenges
+        challenge_title: "Weekly Challenges", challenge_progress: "Progress", challenge_complete: "Complete!", challenge_reward: "Claim",
+        challenge_claimed: "Claimed", challenge_reset_info: "Resets every Sunday",
+
+        // P4: Daily Bonus Roulette
+        roulette_title: "Daily Bonus Roulette", roulette_spin: "SPIN!", roulette_desc: "Complete 1+ quest to unlock daily spin",
+        roulette_locked: "Complete a quest to spin", roulette_used: "Spin used today", roulette_result: "Reward!"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -160,7 +176,15 @@ const i18n = {
 
         critical_hit: "クリティカル！", loot_drop: "戦利品獲得！", loot_common: "一般", loot_uncommon: "高級", loot_rare: "希少", loot_legendary: "伝説",
         daily_clear_bonus: "デイリークエスト全クリア！",
-        loot_bonus_points: "ボーナスポイント", loot_stat_boost: "ステータスブースト", loot_title_fragment: "称号の欠片"
+        loot_bonus_points: "ボーナスポイント", loot_stat_boost: "ステータスブースト", loot_title_fragment: "称号の欠片",
+
+        // P3: 週間チャレンジ
+        challenge_title: "週間チャレンジ", challenge_progress: "進行", challenge_complete: "完了！", challenge_reward: "受取",
+        challenge_claimed: "受取済", challenge_reset_info: "毎週日曜日にリセット",
+
+        // P4: デイリーボーナスルーレット
+        roulette_title: "デイリーボーナスルーレット", roulette_spin: "スピン！", roulette_desc: "クエスト1つ以上完了で1日1回スピン可能",
+        roulette_locked: "クエストを完了するとスピン可能", roulette_used: "本日スピン済", roulette_result: "報酬獲得！"
     }
 };
 

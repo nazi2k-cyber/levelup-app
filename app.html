@@ -166,6 +166,26 @@
                     </div>
                     <div class="cal-grid" id="calendar-grid"></div>
                 </div>
+
+                <!-- P3: 주간 도전과제 -->
+                <div class="system-card" style="padding:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="challenge_title">주간 도전과제</h3>
+                        <span style="font-size:0.6rem; color:var(--text-sub);" data-i18n="challenge_reset_info">매주 일요일 자동 초기화</span>
+                    </div>
+                    <div id="challenge-list"></div>
+                </div>
+
+                <!-- P4: 일일 보너스 룰렛 -->
+                <div class="system-card" style="padding:15px; text-align:center;">
+                    <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</h3>
+                    <div id="roulette-container" style="position:relative; display:inline-block;">
+                        <div class="roulette-arrow"></div>
+                        <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
+                    </div>
+                    <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
+                    <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
+                </div>
             </section>
 
             <section id="dungeon" class="view-section">

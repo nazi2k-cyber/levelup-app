@@ -436,3 +436,21 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 @keyframes criticalRowFlash {
     0% { background: transparent; } 30% { background: rgba(255,204,0,0.3); } 100% { background: transparent; }
 }
+
+/* ===== P3: 주간 도전과제 ===== */
+.challenge-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 6px; background: rgba(255,255,255,0.02); }
+.challenge-item.done { border-color: var(--neon-gold); background: rgba(255,204,0,0.04); }
+.challenge-info { flex: 1; min-width: 0; }
+.challenge-name { font-size: 0.85rem; font-weight: bold; color: var(--text-main); margin-bottom: 2px; }
+.challenge-desc { font-size: 0.7rem; color: var(--text-sub); margin-bottom: 6px; }
+.challenge-bar-bg { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.challenge-bar-fill { height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-gold)); border-radius: 3px; transition: width 0.4s ease; }
+.challenge-progress-text { font-size: 0.65rem; color: var(--text-sub); margin-top: 3px; text-align: right; }
+.challenge-action { flex-shrink: 0; }
+.challenge-claim-btn { background: var(--neon-gold); color: #000; border: none; padding: 6px 14px; border-radius: 5px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
+.challenge-claim-btn:hover { opacity: 0.85; }
+.challenge-claimed { font-size: 0.7rem; color: var(--text-sub); }
+
+/* ===== P4: 일일 보너스 룰렛 ===== */
+.roulette-arrow { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 18px solid var(--neon-gold); z-index: 2; filter: drop-shadow(0 0 4px rgba(255,204,0,0.6)); }
+#roulette-canvas { transition: transform 3s cubic-bezier(0.17, 0.67, 0.12, 0.99); }
