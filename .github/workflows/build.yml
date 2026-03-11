@@ -50,13 +50,9 @@ jobs:
       - name: npm 패키지 설치
         run: npm ci
 
-      # 6. 웹 파일을 www/ 디렉토리로 복사 (Capacitor webDir 요구사항)
+      # 6. www/ 디렉토리에 추가 웹 파일 복사 (Capacitor webDir = www/)
       - name: 웹 빌드 디렉토리 준비
         run: |
-          mkdir -p www
-          cp app.html www/index.html
-          cp app.js style.css data.js logger.js www/
-          # 추가 웹 파일 복사 (존재하는 경우만)
           for f in ads.txt privacy.html terms.html usage-policy.html; do
             [ -f "$f" ] && cp "$f" www/ && echo "  ✅ $f 복사됨"
           done
