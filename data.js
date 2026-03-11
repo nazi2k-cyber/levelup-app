@@ -41,7 +41,20 @@ const i18n = {
         planner_tab_priority: "⭐ 우선순위 태스크", planner_tab_schedule: "🕐 시간표",
         planner_weekly: "주간 플래너", planner_reward: "저장 시 +20P & AGI +0.5",
         planner_placeholder: "할 일을 입력하세요",
-        raid_reward_label: "클리어 보상", raid_reward_points: "결속 포인트", raid_reward_stat: "성장 데이터", raid_reward_condition: "달성 조건"
+        raid_reward_label: "클리어 보상", raid_reward_points: "결속 포인트", raid_reward_stat: "성장 데이터", raid_reward_condition: "달성 조건",
+
+        // 스트릭 시스템
+        streak_label: "연속", streak_day: "일", streak_bonus: "스트릭 보너스", streak_lost: "스트릭이 초기화되었습니다!", stat_decay_warning: "미접속으로 스탯이 감소했습니다.",
+        streak_multiplier: "보상 배율",
+
+        // 던전 보스 HP
+        boss_hp: "보스 HP", boss_rush: "주말 보스 러시", boss_rush_desc: "보스 HP 2배, 보상 2배!", proximity_bonus: "근접 보너스 +50P",
+        boss_defeated: "보스 처치 완료!", boss_damage: "데미지",
+
+        // 크리티컬 & 루트
+        critical_hit: "크리티컬!", loot_drop: "전리품 획득!", loot_common: "일반", loot_uncommon: "고급", loot_rare: "희귀", loot_legendary: "전설",
+        daily_clear_bonus: "일일 퀘스트 올클리어!",
+        loot_bonus_points: "보너스 포인트", loot_stat_boost: "스탯 부스트", loot_title_fragment: "칭호 조각"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -84,7 +97,17 @@ const i18n = {
         planner_tab_priority: "⭐ Priority Tasks", planner_tab_schedule: "🕐 Schedule",
         planner_weekly: "Weekly Planner", planner_reward: "Save: +20P & AGI +0.5",
         planner_placeholder: "Enter task",
-        raid_reward_label: "Clear Reward", raid_reward_points: "Bond Points", raid_reward_stat: "Growth Data", raid_reward_condition: "Condition"
+        raid_reward_label: "Clear Reward", raid_reward_points: "Bond Points", raid_reward_stat: "Growth Data", raid_reward_condition: "Condition",
+
+        streak_label: "Streak", streak_day: "days", streak_bonus: "Streak Bonus", streak_lost: "Streak has been reset!", stat_decay_warning: "Stats decreased due to inactivity.",
+        streak_multiplier: "Reward Multiplier",
+
+        boss_hp: "Boss HP", boss_rush: "Weekend Boss Rush", boss_rush_desc: "Boss HP x2, Rewards x2!", proximity_bonus: "Proximity Bonus +50P",
+        boss_defeated: "Boss Defeated!", boss_damage: "Damage",
+
+        critical_hit: "CRITICAL!", loot_drop: "Loot Drop!", loot_common: "Common", loot_uncommon: "Uncommon", loot_rare: "Rare", loot_legendary: "Legendary",
+        daily_clear_bonus: "Daily Quest All Clear!",
+        loot_bonus_points: "Bonus Points", loot_stat_boost: "Stat Boost", loot_title_fragment: "Title Fragment"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -127,7 +150,17 @@ const i18n = {
         planner_tab_priority: "⭐ 優先タスク", planner_tab_schedule: "🕐 スケジュール",
         planner_weekly: "週間プランナー", planner_reward: "保存: +20P & AGI +0.5",
         planner_placeholder: "タスクを入力",
-        raid_reward_label: "クリア報酬", raid_reward_points: "結束ポイント", raid_reward_stat: "成長データ", raid_reward_condition: "達成条件"
+        raid_reward_label: "クリア報酬", raid_reward_points: "結束ポイント", raid_reward_stat: "成長データ", raid_reward_condition: "達成条件",
+
+        streak_label: "連続", streak_day: "日", streak_bonus: "ストリークボーナス", streak_lost: "ストリークがリセットされました！", stat_decay_warning: "未接続によりステータスが減少しました。",
+        streak_multiplier: "報酬倍率",
+
+        boss_hp: "ボスHP", boss_rush: "週末ボスラッシュ", boss_rush_desc: "ボスHP2倍、報酬2倍！", proximity_bonus: "近接ボーナス +50P",
+        boss_defeated: "ボス撃破完了！", boss_damage: "ダメージ",
+
+        critical_hit: "クリティカル！", loot_drop: "戦利品獲得！", loot_common: "一般", loot_uncommon: "高級", loot_rare: "希少", loot_legendary: "伝説",
+        daily_clear_bonus: "デイリークエスト全クリア！",
+        loot_bonus_points: "ボーナスポイント", loot_stat_boost: "ステータスブースト", loot_title_fragment: "称号の欠片"
     }
 };
 
@@ -205,5 +238,22 @@ const raidMissions = {
         actionText: {ko: "효율성 로그 전송", en: "Transmit Efficiency Log", ja: "効率ログ送信"}
     }
 };
+
+const lootTable = [
+    // Common (60%) - 보너스 포인트
+    { tier: 'common', weight: 20, reward: { type: 'points', value: 50 }, name: {ko: '소량의 결속 에너지', en: 'Minor Bond Energy', ja: '少量の結束エネルギー'} },
+    { tier: 'common', weight: 20, reward: { type: 'points', value: 80 }, name: {ko: '결속 파편', en: 'Bond Fragment', ja: '結束の欠片'} },
+    { tier: 'common', weight: 20, reward: { type: 'points', value: 100 }, name: {ko: '에너지 코어', en: 'Energy Core', ja: 'エネルギーコア'} },
+    // Uncommon (25%) - 스탯 부스트
+    { tier: 'uncommon', weight: 10, reward: { type: 'stat_boost', stat: 'random', value: 1.0 }, name: {ko: '성장 촉진제', en: 'Growth Catalyst', ja: '成長促進剤'} },
+    { tier: 'uncommon', weight: 10, reward: { type: 'points', value: 150 }, name: {ko: '정제된 결속석', en: 'Refined Bond Stone', ja: '精製結束石'} },
+    { tier: 'uncommon', weight: 5, reward: { type: 'stat_boost', stat: 'random', value: 1.5 }, name: {ko: '고농축 데이터', en: 'Concentrated Data', ja: '高濃縮データ'} },
+    // Rare (12%)
+    { tier: 'rare', weight: 7, reward: { type: 'points', value: 200 }, name: {ko: '빛나는 결속 크리스탈', en: 'Shining Bond Crystal', ja: '輝く結束クリスタル'} },
+    { tier: 'rare', weight: 5, reward: { type: 'stat_boost', stat: 'random', value: 2.5 }, name: {ko: '각성의 파동', en: 'Awakening Wave', ja: '覚醒の波動'} },
+    // Legendary (3%)
+    { tier: 'legendary', weight: 2, reward: { type: 'points', value: 500 }, name: {ko: '전설의 결속 오브', en: 'Legendary Bond Orb', ja: '伝説の結束オーブ'} },
+    { tier: 'legendary', weight: 1, reward: { type: 'stat_boost', stat: 'all', value: 1.0 }, name: {ko: '만능 각성 코어', en: 'Universal Awakening Core', ja: '万能覚醒コア'} },
+];
 
 const mockSocialData = [];

@@ -50,7 +50,8 @@ function getInitialAppState() {
             syncEnabled: false,
             gpsEnabled: false,
             stepData: { date: "", rewardedSteps: 0 },
-            instaId: "" 
+            instaId: "",
+            streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -301,6 +302,7 @@ async function saveUserData() {
             gpsEnabled: AppState.user.gpsEnabled,
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "",
+            streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: localStorage.getItem('diary_entries') || '{}'
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
@@ -336,6 +338,11 @@ async function loadUserDataFromDB(user) {
             if(data.gpsEnabled !== undefined) AppState.user.gpsEnabled = data.gpsEnabled;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
+            if(data.streakStr) {
+                try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
+            }
+            // 스트릭 계산 및 스탯 감소
+            applyStreakAndDecay();
             if(data.diaryStr) {
                 try {
                     // 로컬 데이터가 더 최신일 수 있으므로 타임스탬프 기준으로 병합
@@ -363,7 +370,183 @@ async function loadUserDataFromDB(user) {
     } catch(e) { console.error("데이터 로드 에러:", e); AppLogger.error('[DB] 데이터 로드 실패', e.stack || e.message); }
 }
 
-function loadPlayerName() { 
+// --- 스트릭 시스템 ---
+function getTodayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getDaysBetween(dateStr1, dateStr2) {
+    if (!dateStr1 || !dateStr2) return Infinity;
+    const d1 = new Date(dateStr1); d1.setHours(0,0,0,0);
+    const d2 = new Date(dateStr2); d2.setHours(0,0,0,0);
+    return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
+function getStreakMultiplier(streak) {
+    if (streak >= 30) return 3.0;
+    if (streak >= 14) return 2.0;
+    if (streak >= 7) return 1.5;
+    if (streak >= 3) return 1.2;
+    return 1.0;
+}
+
+function applyStreakAndDecay() {
+    const today = getTodayStr();
+    const lastActive = AppState.user.streak.lastActiveDate;
+    const gap = getDaysBetween(lastActive, today);
+
+    if (gap > 1) {
+        // 스트릭 리셋
+        if (AppState.user.streak.currentStreak > 0) {
+            AppState.user.streak.currentStreak = 0;
+        }
+        // 3일 이상 미접속 시 스탯 감소
+        if (gap > 3) {
+            const decayDays = gap - 3;
+            const decayAmount = decayDays * 0.1;
+            let decayed = false;
+            statKeys.forEach(k => {
+                if (AppState.user.stats[k] > 0) {
+                    AppState.user.stats[k] = Math.max(0, Number(AppState.user.stats[k]) - decayAmount);
+                    decayed = true;
+                }
+            });
+            if (decayed) {
+                AppLogger.info(`[Streak] 스탯 감소 적용: ${decayDays}일 미접속, -${decayAmount.toFixed(1)}`);
+            }
+        }
+    }
+    AppState.user.streak.multiplier = getStreakMultiplier(AppState.user.streak.currentStreak);
+    renderStreakBadge();
+}
+
+function updateStreak() {
+    const today = getTodayStr();
+    const lastActive = AppState.user.streak.lastActiveDate;
+
+    if (lastActive === today) return; // 이미 오늘 활동함
+
+    const gap = getDaysBetween(lastActive, today);
+    if (gap === 1) {
+        AppState.user.streak.currentStreak++;
+    } else if (gap > 1 || !lastActive) {
+        AppState.user.streak.currentStreak = 1;
+    }
+
+    AppState.user.streak.lastActiveDate = today;
+    AppState.user.streak.multiplier = getStreakMultiplier(AppState.user.streak.currentStreak);
+    renderStreakBadge();
+}
+
+function renderStreakBadge() {
+    const badge = document.getElementById('streak-badge');
+    const countEl = document.getElementById('streak-count');
+    const dayLabel = document.getElementById('streak-day-label');
+    if (!badge || !countEl) return;
+
+    const streak = AppState.user.streak.currentStreak;
+    if (streak > 0) {
+        badge.classList.remove('d-none');
+        badge.classList.toggle('fire', streak >= 7);
+        countEl.textContent = streak;
+        if (dayLabel) dayLabel.textContent = i18n[AppState.currentLang]?.streak_day || '일';
+    } else {
+        badge.classList.add('d-none');
+    }
+}
+
+// --- 크리티컬 히트 & 루트 드롭 ---
+function rollCritical() {
+    return Math.random() < 0.15; // 15% 확률
+}
+
+function getCriticalMultiplier() {
+    return Math.random() < 0.3 ? 3 : 2; // 30%=3배, 70%=2배
+}
+
+function showCriticalFlash() {
+    const flash = document.getElementById('critical-flash');
+    if (!flash) return;
+    flash.classList.remove('d-none', 'show');
+    void flash.offsetWidth; // reflow
+    flash.classList.add('show');
+    setTimeout(() => { flash.classList.add('d-none'); flash.classList.remove('show'); }, 700);
+}
+
+function rollLootDrop() {
+    const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
+    let roll = Math.random() * totalWeight;
+    for (const item of lootTable) {
+        roll -= item.weight;
+        if (roll <= 0) return item;
+    }
+    return lootTable[0];
+}
+
+function applyLootReward(loot) {
+    const lang = AppState.currentLang;
+    if (loot.reward.type === 'points') {
+        AppState.user.points += loot.reward.value;
+    } else if (loot.reward.type === 'stat_boost') {
+        if (loot.reward.stat === 'all') {
+            statKeys.forEach(k => { AppState.user.pendingStats[k] += loot.reward.value; });
+        } else {
+            const randomStat = statKeys[Math.floor(Math.random() * statKeys.length)];
+            AppState.user.pendingStats[randomStat] += loot.reward.value;
+        }
+    }
+}
+
+function showLootModal(loot) {
+    const lang = AppState.currentLang;
+    const modal = document.getElementById('lootModal');
+    const tierLabel = document.getElementById('loot-tier-label');
+    const nameEl = document.getElementById('loot-name');
+    const descEl = document.getElementById('loot-desc');
+    const iconEl = document.getElementById('loot-icon');
+    if (!modal) return;
+
+    const tierNames = { common: i18n[lang]?.loot_common || 'Common', uncommon: i18n[lang]?.loot_uncommon || 'Uncommon', rare: i18n[lang]?.loot_rare || 'Rare', legendary: i18n[lang]?.loot_legendary || 'Legendary' };
+    const tierIcons = { common: '\u{1F381}', uncommon: '\u{1F48E}', rare: '\u{2728}', legendary: '\u{1F451}' };
+
+    tierLabel.textContent = tierNames[loot.tier];
+    tierLabel.className = 'loot-tier-label ' + loot.tier;
+    iconEl.textContent = tierIcons[loot.tier];
+    nameEl.textContent = loot.name[lang] || loot.name.ko;
+
+    let desc = '';
+    if (loot.reward.type === 'points') {
+        desc = `+${loot.reward.value} P`;
+    } else if (loot.reward.type === 'stat_boost') {
+        desc = loot.reward.stat === 'all'
+            ? `${i18n[lang]?.loot_stat_boost || 'Stat Boost'}: ALL +${loot.reward.value}`
+            : `${i18n[lang]?.loot_stat_boost || 'Stat Boost'}: +${loot.reward.value}`;
+    }
+    descEl.textContent = desc;
+
+    modal.classList.remove('d-none');
+    modal.classList.add('d-flex');
+}
+
+function checkDailyAllClear() {
+    const day = AppState.quest.currentDayOfWeek;
+    const allDone = AppState.quest.completedState[day].every(v => v);
+    if (!allDone) return;
+
+    // 오늘 이미 루트 받았는지 확인
+    const todayKey = 'loot_' + getTodayStr();
+    if (localStorage.getItem(todayKey)) return;
+    localStorage.setItem(todayKey, '1');
+
+    const loot = rollLootDrop();
+    applyLootReward(loot);
+    saveUserData();
+    updatePointUI();
+    showLootModal(loot);
+}
+
+function loadPlayerName() {
     const nameEl = document.getElementById('prof-name');
     if(nameEl) {
         nameEl.textContent = AppState.user.name; 
@@ -470,17 +653,42 @@ window.toggleQuest = (i) => {
     const day = AppState.quest.currentDayOfWeek;
     const state = AppState.quest.completedState[day];
     state[i] = !state[i];
-    
+
     const q = weeklyQuestData[day][i];
     const factor = state[i] ? 1 : -1;
-    
-    AppState.user.points += (20 * factor);
-    AppState.user.pendingStats[q.stat.toLowerCase()] += (0.5 * factor);
-    
-    saveUserData(); 
-    renderQuestList(); 
-    renderCalendar(); 
+    const mult = AppState.user.streak.multiplier || 1.0;
+
+    let pointReward = 20;
+    let statReward = 0.5;
+    let isCritical = false;
+
+    if (state[i] && rollCritical()) {
+        isCritical = true;
+        const critMult = getCriticalMultiplier();
+        pointReward = 20 * critMult;
+        statReward = 0.5 * critMult;
+        showCriticalFlash();
+    }
+
+    AppState.user.points += Math.floor(pointReward * mult * factor);
+    AppState.user.pendingStats[q.stat.toLowerCase()] += (statReward * factor);
+
+    if (state[i]) updateStreak();
+
+    saveUserData();
+    renderQuestList();
+    renderCalendar();
     updatePointUI();
+
+    if (isCritical) {
+        setTimeout(() => {
+            const rows = document.querySelectorAll('.quest-row');
+            if (rows[i]) rows[i].classList.add('critical-reward');
+            setTimeout(() => { if (rows[i]) rows[i].classList.remove('critical-reward'); }, 1000);
+        }, 50);
+    }
+
+    if (state[i]) checkDailyAllClear();
 };
 
 function renderCalendar() {
@@ -535,9 +743,18 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 던전 위치: 발산역(index 5) 고정, 반경 2km
+// 던전 위치: 발산역(index 5) 고정, 반경 2km (근접 보너스용)
 const DUNGEON_FIXED_STATION_IDX = 5; // 발산역
 const DUNGEON_RADIUS_KM = 2;
+
+function isBossRush() {
+    const day = new Date().getDay();
+    return day === 0 || day === 6; // 주말
+}
+
+function getBossRewardMultiplier() {
+    return isBossRush() ? 2 : 1;
+}
 
 function getFixedDungeonData(dateStr, slot) {
     const seedStr = dateStr + "_slot" + slot;
@@ -589,7 +806,7 @@ window.syncGlobalDungeon = async () => {
     try {
         const snap = await getDocs(collection(db, "users"));
         let realParticipants = 0;
-        let realProgressCount = 0;
+        let totalDamage = 0;
         const targetDate = AppState.dungeon.lastGeneratedDate;
         const targetSlot = AppState.dungeon.slot;
 
@@ -600,14 +817,19 @@ window.syncGlobalDungeon = async () => {
                     const dng = JSON.parse(data.dungeonStr);
                     if (dng.lastGeneratedDate === targetDate && dng.slot === targetSlot && dng.isJoined) {
                         realParticipants++;
-                        if (dng.hasContributed) realProgressCount++; 
+                        if (dng.hasContributed) totalDamage++;
                     }
                 } catch(e) {}
             }
         });
 
+        // 보스 HP: 기본 5, 참여자 3명 추가될 때마다 +1 필요
+        const baseHP = isBossRush() ? 10 : 5;
+        const scaledHP = baseHP + Math.floor(Math.max(0, realParticipants - 5) / 3);
+        AppState.dungeon.bossMaxHP = scaledHP;
+        AppState.dungeon.bossDamageDealt = totalDamage;
         AppState.dungeon.globalParticipants = realParticipants;
-        AppState.dungeon.globalProgress = Math.min(100, (realProgressCount / AppState.dungeon.maxParticipants) * 100);
+        AppState.dungeon.globalProgress = Math.min(100, (totalDamage / scaledHP) * 100);
 
         if (document.getElementById('dungeon').classList.contains('active')) {
             renderDungeon();
@@ -647,6 +869,8 @@ function updateDungeonStatus() {
 
         AppState.dungeon.globalParticipants = 0;
         AppState.dungeon.globalProgress = 0;
+        AppState.dungeon.bossMaxHP = isBossRush() ? 10 : 5;
+        AppState.dungeon.bossDamageDealt = 0;
         saveUserData();
     }
     renderDungeon();
@@ -676,10 +900,7 @@ function renderDungeon() {
             
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
             
-            const isFull = AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants;
-            const joinBtnHtml = isFull 
-                ? `<button disabled class="btn-primary" style="background:#333; border-color:#333; margin-top:10px; color:#888; font-weight:bold; cursor:not-allowed;">정원 초과 (입장 불가)</button>`
-                : `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>`;
+            const joinBtnHtml = `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>`;
 
             banner.innerHTML = `
                 <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
@@ -700,18 +921,25 @@ function renderDungeon() {
                         </div>
                         <div class="raid-reward-item">
                             <span class="raid-reward-key">${i18n[AppState.currentLang].raid_reward_points}</span>
-                            <span class="raid-reward-val text-gold">+200 P</span>
+                            <span class="raid-reward-val text-gold">+${200 * getBossRewardMultiplier()} P</span>
                         </div>
                         <div class="raid-reward-item">
                             <span class="raid-reward-key">${i18n[AppState.currentLang].raid_reward_stat}</span>
-                            <span class="raid-reward-val" style="color:${m.color};">${m.stat} +2.0</span>
+                            <span class="raid-reward-val" style="color:${m.color};">${m.stat} +${(2.0 * getBossRewardMultiplier()).toFixed(1)}</span>
                         </div>
                     </div>
                 </div>
-                <p style="font-size: 0.75rem; margin-bottom: 8px; color:var(--neon-gold); word-break:keep-all;">⚠️ ${st.name[AppState.currentLang]} 반경 ${DUNGEON_RADIUS_KM}km 이내 GPS 위치 확인 필요</p>
+                ${isBossRush() ? `<div class="boss-rush-banner">${i18n[AppState.currentLang]?.boss_rush || 'Weekend Boss Rush'} — ${i18n[AppState.currentLang]?.boss_rush_desc || 'HP x2, Rewards x2!'}</div>` : ''}
+                <div class="boss-hp-bar-container">
+                    <div class="boss-hp-label">
+                        <span style="color:var(--neon-red); font-weight:bold;">${i18n[AppState.currentLang]?.boss_hp || 'Boss HP'}</span>
+                        <span style="color:var(--text-sub);">${AppState.dungeon.bossMaxHP - (AppState.dungeon.bossDamageDealt || 0)} / ${AppState.dungeon.bossMaxHP || 5}</span>
+                    </div>
+                    <div class="boss-hp-bar-bg"><div class="boss-hp-bar-fill" style="width: ${Math.max(0, 100 - (AppState.dungeon.globalProgress || 0))}%;"></div></div>
+                </div>
                 <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">
                     ${i18n[AppState.currentLang].raid_part}
-                    <span class="text-blue">${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}</span> 명
+                    <span class="text-blue">${AppState.dungeon.globalParticipants}</span> 명
                 </div>
                 ${joinBtnHtml}
             `;
@@ -727,20 +955,27 @@ function renderDungeon() {
             document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
 
             const lang = AppState.currentLang;
-            document.getElementById('raid-reward-label').innerText = i18n[lang].raid_reward_label;
+            const rewardMult = getBossRewardMultiplier();
+            document.getElementById('raid-reward-label').innerText = i18n[lang].raid_reward_label + (isBossRush() ? ' (x2)' : '');
             document.getElementById('raid-reward-points-label').innerText = i18n[lang].raid_reward_points;
             document.getElementById('raid-reward-stat-label').innerText = i18n[lang].raid_reward_stat;
-            document.getElementById('raid-reward-stat-val').innerText = `${m.stat} +2.0`;
+            document.getElementById('raid-reward-stat-val').innerText = `${m.stat} +${(2.0 * rewardMult).toFixed(1)}`;
             document.getElementById('raid-reward-stat-val').style.color = m.color;
-            
-            document.getElementById('raid-part-count').innerText = `${AppState.dungeon.globalParticipants} / ${AppState.dungeon.maxParticipants}`;
-            document.getElementById('raid-progress-bar').style.width = `${AppState.dungeon.globalProgress}%`;
-            document.getElementById('raid-progress-text').innerText = `${AppState.dungeon.globalProgress}%`;
+
+            document.getElementById('raid-part-count').innerText = `${AppState.dungeon.globalParticipants}`;
+
+            // HP 바 표시 (진행도 대신 보스 HP)
+            const bossMaxHP = AppState.dungeon.bossMaxHP || 5;
+            const bossDmg = AppState.dungeon.bossDamageDealt || 0;
+            const hpPercent = Math.max(0, ((bossMaxHP - bossDmg) / bossMaxHP) * 100);
+            document.getElementById('raid-progress-bar').style.width = `${hpPercent}%`;
+            document.getElementById('raid-progress-bar').style.background = 'linear-gradient(90deg, #ff3c3c, #ff6a00)';
+            document.getElementById('raid-progress-text').innerText = `${bossMaxHP - bossDmg} / ${bossMaxHP}`;
             
             const btnAction = document.getElementById('btn-raid-action');
             const btnComplete = document.getElementById('btn-raid-complete');
             
-            if (AppState.dungeon.globalProgress >= 100) {
+            if (bossDmg >= bossMaxHP) {
                 btnAction.classList.add('d-none');
                 btnComplete.classList.remove('d-none');
                 
@@ -774,55 +1009,40 @@ function renderDungeon() {
 }
 
 window.joinDungeon = async () => {
-    if(AppState.dungeon.globalParticipants >= AppState.dungeon.maxParticipants) {
-        alert("이미 정원이 초과되었습니다.");
-        return;
-    }
-
-    // GPS 위치 확인: 던전 역 반경 2km 이내만 입장 가능
+    // GPS 체크 제거 — 누구나 참여 가능. 근접 시 보너스만 지급
+    let proximityBonus = false;
     const station = seoulStations[AppState.dungeon.stationIdx];
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
-    if (!isNative || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Geolocation) {
-        alert("위치 서비스를 사용할 수 없습니다. 앱에서 GPS를 활성화해주세요.");
-        return;
-    }
-
-    try {
-        const { Geolocation } = window.Capacitor.Plugins;
-        const permResult = await Geolocation.requestPermissions();
-        if (permResult.location === 'denied') {
-            alert("위치 권한이 거부되었습니다. 설정에서 위치 권한을 허용해주세요.");
-            return;
-        }
-
-        const position = await Geolocation.getCurrentPosition({
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
-        });
-
-        const dist = getDistanceKm(
-            position.coords.latitude, position.coords.longitude,
-            station.lat, station.lng
-        );
-
-        if (dist > DUNGEON_RADIUS_KM) {
-            const stName = station.name[AppState.currentLang] || station.name.ko;
-            alert(`[입장 불가] ${stName} 반경 ${DUNGEON_RADIUS_KM}km 이내에서만 입장 가능합니다.\n현재 거리: ${dist.toFixed(1)}km`);
-            return;
-        }
-
-        if (window.AppLogger) AppLogger.info(`[Dungeon] GPS 확인 완료 - 거리: ${dist.toFixed(2)}km`);
-    } catch (e) {
-        if (window.AppLogger) AppLogger.error('[Dungeon] GPS 확인 실패: ' + (e.message || JSON.stringify(e)));
-        alert("위치 정보를 가져올 수 없습니다. GPS를 확인해주세요.");
-        return;
+    if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation) {
+        try {
+            const { Geolocation } = window.Capacitor.Plugins;
+            const permResult = await Geolocation.requestPermissions();
+            if (permResult.location !== 'denied') {
+                const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+                const dist = getDistanceKm(position.coords.latitude, position.coords.longitude, station.lat, station.lng);
+                if (dist <= DUNGEON_RADIUS_KM) {
+                    proximityBonus = true;
+                    AppState.user.points += 50;
+                    if (window.AppLogger) AppLogger.info(`[Dungeon] 근접 보너스 지급 - 거리: ${dist.toFixed(2)}km`);
+                }
+            }
+        } catch (e) { /* GPS 실패해도 입장은 허용 */ }
     }
 
     AppState.dungeon.isJoined = true;
+    if (!AppState.dungeon.bossMaxHP) {
+        AppState.dungeon.bossMaxHP = isBossRush() ? 10 : 5;
+        AppState.dungeon.bossDamageDealt = 0;
+    }
     await saveUserData();
     await window.syncGlobalDungeon();
+
+    if (proximityBonus) {
+        const lang = AppState.currentLang;
+        alert(i18n[lang]?.proximity_bonus || '+50P Proximity Bonus!');
+        updatePointUI();
+    }
 };
 
 window.simulateRaidAction = async () => {
@@ -840,17 +1060,20 @@ window.simulateRaidAction = async () => {
 window.completeDungeon = () => {
     if(AppState.dungeon.isCleared) return;
     const target = AppState.dungeon.targetStat;
-    const pts = 200;
-    const statInc = 2.0;
-    
+    const rewardMult = getBossRewardMultiplier();
+    const pts = 200 * rewardMult;
+    const statInc = 2.0 * rewardMult;
+
     AppState.user.points += pts;
     AppState.user.pendingStats[target] += statInc;
     AppState.dungeon.isCleared = true;
-    
-    saveUserData(); 
-    renderDungeon(); 
+
+    updateStreak();
+    saveUserData();
+    renderDungeon();
     updatePointUI();
-    alert(`[SYSTEM] 아노말리 진압 완료.\n결속 보상: ${pts} P\n성장 데이터: ${target.toUpperCase()} +${statInc}`);
+    const lang = AppState.currentLang;
+    alert(`[SYSTEM] ${i18n[lang]?.boss_defeated || 'Boss Defeated!'}\n+${pts} P\n${target.toUpperCase()} +${statInc}`);
 };
 
 // --- 공통 UI ---

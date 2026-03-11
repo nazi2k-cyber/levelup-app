@@ -72,7 +72,12 @@
     <div id="app-container" class="d-none">
         <header>
             <div id="sys-title">LEVEL UP: REBOOT</div>
-            <div class="level-badge" id="sys-level">Lv. 1</div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div class="streak-badge d-none" id="streak-badge" title="Streak">
+                    <span class="streak-icon">&#x1F525;</span><span id="streak-count">0</span><span id="streak-day-label">일</span>
+                </div>
+                <div class="level-badge" id="sys-level">Lv. 1</div>
+            </div>
         </header>
 
         <main>
@@ -199,10 +204,13 @@
 
                     <div class="raid-progress-box">
                         <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:5px;">
-                            <span>연합 달성률 (<span id="raid-part-count" style="color:var(--neon-gold);">0</span>명 합류)</span>
-                            <span id="raid-progress-text" style="color:var(--neon-blue); font-weight:bold;">0%</span>
+                            <span style="color:var(--neon-red); font-weight:bold;">BOSS HP</span>
+                            <span id="raid-progress-text" style="color:var(--neon-red); font-weight:bold;">5 / 5</span>
                         </div>
-                        <div class="progress-bg" style="height: 10px;"><div class="progress-fill" id="raid-progress-bar" style="width: 0%;"></div></div>
+                        <div class="boss-hp-bar-bg" style="height: 14px;"><div class="boss-hp-bar-fill" id="raid-progress-bar" style="width: 100%;"></div></div>
+                        <div style="font-size:0.7rem; color:var(--text-sub); margin-top:4px; text-align:right;">
+                            <span id="raid-part-count" style="color:var(--neon-gold);">0</span> 명 참여 중
+                        </div>
                     </div>
 
                     <button id="btn-raid-action" class="btn-primary" style="margin-top: 15px; border: 1px solid var(--neon-blue); background: rgba(0, 217, 255, 0.1); color: var(--neon-blue);">
@@ -395,6 +403,22 @@
                 <button class="modal-close" onclick="document.getElementById('legalModal').classList.add('d-none');document.getElementById('legalModal').classList.remove('d-flex');">×</button>
             </div>
             <div id="legal-modal-body" style="overflow-y:auto; flex-grow:1; max-height:60vh; font-size:0.8rem; color:var(--text-main); line-height:1.7;"></div>
+        </div>
+    </div>
+
+    <!-- 크리티컬 히트 플래시 -->
+    <div id="critical-flash" class="critical-flash d-none"></div>
+
+    <!-- 루트 드롭 모달 -->
+    <div class="modal-overlay d-none" id="lootModal" onclick="if(event.target===this){document.getElementById('lootModal').classList.add('d-none');document.getElementById('lootModal').classList.remove('d-flex');}">
+        <div class="modal-content loot-modal-content" style="max-width: 320px; text-align: center; padding: 25px;">
+            <div id="loot-tier-label" class="loot-tier-label">COMMON</div>
+            <div id="loot-icon" class="loot-icon">&#x1F381;</div>
+            <div id="loot-name" class="loot-name">아이템 이름</div>
+            <div id="loot-desc" class="loot-desc">보상 설명</div>
+            <button class="btn-primary" style="margin-top:15px; max-width:200px; margin-left:auto; margin-right:auto;" onclick="document.getElementById('lootModal').classList.add('d-none');document.getElementById('lootModal').classList.remove('d-flex');">
+                확인
+            </button>
         </div>
     </div>
 
