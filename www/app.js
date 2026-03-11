@@ -1280,6 +1280,35 @@ function validatePassword(pw) {
     return pw.length >= 8 && /[A-Z]/.test(pw) && (pw.match(/[^A-Za-z0-9]/g) || []).length >= 2;
 }
 
+function checkPasswordMatch() {
+    const pw = document.getElementById('login-pw').value;
+    const pwConfirm = document.getElementById('login-pw-confirm').value;
+    const confirmInput = document.getElementById('login-pw-confirm');
+    const hint = document.getElementById('pw-mismatch-hint');
+    if (!pwConfirm) {
+        confirmInput.classList.remove('input-error');
+        hint.classList.add('d-none');
+        return true;
+    }
+    if (pw !== pwConfirm) {
+        confirmInput.classList.add('input-error', 'shake');
+        hint.classList.remove('d-none');
+        if (navigator.vibrate) navigator.vibrate([30, 20, 30]);
+        setTimeout(() => confirmInput.classList.remove('shake'), 400);
+        return false;
+    }
+    confirmInput.classList.remove('input-error');
+    hint.classList.add('d-none');
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pwConfirmEl = document.getElementById('login-pw-confirm');
+    if (pwConfirmEl) {
+        pwConfirmEl.addEventListener('input', checkPasswordMatch);
+    }
+});
+
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -1289,11 +1318,10 @@ async function simulateLogin() {
     try {
         if(!AppState.isLoginMode) {
             if(!validatePassword(pw)) throw new Error("비밀번호는 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함해야 합니다.");
-            const pwConfirm = document.getElementById('login-pw-confirm').value;
-            if(pw !== pwConfirm) throw new Error("비밀번호 불일치");
+            if(!checkPasswordMatch()) throw new Error("비밀번호가 일치하지 않습니다.");
             await createUserWithEmailAndPassword(auth, email, pw);
         } else { await signInWithEmailAndPassword(auth, email, pw); }
-    } catch (e) { alert("인증 오류: " + e.message); } 
+    } catch (e) { alert("인증 오류: " + e.message); }
     finally { btn.innerText = AppState.isLoginMode ? "시스템 접속" : "회원가입"; btn.disabled = false; }
 }
 
