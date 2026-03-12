@@ -58,7 +58,7 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false)),
             weekStart: getWeekStartDate()
         },
-        social: { mode: 'global', sortCriteria: 'total', users: [] },
+        social: { mode: 'day1', sortCriteria: 'total', users: [] },
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0 },
     };
 }
@@ -67,7 +67,7 @@ function getInitialAppState() {
 let _initializedUid = null;
 
 // --- 탭 순서 관리 ---
-const DEFAULT_NAV_ORDER = ['status', 'diary', 'quests', 'dungeon', 'reels', 'social', 'settings'];
+const DEFAULT_NAV_ORDER = ['status', 'diary', 'quests', 'dungeon', 'social', 'settings'];
 
 function loadNavOrder() {
     const saved = localStorage.getItem('navTabOrder');
@@ -1128,10 +1128,13 @@ function switchTab(tabId, el) {
         mainEl.style.overflowY = 'auto';
     }
     
-    if(tabId === 'social') fetchSocialData();
+    if(tabId === 'social') {
+        const mode = AppState.social.mode || 'day1';
+        if(mode === 'day1') { renderReelsFeed(); updateReelsResetTimer(); }
+        else { fetchSocialData(); }
+    }
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); renderWeeklyChallenges(); renderRoulette(); }
     if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); }
-    if(tabId === 'reels') { renderReelsFeed(); updateReelsResetTimer(); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
         window.syncGlobalDungeon(); 
@@ -1263,11 +1266,15 @@ async function fetchSocialData() {
 }
 
 function renderUsers(criteria, btn = null) {
-    if(btn) { 
-        AppState.social.sortCriteria = criteria; 
-        document.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); 
+    if(btn) {
+        AppState.social.sortCriteria = criteria;
+        // 현재 활성 패널 내 rank-tab-btn만 업데이트
+        const activePanel = document.querySelector('.social-panel.active');
+        if(activePanel) activePanel.querySelectorAll('.rank-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
     }
-    const container = document.getElementById('user-list-container');
+    const isFriendsMode = AppState.social.mode === 'friends';
+    const container = document.getElementById(isFriendsMode ? 'user-list-container-friends' : 'user-list-container');
     if(!container) return;
 
     let list = AppState.social.users.map(u => {
@@ -1276,7 +1283,7 @@ function renderUsers(criteria, btn = null) {
         return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0 };
     });
 
-    if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
+    if(isFriendsMode) list = list.filter(u => u.isFriend || u.isMe);
     list.sort((a,b) => b[criteria] - a[criteria]);
 
     const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: #ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
@@ -1306,11 +1313,17 @@ window.toggleFriend = async (id) => {
     fetchSocialData();
 };
 
-function toggleSocialMode(mode, btn) { 
-    AppState.social.mode = mode; 
-    document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active')); 
-    btn.classList.add('active'); 
-    renderUsers(AppState.social.sortCriteria); 
+function toggleSocialMode(mode, btn) {
+    AppState.social.mode = mode;
+    document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // 패널 전환
+    document.querySelectorAll('.social-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    const panel = document.getElementById('social-' + mode + '-panel');
+    if(panel) { panel.classList.add('active'); panel.style.display = 'block'; }
+    // 데이터 로드
+    if(mode === 'day1') { renderReelsFeed(); updateReelsResetTimer(); }
+    else { fetchSocialData(); }
 }
 
 // --- 로그인/인증 로직 ---
@@ -2759,7 +2772,7 @@ function updateReelsResetTimer() {
     // 릴스 탭 활성시 1초마다 업데이트
     if (window._reelsTimerInterval) clearInterval(window._reelsTimerInterval);
     window._reelsTimerInterval = setInterval(() => {
-        if (document.getElementById('reels').classList.contains('active')) {
+        if (document.getElementById('social').classList.contains('active') && AppState.social.mode === 'day1') {
             update();
             // 자정 체크 - 날짜 넘어가면 자동 리셋
             checkReelsReset();

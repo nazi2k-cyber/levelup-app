@@ -199,7 +199,9 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 
 /* 소셜 랭킹 등 공통 */
 .social-header { display: flex; gap: 8px; margin-bottom: 12px; }
-.social-tab-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid var(--border-color); color: var(--text-sub); border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; }
+.social-tab-btn { flex: 1; padding: 8px; background: transparent; border: 1px solid var(--border-color); color: var(--text-sub); border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: bold; }
+.social-panel { display: none; }
+.social-panel.active { display: block; }
 .social-tab-btn.active { background: rgba(0, 217, 255, 0.1); border-color: var(--neon-blue); color: var(--neon-blue); }
 .rank-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
 .rank-tabs::-webkit-scrollbar { display: none; }
