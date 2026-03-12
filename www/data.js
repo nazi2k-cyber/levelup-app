@@ -65,7 +65,7 @@ const i18n = {
         roulette_locked: "퀘스트를 완료하면 스핀 가능", roulette_used: "오늘 스핀 완료", roulette_result: "보상 획득!",
 
         // 릴스 탭
-        nav_reels: "릴스", reels_title: "🎬 릴스", reels_post_btn: "타임테이블 포스팅",
+        nav_reels: "Day1", reels_title: "🎬 Day1", reels_post_btn: "타임테이블 포스팅",
         reels_post_hint: "오늘의 시간표를 완성하고 사진을 추가하면 포스팅할 수 있습니다",
         reels_empty: "아직 포스팅이 없습니다. 타임테이블을 완성하고 포스팅해보세요!",
         reels_no_timetable: "먼저 플래너에서 오늘의 시간표를 작성하고 저장해주세요.",
@@ -73,7 +73,7 @@ const i18n = {
         reels_posted: "릴스에 포스팅되었습니다!",
         reels_already_posted: "오늘은 이미 포스팅했습니다.",
         reels_reset_info: "매일 00:00(KST) 초기화",
-        planner_photo_required: "사진 추가 (필수)",
+        planner_photo_required: "사진 추가",
         planner_caption_placeholder: "오늘의 한마디를 남겨보세요...",
         planner_caption_limit_ko: "한글 140자 / 영문 280자"
     },

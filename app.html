@@ -298,12 +298,22 @@
 
                     <!-- 시간표 탭 -->
                     <div class="planner-tab-content" id="planner-tab-schedule">
-                        <!-- 사진 첨부 (필수) -->
+                        <!-- 타임박스 그리드 헤더 -->
+                        <div class="timebox-grid-header">
+                            <span class="timebox-hour-col"></span>
+                            <span class="timebox-col-header">:00</span>
+                            <span class="timebox-col-header">:30</span>
+                        </div>
+
+                        <!-- 타임박스 그리드 -->
+                        <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
+
+                        <!-- 사진 첨부 -->
                         <div class="planner-photo-box" id="planner-photo-box">
                             <label for="plannerPhotoUpload" class="planner-photo-label" id="planner-photo-label">
                                 <div class="planner-photo-placeholder" id="planner-photo-placeholder">
                                     <span style="font-size:1.5rem;">📷</span>
-                                    <span style="font-size:0.7rem; color:var(--text-sub);" data-i18n="planner_photo_required">사진 추가 (필수)</span>
+                                    <span style="font-size:0.7rem; color:var(--text-sub);" data-i18n="planner_photo_required">사진 추가</span>
                                 </div>
                                 <img id="planner-photo-preview" class="planner-photo-preview d-none" alt="Timetable Photo">
                             </label>
@@ -318,16 +328,6 @@
                                       oninput="window.updateCaptionCounter()"></textarea>
                             <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
                         </div>
-
-                        <!-- 타임박스 그리드 헤더 -->
-                        <div class="timebox-grid-header">
-                            <span class="timebox-hour-col"></span>
-                            <span class="timebox-col-header">:00</span>
-                            <span class="timebox-col-header">:30</span>
-                        </div>
-
-                        <!-- 타임박스 그리드 -->
-                        <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
                     </div>
 
                     <!-- 저장 버튼 -->
@@ -349,7 +349,7 @@
 
             <section id="reels" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="reels_title" style="margin:0;">🎬 릴스</h2>
+                    <h2 data-i18n="reels_title" style="margin:0;">🎬 Day1</h2>
                     <span id="reels-reset-timer" style="font-size:0.65rem; color:var(--text-sub);"></span>
                 </div>
 
@@ -414,7 +414,7 @@
             <div class="nav-item" data-tab="diary"><span class="nav-icon">🗓️</span><span data-i18n="nav_diary">플래너</span></div>
             <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
             <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
-            <div class="nav-item" data-tab="reels"><span class="nav-icon">🎬</span><span data-i18n="nav_reels">릴스</span></div>
+            <div class="nav-item" data-tab="reels"><span class="nav-icon">🎬</span><span data-i18n="nav_reels">Day1</span></div>
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
             <div class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
         </nav>
