@@ -2373,7 +2373,13 @@ async function savePlannerEntry() {
     const selectedMood = document.querySelector('#planner-mood-selector .diary-mood-btn.selected');
     const mood = selectedMood ? selectedMood.dataset.mood : '';
 
-    const hasContent = Object.keys(blocks).length > 0 || tasksData.some(t => t.text);
+    // 시간표 블록 최소 1개 필수
+    if (Object.keys(blocks).length === 0) {
+        alert(i18n[AppState.currentLang].planner_no_timetable || '시간표를 최소 1개 이상 입력해주세요.');
+        return;
+    }
+
+    const hasContent = true; // 시간표 블록이 1개 이상 있으므로 항상 true
 
     try {
         let diaries;
