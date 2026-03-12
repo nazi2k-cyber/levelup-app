@@ -2042,8 +2042,9 @@ window.sharePlannerAsImage = async function() {
     const footerText = 'LEVEL UP: REBOOT | ' + dateStr;
     ctx.fillText(footerText, pad + 6, totalH - pad + 4);
 
-    // 이미지 공유/저장
+    // 갤러리에 이미지 저장
     const fileName = `planner_${dateStr}.png`;
+    const msgs = { ko: '갤러리에 저장되었습니다.', en: 'Saved to gallery.', ja: 'ギャラリーに保存しました。' };
     const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
 
     // 모달 닫기
@@ -2051,121 +2052,61 @@ window.sharePlannerAsImage = async function() {
     modal.classList.add('d-none');
     modal.classList.remove('d-flex');
 
-    try {
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        if (!blob) throw new Error('toBlob failed');
-        const file = new File([blob], fileName, { type: 'image/png' });
+    const dataUrl = canvas.toDataURL('image/png');
+    const base64Data = dataUrl.split(',')[1];
 
-        // Web Share API로 네이티브 공유 시트 호출 (저장/카톡/인스타 등 선택 가능)
-        if (navigator.share) {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+        // Capacitor Filesystem → 갤러리 직접 저장
+        try {
+            const { Filesystem } = window.Capacitor.Plugins;
+
+            // 권한 요청
+            try { await Filesystem.requestPermissions(); } catch(p) {}
+
+            // Downloads 디렉토리에 저장 (갤러리에서 자동 감지)
+            await Filesystem.writeFile({
+                path: `Download/${fileName}`,
+                data: base64Data,
+                directory: 'EXTERNAL_STORAGE',
+                recursive: true
+            });
+            alert(msgs[lang] || msgs.ko);
+        } catch(e) {
+            // Filesystem 실패 시 → 공유 시트 폴백
             try {
-                const shareData = { files: [file] };
-                // canShare 체크 (일부 브라우저에서 없을 수 있음)
-                if (!navigator.canShare || navigator.canShare(shareData)) {
-                    await navigator.share(shareData);
-                    return;
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (blob && navigator.share) {
+                    const file = new File([blob], fileName, { type: 'image/png' });
+                    await navigator.share({ files: [file] });
+                } else {
+                    alert(failMsgs[lang] || failMsgs.ko);
                 }
-            } catch(shareErr) {
-                // AbortError = 사용자 취소 → 무시
-                if (shareErr.name === 'AbortError') return;
+            } catch(e2) {
+                if (e2.name !== 'AbortError') alert(failMsgs[lang] || failMsgs.ko);
             }
         }
-
-        // Web Share 미지원 시: Blob URL <a> 다운로드 (데스크톱 웹)
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 1000);
-
-        const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
-        alert(msgs[lang] || msgs.ko);
-    } catch(e) {
-        alert(failMsgs[lang] || failMsgs.ko);
-    }
-};
-
-// 플래너 텍스트 공유 (네이티브 공유 시트)
-window.sharePlannerLink = function() {
-    const lang = AppState.currentLang;
-    const dateStr = diarySelectedDate;
-    const entry = getDiaryEntry(dateStr);
-
-    const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
-    const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
-    const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
-    const mood = (entry && entry.mood) ? entry.mood : '';
-    const moodMap = { great: '😄', good: '🙂', neutral: '😐', bad: '😞', terrible: '😫' };
-    const moodEmoji = moodMap[mood] || '';
-
-    let text = `📋 LEVEL UP: REBOOT - ${dateStr}\n`;
-    text += `👤 ${AppState.user.name} | Lv.${AppState.user.level}${moodEmoji ? ' ' + moodEmoji : ''}\n\n`;
-
-    if (tasks.length > 0) {
-        const taskLabel = { ko: '⭐ 우선순위 태스크', en: '⭐ Priority Tasks', ja: '⭐ 優先タスク' };
-        text += (taskLabel[lang] || taskLabel.ko) + '\n';
-        tasks.forEach((t, i) => {
-            text += (t.ranked ? `${i + 1}. ` : '· ') + t.text + '\n';
-        });
-        text += '\n';
-    }
-
-    if (blocks.length > 0) {
-        const schedLabel = { ko: '🕐 시간표', en: '🕐 Schedule', ja: '🕐 スケジュール' };
-        text += (schedLabel[lang] || schedLabel.ko) + '\n';
-        blocks.forEach(([time, task]) => {
-            text += `${time} ${task}\n`;
-        });
-        text += '\n';
-    }
-
-    if (caption) {
-        text += `💬 ${caption}\n\n`;
-    }
-
-    text += `🔗 https://play.google.com/store/apps/details?id=com.levelup.reboot`;
-
-    // 모달 닫기
-    const m = document.getElementById('shareModal');
-    m.classList.add('d-none');
-    m.classList.remove('d-flex');
-
-    // Web Share API (네이티브 공유 시트 → 카톡, 인스타, 메시지 등)
-    if (navigator.share) {
-        navigator.share({
-            title: `LEVEL UP: REBOOT - ${dateStr}`,
-            text: text
-        }).catch(() => {
-            // 사용자 취소 → 무시
-        });
-        return;
-    }
-
-    // Web Share 미지원 시 클립보드 복사 (데스크톱 웹)
-    const copyToClipboard = (str) => {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(str);
+    } else {
+        // 웹 브라우저: Blob URL <a> 다운로드
+        try {
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) throw new Error('toBlob failed');
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 1000);
+            alert(msgs[lang] || msgs.ko);
+        } catch(e) {
+            alert(failMsgs[lang] || failMsgs.ko);
         }
-        return new Promise((resolve) => {
-            const ta = document.createElement('textarea');
-            ta.value = str;
-            ta.style.cssText = 'position:fixed;left:-9999px;';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-            resolve();
-        });
-    };
-
-    copyToClipboard(text).then(() => {
-        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
-        alert(msgs[lang] || msgs.ko);
-    });
+    }
 };
+
 
 // --- ★ 약관 모달 (인앱 표시 - 인라인) ★ ---
 const legalContents = {
