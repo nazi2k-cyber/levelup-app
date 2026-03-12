@@ -280,12 +280,18 @@ function bindEvents() {
             const tab = btn.getAttribute('data-planner-tab');
             const target = document.getElementById('planner-tab-' + tab);
             if (target) target.classList.add('active');
+            // 탭에 따라 저장 영역 표시/숨김
+            const prioritySave = document.getElementById('priority-save-area');
+            if (prioritySave) prioritySave.style.display = tab === 'priority' ? 'block' : 'none';
         });
     });
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 
     // Reels tab
     document.getElementById('btn-reels-post').addEventListener('click', postToReels);
+    // 우선순위 탭 저장 버튼도 같은 저장 함수 연결
+    const prioritySaveBtn = document.getElementById('btn-planner-save-priority');
+    if (prioritySaveBtn) prioritySaveBtn.addEventListener('click', savePlannerEntry);
     // Planner photo upload
     document.getElementById('plannerPhotoUpload').addEventListener('change', loadPlannerPhoto);
 }
@@ -2603,6 +2609,13 @@ async function postToReels() {
 
     // Firestore 저장
     await saveReelsToFirestore(post);
+
+    // 포스팅 보상: +20P & CHA +0.5
+    AppState.user.points += 20;
+    AppState.user.pendingStats.cha = (AppState.user.pendingStats.cha || 0) + 0.5;
+    updatePointUI();
+    drawRadarChart();
+    AppLogger.info('[Reels] 포스팅 보상 지급: +20P, CHA +0.5');
 
     alert(i18n[lang].reels_posted);
     renderReelsFeed();
