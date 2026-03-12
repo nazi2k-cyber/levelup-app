@@ -248,6 +248,7 @@ function bindEvents() {
     document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
+    document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
@@ -294,6 +295,8 @@ function bindEvents() {
     if (prioritySaveBtn) prioritySaveBtn.addEventListener('click', savePlannerEntry);
     // Planner photo upload
     document.getElementById('plannerPhotoUpload').addEventListener('change', loadPlannerPhoto);
+    // Planner share button
+    document.getElementById('btn-planner-share').addEventListener('click', openShareModal);
 }
 
 // --- 데이터 저장/로드 ---
@@ -1737,6 +1740,246 @@ function openDungeonInfoModal() {
     m.classList.remove('d-none');
     m.classList.add('d-flex');
 }
+
+// --- ★ 플래너 가이드 모달 ★ ---
+function openPlannerInfoModal() {
+    const lang = AppState.currentLang;
+    const guideData = {
+        ko: {
+            title: '플래너 사용 가이드',
+            sections: [
+                { icon: '⭐', title: '우선순위 태스크', desc: '하루의 핵심 할 일을 최대 6개 입력하세요. 왼쪽 버튼을 눌러 우선순위를 매기면 자동으로 번호가 부여됩니다.' },
+                { icon: '🕐', title: '시간표 (타임박스)', desc: '05:00~23:30까지 30분 단위로 할 일을 배치하세요. 우선순위 태스크에서 입력한 항목이 드롭다운에 표시됩니다.' },
+                { icon: '📷', title: '사진 & 한마디', desc: '시간표 탭에서 사진을 첨부하고 오늘의 한마디를 작성하세요. Day1 포스팅 시 필수입니다.' },
+                { icon: '💾', title: '저장 보상', desc: '하루 1회 저장 시 +20P & AGI +0.5 보상을 받습니다.' },
+                { icon: '📤', title: 'Day1 포스팅', desc: '시간표와 사진, 텍스트를 모두 완성하면 Day1에 포스팅할 수 있습니다. 포스팅 시 +20P & CHA +0.5 보상! 24시간 후 자동 삭제됩니다.' },
+                { icon: '🔗', title: '공유 기능', desc: '포스팅 버튼 옆 공유 아이콘을 눌러 플래너를 이미지로 저장하거나 요약 텍스트를 클립보드에 복사할 수 있습니다.' }
+            ]
+        },
+        en: {
+            title: 'Planner Guide',
+            sections: [
+                { icon: '⭐', title: 'Priority Tasks', desc: 'Enter up to 6 key tasks for the day. Tap the left button to assign priority - numbers are assigned automatically.' },
+                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Assign tasks in 30-min blocks from 05:00-23:30. Tasks from Priority list appear in the dropdown.' },
+                { icon: '📷', title: 'Photo & Caption', desc: 'Attach a photo and write a caption in the Schedule tab. Required for Day1 posting.' },
+                { icon: '💾', title: 'Save Reward', desc: 'Save once a day to earn +20P & AGI +0.5.' },
+                { icon: '📤', title: 'Day1 Posting', desc: 'Complete the schedule, photo, and caption to post to Day1. Earn +20P & CHA +0.5! Auto-deleted after 24 hours.' },
+                { icon: '🔗', title: 'Sharing', desc: 'Tap the share icon next to the Post button to save your planner as an image or copy a summary to clipboard.' }
+            ]
+        },
+        ja: {
+            title: 'プランナーガイド',
+            sections: [
+                { icon: '⭐', title: '優先タスク', desc: '1日の重要なタスクを最大6つ入力してください。左のボタンを押すと優先順位が自動付与されます。' },
+                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '05:00〜23:30まで30分単位でタスクを配置できます。優先タスクの項目がドロップダウンに表示されます。' },
+                { icon: '📷', title: '写真 & キャプション', desc: 'スケジュールタブで写真を添付し、今日の一言を書きましょう。Day1投稿に必須です。' },
+                { icon: '💾', title: '保存報酬', desc: '1日1回保存で+20P & AGI +0.5の報酬を獲得できます。' },
+                { icon: '📤', title: 'Day1投稿', desc: 'スケジュール・写真・テキストを完成させるとDay1に投稿できます。投稿で+20P & CHA +0.5！24時間後に自動削除されます。' },
+                { icon: '🔗', title: '共有機能', desc: '投稿ボタン横の共有アイコンをタップして、プランナーを画像保存またはテキストをコピーできます。' }
+            ]
+        }
+    };
+
+    const g = guideData[lang] || guideData.ko;
+    document.getElementById('info-modal-title').innerText = g.title;
+    const body = document.getElementById('info-modal-body');
+
+    body.innerHTML = g.sections.map(s => `
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color);">
+            <span style="font-size:1.3rem; flex-shrink:0;">${s.icon}</span>
+            <div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:3px;">${s.title}</div>
+                <div style="font-size:0.75rem; color:var(--text-sub); line-height:1.5; word-break:keep-all;">${s.desc}</div>
+            </div>
+        </div>
+    `).join('');
+
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// --- ★ 플래너 공유 모달 ★ ---
+function openShareModal() {
+    const lang = AppState.currentLang;
+    const titles = { ko: '플래너 공유', en: 'Share Planner', ja: 'プランナー共有' };
+    document.getElementById('share-modal-title').innerText = titles[lang] || titles.ko;
+    const m = document.getElementById('shareModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// 플래너를 이미지로 저장 (html2canvas 없이 캔버스 직접 생성)
+window.sharePlannerAsImage = function() {
+    const lang = AppState.currentLang;
+    const dateStr = diarySelectedDate;
+    const entry = getDiaryEntry(dateStr);
+
+    // 캔버스 생성
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 600, padding = 24;
+    let y = padding;
+
+    // 콘텐츠 준비
+    const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
+    const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
+    const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+
+    // 높이 계산
+    const lineH = 22;
+    const headerH = 50;
+    const sectionGap = 16;
+    let contentH = headerH + sectionGap;
+    if (tasks.length > 0) contentH += 28 + tasks.length * lineH + sectionGap;
+    if (blocks.length > 0) contentH += 28 + Math.min(blocks.length, 20) * lineH + sectionGap;
+    if (caption) contentH += 28 + lineH + sectionGap;
+    contentH += 30; // footer
+
+    canvas.width = W;
+    canvas.height = contentH + padding * 2;
+
+    // 배경
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#00d9ff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+
+    // 헤더
+    ctx.fillStyle = '#00d9ff';
+    ctx.font = 'bold 18px Pretendard, sans-serif';
+    ctx.fillText('LEVEL UP: REBOOT', padding, y + 22);
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = '14px Pretendard, sans-serif';
+    ctx.fillText(dateStr, W - padding - ctx.measureText(dateStr).width, y + 22);
+    y += headerH;
+
+    // 구분선
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(W - padding, y); ctx.stroke();
+    y += sectionGap;
+
+    // 우선순위 태스크
+    if (tasks.length > 0) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 13px Pretendard, sans-serif';
+        const taskLabel = { ko: '우선순위 태스크', en: 'Priority Tasks', ja: '優先タスク' };
+        ctx.fillText('⭐ ' + (taskLabel[lang] || taskLabel.ko), padding, y + 14);
+        y += 28;
+        tasks.forEach((t, i) => {
+            const ranked = t.ranked ? `${i + 1}. ` : '· ';
+            ctx.fillStyle = t.ranked ? '#00d9ff' : '#aaa';
+            ctx.font = '12px Pretendard, sans-serif';
+            ctx.fillText(ranked + t.text, padding + 8, y + 14);
+            y += lineH;
+        });
+        y += sectionGap;
+    }
+
+    // 시간표
+    if (blocks.length > 0) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 13px Pretendard, sans-serif';
+        const schedLabel = { ko: '시간표', en: 'Schedule', ja: 'スケジュール' };
+        ctx.fillText('🕐 ' + (schedLabel[lang] || schedLabel.ko), padding, y + 14);
+        y += 28;
+        blocks.slice(0, 20).forEach(([time, task]) => {
+            ctx.fillStyle = '#00d9ff';
+            ctx.font = 'bold 12px Pretendard, monospace';
+            ctx.fillText(time, padding + 8, y + 14);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Pretendard, sans-serif';
+            ctx.fillText(task, padding + 60, y + 14);
+            y += lineH;
+        });
+        y += sectionGap;
+    }
+
+    // 캡션
+    if (caption) {
+        ctx.fillStyle = '#aaa';
+        ctx.font = 'italic 12px Pretendard, sans-serif';
+        ctx.fillText('💬 ' + caption.substring(0, 60), padding, y + 14);
+        y += lineH + sectionGap;
+    }
+
+    // 푸터
+    ctx.fillStyle = '#555';
+    ctx.font = '10px Pretendard, sans-serif';
+    ctx.fillText('LEVEL UP: REBOOT | ' + AppState.user.name + ' | Lv.' + AppState.user.level, padding, canvas.height - padding);
+
+    // 다운로드
+    const link = document.createElement('a');
+    link.download = `planner_${dateStr}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+    alert(msgs[lang] || msgs.ko);
+
+    // 모달 닫기
+    const m = document.getElementById('shareModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
+
+// 플래너 요약 텍스트를 클립보드에 복사
+window.sharePlannerLink = function() {
+    const lang = AppState.currentLang;
+    const dateStr = diarySelectedDate;
+    const entry = getDiaryEntry(dateStr);
+
+    const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
+    const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
+    const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+
+    let text = `📋 LEVEL UP: REBOOT - ${dateStr}\n`;
+    text += `👤 ${AppState.user.name} | Lv.${AppState.user.level}\n\n`;
+
+    if (tasks.length > 0) {
+        const taskLabel = { ko: '⭐ 우선순위 태스크', en: '⭐ Priority Tasks', ja: '⭐ 優先タスク' };
+        text += (taskLabel[lang] || taskLabel.ko) + '\n';
+        tasks.forEach((t, i) => {
+            text += (t.ranked ? `${i + 1}. ` : '· ') + t.text + '\n';
+        });
+        text += '\n';
+    }
+
+    if (blocks.length > 0) {
+        const schedLabel = { ko: '🕐 시간표', en: '🕐 Schedule', ja: '🕐 スケジュール' };
+        text += (schedLabel[lang] || schedLabel.ko) + '\n';
+        blocks.forEach(([time, task]) => {
+            text += `${time} ${task}\n`;
+        });
+        text += '\n';
+    }
+
+    if (caption) {
+        text += `💬 ${caption}\n`;
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
+        alert(msgs[lang] || msgs.ko);
+    }).catch(() => {
+        // 폴백: textarea 이용
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
+        alert(msgs[lang] || msgs.ko);
+    });
+
+    // 모달 닫기
+    const m = document.getElementById('shareModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
 
 // --- ★ 약관 모달 (인앱 표시 - 인라인) ★ ---
 const legalContents = {

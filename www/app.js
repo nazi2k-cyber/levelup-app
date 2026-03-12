@@ -248,6 +248,7 @@ function bindEvents() {
     document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
+    document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
@@ -294,6 +295,8 @@ function bindEvents() {
     if (prioritySaveBtn) prioritySaveBtn.addEventListener('click', savePlannerEntry);
     // Planner photo upload
     document.getElementById('plannerPhotoUpload').addEventListener('change', loadPlannerPhoto);
+    // Planner share button
+    document.getElementById('btn-planner-share').addEventListener('click', openShareModal);
 }
 
 // --- 데이터 저장/로드 ---
@@ -318,7 +321,8 @@ async function saveUserData() {
             instaId: AppState.user.instaId || "",
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: localStorage.getItem('diary_entries') || '{}',
-            lastRouletteDate: localStorage.getItem('roulette_date') || ''
+            lastRouletteDate: localStorage.getItem('roulette_date') || '',
+            lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10)
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
@@ -379,18 +383,29 @@ async function loadUserDataFromDB(user) {
             if (data.lastRouletteDate) {
                 localStorage.setItem('roulette_date', data.lastRouletteDate);
             }
-            // 릴스 포스트 데이터 복원 (Firestore → localStorage)
+            // 릴스 포스팅 타임스탬프 복원 (로그아웃 후에도 비활성화 유지)
+            if (data.lastReelsPostTs) {
+                const elapsed = Date.now() - data.lastReelsPostTs;
+                if (elapsed < 24 * 60 * 60 * 1000) {
+                    localStorage.setItem('reels_last_post_ts', String(data.lastReelsPostTs));
+                    localStorage.setItem('reels_reward_ts', String(data.lastReelsPostTs));
+                } else {
+                    localStorage.removeItem('reels_last_post_ts');
+                    localStorage.removeItem('reels_reward_ts');
+                }
+            }
+            // 릴스 포스트 데이터 복원 (Firestore → localStorage) — 24시간 이내 포스트만
             if (data.reelsStr) {
                 try {
-                    const todayKST = getTodayKST();
+                    const now = Date.now();
                     const userPosts = JSON.parse(data.reelsStr);
-                    const todayPosts = userPosts.filter(p => p.dateKST === todayKST);
-                    if (todayPosts.length > 0) {
+                    const activePosts = userPosts.filter(p => (now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
+                    if (activePosts.length > 0) {
                         const reelsLocal = JSON.parse(localStorage.getItem('reels_posts') || '{}');
                         if (!reelsLocal.posts) reelsLocal.posts = [];
-                        reelsLocal._lastDate = todayKST;
-                        todayPosts.forEach(fp => {
-                            if (!reelsLocal.posts.find(lp => lp.uid === fp.uid && lp.dateKST === fp.dateKST)) {
+                        reelsLocal._lastDate = getTodayKST();
+                        activePosts.forEach(fp => {
+                            if (!reelsLocal.posts.find(lp => lp.uid === fp.uid && lp.timestamp === fp.timestamp)) {
                                 reelsLocal.posts.push(fp);
                             }
                         });
@@ -1726,6 +1741,246 @@ function openDungeonInfoModal() {
     m.classList.add('d-flex');
 }
 
+// --- ★ 플래너 가이드 모달 ★ ---
+function openPlannerInfoModal() {
+    const lang = AppState.currentLang;
+    const guideData = {
+        ko: {
+            title: '플래너 사용 가이드',
+            sections: [
+                { icon: '⭐', title: '우선순위 태스크', desc: '하루의 핵심 할 일을 최대 6개 입력하세요. 왼쪽 버튼을 눌러 우선순위를 매기면 자동으로 번호가 부여됩니다.' },
+                { icon: '🕐', title: '시간표 (타임박스)', desc: '05:00~23:30까지 30분 단위로 할 일을 배치하세요. 우선순위 태스크에서 입력한 항목이 드롭다운에 표시됩니다.' },
+                { icon: '📷', title: '사진 & 한마디', desc: '시간표 탭에서 사진을 첨부하고 오늘의 한마디를 작성하세요. Day1 포스팅 시 필수입니다.' },
+                { icon: '💾', title: '저장 보상', desc: '하루 1회 저장 시 +20P & AGI +0.5 보상을 받습니다.' },
+                { icon: '📤', title: 'Day1 포스팅', desc: '시간표와 사진, 텍스트를 모두 완성하면 Day1에 포스팅할 수 있습니다. 포스팅 시 +20P & CHA +0.5 보상! 24시간 후 자동 삭제됩니다.' },
+                { icon: '🔗', title: '공유 기능', desc: '포스팅 버튼 옆 공유 아이콘을 눌러 플래너를 이미지로 저장하거나 요약 텍스트를 클립보드에 복사할 수 있습니다.' }
+            ]
+        },
+        en: {
+            title: 'Planner Guide',
+            sections: [
+                { icon: '⭐', title: 'Priority Tasks', desc: 'Enter up to 6 key tasks for the day. Tap the left button to assign priority - numbers are assigned automatically.' },
+                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Assign tasks in 30-min blocks from 05:00-23:30. Tasks from Priority list appear in the dropdown.' },
+                { icon: '📷', title: 'Photo & Caption', desc: 'Attach a photo and write a caption in the Schedule tab. Required for Day1 posting.' },
+                { icon: '💾', title: 'Save Reward', desc: 'Save once a day to earn +20P & AGI +0.5.' },
+                { icon: '📤', title: 'Day1 Posting', desc: 'Complete the schedule, photo, and caption to post to Day1. Earn +20P & CHA +0.5! Auto-deleted after 24 hours.' },
+                { icon: '🔗', title: 'Sharing', desc: 'Tap the share icon next to the Post button to save your planner as an image or copy a summary to clipboard.' }
+            ]
+        },
+        ja: {
+            title: 'プランナーガイド',
+            sections: [
+                { icon: '⭐', title: '優先タスク', desc: '1日の重要なタスクを最大6つ入力してください。左のボタンを押すと優先順位が自動付与されます。' },
+                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '05:00〜23:30まで30分単位でタスクを配置できます。優先タスクの項目がドロップダウンに表示されます。' },
+                { icon: '📷', title: '写真 & キャプション', desc: 'スケジュールタブで写真を添付し、今日の一言を書きましょう。Day1投稿に必須です。' },
+                { icon: '💾', title: '保存報酬', desc: '1日1回保存で+20P & AGI +0.5の報酬を獲得できます。' },
+                { icon: '📤', title: 'Day1投稿', desc: 'スケジュール・写真・テキストを完成させるとDay1に投稿できます。投稿で+20P & CHA +0.5！24時間後に自動削除されます。' },
+                { icon: '🔗', title: '共有機能', desc: '投稿ボタン横の共有アイコンをタップして、プランナーを画像保存またはテキストをコピーできます。' }
+            ]
+        }
+    };
+
+    const g = guideData[lang] || guideData.ko;
+    document.getElementById('info-modal-title').innerText = g.title;
+    const body = document.getElementById('info-modal-body');
+
+    body.innerHTML = g.sections.map(s => `
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color);">
+            <span style="font-size:1.3rem; flex-shrink:0;">${s.icon}</span>
+            <div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:3px;">${s.title}</div>
+                <div style="font-size:0.75rem; color:var(--text-sub); line-height:1.5; word-break:keep-all;">${s.desc}</div>
+            </div>
+        </div>
+    `).join('');
+
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// --- ★ 플래너 공유 모달 ★ ---
+function openShareModal() {
+    const lang = AppState.currentLang;
+    const titles = { ko: '플래너 공유', en: 'Share Planner', ja: 'プランナー共有' };
+    document.getElementById('share-modal-title').innerText = titles[lang] || titles.ko;
+    const m = document.getElementById('shareModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// 플래너를 이미지로 저장 (html2canvas 없이 캔버스 직접 생성)
+window.sharePlannerAsImage = function() {
+    const lang = AppState.currentLang;
+    const dateStr = diarySelectedDate;
+    const entry = getDiaryEntry(dateStr);
+
+    // 캔버스 생성
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 600, padding = 24;
+    let y = padding;
+
+    // 콘텐츠 준비
+    const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
+    const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
+    const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+
+    // 높이 계산
+    const lineH = 22;
+    const headerH = 50;
+    const sectionGap = 16;
+    let contentH = headerH + sectionGap;
+    if (tasks.length > 0) contentH += 28 + tasks.length * lineH + sectionGap;
+    if (blocks.length > 0) contentH += 28 + Math.min(blocks.length, 20) * lineH + sectionGap;
+    if (caption) contentH += 28 + lineH + sectionGap;
+    contentH += 30; // footer
+
+    canvas.width = W;
+    canvas.height = contentH + padding * 2;
+
+    // 배경
+    ctx.fillStyle = '#0a0e1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#00d9ff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+
+    // 헤더
+    ctx.fillStyle = '#00d9ff';
+    ctx.font = 'bold 18px Pretendard, sans-serif';
+    ctx.fillText('LEVEL UP: REBOOT', padding, y + 22);
+    ctx.fillStyle = '#ffcc00';
+    ctx.font = '14px Pretendard, sans-serif';
+    ctx.fillText(dateStr, W - padding - ctx.measureText(dateStr).width, y + 22);
+    y += headerH;
+
+    // 구분선
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(W - padding, y); ctx.stroke();
+    y += sectionGap;
+
+    // 우선순위 태스크
+    if (tasks.length > 0) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 13px Pretendard, sans-serif';
+        const taskLabel = { ko: '우선순위 태스크', en: 'Priority Tasks', ja: '優先タスク' };
+        ctx.fillText('⭐ ' + (taskLabel[lang] || taskLabel.ko), padding, y + 14);
+        y += 28;
+        tasks.forEach((t, i) => {
+            const ranked = t.ranked ? `${i + 1}. ` : '· ';
+            ctx.fillStyle = t.ranked ? '#00d9ff' : '#aaa';
+            ctx.font = '12px Pretendard, sans-serif';
+            ctx.fillText(ranked + t.text, padding + 8, y + 14);
+            y += lineH;
+        });
+        y += sectionGap;
+    }
+
+    // 시간표
+    if (blocks.length > 0) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 13px Pretendard, sans-serif';
+        const schedLabel = { ko: '시간표', en: 'Schedule', ja: 'スケジュール' };
+        ctx.fillText('🕐 ' + (schedLabel[lang] || schedLabel.ko), padding, y + 14);
+        y += 28;
+        blocks.slice(0, 20).forEach(([time, task]) => {
+            ctx.fillStyle = '#00d9ff';
+            ctx.font = 'bold 12px Pretendard, monospace';
+            ctx.fillText(time, padding + 8, y + 14);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Pretendard, sans-serif';
+            ctx.fillText(task, padding + 60, y + 14);
+            y += lineH;
+        });
+        y += sectionGap;
+    }
+
+    // 캡션
+    if (caption) {
+        ctx.fillStyle = '#aaa';
+        ctx.font = 'italic 12px Pretendard, sans-serif';
+        ctx.fillText('💬 ' + caption.substring(0, 60), padding, y + 14);
+        y += lineH + sectionGap;
+    }
+
+    // 푸터
+    ctx.fillStyle = '#555';
+    ctx.font = '10px Pretendard, sans-serif';
+    ctx.fillText('LEVEL UP: REBOOT | ' + AppState.user.name + ' | Lv.' + AppState.user.level, padding, canvas.height - padding);
+
+    // 다운로드
+    const link = document.createElement('a');
+    link.download = `planner_${dateStr}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+    alert(msgs[lang] || msgs.ko);
+
+    // 모달 닫기
+    const m = document.getElementById('shareModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
+
+// 플래너 요약 텍스트를 클립보드에 복사
+window.sharePlannerLink = function() {
+    const lang = AppState.currentLang;
+    const dateStr = diarySelectedDate;
+    const entry = getDiaryEntry(dateStr);
+
+    const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
+    const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
+    const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+
+    let text = `📋 LEVEL UP: REBOOT - ${dateStr}\n`;
+    text += `👤 ${AppState.user.name} | Lv.${AppState.user.level}\n\n`;
+
+    if (tasks.length > 0) {
+        const taskLabel = { ko: '⭐ 우선순위 태스크', en: '⭐ Priority Tasks', ja: '⭐ 優先タスク' };
+        text += (taskLabel[lang] || taskLabel.ko) + '\n';
+        tasks.forEach((t, i) => {
+            text += (t.ranked ? `${i + 1}. ` : '· ') + t.text + '\n';
+        });
+        text += '\n';
+    }
+
+    if (blocks.length > 0) {
+        const schedLabel = { ko: '🕐 시간표', en: '🕐 Schedule', ja: '🕐 スケジュール' };
+        text += (schedLabel[lang] || schedLabel.ko) + '\n';
+        blocks.forEach(([time, task]) => {
+            text += `${time} ${task}\n`;
+        });
+        text += '\n';
+    }
+
+    if (caption) {
+        text += `💬 ${caption}\n`;
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
+        alert(msgs[lang] || msgs.ko);
+    }).catch(() => {
+        // 폴백: textarea 이용
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
+        alert(msgs[lang] || msgs.ko);
+    });
+
+    // 모달 닫기
+    const m = document.getElementById('shareModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
+
 // --- ★ 약관 모달 (인앱 표시 - 인라인) ★ ---
 const legalContents = {
     terms: {
@@ -2512,19 +2767,21 @@ function getTodayKST() {
     return `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,'0')}-${String(kst.getDate()).padStart(2,'0')}`;
 }
 
-// 릴스 데이터 로드 (localStorage)
+// 릴스 데이터 로드 (localStorage) — 업로드 후 24시간 경과 포스트 자동 삭제
 function getReelsData() {
     try {
         const data = JSON.parse(localStorage.getItem('reels_posts') || '{}');
-        // KST 자정 리셋 체크
         const todayKST = getTodayKST();
-        if (data._lastDate && data._lastDate !== todayKST) {
-            // 날짜가 바뀌었으면 리셋
-            localStorage.setItem('reels_posts', JSON.stringify({ _lastDate: todayKST, posts: [] }));
-            return { _lastDate: todayKST, posts: [] };
-        }
         if (!data._lastDate) data._lastDate = todayKST;
         if (!data.posts) data.posts = [];
+        // 24시간 경과 포스트 자동 삭제
+        const now = Date.now();
+        const before = data.posts.length;
+        data.posts = data.posts.filter(p => (now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
+        if (data.posts.length !== before) {
+            data._lastDate = todayKST;
+            localStorage.setItem('reels_posts', JSON.stringify(data));
+        }
         return data;
     } catch { return { _lastDate: getTodayKST(), posts: [] }; }
 }
@@ -2542,9 +2799,9 @@ async function saveReelsToFirestore(post) {
         if (userDoc.exists() && userDoc.data().reelsStr) {
             try { existingPosts = JSON.parse(userDoc.data().reelsStr); } catch(e) {}
         }
-        // 오늘 KST 기준 포스트만 유지
-        const todayKST = getTodayKST();
-        existingPosts = existingPosts.filter(p => p.dateKST === todayKST);
+        // 24시간 이내 포스트만 유지
+        const now = Date.now();
+        existingPosts = existingPosts.filter(p => (now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
         existingPosts.push(post);
         await updateDoc(doc(db, "users", auth.currentUser.uid), {
             reelsStr: JSON.stringify(existingPosts)
@@ -2553,7 +2810,7 @@ async function saveReelsToFirestore(post) {
 }
 
 async function fetchAllReelsPosts() {
-    const todayKST = getTodayKST();
+    const now = Date.now();
     const posts = [];
     try {
         const snap = await getDocs(collection(db, "users"));
@@ -2563,7 +2820,8 @@ async function fetchAllReelsPosts() {
                 try {
                     const userPosts = JSON.parse(data.reelsStr);
                     userPosts.forEach(p => {
-                        if (p.dateKST === todayKST) {
+                        // 업로드 후 24시간 이내 포스트만 표시
+                        if ((now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000) {
                             posts.push({
                                 ...p,
                                 uid: d.id,
@@ -2588,14 +2846,13 @@ async function postToReels() {
     const lang = AppState.currentLang;
     const todayKST = getTodayKST();
 
-    // 이미 오늘 포스팅했는지 체크 (로컬 + 타임스탬프 검증)
-    const reelsData = getReelsData();
-    const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
-    if (myPost && myPost.dateKST === todayKST) {
+    // 이미 포스팅 후 24시간 이내인지 체크 (로컬 타임스탬프 검증)
+    const lastPostTs = parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10);
+    if (lastPostTs && (Date.now() - lastPostTs) < 24 * 60 * 60 * 1000) {
         return; // 버튼이 비활성화되어 있으므로 조용히 리턴
     }
 
-    // 오늘 타임테이블이 있는지 체크
+    // 오늘 타임테이블(시간표)이 있는지 체크
     const todayStr = getTodayStr();
     const entry = getDiaryEntry(todayStr);
     if (!entry || !entry.blocks || Object.keys(entry.blocks).length === 0) {
@@ -2613,10 +2870,11 @@ async function postToReels() {
 
     // 포스트 생성
     const caption = (entry.caption || '').trim();
+    const postTimestamp = Date.now();
     const post = {
         uid: auth.currentUser.uid,
         dateKST: todayKST,
-        timestamp: Date.now(),
+        timestamp: postTimestamp,
         photo: photoData,
         caption: caption,
         blocks: entry.blocks,
@@ -2628,19 +2886,29 @@ async function postToReels() {
     };
 
     // 로컬 저장
+    const reelsData = getReelsData();
     reelsData.posts.push(post);
     saveReelsData(reelsData);
+
+    // 포스팅 타임스탬프 저장 (로그아웃 후에도 비활성화 유지용)
+    localStorage.setItem('reels_last_post_ts', String(postTimestamp));
 
     // Firestore 저장
     await saveReelsToFirestore(post);
 
-    // 포스팅 보상: +20P & CHA +0.5
-    AppState.user.points += 20;
-    AppState.user.pendingStats.cha = (AppState.user.pendingStats.cha || 0) + 0.5;
-    updatePointUI();
-    drawRadarChart();
-    AppLogger.info('[Reels] 포스팅 보상 지급: +20P, CHA +0.5');
+    // 포스팅 보상: +20P & CHA +0.5 (24시간 내 중복 지급 방지)
+    const lastRewardTs = parseInt(localStorage.getItem('reels_reward_ts') || '0', 10);
+    const alreadyRewarded = lastRewardTs && (Date.now() - lastRewardTs) < 24 * 60 * 60 * 1000;
+    if (!alreadyRewarded) {
+        AppState.user.points += 20;
+        AppState.user.pendingStats.cha = (AppState.user.pendingStats.cha || 0) + 0.5;
+        localStorage.setItem('reels_reward_ts', String(postTimestamp));
+        updatePointUI();
+        drawRadarChart();
+        AppLogger.info('[Reels] 포스팅 보상 지급: +20P, CHA +0.5');
+    }
 
+    await saveUserData();
     alert(i18n[lang].reels_posted);
     renderReelsFeed();
     updateReelsResetTimer();
@@ -2738,21 +3006,21 @@ function formatReelsTime(ts) {
     return `${month}/${date} (${day}) ${hours}:${minutes}`;
 }
 
-// 릴스 리셋 타이머 (다음 00:00 KST까지)
+// 릴스 리셋 타이머 (업로드 후 24시간 기준)
 function updateReelsResetTimer() {
     const timerEl = document.getElementById('reels-reset-timer');
     if (!timerEl) return;
 
     function update() {
-        // 오늘 이미 포스팅했는지 체크
-        const reelsData = getReelsData();
-        const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
+        // 저장된 포스팅 타임스탬프 기반 체크 (로그아웃 후에도 유지)
+        const lastPostTs = parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10);
+        const now = Date.now();
+        const stillCooldown = lastPostTs && (now - lastPostTs) < 24 * 60 * 60 * 1000;
         const postBtn = document.getElementById('btn-reels-post');
 
-        if (myPost) {
+        if (stillCooldown) {
             // 업로드 타임스탬프 + 1일 = 다음 업로드 가능 일시 (KST 기준)
-            const uploadTs = myPost.timestamp || Date.now();
-            const nextAvailMs = uploadTs + (24 * 60 * 60 * 1000);
+            const nextAvailMs = lastPostTs + (24 * 60 * 60 * 1000);
             // KST = UTC+9 → UTC 밀리초에 9시간 더한 뒤 UTC 메서드로 읽기
             const kstNext = new Date(nextAvailMs + 9 * 60 * 60 * 1000);
             const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -2772,6 +3040,11 @@ function updateReelsResetTimer() {
                 postBtn.style.cursor = 'not-allowed';
             }
         } else {
+            // 쿨다운 만료 → 타임스탬프 정리
+            if (lastPostTs) {
+                localStorage.removeItem('reels_last_post_ts');
+                localStorage.removeItem('reels_reward_ts');
+            }
             timerEl.innerText = `업로드 가능`;
             // 버튼 활성화
             if (postBtn) {
@@ -2790,19 +3063,18 @@ function updateReelsResetTimer() {
     window._reelsTimerInterval = setInterval(() => {
         if (document.getElementById('reels').classList.contains('active')) {
             update();
-            // 자정 체크 - 날짜 넘어가면 자동 리셋
+            // 24시간 경과 포스트 자동 삭제 체크
             checkReelsReset();
         }
     }, 1000);
 }
 
-// 00:00 KST 데이터 리셋 체크
+// 24시간 경과 포스트 자동 삭제 체크 (getReelsData에서 필터링됨)
 function checkReelsReset() {
-    const todayKST = getTodayKST();
-    const reelsData = getReelsData();
-    if (reelsData._lastDate !== todayKST) {
-        // 날짜가 바뀜 → 리셋
-        localStorage.setItem('reels_posts', JSON.stringify({ _lastDate: todayKST, posts: [] }));
+    const reelsData = getReelsData(); // 24h 지난 포스트 자동 필터링
+    const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
+    if (!myPost) {
+        // 내 포스트가 삭제됐으면 피드 갱신
         renderReelsFeed();
     }
 }
