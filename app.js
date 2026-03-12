@@ -2042,7 +2042,7 @@ window.sharePlannerAsImage = async function() {
     const footerText = 'LEVEL UP: REBOOT | ' + dateStr;
     ctx.fillText(footerText, pad + 6, totalH - pad + 4);
 
-    // 다운로드 (네이티브 앱 + 웹 모두 지원)
+    // 이미지 공유/저장
     const fileName = `planner_${dateStr}.png`;
     const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
 
@@ -2054,52 +2054,41 @@ window.sharePlannerAsImage = async function() {
     try {
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('toBlob failed');
+        const file = new File([blob], fileName, { type: 'image/png' });
 
-        // 방법 1: Web Share API (네이티브 앱 공유 시트)
-        if (navigator.share && navigator.canShare) {
+        // Web Share API로 네이티브 공유 시트 호출 (저장/카톡/인스타 등 선택 가능)
+        if (navigator.share) {
             try {
-                const file = new File([blob], fileName, { type: 'image/png' });
                 const shareData = { files: [file] };
-                if (navigator.canShare(shareData)) {
+                // canShare 체크 (일부 브라우저에서 없을 수 있음)
+                if (!navigator.canShare || navigator.canShare(shareData)) {
                     await navigator.share(shareData);
                     return;
                 }
             } catch(shareErr) {
-                // 사용자 취소 또는 지원 불가 → 폴백으로
+                // AbortError = 사용자 취소 → 무시
+                if (shareErr.name === 'AbortError') return;
             }
         }
 
-        // 방법 2: 인앱 이미지 뷰어 (Android WebView에서 가장 안정적)
-        const dataUrl = canvas.toDataURL('image/png');
-        _showImageOverlay(dataUrl, fileName, lang);
+        // Web Share 미지원 시: Blob URL <a> 다운로드 (데스크톱 웹)
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 1000);
+
+        const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+        alert(msgs[lang] || msgs.ko);
     } catch(e) {
-        try {
-            const dataUrl = canvas.toDataURL('image/png');
-            _showImageOverlay(dataUrl, fileName, lang);
-        } catch(e2) {
-            alert(failMsgs[lang] || failMsgs.ko);
-        }
+        alert(failMsgs[lang] || failMsgs.ko);
     }
 };
 
-// 이미지 저장용 풀스크린 오버레이
-function _showImageOverlay(dataUrl, fileName, lang) {
-    const hintText = { ko: '이미지를 길게 눌러 저장하세요', en: 'Long press on image to save', ja: '画像を長押しして保存' };
-    const closeText = { ko: '닫기', en: 'Close', ja: '閉じる' };
-    const overlay = document.createElement('div');
-    overlay.id = 'image-save-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.97);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
-    overlay.innerHTML = `
-        <p style="color:#00d9ff;font-size:0.9rem;margin-bottom:16px;text-align:center;font-weight:bold;">${hintText[lang] || hintText.ko}</p>
-        <img src="${dataUrl}" style="max-width:92%;max-height:72vh;border-radius:10px;box-shadow:0 0 20px rgba(0,217,255,0.2);">
-        <button id="image-overlay-close" style="margin-top:20px;padding:12px 40px;background:var(--neon-blue,#00d9ff);color:#000;border:none;border-radius:8px;font-weight:bold;font-size:0.95rem;cursor:pointer;">${closeText[lang] || closeText.ko}</button>
-    `;
-    document.body.appendChild(overlay);
-    document.getElementById('image-overlay-close').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-}
-
-// 플래너 공유 링크(URL)를 클립보드에 복사
+// 플래너 텍스트 공유 (네이티브 공유 시트)
 window.sharePlannerLink = function() {
     const lang = AppState.currentLang;
     const dateStr = diarySelectedDate;
@@ -2108,25 +2097,54 @@ window.sharePlannerLink = function() {
     const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
     const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
     const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+    const mood = (entry && entry.mood) ? entry.mood : '';
+    const moodMap = { great: '😄', good: '🙂', neutral: '😐', bad: '😞', terrible: '😫' };
+    const moodEmoji = moodMap[mood] || '';
 
-    // URL 생성용 데이터
-    const shareData = {
-        u: AppState.user.name || '',
-        lv: AppState.user.level || 1,
-        d: dateStr,
-        t: tasks.slice(0, 5).map(t => t.text),
-        b: blocks.slice(0, 8).map(([time, task]) => `${time} ${task}`),
-        c: caption ? caption.substring(0, 100) : ''
-    };
-    const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(shareData)))));
-    const baseUrl = 'https://levelup-app-53d02.web.app';
-    const shareUrl = `${baseUrl}/?share=${encoded}`;
-
-    // 공유 텍스트 (URL 포함)
     let text = `📋 LEVEL UP: REBOOT - ${dateStr}\n`;
-    text += `👤 ${AppState.user.name} | Lv.${AppState.user.level}\n`;
-    text += `🔗 ${shareUrl}`;
+    text += `👤 ${AppState.user.name} | Lv.${AppState.user.level}${moodEmoji ? ' ' + moodEmoji : ''}\n\n`;
 
+    if (tasks.length > 0) {
+        const taskLabel = { ko: '⭐ 우선순위 태스크', en: '⭐ Priority Tasks', ja: '⭐ 優先タスク' };
+        text += (taskLabel[lang] || taskLabel.ko) + '\n';
+        tasks.forEach((t, i) => {
+            text += (t.ranked ? `${i + 1}. ` : '· ') + t.text + '\n';
+        });
+        text += '\n';
+    }
+
+    if (blocks.length > 0) {
+        const schedLabel = { ko: '🕐 시간표', en: '🕐 Schedule', ja: '🕐 スケジュール' };
+        text += (schedLabel[lang] || schedLabel.ko) + '\n';
+        blocks.forEach(([time, task]) => {
+            text += `${time} ${task}\n`;
+        });
+        text += '\n';
+    }
+
+    if (caption) {
+        text += `💬 ${caption}\n\n`;
+    }
+
+    text += `🔗 https://play.google.com/store/apps/details?id=com.levelup.reboot`;
+
+    // 모달 닫기
+    const m = document.getElementById('shareModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+
+    // Web Share API (네이티브 공유 시트 → 카톡, 인스타, 메시지 등)
+    if (navigator.share) {
+        navigator.share({
+            title: `LEVEL UP: REBOOT - ${dateStr}`,
+            text: text
+        }).catch(() => {
+            // 사용자 취소 → 무시
+        });
+        return;
+    }
+
+    // Web Share 미지원 시 클립보드 복사 (데스크톱 웹)
     const copyToClipboard = (str) => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             return navigator.clipboard.writeText(str);
@@ -2143,26 +2161,10 @@ window.sharePlannerLink = function() {
         });
     };
 
-    // Web Share API 시도 (네이티브 공유 시트)
-    if (navigator.share) {
-        navigator.share({ title: `LEVEL UP - ${dateStr}`, text: text, url: shareUrl }).catch(() => {
-            // 사용자 취소 시 클립보드 복사로 폴백
-            copyToClipboard(text).then(() => {
-                const msgs = { ko: '링크가 클립보드에 복사되었습니다.', en: 'Link copied to clipboard.', ja: 'リンクをクリップボードにコピーしました。' };
-                alert(msgs[lang] || msgs.ko);
-            });
-        });
-    } else {
-        copyToClipboard(text).then(() => {
-            const msgs = { ko: '링크가 클립보드에 복사되었습니다.', en: 'Link copied to clipboard.', ja: 'リンクをクリップボードにコピーしました。' };
-            alert(msgs[lang] || msgs.ko);
-        });
-    }
-
-    // 모달 닫기
-    const m = document.getElementById('shareModal');
-    m.classList.add('d-none');
-    m.classList.remove('d-flex');
+    copyToClipboard(text).then(() => {
+        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
+        alert(msgs[lang] || msgs.ko);
+    });
 };
 
 // --- ★ 약관 모달 (인앱 표시 - 인라인) ★ ---
