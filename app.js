@@ -2042,14 +2042,69 @@ window.sharePlannerAsImage = async function() {
     const footerText = 'LEVEL UP: REBOOT | ' + dateStr;
     ctx.fillText(footerText, pad + 6, totalH - pad + 4);
 
-    // 다운로드
-    const link = document.createElement('a');
-    link.download = `planner_${dateStr}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-
+    // 다운로드 (네이티브 앱 + 웹 모두 지원)
+    const fileName = `planner_${dateStr}.png`;
     const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
-    alert(msgs[lang] || msgs.ko);
+    const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
+
+    try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('toBlob failed');
+
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+        // 방법 1: Web Share API (네이티브 앱에서 가장 잘 동작)
+        if (navigator.share && navigator.canShare) {
+            const file = new File([blob], fileName, { type: 'image/png' });
+            const shareData = { files: [file] };
+            if (navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+                // 모달 닫기
+                const m = document.getElementById('shareModal');
+                m.classList.add('d-none');
+                m.classList.remove('d-flex');
+                return;
+            }
+        }
+
+        // 방법 2: Blob URL + <a> 다운로드 (웹 브라우저)
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        // 클린업
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 1000);
+
+        alert(msgs[lang] || msgs.ko);
+    } catch(e) {
+        // 방법 3: 최종 폴백 - 새 탭에서 이미지 열기 (사용자가 길게 눌러 저장)
+        try {
+            const dataUrl = canvas.toDataURL('image/png');
+            const w = window.open();
+            if (w) {
+                w.document.write(`<html><head><title>${fileName}</title></head><body style="margin:0;background:#000;display:flex;justify-content:center;align-items:center;min-height:100vh;"><img src="${dataUrl}" style="max-width:100%;height:auto;"></body></html>`);
+                w.document.close();
+            } else {
+                // 팝업 차단 시 직접 이미지 표시
+                const imgWindow = document.createElement('div');
+                imgWindow.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+                imgWindow.innerHTML = `
+                    <p style="color:#fff;font-size:0.85rem;margin-bottom:12px;text-align:center;">이미지를 길게 눌러 저장하세요</p>
+                    <img src="${dataUrl}" style="max-width:100%;max-height:80vh;border-radius:8px;">
+                    <button onclick="this.parentElement.remove()" style="margin-top:16px;padding:10px 30px;background:var(--neon-blue);color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">닫기</button>
+                `;
+                document.body.appendChild(imgWindow);
+            }
+        } catch(e2) {
+            alert(failMsgs[lang] || failMsgs.ko);
+        }
+    }
 
     // 모달 닫기
     const m = document.getElementById('shareModal');
