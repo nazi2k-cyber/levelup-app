@@ -2723,33 +2723,23 @@ function updateReelsResetTimer() {
     if (!timerEl) return;
 
     function update() {
-        const now = new Date();
-        // KST = UTC + 9
-        const kstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
-        const kstMidnight = new Date(kstNow);
-        kstMidnight.setDate(kstMidnight.getDate() + 1);
-        kstMidnight.setHours(0, 0, 0, 0);
-
         // 오늘 이미 포스팅했는지 체크
         const reelsData = getReelsData();
         const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
 
         if (myPost) {
-            // 이미 포스팅함 → 다음 업로드 가능 시간 표시
-            const diff = kstMidnight - kstNow;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            // 실제 로컬 시간으로 다음 업로드 시간 계산
-            const nextUploadLocal = new Date(now.getTime() + diff);
+            // 업로드 타임스탬프 + 1일 = 다음 업로드 가능 일시 (KST 기준)
+            const uploadTs = myPost.timestamp || Date.now();
+            const nextAvail = new Date(uploadTs + (24 * 60 * 60 * 1000));
+            // KST로 변환
+            const kstNext = new Date(nextAvail.getTime() + (9 * 60 * 60 * 1000) - (nextAvail.getTimezoneOffset() * 60 * 1000));
             const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-            const m = nextUploadLocal.getMonth() + 1;
-            const d = nextUploadLocal.getDate();
-            const dy = dayNames[nextUploadLocal.getDay()];
-            const h = String(nextUploadLocal.getHours()).padStart(2, '0');
-            const mi = String(nextUploadLocal.getMinutes()).padStart(2, '0');
-            timerEl.innerText = `다음 업로드: ${m}/${d} (${dy}) ${h}:${mi} | ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+            const m = kstNext.getMonth() + 1;
+            const d = kstNext.getDate();
+            const dy = dayNames[kstNext.getDay()];
+            const h = String(kstNext.getHours()).padStart(2, '0');
+            const mi = String(kstNext.getMinutes()).padStart(2, '0');
+            timerEl.innerText = `다음 업로드: ${m}/${d} (${dy}) ${h}:${mi}`;
         } else {
             timerEl.innerText = `업로드 가능`;
         }
