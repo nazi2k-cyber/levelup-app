@@ -262,7 +262,10 @@
 
             <section id="diary" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="diary_tab_title" style="margin:0;">🗓️ 플래너</h2>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <h2 data-i18n="diary_tab_title" style="margin:0;">🗓️ 플래너</h2>
+                        <button class="btn-info-sm" id="btn-planner-info">ℹ️ <span data-i18n="btn_planner_info">가이드</span></button>
+                    </div>
                     <span id="planner-week-label" style="font-size:0.7rem; color:var(--neon-gold);"></span>
                 </div>
 
@@ -335,6 +338,11 @@
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <button class="btn-primary" id="btn-planner-save" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
                                 <button class="btn-primary" id="btn-reels-post" style="width:auto; padding:8px 20px; background:var(--neon-gold); color:#000;" data-i18n="reels_post_btn">Day1 포스팅</button>
+                                <button class="btn-planner-share" id="btn-planner-share" title="공유">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
@@ -487,6 +495,32 @@
             <button class="btn-primary" style="margin-top:15px; max-width:200px; margin-left:auto; margin-right:auto;" onclick="document.getElementById('lootModal').classList.add('d-none');document.getElementById('lootModal').classList.remove('d-flex');">
                 확인
             </button>
+        </div>
+    </div>
+
+    <!-- 플래너 공유 모달 -->
+    <div class="modal-overlay d-none" id="shareModal" onclick="if(event.target===this){document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');}">
+        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px; text-align:center;">
+            <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 8px;">
+                <span id="share-modal-title" style="font-weight:bold; color:var(--neon-blue);">플래너 공유</span>
+                <button class="modal-close" onclick="document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');">×</button>
+            </div>
+            <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+                <button class="btn-share-option" id="btn-share-save-image" onclick="window.sharePlannerAsImage()">
+                    <span class="share-option-icon">📥</span>
+                    <div class="share-option-text">
+                        <span class="share-option-label" data-i18n="share_save_local">이미지 로컬 저장</span>
+                        <span class="share-option-desc" data-i18n="share_save_local_desc">플래너를 이미지로 저장합니다</span>
+                    </div>
+                </button>
+                <button class="btn-share-option" id="btn-share-link" onclick="window.sharePlannerLink()">
+                    <span class="share-option-icon">🔗</span>
+                    <div class="share-option-text">
+                        <span class="share-option-label" data-i18n="share_link">링크 공유</span>
+                        <span class="share-option-desc" data-i18n="share_link_desc">플래너 요약을 클립보드에 복사합니다</span>
+                    </div>
+                </button>
+            </div>
         </div>
     </div>
 

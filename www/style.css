@@ -536,3 +536,25 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 [data-theme="light"] .reels-timetable { background: rgba(0,100,200,0.04); }
 [data-theme="light"] .reels-block-item { border-bottom-color: rgba(0,0,0,0.06); }
+
+/* ===== 플래너 공유 버튼 ===== */
+.btn-planner-share {
+    background: rgba(0, 217, 255, 0.1); border: 1px solid var(--neon-blue); color: var(--neon-blue);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer; display: flex; align-items: center;
+    transition: all 0.2s;
+}
+.btn-planner-share:hover { background: rgba(0, 217, 255, 0.2); }
+.btn-planner-share:active { transform: scale(0.95); }
+
+/* ===== 공유 모달 옵션 ===== */
+.btn-share-option {
+    display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px;
+    background: rgba(0, 217, 255, 0.05); border: 1px solid var(--border-color); border-radius: 8px;
+    cursor: pointer; transition: all 0.2s; text-align: left;
+}
+.btn-share-option:hover { background: rgba(0, 217, 255, 0.12); border-color: var(--neon-blue); }
+.btn-share-option:active { transform: scale(0.98); }
+.share-option-icon { font-size: 1.5rem; flex-shrink: 0; }
+.share-option-text { display: flex; flex-direction: column; gap: 2px; }
+.share-option-label { font-size: 0.9rem; font-weight: bold; color: var(--text-main); }
+.share-option-desc { font-size: 0.7rem; color: var(--text-sub); }
