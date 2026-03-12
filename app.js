@@ -1810,114 +1810,301 @@ function openShareModal() {
 }
 
 // 플래너를 이미지로 저장 (html2canvas 없이 캔버스 직접 생성)
-window.sharePlannerAsImage = function() {
+window.sharePlannerAsImage = async function() {
     const lang = AppState.currentLang;
     const dateStr = diarySelectedDate;
     const entry = getDiaryEntry(dateStr);
 
-    // 캔버스 생성
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const W = 600, padding = 24;
-    let y = padding;
-
-    // 콘텐츠 준비
-    const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
     const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
     const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+    const photoSrc = plannerPhotoData || (entry && entry.photo) || null;
+    const mood = (entry && entry.mood) ? entry.mood : '';
+    const moodMap = { great: '😄', good: '🙂', neutral: '😐', bad: '😞', terrible: '😫' };
+    const moodEmoji = moodMap[mood] || '';
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 540;
+    const pad = 20;
+    const innerW = W - pad * 2;
+
+    // 사진 로드 (있을 경우)
+    let photoImg = null;
+    let photoH = 0;
+    if (photoSrc) {
+        try {
+            photoImg = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = photoSrc;
+            });
+            if (photoImg) {
+                photoH = Math.round(innerW * (photoImg.height / photoImg.width));
+                if (photoH > 400) photoH = 400;
+            }
+        } catch(e) { photoImg = null; }
+    }
+
+    // 시간표 블록 (최대 8개 표시)
+    const maxBlocks = 8;
+    const displayBlocks = blocks.slice(0, maxBlocks);
+    const moreCount = blocks.length > maxBlocks ? blocks.length - maxBlocks : 0;
 
     // 높이 계산
-    const lineH = 22;
-    const headerH = 50;
-    const sectionGap = 16;
-    let contentH = headerH + sectionGap;
-    if (tasks.length > 0) contentH += 28 + tasks.length * lineH + sectionGap;
-    if (blocks.length > 0) contentH += 28 + Math.min(blocks.length, 20) * lineH + sectionGap;
-    if (caption) contentH += 28 + lineH + sectionGap;
-    contentH += 30; // footer
+    const lineH = 24;
+    const headerH = 56;
+    let totalH = pad;                   // top padding
+    totalH += headerH;                  // 프로필 헤더
+    if (photoImg) totalH += photoH + 12; // 사진
+    if (caption) totalH += 40;           // 캡션
+    if (displayBlocks.length > 0) {
+        totalH += 32;                    // 시간표 제목
+        totalH += displayBlocks.length * lineH; // 블록 행
+        if (moreCount > 0) totalH += 20; // +more
+        totalH += 16;                    // 하단 여백
+    }
+    totalH += 36;                        // 푸터
+    totalH += pad;                       // bottom padding
 
     canvas.width = W;
-    canvas.height = contentH + padding * 2;
+    canvas.height = totalH;
 
     // 배경
-    ctx.fillStyle = '#0a0e1a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#00d9ff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, W, totalH);
 
-    // 헤더
-    ctx.fillStyle = '#00d9ff';
-    ctx.font = 'bold 18px Pretendard, sans-serif';
-    ctx.fillText('LEVEL UP: REBOOT', padding, y + 22);
-    ctx.fillStyle = '#ffcc00';
-    ctx.font = '14px Pretendard, sans-serif';
-    ctx.fillText(dateStr, W - padding - ctx.measureText(dateStr).width, y + 22);
-    y += headerH;
-
-    // 구분선
+    // 카드 영역 (system-card 스타일)
+    const cardX = pad - 4, cardY = pad - 4;
+    const cardW = innerW + 8, cardH = totalH - pad * 2 + 8;
+    ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(padding, y); ctx.lineTo(W - padding, y); ctx.stroke();
-    y += sectionGap;
+    const r = 10;
+    ctx.beginPath();
+    ctx.moveTo(cardX + r, cardY);
+    ctx.lineTo(cardX + cardW - r, cardY);
+    ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + r);
+    ctx.lineTo(cardX + cardW, cardY + cardH - r);
+    ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - r, cardY + cardH);
+    ctx.lineTo(cardX + r, cardY + cardH);
+    ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - r);
+    ctx.lineTo(cardX, cardY + r);
+    ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
-    // 우선순위 태스크
-    if (tasks.length > 0) {
-        ctx.fillStyle = '#ffcc00';
-        ctx.font = 'bold 13px Pretendard, sans-serif';
-        const taskLabel = { ko: '우선순위 태스크', en: 'Priority Tasks', ja: '優先タスク' };
-        ctx.fillText('⭐ ' + (taskLabel[lang] || taskLabel.ko), padding, y + 14);
-        y += 28;
-        tasks.forEach((t, i) => {
-            const ranked = t.ranked ? `${i + 1}. ` : '· ';
-            ctx.fillStyle = t.ranked ? '#00d9ff' : '#aaa';
-            ctx.font = '12px Pretendard, sans-serif';
-            ctx.fillText(ranked + t.text, padding + 8, y + 14);
-            y += lineH;
-        });
-        y += sectionGap;
+    let y = pad;
+
+    // --- 프로필 헤더 (reels-header 스타일) ---
+    // 아바타 원형
+    const avatarSize = 38;
+    const avatarX = pad + 6;
+    const avatarCenterY = y + headerH / 2;
+    ctx.beginPath();
+    ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2 + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#00d9ff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a2332';
+    ctx.fill();
+
+    // 프로필 이미지 로드 시도
+    if (AppState.user.photoURL) {
+        try {
+            const profImg = await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = AppState.user.photoURL;
+            });
+            if (profImg) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(profImg, avatarX, avatarCenterY - avatarSize / 2, avatarSize, avatarSize);
+                ctx.restore();
+            }
+        } catch(e) {}
     }
 
-    // 시간표
-    if (blocks.length > 0) {
+    // 유저명
+    const textX = avatarX + avatarSize + 12;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px Pretendard, sans-serif';
+    ctx.fillText(AppState.user.name || '헌터', textX, avatarCenterY - 4);
+
+    // Lv + 무드
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '12px Pretendard, sans-serif';
+    ctx.fillText('Lv.' + AppState.user.level + (moodEmoji ? ' ' + moodEmoji : ''), textX, avatarCenterY + 14);
+
+    // 날짜 (우측)
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '11px Pretendard, sans-serif';
+    const dateDisplay = formatReelsTime(Date.now());
+    ctx.fillText(dateDisplay, W - pad - ctx.measureText(dateDisplay).width - 6, avatarCenterY + 2);
+
+    y += headerH;
+
+    // --- 사진 ---
+    if (photoImg) {
+        const imgX = pad;
+        const imgW = innerW;
+        ctx.drawImage(photoImg, imgX, y, imgW, photoH);
+        y += photoH + 12;
+    }
+
+    // --- 캡션 ---
+    if (caption) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '13px Pretendard, sans-serif';
+        // 텍스트가 긴 경우 줄임
+        let displayCaption = caption;
+        if (ctx.measureText(displayCaption).width > innerW - 20) {
+            while (ctx.measureText(displayCaption + '...').width > innerW - 20 && displayCaption.length > 0) {
+                displayCaption = displayCaption.slice(0, -1);
+            }
+            displayCaption += '...';
+        }
+        ctx.fillText(displayCaption, pad + 10, y + 18);
+        y += 40;
+    }
+
+    // --- 시간표 블록 (reels-timetable 스타일) ---
+    if (displayBlocks.length > 0) {
+        // 시간표 배경 박스
+        const ttX = pad + 4, ttY = y;
+        const ttW = innerW - 8;
+        const ttH = 28 + displayBlocks.length * lineH + (moreCount > 0 ? 20 : 0) + 8;
+        ctx.fillStyle = 'rgba(0, 217, 255, 0.04)';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(ttX, ttY, ttW, ttH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // 시간표 제목
         ctx.fillStyle = '#ffcc00';
-        ctx.font = 'bold 13px Pretendard, sans-serif';
+        ctx.font = 'bold 12px Pretendard, sans-serif';
         const schedLabel = { ko: '시간표', en: 'Schedule', ja: 'スケジュール' };
-        ctx.fillText('🕐 ' + (schedLabel[lang] || schedLabel.ko), padding, y + 14);
-        y += 28;
-        blocks.slice(0, 20).forEach(([time, task]) => {
+        ctx.fillText('📋 ' + (schedLabel[lang] || schedLabel.ko), ttX + 10, y + 20);
+        y += 32;
+
+        // 블록 행
+        displayBlocks.forEach(([time, task]) => {
             ctx.fillStyle = '#00d9ff';
             ctx.font = 'bold 12px Pretendard, monospace';
-            ctx.fillText(time, padding + 8, y + 14);
+            ctx.fillText(time, ttX + 10, y + 16);
             ctx.fillStyle = '#ffffff';
             ctx.font = '12px Pretendard, sans-serif';
-            ctx.fillText(task, padding + 60, y + 14);
+            // 긴 텍스트 줄임
+            let displayTask = task;
+            const maxTaskW = ttW - 80;
+            if (ctx.measureText(displayTask).width > maxTaskW) {
+                while (ctx.measureText(displayTask + '...').width > maxTaskW && displayTask.length > 0) {
+                    displayTask = displayTask.slice(0, -1);
+                }
+                displayTask += '...';
+            }
+            ctx.fillText(displayTask, ttX + 60, y + 16);
+
+            // 구분선
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(ttX + 10, y + lineH);
+            ctx.lineTo(ttX + ttW - 10, y + lineH);
+            ctx.stroke();
+
             y += lineH;
         });
-        y += sectionGap;
+
+        if (moreCount > 0) {
+            ctx.fillStyle = '#aaa';
+            ctx.font = '10px Pretendard, sans-serif';
+            const moreText = `+${moreCount} more`;
+            ctx.fillText(moreText, ttX + ttW - ctx.measureText(moreText).width - 10, y + 14);
+            y += 20;
+        }
+        y += 16;
     }
 
-    // 캡션
-    if (caption) {
-        ctx.fillStyle = '#aaa';
-        ctx.font = 'italic 12px Pretendard, sans-serif';
-        ctx.fillText('💬 ' + caption.substring(0, 60), padding, y + 14);
-        y += lineH + sectionGap;
-    }
-
-    // 푸터
-    ctx.fillStyle = '#555';
+    // --- 푸터 ---
+    ctx.fillStyle = '#444';
     ctx.font = '10px Pretendard, sans-serif';
-    ctx.fillText('LEVEL UP: REBOOT | ' + AppState.user.name + ' | Lv.' + AppState.user.level, padding, canvas.height - padding);
+    const footerText = 'LEVEL UP: REBOOT | ' + dateStr;
+    ctx.fillText(footerText, pad + 6, totalH - pad + 4);
 
-    // 다운로드
-    const link = document.createElement('a');
-    link.download = `planner_${dateStr}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-
+    // 다운로드 (네이티브 앱 + 웹 모두 지원)
+    const fileName = `planner_${dateStr}.png`;
     const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
-    alert(msgs[lang] || msgs.ko);
+    const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
+
+    try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('toBlob failed');
+
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+        // 방법 1: Web Share API (네이티브 앱에서 가장 잘 동작)
+        if (navigator.share && navigator.canShare) {
+            const file = new File([blob], fileName, { type: 'image/png' });
+            const shareData = { files: [file] };
+            if (navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+                // 모달 닫기
+                const m = document.getElementById('shareModal');
+                m.classList.add('d-none');
+                m.classList.remove('d-flex');
+                return;
+            }
+        }
+
+        // 방법 2: Blob URL + <a> 다운로드 (웹 브라우저)
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        // 클린업
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 1000);
+
+        alert(msgs[lang] || msgs.ko);
+    } catch(e) {
+        // 방법 3: 최종 폴백 - 새 탭에서 이미지 열기 (사용자가 길게 눌러 저장)
+        try {
+            const dataUrl = canvas.toDataURL('image/png');
+            const w = window.open();
+            if (w) {
+                w.document.write(`<html><head><title>${fileName}</title></head><body style="margin:0;background:#000;display:flex;justify-content:center;align-items:center;min-height:100vh;"><img src="${dataUrl}" style="max-width:100%;height:auto;"></body></html>`);
+                w.document.close();
+            } else {
+                // 팝업 차단 시 직접 이미지 표시
+                const imgWindow = document.createElement('div');
+                imgWindow.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+                imgWindow.innerHTML = `
+                    <p style="color:#fff;font-size:0.85rem;margin-bottom:12px;text-align:center;">이미지를 길게 눌러 저장하세요</p>
+                    <img src="${dataUrl}" style="max-width:100%;max-height:80vh;border-radius:8px;">
+                    <button onclick="this.parentElement.remove()" style="margin-top:16px;padding:10px 30px;background:var(--neon-blue);color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">닫기</button>
+                `;
+                document.body.appendChild(imgWindow);
+            }
+        } catch(e2) {
+            alert(failMsgs[lang] || failMsgs.ko);
+        }
+    }
 
     // 모달 닫기
     const m = document.getElementById('shareModal');
