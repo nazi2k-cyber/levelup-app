@@ -33,12 +33,12 @@ jobs:
       commit_sha: ${{ steps.tag.outputs.commit_sha }}
     steps:
       - name: 소스코드 체크아웃
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 전체 이력 — 태그 조회에 필요
 
       - name: Node.js 셋업
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
@@ -214,7 +214,7 @@ jobs:
 
       # APK를 버전별 아티팩트로 업로드
       - name: APK 업로드 (버전별 Artifact)
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: apk-${{ steps.tag.outputs.version_tag }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -236,7 +236,7 @@ jobs:
           METAEOF
 
       - name: 메타데이터 업로드
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: deploy-meta-${{ steps.tag.outputs.version_tag }}
           path: deploy-meta/manifest.json
@@ -272,7 +272,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: 소스코드 체크아웃
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -315,7 +315,7 @@ jobs:
         run: git checkout ${{ steps.resolve.outputs.target_sha }}
 
       - name: Node.js 셋업
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
@@ -471,7 +471,7 @@ jobs:
 
       # 롤백 APK 업로드
       - name: 롤백 APK 업로드
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: apk-rollback-to-${{ steps.resolve.outputs.target_tag }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
@@ -513,7 +513,7 @@ jobs:
     if: always() && (needs.deploy.result == 'success' || needs.rollback.result == 'success')
     steps:
       - name: 소스코드 체크아웃
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

@@ -245,43 +245,19 @@
 
             <section id="social" class="view-section">
                 <div class="social-header">
-                    <button class="social-tab-btn active" data-mode="day1" data-i18n="soc_day1">🎬 Day1</button>
-                    <button class="social-tab-btn" data-mode="global" data-i18n="soc_global">🏆 글로벌 랭킹</button>
+                    <button class="social-tab-btn active" data-mode="global" data-i18n="soc_global">🏆 글로벌 랭킹</button>
                     <button class="social-tab-btn" data-mode="friends" data-i18n="soc_friend">👥 내 친구</button>
                 </div>
-
-                <!-- Day1 피드 (서브탭) -->
-                <div id="social-day1-panel" class="social-panel active">
-                    <div id="reels-feed" class="reels-feed-container"></div>
+                <div id="ranking-controls" class="rank-tabs">
+                    <button class="rank-tab-btn active" data-sort="total" data-i18n="sort_tot">종합스코어</button>
+                    <button class="rank-tab-btn" data-sort="str" data-i18n="sort_str">근력</button>
+                    <button class="rank-tab-btn" data-sort="int" data-i18n="sort_int">지능</button>
+                    <button class="rank-tab-btn" data-sort="cha" data-i18n="sort_cha">매력</button>
+                    <button class="rank-tab-btn" data-sort="vit" data-i18n="sort_vit">체력</button>
+                    <button class="rank-tab-btn" data-sort="wlth" data-i18n="sort_wlth">재력</button>
+                    <button class="rank-tab-btn" data-sort="agi" data-i18n="sort_agi">민첩</button>
                 </div>
-
-                <!-- 글로벌 랭킹 (서브탭) -->
-                <div id="social-global-panel" class="social-panel" style="display:none;">
-                    <div id="ranking-controls" class="rank-tabs">
-                        <button class="rank-tab-btn active" data-sort="total" data-i18n="sort_tot">종합스코어</button>
-                        <button class="rank-tab-btn" data-sort="str" data-i18n="sort_str">근력</button>
-                        <button class="rank-tab-btn" data-sort="int" data-i18n="sort_int">지능</button>
-                        <button class="rank-tab-btn" data-sort="cha" data-i18n="sort_cha">매력</button>
-                        <button class="rank-tab-btn" data-sort="vit" data-i18n="sort_vit">체력</button>
-                        <button class="rank-tab-btn" data-sort="wlth" data-i18n="sort_wlth">재력</button>
-                        <button class="rank-tab-btn" data-sort="agi" data-i18n="sort_agi">민첩</button>
-                    </div>
-                    <div class="user-list" id="user-list-container"></div>
-                </div>
-
-                <!-- 내 친구 (서브탭) -->
-                <div id="social-friends-panel" class="social-panel" style="display:none;">
-                    <div id="ranking-controls-friends" class="rank-tabs">
-                        <button class="rank-tab-btn active" data-sort="total" data-i18n="sort_tot">종합스코어</button>
-                        <button class="rank-tab-btn" data-sort="str" data-i18n="sort_str">근력</button>
-                        <button class="rank-tab-btn" data-sort="int" data-i18n="sort_int">지능</button>
-                        <button class="rank-tab-btn" data-sort="cha" data-i18n="sort_cha">매력</button>
-                        <button class="rank-tab-btn" data-sort="vit" data-i18n="sort_vit">체력</button>
-                        <button class="rank-tab-btn" data-sort="wlth" data-i18n="sort_wlth">재력</button>
-                        <button class="rank-tab-btn" data-sort="agi" data-i18n="sort_agi">민첩</button>
-                    </div>
-                    <div class="user-list" id="user-list-container-friends"></div>
-                </div>
+                <div class="user-list" id="user-list-container"></div>
             </section>
 
             <section id="diary" class="view-section">
@@ -387,6 +363,14 @@
                 </div>
             </section>
 
+            <section id="reels" class="view-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h2 data-i18n="reels_title" style="margin:0;">🎬 Day1</h2>
+                </div>
+
+                <!-- Day1 피드 -->
+                <div id="reels-feed" class="reels-feed-container"></div>
+            </section>
 
             <section id="settings" class="view-section">
                 <h2 data-i18n="set_title">System Settings</h2>
@@ -439,6 +423,7 @@
             <div class="nav-item" data-tab="diary"><span class="nav-icon">🗓️</span><span data-i18n="nav_diary">플래너</span></div>
             <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
             <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
+            <div class="nav-item" data-tab="reels"><span class="nav-icon">🎬</span><span data-i18n="nav_reels">Day1</span></div>
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
             <div class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
         </nav>
