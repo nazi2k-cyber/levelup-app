@@ -2545,7 +2545,8 @@ async function fetchAllReelsPosts() {
                                 uid: d.id,
                                 userName: data.name || '헌터',
                                 userPhoto: data.photoURL || null,
-                                userLevel: data.level || 1
+                                userLevel: data.level || 1,
+                                userInstaId: data.instaId || ''
                             });
                         }
                     });
@@ -2563,12 +2564,15 @@ async function postToReels() {
     const lang = AppState.currentLang;
     const todayKST = getTodayKST();
 
-    // 이미 오늘 포스팅했는지 체크
+    // 이미 오늘 포스팅했는지 체크 (로컬 + 타임스탬프 검증)
     const reelsData = getReelsData();
     const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
     if (myPost) {
-        alert(i18n[lang].reels_already_posted);
-        return;
+        // 타임스탬프로 실제 오늘 포스팅인지 재확인
+        if (myPost.dateKST === todayKST) {
+            alert(i18n[lang].reels_already_posted);
+            return;
+        }
     }
 
     // 오늘 타임테이블이 있는지 체크
@@ -2662,9 +2666,12 @@ async function renderReelsFeed() {
 }
 
 function renderReelsCards(posts, lang) {
+    const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="color:#ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+
     return posts.map(post => {
         const profileSrc = post.userPhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
         const isMe = post.uid === auth.currentUser?.uid;
+        const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${post.userInstaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
 
         // 시간표 블록 요약 (최대 6개)
         const blockEntries = Object.entries(post.blocks || {}).sort(([a],[b]) => a.localeCompare(b));
@@ -2677,7 +2684,7 @@ function renderReelsCards(posts, lang) {
             <div class="reels-header">
                 <img class="reels-avatar" src="${profileSrc}" alt="">
                 <div class="reels-user-info">
-                    <div class="reels-username">${(post.userName || '헌터').replace(/</g,'&lt;')}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
+                    <div class="reels-username">${(post.userName || '헌터').replace(/</g,'&lt;')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
                 </div>
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
@@ -2701,7 +2708,13 @@ function getMoodEmoji(mood) {
 function formatReelsTime(ts) {
     if (!ts) return '';
     const d = new Date(ts);
-    return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const month = d.getMonth() + 1;
+    const date = d.getDate();
+    const day = dayNames[d.getDay()];
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${month}/${date} (${day}) ${hours}:${minutes}`;
 }
 
 // 릴스 리셋 타이머 (다음 00:00 KST까지)
@@ -2717,13 +2730,29 @@ function updateReelsResetTimer() {
         kstMidnight.setDate(kstMidnight.getDate() + 1);
         kstMidnight.setHours(0, 0, 0, 0);
 
-        const diff = kstMidnight - kstNow;
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        // 오늘 이미 포스팅했는지 체크
+        const reelsData = getReelsData();
+        const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
 
-        const lang = AppState.currentLang;
-        timerEl.innerText = `${i18n[lang]?.reels_reset_info || '매일 00:00(KST) 초기화'} | ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+        if (myPost) {
+            // 이미 포스팅함 → 다음 업로드 가능 시간 표시
+            const diff = kstMidnight - kstNow;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            // 실제 로컬 시간으로 다음 업로드 시간 계산
+            const nextUploadLocal = new Date(now.getTime() + diff);
+            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+            const m = nextUploadLocal.getMonth() + 1;
+            const d = nextUploadLocal.getDate();
+            const dy = dayNames[nextUploadLocal.getDay()];
+            const h = String(nextUploadLocal.getHours()).padStart(2, '0');
+            const mi = String(nextUploadLocal.getMinutes()).padStart(2, '0');
+            timerEl.innerText = `다음 업로드: ${m}/${d} (${dy}) ${h}:${mi} | ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+        } else {
+            timerEl.innerText = `업로드 가능`;
+        }
     }
     update();
     // 릴스 탭 활성시 1초마다 업데이트
