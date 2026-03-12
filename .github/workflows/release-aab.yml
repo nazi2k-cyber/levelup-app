@@ -19,11 +19,11 @@ jobs:
     steps:
       # 1. 소스코드 체크아웃
       - name: 소스코드 체크아웃
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 2. Node.js 환경 셋업
       - name: Node.js 셋업
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: 'npm'
@@ -290,7 +290,7 @@ jobs:
 
       # 22. AAB 아티팩트 업로드
       - name: AAB 업로드 (Artifact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: levelup-reboot-release-v${{ github.event.inputs.version_name }}-(${{ github.event.inputs.version_code }})
           path: android/app/build/outputs/bundle/release/app-release.aab
