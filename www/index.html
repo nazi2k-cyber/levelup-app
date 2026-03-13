@@ -146,6 +146,7 @@
                     <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
                 </div>
 
+                <button class="btn-myinfo" id="btn-myinfo" data-i18n="btn_myinfo">&#9881; 내 정보</button>
 
             </section>
 
@@ -375,7 +376,10 @@
             </section>
 
             <section id="settings" class="view-section">
-                <h2 data-i18n="set_title">System Settings</h2>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                    <button class="btn-back-status" id="btn-back-status" data-i18n="btn_back">&#8592; 돌아가기</button>
+                    <h2 data-i18n="set_title" style="margin:0;">System Settings</h2>
+                </div>
                 <div class="system-card">
                     <div class="setting-row">
                         <span data-i18n="set_lang">언어 (Language)</span>
@@ -389,6 +393,13 @@
                         <span data-i18n="set_theme">라이트 모드</span>
                         <label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider"></span></label>
                     </div>
+                </div>
+                <div class="system-card">
+                    <div class="setting-row">
+                        <span data-i18n="set_push">푸시 알림 수신</span>
+                        <label class="switch"><input type="checkbox" id="push-toggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row" id="push-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
                 </div>
                 <div class="system-card">
                     <div class="setting-row">
@@ -427,7 +438,7 @@
             <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
             <div class="nav-item" data-tab="reels"><span class="nav-icon">🎬</span><span data-i18n="nav_reels">Day1</span></div>
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
-            <div class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
+            <div class="nav-item" data-tab="settings" style="display:none;"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
         </nav>
     </div>
 
