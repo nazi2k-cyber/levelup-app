@@ -828,8 +828,7 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 던전 위치: 발산역(index 5) 고정, 반경 2km (근접 보너스용)
-const DUNGEON_FIXED_STATION_IDX = 5; // 발산역
+// 던전 위치: 6개 서울 역 중 날짜 기반 랜덤 선택, 반경 2km (근접 보너스용)
 const DUNGEON_RADIUS_KM = 2;
 
 function isBossRush() {
@@ -848,8 +847,17 @@ function getFixedDungeonData(dateStr, slot) {
         hash = seedStr.charCodeAt(i) + ((hash << 5) - hash);
     }
     hash = Math.abs(hash);
+
+    // station 선택용 별도 해시 (독립적 분포)
+    const stationSeed = "station_" + dateStr + "_" + slot;
+    let stationHash = 0;
+    for (let i = 0; i < stationSeed.length; i++) {
+        stationHash = stationSeed.charCodeAt(i) + ((stationHash << 5) - stationHash);
+    }
+    stationHash = Math.abs(stationHash);
+
     return {
-        stationIdx: DUNGEON_FIXED_STATION_IDX, // 발산역 고정
+        stationIdx: stationHash % seoulStations.length, // 6개 역 중 랜덤
         targetStat: statKeys[hash % statKeys.length]
     };
 }
