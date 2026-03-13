@@ -3177,12 +3177,10 @@ function renderReelsCards(posts, lang) {
                 ${moreCount > 0 ? `<div style="font-size:0.65rem; color:var(--text-sub); text-align:right;">+${moreCount} more</div>` : ''}
             </div>
             <div class="reels-actions">
-                <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button>
-                <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button>
+                <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count"></span>
+                <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button><span class="reels-comment-count"></span>
             </div>
-            <div class="reels-like-count"></div>
             <div class="reels-comments-panel">
-                <div class="reels-comment-count"></div>
                 <div class="reels-comments-list">
                     <div class="reels-comment-empty">${i18n[lang].reels_comment_empty}</div>
                 </div>
@@ -3345,10 +3343,15 @@ async function toggleReelsLike(postId) {
     } catch(e) { AppLogger.error('[Reels] 좋아요 실패: ' + (e.message || e)); }
 }
 
+// 숫자 포맷 (최대 9999, 이상은 9999+)
+function formatReactCount(n) {
+    if (!n || n <= 0) return '';
+    return n > 9999 ? '9999+' : String(n);
+}
+
 // 좋아요 UI 업데이트
 function updateLikeUI(postId, likes) {
     const uid = auth.currentUser?.uid;
-    const lang = AppState.currentLang;
     const isLiked = likes.some(l => l.uid === uid);
     const likeBtn = document.querySelector(`[data-post-id="${postId}"] .reels-like-btn`);
     const likeCount = document.querySelector(`[data-post-id="${postId}"] .reels-like-count`);
@@ -3359,7 +3362,7 @@ function updateLikeUI(postId, likes) {
             : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
     }
     if (likeCount) {
-        likeCount.textContent = likes.length > 0 ? (i18n[lang].reels_likes || '').replace('{n}', likes.length) : '';
+        likeCount.textContent = formatReactCount(likes.length);
     }
 }
 
@@ -3420,7 +3423,7 @@ function renderCommentsSection(postId, comments) {
     }
 
     if (countEl) {
-        countEl.textContent = comments.length > 0 ? (i18n[lang].reels_comments || '').replace('{n}', comments.length) : '';
+        countEl.textContent = formatReactCount(comments.length);
     }
 }
 
