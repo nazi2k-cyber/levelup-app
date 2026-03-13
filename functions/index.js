@@ -293,3 +293,146 @@ exports.cleanupInactiveTokens = onSchedule({
 
     console.log(`[토큰 정리] ${cleanedCount}건의 비활성 토큰 정리 완료`);
 });
+
+// ─── 6. 테스트 푸시 발송 (Callable — 관리자 전용) ───
+
+exports.sendTestNotification = onCall({
+    region: "asia-northeast3"
+}, async (request) => {
+    const callerEmail = request.auth?.token?.email;
+    if (callerEmail !== "nazi2k@gmail.com") {
+        throw new Error("권한이 없습니다.");
+    }
+
+    const { token, topic, type, lang, customTitle, customBody } = request.data;
+    if (!token && !topic) {
+        throw new Error("token 또는 topic은 필수입니다.");
+    }
+
+    let notification;
+    if (type === "custom") {
+        if (!customTitle || !customBody) throw new Error("커스텀 알림은 제목과 본문이 필수입니다.");
+        notification = { title: customTitle, body: customBody };
+    } else {
+        notification = getLocalizedMessage(type || "raid_start", lang || "ko");
+    }
+
+    const message = {
+        notification,
+        data: {
+            tab: "status",
+            type: "test_" + (type || "raid_start")
+        },
+        android: {
+            priority: "high",
+            notification: {
+                channelId: "test",
+                sound: "default"
+            }
+        }
+    };
+
+    if (token) message.token = token;
+    else message.topic = topic;
+
+    const target = token ? token.substring(0, 20) + "..." : "topic:" + topic;
+
+    try {
+        const response = await messaging.send(message);
+
+        // 발송 이력 기록
+        await db.collection("push_logs").add({
+            timestamp: new Date(),
+            type: type || "raid_start",
+            target,
+            success: true,
+            messageId: response,
+            sender: callerEmail
+        });
+
+        console.log("[테스트 발송] 성공:", response);
+        return { success: true, messageId: response };
+    } catch (e) {
+        // 실패 이력 기록
+        await db.collection("push_logs").add({
+            timestamp: new Date(),
+            type: type || "raid_start",
+            target,
+            success: false,
+            error: e.code || e.message,
+            sender: callerEmail
+        });
+
+        console.error("[테스트 발송] 실패:", e);
+        throw new Error("발송 실패: " + (e.code || e.message));
+    }
+});
+
+// ─── 7. 푸시 활성 유저 목록 조회 (Callable — 관리자 전용) ───
+
+exports.getTestUsers = onCall({
+    region: "asia-northeast3"
+}, async (request) => {
+    const callerEmail = request.auth?.token?.email;
+    if (callerEmail !== "nazi2k@gmail.com") {
+        throw new Error("권한이 없습니다.");
+    }
+
+    const usersSnap = await db.collection("users")
+        .where("pushEnabled", "==", true)
+        .limit(100)
+        .get();
+
+    const now = new Date();
+    return usersSnap.docs.map(doc => {
+        const data = doc.data();
+        let lastActiveDate = null;
+        let diffDays = null;
+        try {
+            const streak = JSON.parse(data.streakStr || "{}");
+            if (streak.lastActiveDate) {
+                lastActiveDate = streak.lastActiveDate;
+                diffDays = Math.floor((now - new Date(streak.lastActiveDate)) / (1000 * 60 * 60 * 24));
+            }
+        } catch { /* ignore */ }
+
+        return {
+            uid: doc.id,
+            displayName: data.displayName || data.nickname || doc.id.substring(0, 8),
+            lang: data.lang || "ko",
+            fcmToken: data.fcmToken || null,
+            lastActiveDate,
+            diffDays
+        };
+    });
+});
+
+// ─── 8. 발송 이력 조회 (Callable — 관리자 전용) ───
+
+exports.getPushLogs = onCall({
+    region: "asia-northeast3"
+}, async (request) => {
+    const callerEmail = request.auth?.token?.email;
+    if (callerEmail !== "nazi2k@gmail.com") {
+        throw new Error("권한이 없습니다.");
+    }
+
+    const logsSnap = await db.collection("push_logs")
+        .orderBy("timestamp", "desc")
+        .limit(50)
+        .get();
+
+    return logsSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            timestamp: data.timestamp?.toDate?.() ? data.timestamp.toDate().toISOString() : String(data.timestamp),
+            type: data.type,
+            target: data.target,
+            success: data.success,
+            messageId: data.messageId || null,
+            error: data.error || null,
+            sender: data.sender
+        };
+    });
+});

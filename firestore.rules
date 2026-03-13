@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 기존 users 컬렉션: 본인 문서만 읽기/쓰기
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // 관리자는 모든 유저 읽기 가능
+      allow read: if request.auth != null && request.auth.token.email == 'nazi2k@gmail.com';
+    }
+
+    // push_logs: 관리자만 읽기/쓰기 (Cloud Functions에서 서버사이드 쓰기)
+    match /push_logs/{logId} {
+      allow read: if request.auth != null && request.auth.token.email == 'nazi2k@gmail.com';
+      allow write: if false; // Cloud Functions (Admin SDK)에서만 쓰기
+    }
+
+    // push_feedback: 인증된 유저 쓰기, 관리자만 읽기
+    match /push_feedback/{feedbackId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && request.auth.token.email == 'nazi2k@gmail.com';
+      allow update, delete: if false;
+    }
+  }
+}

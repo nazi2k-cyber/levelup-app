@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEVEL UP: REBOOT — Push Admin</title>
+<style>
+:root {
+    --bg-deep: #0a0a0f;
+    --bg-card: #141420;
+    --bg-input: #1a1a2e;
+    --accent: #00e5ff;
+    --accent-dim: #00e5ff33;
+    --text: #e0e0e0;
+    --text-sub: #888;
+    --success: #4caf50;
+    --error: #ff5252;
+    --warning: #ffc107;
+    --border: #2a2a3e;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 { font-size: 1.3rem; color: var(--accent); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+h2 { font-size: 1rem; color: var(--accent); margin-bottom: 12px; }
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+/* Login */
+#login-section { text-align: center; padding: 60px 20px; }
+#login-section p { color: var(--text-sub); margin-bottom: 20px; }
+.btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 24px;
+    border: none; border-radius: 8px;
+    font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { filter: brightness(1.2); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { padding: 6px 14px; font-size: 0.8rem; border-radius: 6px; }
+.btn-danger { background: var(--error); color: #fff; }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--accent); }
+
+#admin-section { display: none; }
+
+/* Dashboard */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+}
+.stat-card {
+    background: var(--bg-input);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+}
+.stat-card .number { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+.stat-card .label { font-size: 0.75rem; color: var(--text-sub); margin-top: 4px; }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 6px; }
+select, input[type="text"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+}
+select:focus, input:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 60px; }
+.radio-group { display: flex; gap: 16px; }
+.radio-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); font-size: 0.9rem; }
+input[type="radio"] { accent-color: var(--accent); }
+
+.preview-box {
+    background: var(--bg-input);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 14px;
+}
+.preview-box .title { font-weight: 600; font-size: 0.9rem; }
+.preview-box .body { color: var(--text-sub); font-size: 0.85rem; margin-top: 4px; }
+
+.result-box {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-top: 12px;
+    display: none;
+}
+.result-box.success { background: #4caf5022; border: 1px solid var(--success); color: var(--success); display: block; }
+.result-box.error { background: #ff525222; border: 1px solid var(--error); color: var(--error); display: block; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+th { text-align: left; color: var(--text-sub); font-weight: 500; padding: 8px; border-bottom: 1px solid var(--border); }
+td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600;
+}
+.badge-success { background: #4caf5033; color: var(--success); }
+.badge-error { background: #ff525233; color: var(--error); }
+.badge-warning { background: #ffc10733; color: var(--warning); }
+.badge-active { background: #4caf5033; color: var(--success); }
+
+.user-email { color: var(--text-sub); font-size: 0.75rem; }
+.token-masked { font-family: monospace; font-size: 0.7rem; color: var(--text-sub); }
+
+/* Feedback */
+.feedback-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.feedback-form .full-width { grid-column: 1 / -1; }
+.feedback-item {
+    background: var(--bg-input);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+}
+.feedback-item .meta { color: var(--text-sub); font-size: 0.75rem; }
+
+/* Responsive */
+@media (max-width: 600px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .feedback-form { grid-template-columns: 1fr; }
+    table { font-size: 0.7rem; }
+}
+
+.loading { color: var(--text-sub); font-style: italic; }
+.header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.header-bar .user-info { font-size: 0.85rem; color: var(--text-sub); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Login Section -->
+<div id="login-section" class="card">
+    <h1>LEVEL UP: REBOOT</h1>
+    <p>Push Notification Admin Panel</p>
+    <p style="font-size:0.8rem;">Access restricted to administrators only.</p>
+    <br>
+    <button class="btn btn-primary" onclick="doLogin()">Google Login</button>
+    <div id="login-error" style="color:var(--error); margin-top:12px; font-size:0.85rem;"></div>
+</div>
+
+<!-- Admin Section -->
+<div id="admin-section">
+    <div class="header-bar">
+        <h1>Push Notification Admin</h1>
+        <div>
+            <span class="user-info" id="user-email"></span>
+            <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="card">
+        <h2>Dashboard</h2>
+        <div class="stats-grid" id="stats-grid">
+            <div class="stat-card"><div class="number" id="stat-total">-</div><div class="label">Total Users</div></div>
+            <div class="stat-card"><div class="number" id="stat-push">-</div><div class="label">Push ON</div></div>
+            <div class="stat-card"><div class="number" id="stat-token">-</div><div class="label">Active Tokens</div></div>
+            <div class="stat-card"><div class="number" id="stat-warn">-</div><div class="label">Streak Risk</div></div>
+        </div>
+    </div>
+
+    <!-- Test Send -->
+    <div class="card">
+        <h2>Test Send</h2>
+        <div class="form-group">
+            <label>Notification Type</label>
+            <select id="send-type" onchange="updatePreview()">
+                <option value="raid_start">Raid Alert</option>
+                <option value="daily_reminder">Daily Reminder</option>
+                <option value="streak_warning">Streak Warning</option>
+                <option value="streak_broken">Streak Broken</option>
+                <option value="custom">Custom Message</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Target</label>
+            <div class="radio-group">
+                <label><input type="radio" name="target" value="topic" checked onchange="toggleTarget()"> Topic</label>
+                <label><input type="radio" name="target" value="user" onchange="toggleTarget()"> Individual User</label>
+            </div>
+        </div>
+
+        <div id="topic-section" class="form-group">
+            <label>Topic</label>
+            <select id="send-topic">
+                <option value="raid_alerts">raid_alerts</option>
+                <option value="daily_reminder">daily_reminder</option>
+                <option value="announcements">announcements</option>
+            </select>
+        </div>
+
+        <div id="user-section" class="form-group" style="display:none;">
+            <label>User (select from list below or paste token)</label>
+            <input type="text" id="send-token" placeholder="FCM Token or select from user list">
+        </div>
+
+        <div class="form-group">
+            <label>Language</label>
+            <select id="send-lang" onchange="updatePreview()">
+                <option value="ko">Korean</option>
+                <option value="en">English</option>
+                <option value="ja">Japanese</option>
+            </select>
+        </div>
+
+        <div id="custom-fields" style="display:none;">
+            <div class="form-group">
+                <label>Custom Title</label>
+                <input type="text" id="custom-title" placeholder="Notification title">
+            </div>
+            <div class="form-group">
+                <label>Custom Body</label>
+                <textarea id="custom-body" placeholder="Notification body"></textarea>
+            </div>
+        </div>
+
+        <div class="preview-box" id="preview-box">
+            <div class="title" id="preview-title"></div>
+            <div class="body" id="preview-body"></div>
+        </div>
+
+        <button class="btn btn-primary" id="send-btn" onclick="doSendTest()">Send Test Notification</button>
+        <div class="result-box" id="send-result"></div>
+    </div>
+
+    <!-- Users List -->
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 style="margin:0;">Push-Enabled Users</h2>
+            <button class="btn btn-ghost btn-sm" onclick="loadUsers()">Refresh</button>
+        </div>
+        <div id="users-table"><p class="loading">Loading...</p></div>
+    </div>
+
+    <!-- Push Logs -->
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 style="margin:0;">Send History</h2>
+            <button class="btn btn-ghost btn-sm" onclick="loadLogs()">Refresh</button>
+        </div>
+        <div id="logs-table"><p class="loading">Loading...</p></div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="card">
+        <h2>Test Feedback</h2>
+        <div class="feedback-form">
+            <div class="form-group">
+                <label>Device Model</label>
+                <input type="text" id="fb-device" placeholder="e.g. Galaxy S23">
+            </div>
+            <div class="form-group">
+                <label>OS Version</label>
+                <input type="text" id="fb-os" placeholder="e.g. Android 14">
+            </div>
+            <div class="form-group">
+                <label>Notification Received?</label>
+                <select id="fb-received">
+                    <option value="yes">Yes - received</option>
+                    <option value="foreground">Yes - foreground only</option>
+                    <option value="background">Yes - background only</option>
+                    <option value="no">No - not received</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Notification Type Tested</label>
+                <select id="fb-type">
+                    <option value="raid_start">Raid Alert</option>
+                    <option value="daily_reminder">Daily Reminder</option>
+                    <option value="streak_warning">Streak Warning</option>
+                    <option value="streak_broken">Streak Broken</option>
+                    <option value="announcement">Announcement</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="form-group full-width">
+                <label>Memo</label>
+                <textarea id="fb-memo" placeholder="Additional notes..."></textarea>
+            </div>
+            <div class="full-width">
+                <button class="btn btn-primary btn-sm" onclick="submitFeedback()">Submit Feedback</button>
+            </div>
+        </div>
+        <div class="result-box" id="fb-result"></div>
+        <br>
+        <h2>Recent Feedback</h2>
+        <div id="feedback-list"><p class="loading">Loading...</p></div>
+    </div>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getFirestore, collection, getDocs, addDoc, query, where, orderBy, limit, Timestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
+    authDomain: "levelup-app-53d02.firebaseapp.com",
+    projectId: "levelup-app-53d02",
+    storageBucket: "levelup-app-53d02.firebasestorage.app",
+    messagingSenderId: "233040099152",
+    appId: "1:233040099152:web:82310514d26c8c6d52de55"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const functions = getFunctions(app, "asia-northeast3");
+const provider = new GoogleAuthProvider();
+
+const ADMIN_EMAIL = "nazi2k@gmail.com";
+
+const MESSAGES = {
+    raid_start: {
+        ko: { title: "\u2694\uFE0F \uB808\uC774\uB4DC \uCD9C\uD604!", body: "\uC774\uC0C1 \uD604\uC0C1\uC774 \uAC10\uC9C0\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC9C0\uAE08 \uBC14\uB85C \uCC38\uC5EC\uD558\uC138\uC694!" },
+        en: { title: "\u2694\uFE0F Raid Alert!", body: "An anomaly has been detected. Join the raid now!" },
+        ja: { title: "\u2694\uFE0F \u30EC\u30A4\u30C9\u51FA\u73FE!", body: "\u7570\u5E38\u73FE\u8C61\u304C\u691C\u77E5\u3055\u308C\u307E\u3057\u305F\u3002\u4ECA\u3059\u3050\u53C2\u52A0\u3057\u307E\u3057\u3087\u3046!" }
+    },
+    daily_reminder: {
+        ko: { title: "\uD83C\uDFAF \uC624\uB298\uC758 \uD018\uC2A4\uD2B8\uAC00 \uAE30\uB2E4\uB9AC\uACE0 \uC788\uC5B4\uC694", body: "\uC77C\uC77C \uD018\uC2A4\uD2B8\uB97C \uC644\uB8CC\uD558\uACE0 \uACBD\uD5D8\uCE58\uB97C \uD68D\uB4DD\uD558\uC138\uC694!" },
+        en: { title: "\uD83C\uDFAF Daily quests are waiting", body: "Complete your daily quests and earn XP!" },
+        ja: { title: "\uD83C\uDFAF \u672C\u65E5\u306E\u30AF\u30A8\u30B9\u30C8\u304C\u5F85\u3063\u3066\u3044\u307E\u3059", body: "\u30C7\u30A4\u30EA\u30FC\u30AF\u30A8\u30B9\u30C8\u3092\u5B8C\u4E86\u3057\u3066EXP\u3092\u7372\u5F97\u3057\u3088\u3046!" }
+    },
+    streak_warning: {
+        ko: { title: "\uD83D\uDD25 \uC2A4\uD2B8\uB9AD\uC774 \uC704\uD5D8\uD574\uC694!", body: "2\uC77C\uC9F8 \uBBF8\uC811\uC18D \uC911\uC785\uB2C8\uB2E4. \uB0B4\uC77C\uAE4C\uC9C0 \uC811\uC18D\uD558\uC9C0 \uC54A\uC73C\uBA74 \uC2A4\uD0EF\uC774 \uAC10\uC18C\uD569\uB2C8\uB2E4!" },
+        en: { title: "\uD83D\uDD25 Your streak is at risk!", body: "You've been away for 2 days. Log in before tomorrow or your stats will decay!" },
+        ja: { title: "\uD83D\uDD25 \u30B9\u30C8\u30EA\u30FC\u30AF\u304C\u5371\u967A\u3067\u3059!", body: "2\u65E5\u9593\u672A\u63A5\u7D9A\u3067\u3059\u3002\u660E\u65E5\u307E\u3067\u306B\u30ED\u30B0\u30A4\u30F3\u3057\u306A\u3044\u3068\u30B9\u30C6\u30FC\u30BF\u30B9\u304C\u6E1B\u5C11\u3057\u307E\u3059!" }
+    },
+    streak_broken: {
+        ko: { title: "\uD83D\uDC94 \uC2A4\uD2B8\uB9AD\uC774 \uB04A\uC5B4\uC84C\uC2B5\uB2C8\uB2E4", body: "\uC2A4\uD0EF \uAC10\uC18C\uAC00 \uC2DC\uC791\uB429\uB2C8\uB2E4. \uC9C0\uAE08 \uC811\uC18D\uD558\uC5EC \uB2E4\uC2DC \uC30D\uC544\uBCF4\uC138\uC694!" },
+        en: { title: "\uD83D\uDC94 Streak broken", body: "Stat decay has begun. Log in now to start rebuilding!" },
+        ja: { title: "\uD83D\uDC94 \u30B9\u30C8\u30EA\u30FC\u30AF\u304C\u9014\u5207\u308C\u307E\u3057\u305F", body: "\u30B9\u30C6\u30FC\u30BF\u30B9\u6E1B\u5C11\u304C\u59CB\u307E\u308A\u307E\u3057\u305F\u3002\u4ECA\u3059\u3050\u30ED\u30B0\u30A4\u30F3\u3057\u3066\u7ACB\u3066\u76F4\u3057\u307E\u3057\u3087\u3046!" }
+    }
+};
+
+let usersCache = [];
+
+// --- Auth ---
+window.doLogin = async function() {
+    try {
+        const result = await signInWithPopup(auth, provider);
+        if (result.user.email !== ADMIN_EMAIL) {
+            await signOut(auth);
+            document.getElementById("login-error").textContent = "Access denied. Admin only.";
+        }
+    } catch (e) {
+        document.getElementById("login-error").textContent = e.message;
+    }
+};
+
+window.doLogout = function() { signOut(auth); };
+
+onAuthStateChanged(auth, (user) => {
+    if (user && user.email === ADMIN_EMAIL) {
+        document.getElementById("login-section").style.display = "none";
+        document.getElementById("admin-section").style.display = "block";
+        document.getElementById("user-email").textContent = user.email;
+        loadDashboard();
+        loadUsers();
+        loadLogs();
+        loadFeedback();
+        updatePreview();
+    } else {
+        document.getElementById("login-section").style.display = "block";
+        document.getElementById("admin-section").style.display = "none";
+    }
+});
+
+// --- Dashboard ---
+async function loadDashboard() {
+    try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        let total = 0, pushOn = 0, hasToken = 0, atRisk = 0;
+        const now = new Date();
+
+        usersSnap.forEach(doc => {
+            total++;
+            const d = doc.data();
+            if (d.pushEnabled) pushOn++;
+            if (d.fcmToken) hasToken++;
+            try {
+                const s = JSON.parse(d.streakStr || "{}");
+                if (s.lastActiveDate) {
+                    const diff = Math.floor((now - new Date(s.lastActiveDate)) / 86400000);
+                    if (diff >= 2) atRisk++;
+                }
+            } catch {}
+        });
+
+        document.getElementById("stat-total").textContent = total;
+        document.getElementById("stat-push").textContent = pushOn;
+        document.getElementById("stat-token").textContent = hasToken;
+        document.getElementById("stat-warn").textContent = atRisk;
+    } catch (e) {
+        console.error("Dashboard error:", e);
+    }
+}
+
+// --- Preview ---
+window.updatePreview = function() {
+    const type = document.getElementById("send-type").value;
+    const lang = document.getElementById("send-lang").value;
+    const customFields = document.getElementById("custom-fields");
+
+    if (type === "custom") {
+        customFields.style.display = "block";
+        document.getElementById("preview-title").textContent = "(Custom message)";
+        document.getElementById("preview-body").textContent = "";
+        return;
+    }
+
+    customFields.style.display = "none";
+    const msgs = MESSAGES[type];
+    if (msgs) {
+        const msg = msgs[lang] || msgs.en;
+        document.getElementById("preview-title").textContent = msg.title;
+        document.getElementById("preview-body").textContent = msg.body;
+    }
+};
+
+// --- Target Toggle ---
+window.toggleTarget = function() {
+    const val = document.querySelector('input[name="target"]:checked').value;
+    document.getElementById("topic-section").style.display = val === "topic" ? "block" : "none";
+    document.getElementById("user-section").style.display = val === "user" ? "block" : "none";
+};
+
+// --- Send Test ---
+window.doSendTest = async function() {
+    const btn = document.getElementById("send-btn");
+    const resultEl = document.getElementById("send-result");
+    btn.disabled = true;
+    resultEl.className = "result-box";
+    resultEl.style.display = "none";
+
+    const type = document.getElementById("send-type").value;
+    const lang = document.getElementById("send-lang").value;
+    const targetType = document.querySelector('input[name="target"]:checked').value;
+
+    const payload = { type, lang };
+
+    if (targetType === "topic") {
+        payload.topic = document.getElementById("send-topic").value;
+    } else {
+        payload.token = document.getElementById("send-token").value.trim();
+        if (!payload.token) {
+            resultEl.textContent = "Please enter FCM token or select a user.";
+            resultEl.className = "result-box error";
+            btn.disabled = false;
+            return;
+        }
+    }
+
+    if (type === "custom") {
+        payload.customTitle = document.getElementById("custom-title").value.trim();
+        payload.customBody = document.getElementById("custom-body").value.trim();
+        if (!payload.customTitle || !payload.customBody) {
+            resultEl.textContent = "Custom title and body are required.";
+            resultEl.className = "result-box error";
+            btn.disabled = false;
+            return;
+        }
+    }
+
+    try {
+        const fn = httpsCallable(functions, "sendTestNotification");
+        const result = await fn(payload);
+        resultEl.textContent = "Sent successfully! messageId: " + result.data.messageId;
+        resultEl.className = "result-box success";
+        loadLogs();
+    } catch (e) {
+        resultEl.textContent = "Failed: " + (e.message || e);
+        resultEl.className = "result-box error";
+    }
+    btn.disabled = false;
+};
+
+// --- Users ---
+window.loadUsers = async function() {
+    const container = document.getElementById("users-table");
+    container.innerHTML = '<p class="loading">Loading...</p>';
+
+    try {
+        const fn = httpsCallable(functions, "getTestUsers");
+        const result = await fn({});
+        usersCache = result.data;
+
+        if (!usersCache.length) {
+            container.innerHTML = '<p class="loading">No push-enabled users found.</p>';
+            return;
+        }
+
+        let html = '<table><thead><tr><th>User</th><th>Lang</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
+        for (const u of usersCache) {
+            const diffClass = u.diffDays === null ? "" : u.diffDays >= 3 ? "badge-error" : u.diffDays >= 2 ? "badge-warning" : "badge-active";
+            const diffText = u.diffDays === null ? "-" : u.diffDays === 0 ? "Today" : u.diffDays + "d ago";
+            const tokenShort = u.fcmToken ? u.fcmToken.substring(0, 16) + "..." : "none";
+
+            html += `<tr>
+                <td><strong>${esc(u.displayName)}</strong><br><span class="user-email">${esc(u.uid.substring(0, 12))}...</span></td>
+                <td>${esc(u.lang)}</td>
+                <td><span class="badge ${diffClass}">${diffText}</span></td>
+                <td><span class="token-masked">${esc(tokenShort)}</span></td>
+                <td>${u.fcmToken ? `<button class="btn btn-primary btn-sm" onclick="sendToUser('${esc(u.fcmToken)}')">Send</button>` : '-'}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<p style="color:var(--error)">Error: ' + esc(e.message) + '</p>';
+    }
+};
+
+window.sendToUser = function(token) {
+    document.querySelector('input[name="target"][value="user"]').checked = true;
+    toggleTarget();
+    document.getElementById("send-token").value = token;
+    document.getElementById("send-btn").scrollIntoView({ behavior: "smooth", block: "center" });
+};
+
+// --- Logs ---
+window.loadLogs = async function() {
+    const container = document.getElementById("logs-table");
+    container.innerHTML = '<p class="loading">Loading...</p>';
+
+    try {
+        const fn = httpsCallable(functions, "getPushLogs");
+        const result = await fn({});
+        const logs = result.data;
+
+        if (!logs.length) {
+            container.innerHTML = '<p class="loading">No send history yet.</p>';
+            return;
+        }
+
+        let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th></tr></thead><tbody>';
+        for (const l of logs) {
+            const time = new Date(l.timestamp).toLocaleString("ko-KR", { hour12: false });
+            const badge = l.success ? '<span class="badge badge-success">OK</span>' : '<span class="badge badge-error">FAIL</span>';
+            const id = l.success ? (l.messageId || "").substring(0, 20) : esc(l.error || "");
+
+            html += `<tr>
+                <td>${esc(time)}</td>
+                <td>${esc(l.type)}</td>
+                <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${esc(l.target)}</td>
+                <td>${badge}</td>
+                <td style="font-size:0.7rem; color:var(--text-sub); max-width:140px; overflow:hidden; text-overflow:ellipsis;">${id}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<p style="color:var(--error)">Error: ' + esc(e.message) + '</p>';
+    }
+};
+
+// --- Feedback ---
+window.submitFeedback = async function() {
+    const resultEl = document.getElementById("fb-result");
+    resultEl.className = "result-box";
+    resultEl.style.display = "none";
+
+    const device = document.getElementById("fb-device").value.trim();
+    const os = document.getElementById("fb-os").value.trim();
+    const received = document.getElementById("fb-received").value;
+    const type = document.getElementById("fb-type").value;
+    const memo = document.getElementById("fb-memo").value.trim();
+
+    if (!device || !os) {
+        resultEl.textContent = "Device model and OS version are required.";
+        resultEl.className = "result-box error";
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, "push_feedback"), {
+            device, os, received, type, memo,
+            timestamp: Timestamp.now(),
+            reporter: auth.currentUser.email
+        });
+        resultEl.textContent = "Feedback submitted!";
+        resultEl.className = "result-box success";
+        document.getElementById("fb-memo").value = "";
+        loadFeedback();
+    } catch (e) {
+        resultEl.textContent = "Error: " + e.message;
+        resultEl.className = "result-box error";
+    }
+};
+
+async function loadFeedback() {
+    const container = document.getElementById("feedback-list");
+    try {
+        const q = query(collection(db, "push_feedback"), orderBy("timestamp", "desc"), limit(20));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+            container.innerHTML = '<p class="loading">No feedback yet.</p>';
+            return;
+        }
+
+        let html = "";
+        snap.forEach(doc => {
+            const d = doc.data();
+            const time = d.timestamp?.toDate ? d.timestamp.toDate().toLocaleString("ko-KR") : "";
+            const receivedBadge = d.received === "yes" ? '<span class="badge badge-success">Received</span>'
+                : d.received === "no" ? '<span class="badge badge-error">Not received</span>'
+                : `<span class="badge badge-warning">${esc(d.received)}</span>`;
+
+            html += `<div class="feedback-item">
+                <strong>${esc(d.device)}</strong> / ${esc(d.os)} — ${esc(d.type)} ${receivedBadge}
+                ${d.memo ? `<br>${esc(d.memo)}` : ""}
+                <div class="meta">${esc(time)} by ${esc(d.reporter || "")}</div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = '<p style="color:var(--error)">Error loading feedback: ' + esc(e.message) + '</p>';
+    }
+}
+
+function esc(str) {
+    if (!str) return "";
+    const div = document.createElement("div");
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+</script>
+</body>
+</html>
