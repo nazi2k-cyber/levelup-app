@@ -3156,17 +3156,14 @@ function renderReelsCards(posts, lang) {
         ).join('');
         const moreCount = blockEntries.length > 6 ? blockEntries.length - 6 : 0;
 
-        const repostBanner = post.isRepost ? `<div class="reels-repost-banner">🔄 ${post.repostByName || '헌터'} ${i18n[lang]?.reels_reposted_by || '리포스트'}</div>` : '';
-
         return `<div class="system-card reels-card">
-            ${repostBanner}
             <div class="reels-header">
                 <img class="reels-avatar" src="${profileSrc}" alt="">
                 <div class="reels-user-info">
                     <div class="reels-username">${(post.userName || '헌터').replace(/</g,'&lt;')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
                 </div>
-                <div class="reels-time">${formatReelsTime(post.isRepost ? post.repostTimestamp : post.timestamp)}</div>
+                <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
             ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${post.photo}" alt="Timetable"></div>` : ''}
             ${post.caption ? `<div class="reels-caption">${post.caption.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
@@ -3175,7 +3172,6 @@ function renderReelsCards(posts, lang) {
                 ${blockSummary}
                 ${moreCount > 0 ? `<div style="font-size:0.65rem; color:var(--text-sub); text-align:right;">+${moreCount} more</div>` : ''}
             </div>
-            ${renderReelsSocialBar(post, lang)}
         </div>`;
     }).join('');
 }
@@ -3196,212 +3192,6 @@ function formatReelsTime(ts) {
     const minutes = String(d.getMinutes()).padStart(2, '0');
     return `${month}/${date} (${day}) ${hours}:${minutes}`;
 }
-
-// ===== 소셜 기능: 좋아요, 댓글, 리포스트 =====
-
-function renderReelsSocialBar(post, lang) {
-    const currentUid = auth.currentUser?.uid;
-    if (!currentUid) return '';
-
-    const likes = post.likes || [];
-    const comments = post.comments || [];
-    const reposts = post.reposts || [];
-    const isLiked = likes.includes(currentUid);
-    const isReposted = reposts.includes(currentUid);
-    const postId = `${post.uid}_${post.timestamp}`;
-
-    const commentsHtml = comments.map(c => {
-        const cName = (c.userName || '헌터').replace(/</g, '&lt;');
-        const cText = (c.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
-        const cTime = formatReelsTime(c.timestamp);
-        return `<div class="reels-comment-item">
-            <span class="reels-comment-author">${cName}</span>
-            <span class="reels-comment-text">${cText}</span>
-            <span class="reels-comment-time">${cTime}</span>
-        </div>`;
-    }).join('');
-
-    return `<div class="reels-social-bar">
-        <div class="reels-social-actions">
-            <button class="reels-social-btn ${isLiked ? 'reels-liked' : ''}" onclick="toggleReelsLike('${post.uid}', ${post.timestamp})">
-                <span class="reels-social-icon">${isLiked ? '❤️' : '🤍'}</span>
-                <span class="reels-social-count">${likes.length > 0 ? likes.length : ''}</span>
-            </button>
-            <button class="reels-social-btn" onclick="toggleReelsComments('${postId}')">
-                <span class="reels-social-icon">💬</span>
-                <span class="reels-social-count">${comments.length > 0 ? comments.length : ''}</span>
-            </button>
-            <button class="reels-social-btn ${isReposted ? 'reels-reposted' : ''}" onclick="repostReels('${post.uid}', ${post.timestamp})">
-                <span class="reels-social-icon">🔄</span>
-                <span class="reels-social-count">${reposts.length > 0 ? reposts.length : ''}</span>
-            </button>
-        </div>
-        <div class="reels-comments-section" id="comments-${postId}" style="display:none;">
-            ${commentsHtml ? `<div class="reels-comments-list">${commentsHtml}</div>` : ''}
-            <div class="reels-comment-input-row">
-                <input type="text" class="reels-comment-input" id="comment-input-${postId}"
-                    placeholder="${i18n[lang]?.reels_comment_placeholder || '댓글을 입력하세요...'}" maxlength="200">
-                <button class="reels-comment-submit-btn" onclick="addReelsComment('${post.uid}', ${post.timestamp})">
-                    ${i18n[lang]?.reels_comment_submit || '등록'}
-                </button>
-            </div>
-        </div>
-    </div>`;
-}
-
-function toggleReelsComments(postId) {
-    const section = document.getElementById('comments-' + postId);
-    if (section) {
-        section.style.display = section.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-async function toggleReelsLike(postOwnerUid, postTimestamp) {
-    const currentUid = auth.currentUser?.uid;
-    if (!currentUid) return;
-
-    try {
-        const userDoc = await getDoc(doc(db, "users", postOwnerUid));
-        if (!userDoc.exists() || !userDoc.data().reelsStr) return;
-
-        let posts = JSON.parse(userDoc.data().reelsStr);
-        const postIndex = posts.findIndex(p => p.timestamp === postTimestamp);
-        if (postIndex === -1) return;
-
-        if (!posts[postIndex].likes) posts[postIndex].likes = [];
-        const likeIndex = posts[postIndex].likes.indexOf(currentUid);
-
-        if (likeIndex === -1) {
-            posts[postIndex].likes.push(currentUid);
-        } else {
-            posts[postIndex].likes.splice(likeIndex, 1);
-        }
-
-        await updateDoc(doc(db, "users", postOwnerUid), {
-            reelsStr: JSON.stringify(posts)
-        });
-
-        renderReelsFeed();
-    } catch (e) {
-        AppLogger.error('[Reels] 좋아요 처리 실패: ' + (e.message || e));
-    }
-}
-
-async function addReelsComment(postOwnerUid, postTimestamp) {
-    const currentUid = auth.currentUser?.uid;
-    if (!currentUid) return;
-
-    const lang = AppState.currentLang;
-    const postId = `${postOwnerUid}_${postTimestamp}`;
-    const inputEl = document.getElementById('comment-input-' + postId);
-    if (!inputEl) return;
-
-    const text = inputEl.value.trim();
-    if (!text) {
-        alert(i18n[lang]?.reels_comment_empty || '댓글을 입력해주세요.');
-        return;
-    }
-
-    try {
-        const userDoc = await getDoc(doc(db, "users", postOwnerUid));
-        if (!userDoc.exists() || !userDoc.data().reelsStr) return;
-
-        let posts = JSON.parse(userDoc.data().reelsStr);
-        const postIndex = posts.findIndex(p => p.timestamp === postTimestamp);
-        if (postIndex === -1) return;
-
-        if (!posts[postIndex].comments) posts[postIndex].comments = [];
-        posts[postIndex].comments.push({
-            uid: currentUid,
-            userName: AppState.user.name || '헌터',
-            text: text,
-            timestamp: Date.now()
-        });
-
-        await updateDoc(doc(db, "users", postOwnerUid), {
-            reelsStr: JSON.stringify(posts)
-        });
-
-        inputEl.value = '';
-        renderReelsFeed();
-    } catch (e) {
-        AppLogger.error('[Reels] 댓글 등록 실패: ' + (e.message || e));
-    }
-}
-
-async function repostReels(postOwnerUid, postTimestamp) {
-    const currentUid = auth.currentUser?.uid;
-    if (!currentUid) return;
-
-    const lang = AppState.currentLang;
-
-    if (postOwnerUid === currentUid) {
-        alert(i18n[lang]?.reels_repost_own || '자신의 포스트는 리포스트할 수 없습니다.');
-        return;
-    }
-
-    if (!confirm(i18n[lang]?.reels_repost_confirm || '이 포스트를 리포스트하시겠습니까?')) return;
-
-    try {
-        const userDoc = await getDoc(doc(db, "users", postOwnerUid));
-        if (!userDoc.exists() || !userDoc.data().reelsStr) return;
-
-        let posts = JSON.parse(userDoc.data().reelsStr);
-        const postIndex = posts.findIndex(p => p.timestamp === postTimestamp);
-        if (postIndex === -1) return;
-
-        if (!posts[postIndex].reposts) posts[postIndex].reposts = [];
-
-        if (posts[postIndex].reposts.includes(currentUid)) {
-            alert(i18n[lang]?.reels_already_reposted || '이미 리포스트했습니다.');
-            return;
-        }
-
-        posts[postIndex].reposts.push(currentUid);
-
-        // 리포스트한 사용자의 피드에도 포스트 복사 저장
-        const originalPost = posts[postIndex];
-        const repost = {
-            ...originalPost,
-            isRepost: true,
-            repostBy: currentUid,
-            repostByName: AppState.user.name || '헌터',
-            repostTimestamp: Date.now(),
-            originalUid: postOwnerUid,
-            // 리포스트 자체에는 소셜 데이터 복사하지 않음 (원본에서 관리)
-            likes: originalPost.likes || [],
-            comments: originalPost.comments || [],
-            reposts: originalPost.reposts || []
-        };
-
-        // 원본 포스트 업데이트
-        await updateDoc(doc(db, "users", postOwnerUid), {
-            reelsStr: JSON.stringify(posts)
-        });
-
-        // 리포스터의 reelsStr에 추가
-        const myDoc = await getDoc(doc(db, "users", currentUid));
-        let myPosts = [];
-        if (myDoc.exists() && myDoc.data().reelsStr) {
-            try { myPosts = JSON.parse(myDoc.data().reelsStr); } catch(e) {}
-        }
-        myPosts.push(repost);
-        await updateDoc(doc(db, "users", currentUid), {
-            reelsStr: JSON.stringify(myPosts)
-        });
-
-        alert(i18n[lang]?.reels_reposted || '리포스트 완료!');
-        renderReelsFeed();
-    } catch (e) {
-        AppLogger.error('[Reels] 리포스트 실패: ' + (e.message || e));
-    }
-}
-
-// 소셜 기능 전역 등록
-window.toggleReelsLike = toggleReelsLike;
-window.addReelsComment = addReelsComment;
-window.repostReels = repostReels;
-window.toggleReelsComments = toggleReelsComments;
 
 // 릴스 리셋 타이머 (업로드 후 24시간 기준)
 function updateReelsResetTimer() {

@@ -80,17 +80,7 @@ const i18n = {
         share_save_local: "이미지 로컬 저장",
         share_save_local_desc: "플래너를 이미지로 저장합니다",
         share_link: "링크 공유",
-        share_link_desc: "플래너 요약을 클립보드에 복사합니다",
-
-        // 소셜 기능 (좋아요, 댓글, 리포스트)
-        reels_like: "좋아요", reels_unlike: "좋아요 취소",
-        reels_comment: "댓글", reels_repost: "리포스트",
-        reels_comment_placeholder: "댓글을 입력하세요...",
-        reels_comment_submit: "등록", reels_comment_empty: "댓글을 입력해주세요.",
-        reels_reposted: "리포스트 완료!", reels_already_reposted: "이미 리포스트했습니다.",
-        reels_repost_own: "자신의 포스트는 리포스트할 수 없습니다.",
-        reels_repost_confirm: "이 포스트를 리포스트하시겠습니까?",
-        reels_reposted_by: "리포스트"
+        share_link_desc: "플래너 요약을 클립보드에 복사합니다"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -169,17 +159,7 @@ const i18n = {
         share_save_local: "Save as Image",
         share_save_local_desc: "Save your planner as an image",
         share_link: "Copy to Clipboard",
-        share_link_desc: "Copy planner summary text to clipboard",
-
-        // Social features (like, comment, repost)
-        reels_like: "Like", reels_unlike: "Unlike",
-        reels_comment: "Comment", reels_repost: "Repost",
-        reels_comment_placeholder: "Write a comment...",
-        reels_comment_submit: "Post", reels_comment_empty: "Please enter a comment.",
-        reels_reposted: "Reposted!", reels_already_reposted: "Already reposted.",
-        reels_repost_own: "You cannot repost your own post.",
-        reels_repost_confirm: "Repost this post?",
-        reels_reposted_by: "Reposted"
+        share_link_desc: "Copy planner summary text to clipboard"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -258,17 +238,7 @@ const i18n = {
         share_save_local: "画像として保存",
         share_save_local_desc: "プランナーを画像として保存します",
         share_link: "クリップボードにコピー",
-        share_link_desc: "プランナーの要約テキストをコピーします",
-
-        // ソーシャル機能（いいね、コメント、リポスト）
-        reels_like: "いいね", reels_unlike: "いいね取消",
-        reels_comment: "コメント", reels_repost: "リポスト",
-        reels_comment_placeholder: "コメントを入力...",
-        reels_comment_submit: "投稿", reels_comment_empty: "コメントを入力してください。",
-        reels_reposted: "リポスト完了！", reels_already_reposted: "すでにリポスト済みです。",
-        reels_repost_own: "自分の投稿はリポストできません。",
-        reels_repost_confirm: "この投稿をリポストしますか？",
-        reels_reposted_by: "リポスト"
+        share_link_desc: "プランナーの要約テキストをコピーします"
     }
 };
 
