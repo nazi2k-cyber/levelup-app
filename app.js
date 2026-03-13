@@ -260,7 +260,17 @@ function bindEvents() {
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
-    
+
+    document.getElementById('btn-myinfo').addEventListener('click', function() {
+        document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('settings').classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    });
+    document.getElementById('btn-back-status').addEventListener('click', function() {
+        var statusTab = document.querySelector('.nav-item[data-tab="status"]');
+        switchTab('status', statusTab);
+    });
+
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
 
     // Planner tab
