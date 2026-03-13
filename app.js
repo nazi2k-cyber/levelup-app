@@ -3144,7 +3144,11 @@ async function renderReelsFeed() {
 function renderReelsCards(posts, lang) {
     const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="color:#ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
 
-    return posts.map(post => {
+    const heartOutline = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+    const commentIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+
+    const html = posts.map(post => {
+        const postId = getPostId(post);
         const profileSrc = post.userPhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
         const isMe = post.uid === auth.currentUser?.uid;
         const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${post.userInstaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
@@ -3156,7 +3160,7 @@ function renderReelsCards(posts, lang) {
         ).join('');
         const moreCount = blockEntries.length > 6 ? blockEntries.length - 6 : 0;
 
-        return `<div class="system-card reels-card">
+        return `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
                 <img class="reels-avatar" src="${profileSrc}" alt="">
                 <div class="reels-user-info">
@@ -3172,8 +3176,36 @@ function renderReelsCards(posts, lang) {
                 ${blockSummary}
                 ${moreCount > 0 ? `<div style="font-size:0.65rem; color:var(--text-sub); text-align:right;">+${moreCount} more</div>` : ''}
             </div>
+            <div class="reels-actions">
+                <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button>
+                <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button>
+            </div>
+            <div class="reels-like-count"></div>
+            <div class="reels-comments-panel">
+                <div class="reels-comment-count"></div>
+                <div class="reels-comments-list">
+                    <div class="reels-comment-empty">${i18n[lang].reels_comment_empty}</div>
+                </div>
+                <div class="reels-comment-input-wrap">
+                    <input type="text" class="reels-comment-input" placeholder="${i18n[lang].reels_comment_placeholder}" maxlength="200" onkeydown="if(event.key==='Enter'){const inp=this;addReelsComment('${postId}',inp.value);inp.value='';}">
+                    <button class="reels-comment-submit" onclick="const inp=this.previousElementSibling;addReelsComment('${postId}',inp.value);inp.value='';">${i18n[lang].reels_comment_post}</button>
+                </div>
+            </div>
         </div>`;
     }).join('');
+
+    // 렌더 후 각 포스트의 리액션 데이터 로드
+    setTimeout(() => {
+        posts.forEach(post => {
+            const postId = getPostId(post);
+            loadReelsReactions(postId).then(data => {
+                if (data.likes && data.likes.length > 0) updateLikeUI(postId, data.likes);
+                if (data.comments && data.comments.length > 0) renderCommentsSection(postId, data.comments);
+            });
+        });
+    }, 100);
+
+    return html;
 }
 
 function getMoodEmoji(mood) {
@@ -3265,6 +3297,157 @@ function checkReelsReset() {
         renderReelsFeed();
     }
 }
+
+// ===== 좋아요 / 댓글 기능 =====
+
+// 포스트 고유 ID 생성 (uid + timestamp)
+function getPostId(post) {
+    return `${post.uid}_${post.timestamp}`;
+}
+
+// 좋아요/댓글 데이터 로드
+async function loadReelsReactions(postId) {
+    try {
+        const docSnap = await getDoc(doc(db, "reels_reactions", postId));
+        if (docSnap.exists()) return docSnap.data();
+    } catch(e) { AppLogger.error('[Reels] 리액션 로드 실패: ' + (e.message || e)); }
+    return { likes: [], comments: [] };
+}
+
+// 좋아요 토글
+async function toggleReelsLike(postId) {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const reactRef = doc(db, "reels_reactions", postId);
+    try {
+        const docSnap = await getDoc(reactRef);
+        let likes = [];
+        let comments = [];
+        if (docSnap.exists()) {
+            likes = docSnap.data().likes || [];
+            comments = docSnap.data().comments || [];
+        }
+        const existIdx = likes.findIndex(l => l.uid === uid);
+        if (existIdx >= 0) {
+            likes.splice(existIdx, 1);
+        } else {
+            likes.push({
+                uid: uid,
+                name: AppState.user.name || '헌터',
+                photoURL: AppState.user.photoURL || null,
+                instaId: AppState.user.instaId || '',
+                timestamp: Date.now()
+            });
+        }
+        await setDoc(reactRef, { likes, comments }, { merge: true });
+        // UI 업데이트
+        updateLikeUI(postId, likes);
+    } catch(e) { AppLogger.error('[Reels] 좋아요 실패: ' + (e.message || e)); }
+}
+
+// 좋아요 UI 업데이트
+function updateLikeUI(postId, likes) {
+    const uid = auth.currentUser?.uid;
+    const lang = AppState.currentLang;
+    const isLiked = likes.some(l => l.uid === uid);
+    const likeBtn = document.querySelector(`[data-post-id="${postId}"] .reels-like-btn`);
+    const likeCount = document.querySelector(`[data-post-id="${postId}"] .reels-like-count`);
+    if (likeBtn) {
+        likeBtn.classList.toggle('liked', isLiked);
+        likeBtn.innerHTML = isLiked
+            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="#ff3c3c"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    }
+    if (likeCount) {
+        likeCount.textContent = likes.length > 0 ? (i18n[lang].reels_likes || '').replace('{n}', likes.length) : '';
+    }
+}
+
+// 댓글 추가
+async function addReelsComment(postId, text) {
+    if (!auth.currentUser || !text.trim()) return;
+    const uid = auth.currentUser.uid;
+    const reactRef = doc(db, "reels_reactions", postId);
+    try {
+        const docSnap = await getDoc(reactRef);
+        let likes = [];
+        let comments = [];
+        if (docSnap.exists()) {
+            likes = docSnap.data().likes || [];
+            comments = docSnap.data().comments || [];
+        }
+        comments.push({
+            uid: uid,
+            name: AppState.user.name || '헌터',
+            photoURL: AppState.user.photoURL || null,
+            instaId: AppState.user.instaId || '',
+            text: text.trim(),
+            timestamp: Date.now()
+        });
+        await setDoc(reactRef, { likes, comments }, { merge: true });
+        // UI 업데이트
+        renderCommentsSection(postId, comments);
+    } catch(e) { AppLogger.error('[Reels] 댓글 실패: ' + (e.message || e)); }
+}
+
+// 댓글 섹션 렌더링
+function renderCommentsSection(postId, comments) {
+    const lang = AppState.currentLang;
+    const container = document.querySelector(`[data-post-id="${postId}"] .reels-comments-list`);
+    const countEl = document.querySelector(`[data-post-id="${postId}"] .reels-comment-count`);
+    if (!container) return;
+
+    const instaSvgSmall = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16" style="color:#ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+
+    if (comments.length === 0) {
+        container.innerHTML = `<div class="reels-comment-empty">${i18n[lang].reels_comment_empty}</div>`;
+    } else {
+        container.innerHTML = comments.map(c => {
+            const cPhoto = c.photoURL || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+            const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${c.instaId}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
+            const timeAgo = getTimeAgo(c.timestamp, lang);
+            return `<div class="reels-comment-item">
+                <img class="reels-comment-avatar" src="${cPhoto}" alt="">
+                <div class="reels-comment-body">
+                    <div class="reels-comment-meta">
+                        <span class="reels-comment-name">${(c.name || '헌터').replace(/</g,'&lt;')}</span>${instaBtn}
+                        <span class="reels-comment-time">${timeAgo}</span>
+                    </div>
+                    <div class="reels-comment-text">${c.text.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    if (countEl) {
+        countEl.textContent = comments.length > 0 ? (i18n[lang].reels_comments || '').replace('{n}', comments.length) : '';
+    }
+}
+
+// 시간 경과 표시
+function getTimeAgo(ts, lang) {
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 60) return lang === 'ko' ? '방금' : lang === 'ja' ? 'たった今' : 'now';
+    if (diff < 3600) {
+        const m = Math.floor(diff / 60);
+        return lang === 'ko' ? `${m}분 전` : lang === 'ja' ? `${m}分前` : `${m}m`;
+    }
+    const h = Math.floor(diff / 3600);
+    return lang === 'ko' ? `${h}시간 전` : lang === 'ja' ? `${h}時間前` : `${h}h`;
+}
+
+// 댓글 토글 (접기/펼치기)
+function toggleCommentsPanel(postId) {
+    const panel = document.querySelector(`[data-post-id="${postId}"] .reels-comments-panel`);
+    if (panel) {
+        panel.classList.toggle('open');
+    }
+}
+
+// 전역 등록 (onclick에서 호출)
+window.toggleReelsLike = toggleReelsLike;
+window.addReelsComment = addReelsComment;
+window.toggleCommentsPanel = toggleCommentsPanel;
 
 function changeTheme() {
     const light = document.getElementById('theme-toggle').checked;
