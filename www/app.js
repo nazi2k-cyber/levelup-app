@@ -2,6 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
@@ -16,6 +17,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Firebase Cloud Messaging 초기화 (웹 환경에서만)
+let messaging = null;
+try {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) {
+        messaging = getMessaging(app);
+    }
+} catch (e) {
+    console.warn('[FCM] Messaging 초기화 스킵:', e.message);
+}
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
@@ -49,6 +61,8 @@ function getInitialAppState() {
             friends: [],
             syncEnabled: false,
             gpsEnabled: false,
+            pushEnabled: false,
+            fcmToken: null,
             stepData: { date: "", rewardedSteps: 0 },
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }
@@ -190,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRoulette();
 
             if (AppState.user.syncEnabled) { syncHealthData(false); }
+            initPushNotifications();
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
             _initializedUid = null;
@@ -257,10 +272,21 @@ function bindEvents() {
 
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
+    document.getElementById('push-toggle').addEventListener('change', togglePushNotifications);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
-    
+
+    document.getElementById('btn-myinfo').addEventListener('click', function() {
+        document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('settings').classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    });
+    document.getElementById('btn-back-status').addEventListener('click', function() {
+        var statusTab = document.querySelector('.nav-item[data-tab="status"]');
+        switchTab('status', statusTab);
+    });
+
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
 
     // Planner tab
@@ -317,6 +343,8 @@ async function saveUserData() {
             photoURL: AppState.user.photoURL || null,
             syncEnabled: AppState.user.syncEnabled,
             gpsEnabled: AppState.user.gpsEnabled,
+            pushEnabled: AppState.user.pushEnabled,
+            fcmToken: AppState.user.fcmToken || null,
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "",
             streakStr: JSON.stringify(AppState.user.streak),
@@ -357,6 +385,8 @@ async function loadUserDataFromDB(user) {
             if(data.friends) AppState.user.friends = data.friends;
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.gpsEnabled !== undefined) AppState.user.gpsEnabled = data.gpsEnabled;
+            if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
+            if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.streakStr) {
@@ -3152,7 +3182,11 @@ async function renderReelsFeed() {
 function renderReelsCards(posts, lang) {
     const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="color:#ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
 
-    return posts.map(post => {
+    const heartOutline = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+    const commentIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+
+    const html = posts.map(post => {
+        const postId = getPostId(post);
         const profileSrc = post.userPhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
         const isMe = post.uid === auth.currentUser?.uid;
         const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${post.userInstaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
@@ -3164,7 +3198,7 @@ function renderReelsCards(posts, lang) {
         ).join('');
         const moreCount = blockEntries.length > 6 ? blockEntries.length - 6 : 0;
 
-        return `<div class="system-card reels-card">
+        return `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
                 <img class="reels-avatar" src="${profileSrc}" alt="">
                 <div class="reels-user-info">
@@ -3180,8 +3214,34 @@ function renderReelsCards(posts, lang) {
                 ${blockSummary}
                 ${moreCount > 0 ? `<div style="font-size:0.65rem; color:var(--text-sub); text-align:right;">+${moreCount} more</div>` : ''}
             </div>
+            <div class="reels-actions">
+                <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count"></span>
+                <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button><span class="reels-comment-count"></span>
+            </div>
+            <div class="reels-comments-panel">
+                <div class="reels-comments-list">
+                    <div class="reels-comment-empty">${i18n[lang].reels_comment_empty}</div>
+                </div>
+                <div class="reels-comment-input-wrap">
+                    <input type="text" class="reels-comment-input" placeholder="${i18n[lang].reels_comment_placeholder}" maxlength="200" onkeydown="if(event.key==='Enter'){const inp=this;addReelsComment('${postId}',inp.value);inp.value='';}">
+                    <button class="reels-comment-submit" onclick="const inp=this.previousElementSibling;addReelsComment('${postId}',inp.value);inp.value='';">${i18n[lang].reels_comment_post}</button>
+                </div>
+            </div>
         </div>`;
     }).join('');
+
+    // 렌더 후 각 포스트의 리액션 데이터 로드
+    setTimeout(() => {
+        posts.forEach(post => {
+            const postId = getPostId(post);
+            loadReelsReactions(postId).then(data => {
+                if (data.likes && data.likes.length > 0) updateLikeUI(postId, data.likes);
+                if (data.comments && data.comments.length > 0) renderCommentsSection(postId, data.comments);
+            });
+        });
+    }, 100);
+
+    return html;
 }
 
 function getMoodEmoji(mood) {
@@ -3273,6 +3333,162 @@ function checkReelsReset() {
         renderReelsFeed();
     }
 }
+
+// ===== 좋아요 / 댓글 기능 =====
+
+// 포스트 고유 ID 생성 (uid + timestamp)
+function getPostId(post) {
+    return `${post.uid}_${post.timestamp}`;
+}
+
+// 좋아요/댓글 데이터 로드
+async function loadReelsReactions(postId) {
+    try {
+        const docSnap = await getDoc(doc(db, "reels_reactions", postId));
+        if (docSnap.exists()) return docSnap.data();
+    } catch(e) { AppLogger.error('[Reels] 리액션 로드 실패: ' + (e.message || e)); }
+    return { likes: [], comments: [] };
+}
+
+// 좋아요 토글
+async function toggleReelsLike(postId) {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const reactRef = doc(db, "reels_reactions", postId);
+    try {
+        const docSnap = await getDoc(reactRef);
+        let likes = [];
+        let comments = [];
+        if (docSnap.exists()) {
+            likes = docSnap.data().likes || [];
+            comments = docSnap.data().comments || [];
+        }
+        const existIdx = likes.findIndex(l => l.uid === uid);
+        if (existIdx >= 0) {
+            likes.splice(existIdx, 1);
+        } else {
+            likes.push({
+                uid: uid,
+                name: AppState.user.name || '헌터',
+                photoURL: AppState.user.photoURL || null,
+                instaId: AppState.user.instaId || '',
+                timestamp: Date.now()
+            });
+        }
+        await setDoc(reactRef, { likes, comments }, { merge: true });
+        // UI 업데이트
+        updateLikeUI(postId, likes);
+    } catch(e) { AppLogger.error('[Reels] 좋아요 실패: ' + (e.message || e)); }
+}
+
+// 숫자 포맷 (최대 9999, 이상은 9999+)
+function formatReactCount(n) {
+    if (!n || n <= 0) return '';
+    return n > 9999 ? '9999+' : String(n);
+}
+
+// 좋아요 UI 업데이트
+function updateLikeUI(postId, likes) {
+    const uid = auth.currentUser?.uid;
+    const isLiked = likes.some(l => l.uid === uid);
+    const likeBtn = document.querySelector(`[data-post-id="${postId}"] .reels-like-btn`);
+    const likeCount = document.querySelector(`[data-post-id="${postId}"] .reels-like-count`);
+    if (likeBtn) {
+        likeBtn.classList.toggle('liked', isLiked);
+        likeBtn.innerHTML = isLiked
+            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="#ff3c3c"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    }
+    if (likeCount) {
+        likeCount.textContent = formatReactCount(likes.length);
+    }
+}
+
+// 댓글 추가
+async function addReelsComment(postId, text) {
+    if (!auth.currentUser || !text.trim()) return;
+    const uid = auth.currentUser.uid;
+    const reactRef = doc(db, "reels_reactions", postId);
+    try {
+        const docSnap = await getDoc(reactRef);
+        let likes = [];
+        let comments = [];
+        if (docSnap.exists()) {
+            likes = docSnap.data().likes || [];
+            comments = docSnap.data().comments || [];
+        }
+        comments.push({
+            uid: uid,
+            name: AppState.user.name || '헌터',
+            photoURL: AppState.user.photoURL || null,
+            instaId: AppState.user.instaId || '',
+            text: text.trim(),
+            timestamp: Date.now()
+        });
+        await setDoc(reactRef, { likes, comments }, { merge: true });
+        // UI 업데이트
+        renderCommentsSection(postId, comments);
+    } catch(e) { AppLogger.error('[Reels] 댓글 실패: ' + (e.message || e)); }
+}
+
+// 댓글 섹션 렌더링
+function renderCommentsSection(postId, comments) {
+    const lang = AppState.currentLang;
+    const container = document.querySelector(`[data-post-id="${postId}"] .reels-comments-list`);
+    const countEl = document.querySelector(`[data-post-id="${postId}"] .reels-comment-count`);
+    if (!container) return;
+
+    const instaSvgSmall = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16" style="color:#ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+
+    if (comments.length === 0) {
+        container.innerHTML = `<div class="reels-comment-empty">${i18n[lang].reels_comment_empty}</div>`;
+    } else {
+        container.innerHTML = comments.map(c => {
+            const cPhoto = c.photoURL || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+            const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${c.instaId}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
+            const timeAgo = getTimeAgo(c.timestamp, lang);
+            return `<div class="reels-comment-item">
+                <img class="reels-comment-avatar" src="${cPhoto}" alt="">
+                <div class="reels-comment-body">
+                    <div class="reels-comment-meta">
+                        <span class="reels-comment-name">${(c.name || '헌터').replace(/</g,'&lt;')}</span>${instaBtn}
+                        <span class="reels-comment-time">${timeAgo}</span>
+                    </div>
+                    <div class="reels-comment-text">${c.text.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    if (countEl) {
+        countEl.textContent = formatReactCount(comments.length);
+    }
+}
+
+// 시간 경과 표시
+function getTimeAgo(ts, lang) {
+    const diff = Math.floor((Date.now() - ts) / 1000);
+    if (diff < 60) return lang === 'ko' ? '방금' : lang === 'ja' ? 'たった今' : 'now';
+    if (diff < 3600) {
+        const m = Math.floor(diff / 60);
+        return lang === 'ko' ? `${m}분 전` : lang === 'ja' ? `${m}分前` : `${m}m`;
+    }
+    const h = Math.floor(diff / 3600);
+    return lang === 'ko' ? `${h}시간 전` : lang === 'ja' ? `${h}時間前` : `${h}h`;
+}
+
+// 댓글 토글 (접기/펼치기)
+function toggleCommentsPanel(postId) {
+    const panel = document.querySelector(`[data-post-id="${postId}"] .reels-comments-panel`);
+    if (panel) {
+        panel.classList.toggle('open');
+    }
+}
+
+// 전역 등록 (onclick에서 호출)
+window.toggleReelsLike = toggleReelsLike;
+window.addReelsComment = addReelsComment;
+window.toggleCommentsPanel = toggleCommentsPanel;
 
 function changeTheme() {
     const light = document.getElementById('theme-toggle').checked;
@@ -3597,4 +3813,305 @@ async function syncHealthData(showMsg = false) {
         }
     }
     saveUserData();
+}
+
+// --- 푸시 알림 (FCM) ---
+
+/** 푸시 알림 초기화 — 로그인 후 호출 */
+async function initPushNotifications() {
+    const pushToggle = document.getElementById('push-toggle');
+    if (!pushToggle) return;
+
+    // 저장된 상태 복원
+    pushToggle.checked = AppState.user.pushEnabled;
+
+    const statusDiv = document.getElementById('push-status');
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    // 이미 활성화된 상태라면 토큰 갱신 및 메시지 리스너 설정
+    if (AppState.user.pushEnabled) {
+        if (isNative) {
+            await setupNativePushListeners();
+        } else {
+            await setupWebPushListeners();
+        }
+        if (statusDiv) {
+            statusDiv.style.display = 'flex';
+            const lang = i18n[AppState.currentLang];
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+        }
+    }
+}
+
+/** 푸시 알림 토글 핸들러 */
+async function togglePushNotifications() {
+    const pushToggle = document.getElementById('push-toggle');
+    const isChecked = pushToggle.checked;
+    const statusDiv = document.getElementById('push-status');
+    const lang = i18n[AppState.currentLang];
+    statusDiv.style.display = 'flex';
+
+    if (!isChecked) {
+        // 푸시 알림 비활성화
+        AppState.user.pushEnabled = false;
+        AppState.user.fcmToken = null;
+        saveUserData();
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
+        if (window.AppLogger) AppLogger.info('[FCM] 푸시 알림 비활성화');
+
+        // 네이티브: 토픽 구독 해제
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (isNative) {
+            await unsubscribeNativeTopics();
+        }
+        return;
+    }
+
+    // 푸시 알림 활성화 시도
+    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.push_requesting || '알림 권한 요청 중...'}</span>`;
+
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    try {
+        let token = null;
+
+        if (isNative) {
+            token = await requestNativePushPermission();
+        } else {
+            token = await requestWebPushPermission();
+        }
+
+        if (!token) {
+            pushToggle.checked = false;
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_denied || '알림 권한이 거부되었습니다.'}</span>`;
+            return;
+        }
+
+        AppState.user.pushEnabled = true;
+        AppState.user.fcmToken = token;
+        saveUserData();
+
+        if (window.AppLogger) AppLogger.info('[FCM] 토큰 등록 완료: ' + token.substring(0, 20) + '...');
+        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+
+        // 메시지 리스너 설정
+        if (isNative) {
+            await setupNativePushListeners();
+        } else {
+            await setupWebPushListeners();
+        }
+    } catch (e) {
+        if (window.AppLogger) AppLogger.error('[FCM] 푸시 알림 설정 실패: ' + (e.message || JSON.stringify(e)));
+        pushToggle.checked = false;
+        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_err || '푸시 알림 설정 실패'}</span>`;
+    }
+}
+
+/** 네이티브 앱: Capacitor PushNotifications 또는 커스텀 FCMPlugin으로 권한 요청 및 토큰 획득 */
+async function requestNativePushPermission() {
+    const cap = window.Capacitor;
+
+    // 방법 1: @capacitor/push-notifications 플러그인
+    if (cap.Plugins && cap.Plugins.PushNotifications) {
+        const { PushNotifications } = cap.Plugins;
+
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== 'granted') {
+            if (window.AppLogger) AppLogger.warn('[FCM] 네이티브 알림 권한 거부: ' + JSON.stringify(permResult));
+            return null;
+        }
+
+        // 토큰 수신 대기
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('FCM 토큰 수신 타임아웃'));
+            }, 15000);
+
+            PushNotifications.addListener('registration', (tokenData) => {
+                clearTimeout(timeout);
+                if (window.AppLogger) AppLogger.info('[FCM] 네이티브 토큰 수신: ' + tokenData.value.substring(0, 20) + '...');
+                resolve(tokenData.value);
+            });
+
+            PushNotifications.addListener('registrationError', (error) => {
+                clearTimeout(timeout);
+                if (window.AppLogger) AppLogger.error('[FCM] 네이티브 등록 실패: ' + JSON.stringify(error));
+                reject(new Error(error.error || '등록 실패'));
+            });
+
+            PushNotifications.register();
+        });
+    }
+
+    // 방법 2: 커스텀 FCMPlugin (네이티브 브릿지)
+    if (cap.Plugins && cap.Plugins.FCMPlugin) {
+        const result = await cap.Plugins.FCMPlugin.getToken();
+        return result.token || null;
+    }
+
+    // 방법 3: Capacitor 네이티브 브릿지 직접 호출
+    if (cap.toNative) {
+        return new Promise((resolve, reject) => {
+            const callbackId = 'fcm_getToken_' + Date.now();
+            cap.toNative('FCMPlugin', 'getToken', { callbackId });
+            // 폴백: 5초 후 타임아웃
+            setTimeout(() => resolve(null), 5000);
+        });
+    }
+
+    return null;
+}
+
+/** 웹 브라우저: Firebase Messaging으로 권한 요청 및 토큰 획득 */
+async function requestWebPushPermission() {
+    if (!messaging) {
+        if (window.AppLogger) AppLogger.warn('[FCM] Firebase Messaging이 초기화되지 않았습니다.');
+        return null;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        if (window.AppLogger) AppLogger.warn('[FCM] 웹 알림 권한 거부: ' + permission);
+        return null;
+    }
+
+    // Service Worker 등록
+    let swRegistration = null;
+    if ('serviceWorker' in navigator) {
+        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        if (window.AppLogger) AppLogger.info('[FCM] Service Worker 등록 완료');
+    }
+
+    const token = await getToken(messaging, {
+        vapidKey: '', // VAPID 키는 Firebase 콘솔에서 생성 후 설정 필요
+        serviceWorkerRegistration: swRegistration
+    });
+
+    return token || null;
+}
+
+/** 네이티브 앱: 포그라운드 메시지 리스너 설정 */
+async function setupNativePushListeners() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins) return;
+
+    // @capacitor/push-notifications 플러그인 사용
+    if (cap.Plugins.PushNotifications) {
+        const { PushNotifications } = cap.Plugins;
+
+        // 포그라운드 알림 수신
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            if (window.AppLogger) AppLogger.info('[FCM] 포그라운드 알림 수신: ' + JSON.stringify(notification));
+            showInAppNotification(notification.title, notification.body, notification.data);
+        });
+
+        // 알림 탭(클릭) 처리
+        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+            if (window.AppLogger) AppLogger.info('[FCM] 알림 탭: ' + JSON.stringify(action));
+            handleNotificationAction(action.notification.data);
+        });
+
+        // 기본 토픽 구독
+        await subscribeNativeTopics();
+    }
+}
+
+/** 웹 브라우저: 포그라운드 메시지 리스너 설정 */
+async function setupWebPushListeners() {
+    if (!messaging) return;
+
+    onMessage(messaging, (payload) => {
+        if (window.AppLogger) AppLogger.info('[FCM] 웹 메시지 수신: ' + JSON.stringify(payload));
+        showInAppNotification(
+            payload.notification?.title || 'LEVEL UP',
+            payload.notification?.body || '',
+            payload.data
+        );
+    });
+}
+
+/** 네이티브 기본 토픽 구독 (레이드 알림, 일일 리마인더 등) */
+async function subscribeNativeTopics() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const topics = ['raid_alerts', 'daily_reminder', 'announcements'];
+    for (const topic of topics) {
+        try {
+            await cap.Plugins.FCMPlugin.subscribeTopic({ topic });
+            if (window.AppLogger) AppLogger.info('[FCM] 토픽 구독: ' + topic);
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[FCM] 토픽 구독 실패: ' + topic + ' - ' + e.message);
+        }
+    }
+}
+
+/** 네이티브 토픽 구독 해제 */
+async function unsubscribeNativeTopics() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const topics = ['raid_alerts', 'daily_reminder', 'announcements'];
+    for (const topic of topics) {
+        try {
+            await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic });
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[FCM] 토픽 해제 실패: ' + topic);
+        }
+    }
+}
+
+/** 인앱 알림 표시 (포그라운드 수신 시) */
+function showInAppNotification(title, body, data) {
+    // 기존 알림 배너가 있으면 제거
+    const existing = document.getElementById('push-notification-banner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'push-notification-banner';
+    banner.className = 'push-notification-banner';
+    banner.innerHTML = `
+        <div class="push-noti-content">
+            <div class="push-noti-icon">🔔</div>
+            <div class="push-noti-text">
+                <strong>${sanitizeText(title || 'LEVEL UP')}</strong>
+                <span>${sanitizeText(body || '')}</span>
+            </div>
+            <button class="push-noti-close" onclick="this.closest('.push-notification-banner').remove()">&times;</button>
+        </div>
+    `;
+
+    // 클릭 시 해당 화면으로 이동
+    banner.addEventListener('click', (e) => {
+        if (e.target.classList.contains('push-noti-close')) return;
+        handleNotificationAction(data);
+        banner.remove();
+    });
+
+    document.body.appendChild(banner);
+
+    // 5초 후 자동 제거
+    setTimeout(() => {
+        if (banner.parentNode) {
+            banner.classList.add('push-noti-fadeout');
+            setTimeout(() => banner.remove(), 300);
+        }
+    }, 5000);
+}
+
+/** 알림 데이터에 따라 해당 탭으로 이동 */
+function handleNotificationAction(data) {
+    if (!data) return;
+    const tab = data.tab || data.target;
+    if (tab) {
+        const tabEl = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+        if (tabEl) switchTab(tab, tabEl);
+    }
+}
+
+/** XSS 방지용 텍스트 새니타이즈 */
+function sanitizeText(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }

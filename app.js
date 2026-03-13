@@ -2,6 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
@@ -16,6 +17,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Firebase Cloud Messaging 초기화 (웹 환경에서만)
+let messaging = null;
+try {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) {
+        messaging = getMessaging(app);
+    }
+} catch (e) {
+    console.warn('[FCM] Messaging 초기화 스킵:', e.message);
+}
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
@@ -49,6 +61,8 @@ function getInitialAppState() {
             friends: [],
             syncEnabled: false,
             gpsEnabled: false,
+            pushEnabled: false,
+            fcmToken: null,
             stepData: { date: "", rewardedSteps: 0 },
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }
@@ -190,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRoulette();
 
             if (AppState.user.syncEnabled) { syncHealthData(false); }
+            initPushNotifications();
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
             _initializedUid = null;
@@ -257,6 +272,7 @@ function bindEvents() {
 
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
+    document.getElementById('push-toggle').addEventListener('change', togglePushNotifications);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
@@ -327,6 +343,8 @@ async function saveUserData() {
             photoURL: AppState.user.photoURL || null,
             syncEnabled: AppState.user.syncEnabled,
             gpsEnabled: AppState.user.gpsEnabled,
+            pushEnabled: AppState.user.pushEnabled,
+            fcmToken: AppState.user.fcmToken || null,
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "",
             streakStr: JSON.stringify(AppState.user.streak),
@@ -367,6 +385,8 @@ async function loadUserDataFromDB(user) {
             if(data.friends) AppState.user.friends = data.friends;
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.gpsEnabled !== undefined) AppState.user.gpsEnabled = data.gpsEnabled;
+            if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
+            if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.streakStr) {
@@ -3793,4 +3813,305 @@ async function syncHealthData(showMsg = false) {
         }
     }
     saveUserData();
+}
+
+// --- 푸시 알림 (FCM) ---
+
+/** 푸시 알림 초기화 — 로그인 후 호출 */
+async function initPushNotifications() {
+    const pushToggle = document.getElementById('push-toggle');
+    if (!pushToggle) return;
+
+    // 저장된 상태 복원
+    pushToggle.checked = AppState.user.pushEnabled;
+
+    const statusDiv = document.getElementById('push-status');
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    // 이미 활성화된 상태라면 토큰 갱신 및 메시지 리스너 설정
+    if (AppState.user.pushEnabled) {
+        if (isNative) {
+            await setupNativePushListeners();
+        } else {
+            await setupWebPushListeners();
+        }
+        if (statusDiv) {
+            statusDiv.style.display = 'flex';
+            const lang = i18n[AppState.currentLang];
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+        }
+    }
+}
+
+/** 푸시 알림 토글 핸들러 */
+async function togglePushNotifications() {
+    const pushToggle = document.getElementById('push-toggle');
+    const isChecked = pushToggle.checked;
+    const statusDiv = document.getElementById('push-status');
+    const lang = i18n[AppState.currentLang];
+    statusDiv.style.display = 'flex';
+
+    if (!isChecked) {
+        // 푸시 알림 비활성화
+        AppState.user.pushEnabled = false;
+        AppState.user.fcmToken = null;
+        saveUserData();
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
+        if (window.AppLogger) AppLogger.info('[FCM] 푸시 알림 비활성화');
+
+        // 네이티브: 토픽 구독 해제
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (isNative) {
+            await unsubscribeNativeTopics();
+        }
+        return;
+    }
+
+    // 푸시 알림 활성화 시도
+    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.push_requesting || '알림 권한 요청 중...'}</span>`;
+
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    try {
+        let token = null;
+
+        if (isNative) {
+            token = await requestNativePushPermission();
+        } else {
+            token = await requestWebPushPermission();
+        }
+
+        if (!token) {
+            pushToggle.checked = false;
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_denied || '알림 권한이 거부되었습니다.'}</span>`;
+            return;
+        }
+
+        AppState.user.pushEnabled = true;
+        AppState.user.fcmToken = token;
+        saveUserData();
+
+        if (window.AppLogger) AppLogger.info('[FCM] 토큰 등록 완료: ' + token.substring(0, 20) + '...');
+        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+
+        // 메시지 리스너 설정
+        if (isNative) {
+            await setupNativePushListeners();
+        } else {
+            await setupWebPushListeners();
+        }
+    } catch (e) {
+        if (window.AppLogger) AppLogger.error('[FCM] 푸시 알림 설정 실패: ' + (e.message || JSON.stringify(e)));
+        pushToggle.checked = false;
+        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_err || '푸시 알림 설정 실패'}</span>`;
+    }
+}
+
+/** 네이티브 앱: Capacitor PushNotifications 또는 커스텀 FCMPlugin으로 권한 요청 및 토큰 획득 */
+async function requestNativePushPermission() {
+    const cap = window.Capacitor;
+
+    // 방법 1: @capacitor/push-notifications 플러그인
+    if (cap.Plugins && cap.Plugins.PushNotifications) {
+        const { PushNotifications } = cap.Plugins;
+
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== 'granted') {
+            if (window.AppLogger) AppLogger.warn('[FCM] 네이티브 알림 권한 거부: ' + JSON.stringify(permResult));
+            return null;
+        }
+
+        // 토큰 수신 대기
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('FCM 토큰 수신 타임아웃'));
+            }, 15000);
+
+            PushNotifications.addListener('registration', (tokenData) => {
+                clearTimeout(timeout);
+                if (window.AppLogger) AppLogger.info('[FCM] 네이티브 토큰 수신: ' + tokenData.value.substring(0, 20) + '...');
+                resolve(tokenData.value);
+            });
+
+            PushNotifications.addListener('registrationError', (error) => {
+                clearTimeout(timeout);
+                if (window.AppLogger) AppLogger.error('[FCM] 네이티브 등록 실패: ' + JSON.stringify(error));
+                reject(new Error(error.error || '등록 실패'));
+            });
+
+            PushNotifications.register();
+        });
+    }
+
+    // 방법 2: 커스텀 FCMPlugin (네이티브 브릿지)
+    if (cap.Plugins && cap.Plugins.FCMPlugin) {
+        const result = await cap.Plugins.FCMPlugin.getToken();
+        return result.token || null;
+    }
+
+    // 방법 3: Capacitor 네이티브 브릿지 직접 호출
+    if (cap.toNative) {
+        return new Promise((resolve, reject) => {
+            const callbackId = 'fcm_getToken_' + Date.now();
+            cap.toNative('FCMPlugin', 'getToken', { callbackId });
+            // 폴백: 5초 후 타임아웃
+            setTimeout(() => resolve(null), 5000);
+        });
+    }
+
+    return null;
+}
+
+/** 웹 브라우저: Firebase Messaging으로 권한 요청 및 토큰 획득 */
+async function requestWebPushPermission() {
+    if (!messaging) {
+        if (window.AppLogger) AppLogger.warn('[FCM] Firebase Messaging이 초기화되지 않았습니다.');
+        return null;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        if (window.AppLogger) AppLogger.warn('[FCM] 웹 알림 권한 거부: ' + permission);
+        return null;
+    }
+
+    // Service Worker 등록
+    let swRegistration = null;
+    if ('serviceWorker' in navigator) {
+        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        if (window.AppLogger) AppLogger.info('[FCM] Service Worker 등록 완료');
+    }
+
+    const token = await getToken(messaging, {
+        vapidKey: '', // VAPID 키는 Firebase 콘솔에서 생성 후 설정 필요
+        serviceWorkerRegistration: swRegistration
+    });
+
+    return token || null;
+}
+
+/** 네이티브 앱: 포그라운드 메시지 리스너 설정 */
+async function setupNativePushListeners() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins) return;
+
+    // @capacitor/push-notifications 플러그인 사용
+    if (cap.Plugins.PushNotifications) {
+        const { PushNotifications } = cap.Plugins;
+
+        // 포그라운드 알림 수신
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            if (window.AppLogger) AppLogger.info('[FCM] 포그라운드 알림 수신: ' + JSON.stringify(notification));
+            showInAppNotification(notification.title, notification.body, notification.data);
+        });
+
+        // 알림 탭(클릭) 처리
+        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+            if (window.AppLogger) AppLogger.info('[FCM] 알림 탭: ' + JSON.stringify(action));
+            handleNotificationAction(action.notification.data);
+        });
+
+        // 기본 토픽 구독
+        await subscribeNativeTopics();
+    }
+}
+
+/** 웹 브라우저: 포그라운드 메시지 리스너 설정 */
+async function setupWebPushListeners() {
+    if (!messaging) return;
+
+    onMessage(messaging, (payload) => {
+        if (window.AppLogger) AppLogger.info('[FCM] 웹 메시지 수신: ' + JSON.stringify(payload));
+        showInAppNotification(
+            payload.notification?.title || 'LEVEL UP',
+            payload.notification?.body || '',
+            payload.data
+        );
+    });
+}
+
+/** 네이티브 기본 토픽 구독 (레이드 알림, 일일 리마인더 등) */
+async function subscribeNativeTopics() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const topics = ['raid_alerts', 'daily_reminder', 'announcements'];
+    for (const topic of topics) {
+        try {
+            await cap.Plugins.FCMPlugin.subscribeTopic({ topic });
+            if (window.AppLogger) AppLogger.info('[FCM] 토픽 구독: ' + topic);
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[FCM] 토픽 구독 실패: ' + topic + ' - ' + e.message);
+        }
+    }
+}
+
+/** 네이티브 토픽 구독 해제 */
+async function unsubscribeNativeTopics() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const topics = ['raid_alerts', 'daily_reminder', 'announcements'];
+    for (const topic of topics) {
+        try {
+            await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic });
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[FCM] 토픽 해제 실패: ' + topic);
+        }
+    }
+}
+
+/** 인앱 알림 표시 (포그라운드 수신 시) */
+function showInAppNotification(title, body, data) {
+    // 기존 알림 배너가 있으면 제거
+    const existing = document.getElementById('push-notification-banner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'push-notification-banner';
+    banner.className = 'push-notification-banner';
+    banner.innerHTML = `
+        <div class="push-noti-content">
+            <div class="push-noti-icon">🔔</div>
+            <div class="push-noti-text">
+                <strong>${sanitizeText(title || 'LEVEL UP')}</strong>
+                <span>${sanitizeText(body || '')}</span>
+            </div>
+            <button class="push-noti-close" onclick="this.closest('.push-notification-banner').remove()">&times;</button>
+        </div>
+    `;
+
+    // 클릭 시 해당 화면으로 이동
+    banner.addEventListener('click', (e) => {
+        if (e.target.classList.contains('push-noti-close')) return;
+        handleNotificationAction(data);
+        banner.remove();
+    });
+
+    document.body.appendChild(banner);
+
+    // 5초 후 자동 제거
+    setTimeout(() => {
+        if (banner.parentNode) {
+            banner.classList.add('push-noti-fadeout');
+            setTimeout(() => banner.remove(), 300);
+        }
+    }, 5000);
+}
+
+/** 알림 데이터에 따라 해당 탭으로 이동 */
+function handleNotificationAction(data) {
+    if (!data) return;
+    const tab = data.tab || data.target;
+    if (tab) {
+        const tabEl = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+        if (tabEl) switchTab(tab, tabEl);
+    }
+}
+
+/** XSS 방지용 텍스트 새니타이즈 */
+function sanitizeText(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
