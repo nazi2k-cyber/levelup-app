@@ -36,9 +36,11 @@ jobs:
       - name: Firebase CLI 설치
         run: npm install -g firebase-tools
 
-      - name: 고아 함수 정리 (삭제 실패 방지)
+      - name: 고아 함수 정리 (sendRaidAlerts — scheduler job 누락)
         continue-on-error: true
-        run: firebase functions:delete sendRaidAlerts --region asia-northeast3 --force 2>/dev/null || true
+        run: |
+          gcloud functions delete sendRaidAlerts --region=asia-northeast3 --gen2 --quiet 2>/dev/null || true
+          gcloud scheduler jobs delete firebase-schedule-sendRaidAlerts-asia-northeast3 --location=asia-northeast3 --quiet 2>/dev/null || true
 
       - name: Firebase Functions 배포
         run: firebase deploy --only functions --force
