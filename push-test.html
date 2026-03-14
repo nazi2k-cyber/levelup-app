@@ -541,6 +541,7 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById("login-section").style.display = "none";
         document.getElementById("admin-section").style.display = "block";
         document.getElementById("user-email").textContent = user.email;
+        pingFunctions();
         loadDashboard();
         loadUsers();
         loadLogs();
@@ -552,6 +553,19 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById("admin-section").style.display = "none";
     }
 });
+
+// --- Ping (Functions health check) ---
+async function pingFunctions() {
+    tlog("Ping", "Calling ping function to check Cloud Functions health...");
+    try {
+        const fn = httpsCallable(functions, "ping");
+        const result = await fn({});
+        tok("Ping", "Cloud Functions OK — node=" + result.data.node + " auth=" + result.data.auth + " ts=" + result.data.ts);
+    } catch (e) {
+        terror("Ping", "Cloud Functions UNREACHABLE — code=" + (e.code || "unknown") + " message=" + (e.message || e) + " details=" + JSON.stringify(e.details || null));
+        terror("Ping", "Functions may not be deployed. Run: firebase deploy --only functions --force");
+    }
+}
 
 // --- Dashboard ---
 async function loadDashboard() {

@@ -8,6 +8,25 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
+// Callable 함수 공통 옵션 (Gen 2 Cloud Run 호환)
+const callableOpts = {
+    region: "asia-northeast3",
+    cors: true,
+    invoker: "public"
+};
+
+// ─── 0. 진단용 Ping (Callable) ───
+
+exports.ping = onCall(callableOpts, async (request) => {
+    return {
+        ok: true,
+        ts: new Date().toISOString(),
+        auth: request.auth ? request.auth.token.email : null,
+        node: process.version,
+        region: process.env.FUNCTION_REGION || "unknown"
+    };
+});
+
 // ─── 다국어 알림 메시지 ───
 
 const MESSAGES = {
@@ -44,11 +63,7 @@ function getLocalizedMessage(type, lang) {
 
 // ─── 1. 레이드 알림 (매일 05:55, 11:25, 18:55 KST — 레이드 시작 5분 전) ───
 
-exports.sendRaidAlerts = onSchedule({
-    schedule: "55 5,25 11,55 18 * * *",
-    timeZone: "Asia/Seoul",
-    region: "asia-northeast3"
-}, async () => {
+async function handleRaidAlert() {
     const kstHour = new Date(Date.now() + 9 * 60 * 60 * 1000).getHours();
 
     let slotLabel;
@@ -84,7 +99,13 @@ exports.sendRaidAlerts = onSchedule({
     } catch (e) {
         console.error("[레이드 알림] 발송 실패:", e);
     }
-});
+}
+
+const raidScheduleOpts = { timeZone: "Asia/Seoul", region: "asia-northeast3" };
+
+exports.sendRaidAlert0555 = onSchedule({ schedule: "55 5 * * *", ...raidScheduleOpts }, handleRaidAlert);
+exports.sendRaidAlert1125 = onSchedule({ schedule: "25 11 * * *", ...raidScheduleOpts }, handleRaidAlert);
+exports.sendRaidAlert1855 = onSchedule({ schedule: "55 18 * * *", ...raidScheduleOpts }, handleRaidAlert);
 
 // ─── 2. 일일 리마인더 (매일 09:00 KST) ───
 
@@ -211,9 +232,7 @@ exports.sendStreakWarnings = onSchedule({
 
 // ─── 4. 공지사항 수동 발송 (Callable Function — 관리자 전용) ───
 
-exports.sendAnnouncement = onCall({
-    region: "asia-northeast3"
-}, async (request) => {
+exports.sendAnnouncement = onCall(callableOpts, async (request) => {
     // 관리자 인증 확인
     const callerEmail = request.auth?.token?.email;
     if (callerEmail !== "nazi2k@gmail.com") {
@@ -296,9 +315,7 @@ exports.cleanupInactiveTokens = onSchedule({
 
 // ─── 6. 테스트 푸시 발송 (Callable — 관리자 전용) ───
 
-exports.sendTestNotification = onCall({
-    region: "asia-northeast3"
-}, async (request) => {
+exports.sendTestNotification = onCall(callableOpts, async (request) => {
     const callerEmail = request.auth?.token?.email;
     if (callerEmail !== "nazi2k@gmail.com") {
         throw new HttpsError("permission-denied", "권한이 없습니다.");
@@ -370,9 +387,7 @@ exports.sendTestNotification = onCall({
 
 // ─── 7. 푸시 활성 유저 목록 조회 (Callable — 관리자 전용) ───
 
-exports.getTestUsers = onCall({
-    region: "asia-northeast3"
-}, async (request) => {
+exports.getTestUsers = onCall(callableOpts, async (request) => {
     const callerEmail = request.auth?.token?.email;
     if (callerEmail !== "nazi2k@gmail.com") {
         throw new HttpsError("permission-denied", "권한이 없습니다.");
@@ -415,9 +430,7 @@ exports.getTestUsers = onCall({
 
 // ─── 8. 발송 이력 조회 (Callable — 관리자 전용) ───
 
-exports.getPushLogs = onCall({
-    region: "asia-northeast3"
-}, async (request) => {
+exports.getPushLogs = onCall(callableOpts, async (request) => {
     const callerEmail = request.auth?.token?.email;
     if (callerEmail !== "nazi2k@gmail.com") {
         throw new HttpsError("permission-denied", "권한이 없습니다.");
