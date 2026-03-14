@@ -3,12 +3,10 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
-const { getStorage } = require("firebase-admin/storage");
 
 initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
-const bucket = getStorage().bucket();
 
 // Callable 함수 공통 옵션 (Gen 2 Cloud Run 호환)
 const callableOpts = {
@@ -526,61 +524,5 @@ exports.getPushLogs = onCall(callableOpts, async (request) => {
         if (e instanceof HttpsError) throw e;
         console.error("[getPushLogs] Error:", e);
         throw new HttpsError("internal", "getPushLogs failed: " + String(e.message || e).substring(0, 500));
-    }
-});
-
-// ─── 만료된 릴스 사진 자동 삭제 (매시간) ───
-
-exports.cleanupExpiredReelsPhotos = onSchedule({
-    schedule: "0 * * * *",
-    timeZone: "Asia/Seoul",
-    region: "asia-northeast3"
-}, async () => {
-    const now = Date.now();
-    const cutoff = 24 * 60 * 60 * 1000;
-    let deletedPhotos = 0;
-    let cleanedUsers = 0;
-
-    try {
-        const usersSnap = await db.collection("users").get();
-
-        for (const userDoc of usersSnap.docs) {
-            const data = userDoc.data();
-            if (!data.reelsStr) continue;
-
-            let posts;
-            try { posts = JSON.parse(data.reelsStr); } catch(e) { continue; }
-            if (!Array.isArray(posts) || posts.length === 0) continue;
-
-            const activePosts = [];
-            for (const post of posts) {
-                if ((now - (post.timestamp || 0)) >= cutoff) {
-                    // 만료 → Cloud Storage에서 사진 삭제
-                    if (post.photoPath) {
-                        try {
-                            await bucket.file(post.photoPath).delete();
-                            deletedPhotos++;
-                        } catch(e) {
-                            if (e.code !== 404) {
-                                console.warn(`[Reels Cleanup] 삭제 실패 ${post.photoPath}:`, e.message);
-                            }
-                        }
-                    }
-                } else {
-                    activePosts.push(post);
-                }
-            }
-
-            if (activePosts.length < posts.length) {
-                await db.collection("users").doc(userDoc.id).update({
-                    reelsStr: JSON.stringify(activePosts)
-                });
-                cleanedUsers++;
-            }
-        }
-
-        console.log(`[Reels Cleanup] ${deletedPhotos} photos deleted, ${cleanedUsers} users cleaned`);
-    } catch(e) {
-        console.error("[Reels Cleanup] Error:", e);
     }
 });
