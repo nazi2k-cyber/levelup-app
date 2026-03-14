@@ -15,9 +15,231 @@ const callableOpts = {
     invoker: "public"
 };
 
-// ─── 0. 진단용 Ping (Callable) ───
+// ─── Admin action handlers (shared between ping router and individual exports) ───
+
+async function handleGetTestUsers(request) {
+    const callerEmail = request.auth?.token?.email;
+    if (callerEmail !== "nazi2k@gmail.com") {
+        throw new HttpsError("permission-denied", "권한이 없습니다.");
+    }
+
+    console.log("[getTestUsers] Querying pushEnabled users...");
+    const usersSnap = await db.collection("users")
+        .where("pushEnabled", "==", true)
+        .limit(100)
+        .get();
+    console.log("[getTestUsers] Found", usersSnap.size, "users");
+
+    const now = new Date();
+    const users = [];
+    for (const doc of usersSnap.docs) {
+        try {
+            const data = doc.data();
+            let lastActiveDate = null;
+            let diffDays = null;
+            try {
+                const streak = JSON.parse(data.streakStr || "{}");
+                if (streak.lastActiveDate) {
+                    lastActiveDate = String(streak.lastActiveDate);
+                    const d = Math.floor((now - new Date(streak.lastActiveDate)) / (1000 * 60 * 60 * 24));
+                    diffDays = Number.isFinite(d) ? d : null;
+                }
+            } catch (_e) { /* ignore streak parse error */ }
+
+            users.push({
+                uid: String(doc.id),
+                displayName: String(data.displayName || data.nickname || doc.id.substring(0, 8)),
+                lang: String(data.lang || "ko"),
+                fcmToken: data.fcmToken ? String(data.fcmToken) : null,
+                lastActiveDate,
+                diffDays
+            });
+        } catch (docErr) {
+            console.warn("[getTestUsers] Skipping doc", doc.id, docErr.message);
+        }
+    }
+    console.log("[getTestUsers] Returning", users.length, "users");
+    return { users };
+}
+
+async function handleGetPushLogs(request) {
+    const callerEmail = request.auth?.token?.email;
+    if (callerEmail !== "nazi2k@gmail.com") {
+        throw new HttpsError("permission-denied", "권한이 없습니다.");
+    }
+
+    console.log("[getPushLogs] Querying push_logs...");
+    const logsSnap = await db.collection("push_logs")
+        .orderBy("timestamp", "desc")
+        .limit(50)
+        .get();
+    console.log("[getPushLogs] Found", logsSnap.size, "logs");
+
+    const logs = [];
+    for (const doc of logsSnap.docs) {
+        try {
+            const data = doc.data();
+            let ts;
+            try {
+                ts = data.timestamp && typeof data.timestamp.toDate === "function"
+                    ? data.timestamp.toDate().toISOString()
+                    : String(data.timestamp || "");
+            } catch (_e) {
+                ts = String(data.timestamp || "");
+            }
+            logs.push({
+                id: String(doc.id),
+                timestamp: ts,
+                type: String(data.type || ""),
+                target: String(data.target || ""),
+                success: !!data.success,
+                messageId: data.messageId ? String(data.messageId) : null,
+                error: data.error ? String(data.error) : null,
+                sender: data.sender ? String(data.sender) : null
+            });
+        } catch (docErr) {
+            console.warn("[getPushLogs] Skipping doc", doc.id, docErr.message);
+        }
+    }
+    console.log("[getPushLogs] Returning", logs.length, "logs");
+    return { logs };
+}
+
+async function handleSendTestNotification(request) {
+    const callerEmail = request.auth?.token?.email;
+    const reqData = request.data || {};
+    console.log("[sendTestNotification] caller:", callerEmail, "data:", JSON.stringify(reqData));
+    if (callerEmail !== "nazi2k@gmail.com") {
+        throw new HttpsError("permission-denied", "권한이 없습니다.");
+    }
+
+    const { token, topic, type, lang, customTitle, customBody } = reqData;
+    if (!token && !topic) {
+        throw new HttpsError("invalid-argument", "token 또는 topic은 필수입니다.");
+    }
+
+    let notification;
+    if (type === "custom") {
+        if (!customTitle || !customBody) throw new HttpsError("invalid-argument", "커스텀 알림은 제목과 본문이 필수입니다.");
+        notification = { title: String(customTitle), body: String(customBody) };
+    } else {
+        notification = getLocalizedMessage(type || "raid_start", lang || "ko");
+    }
+
+    const message = {
+        notification,
+        data: {
+            tab: "status",
+            type: "test_" + (type || "raid_start")
+        },
+        android: {
+            priority: "high",
+            notification: {
+                channelId: "test",
+                sound: "default"
+            }
+        }
+    };
+
+    if (token) message.token = String(token);
+    else message.topic = String(topic);
+
+    const target = token ? String(token).substring(0, 20) + "..." : "topic:" + topic;
+
+    try {
+        const response = await messaging.send(message);
+        console.log("[sendTestNotification] FCM success:", response);
+
+        await db.collection("push_logs").add({
+            timestamp: new Date(),
+            type: String(type || "raid_start"),
+            target: String(target),
+            success: true,
+            messageId: String(response),
+            sender: String(callerEmail)
+        });
+
+        return { success: true, messageId: String(response) };
+    } catch (e) {
+        console.error("[sendTestNotification] FCM failed:", e.code, e.message);
+        try {
+            await db.collection("push_logs").add({
+                timestamp: new Date(),
+                type: String(type || "raid_start"),
+                target: String(target),
+                success: false,
+                error: String(e.code || e.message),
+                sender: String(callerEmail)
+            });
+        } catch (logErr) {
+            console.error("[sendTestNotification] Log write failed:", logErr.message);
+        }
+
+        throw new HttpsError("failed-precondition", "발송 실패: " + String(e.code || e.message));
+    }
+}
+
+async function handleSendAnnouncement(request) {
+    const callerEmail = request.auth?.token?.email;
+    if (callerEmail !== "nazi2k@gmail.com") {
+        throw new HttpsError("permission-denied", "권한이 없습니다.");
+    }
+
+    const { title, body, targetTab } = request.data || {};
+    if (!title || !body) {
+        throw new HttpsError("invalid-argument", "title과 body는 필수입니다.");
+    }
+
+    const message = {
+        topic: "announcements",
+        notification: { title, body },
+        data: {
+            tab: targetTab || "",
+            type: "announcement"
+        },
+        android: {
+            priority: "high",
+            notification: {
+                channelId: "announcements",
+                sound: "default"
+            }
+        }
+    };
+
+    const response = await messaging.send(message);
+    console.log("[공지사항] 발송 완료:", response);
+    return { success: true, messageId: response };
+}
+
+// ─── 0. Ping + Admin API Router (Callable) ───
+// Routes admin actions through the working ping function to bypass
+// per-function Cloud Run deployment/IAM issues in Gen 2.
 
 exports.ping = onCall(callableOpts, async (request) => {
+    // ── Action router: handle admin actions via ping ──
+    const action = request.data?.action;
+    if (action) {
+        try {
+            switch (action) {
+                case "getTestUsers":
+                    return await handleGetTestUsers(request);
+                case "getPushLogs":
+                    return await handleGetPushLogs(request);
+                case "sendTestNotification":
+                    return await handleSendTestNotification(request);
+                case "sendAnnouncement":
+                    return await handleSendAnnouncement(request);
+                default:
+                    throw new HttpsError("invalid-argument", "Unknown action: " + action);
+            }
+        } catch (e) {
+            if (e instanceof HttpsError) throw e;
+            console.error("[ping/" + action + "] Unhandled:", e);
+            throw new HttpsError("internal", action + " failed: " + String(e.message || e).substring(0, 500));
+        }
+    }
+
+    // ── Default: diagnostic ping ──
     const result = {
         ok: true,
         ts: new Date().toISOString(),
@@ -42,7 +264,6 @@ exports.ping = onCall(callableOpts, async (request) => {
         await messaging.send({ token: "test-invalid-token", notification: { title: "ping" } }, true);
         result.fcm = "ok (dry-run)";
     } catch (e) {
-        // messaging/invalid-argument = FCM API 연결 성공 (토큰만 무효)
         if (e.code === "messaging/invalid-argument" || e.code === "messaging/registration-token-not-registered") {
             result.fcm = "ok (API reachable, token invalid as expected)";
         } else {
@@ -50,14 +271,12 @@ exports.ping = onCall(callableOpts, async (request) => {
         }
     }
 
-    // 진단 모드: ping에서 다른 함수들의 핵심 로직 테스트
+    // 진단 모드
     if (request.data && request.data.diag) {
         const diag = {};
-        // admin check test
         diag.adminEmail = request.auth?.token?.email || null;
         diag.isAdmin = (request.auth?.token?.email === "nazi2k@gmail.com");
 
-        // pushEnabled query test
         try {
             const usersSnap = await db.collection("users")
                 .where("pushEnabled", "==", true)
@@ -68,7 +287,6 @@ exports.ping = onCall(callableOpts, async (request) => {
             diag.pushUsers = "FAIL: " + (e.code || "") + " " + (e.message || e);
         }
 
-        // push_logs query test
         try {
             const logsSnap = await db.collection("push_logs")
                 .orderBy("timestamp", "desc")
@@ -79,7 +297,6 @@ exports.ping = onCall(callableOpts, async (request) => {
             diag.pushLogs = "FAIL: " + (e.code || "") + " " + (e.message || e);
         }
 
-        // FCM topic send test (dry-run)
         try {
             await messaging.send({ topic: "raid_alerts", notification: { title: "diag" } }, true);
             diag.fcmTopic = "ok (dry-run)";
@@ -297,46 +514,14 @@ exports.sendStreakWarnings = onSchedule({
 });
 
 // ─── 4. 공지사항 수동 발송 (Callable Function — 관리자 전용) ───
+// NOTE: Individual exports kept for direct invocation; primary path is via ping router.
 
 exports.sendAnnouncement = onCall(callableOpts, async (request) => {
     try {
-    const callerEmail = request.auth?.token?.email;
-    if (callerEmail !== "nazi2k@gmail.com") {
-        throw new HttpsError("permission-denied", "권한이 없습니다.");
-    }
-
-    const { title, body, targetTab } = request.data || {};
-    if (!title || !body) {
-        throw new HttpsError("invalid-argument", "title과 body는 필수입니다.");
-    }
-
-    const message = {
-        topic: "announcements",
-        notification: { title, body },
-        data: {
-            tab: targetTab || "",
-            type: "announcement"
-        },
-        android: {
-            priority: "high",
-            notification: {
-                channelId: "announcements",
-                sound: "default"
-            }
-        }
-    };
-
-    try {
-        const response = await messaging.send(message);
-        console.log("[공지사항] 발송 완료:", response);
-        return { success: true, messageId: response };
-    } catch (e) {
-        console.error("[공지사항] 발송 실패:", e);
-        throw new HttpsError("failed-precondition", "공지사항 발송 실패: " + e.message);
-    }
+        return await handleSendAnnouncement(request);
     } catch (e) {
         if (e instanceof HttpsError) throw e;
-        throw new HttpsError("failed-precondition", "sendAnnouncement crashed: " + (e.stack || e.message || String(e)));
+        throw new HttpsError("internal", "sendAnnouncement crashed: " + (e.stack || e.message || String(e)));
     }
 });
 
@@ -387,81 +572,11 @@ exports.cleanupInactiveTokens = onSchedule({
 
 exports.sendTestNotification = onCall(callableOpts, async (request) => {
     try {
-        const callerEmail = request.auth?.token?.email;
-        const reqData = request.data || {};
-        console.log("[sendTestNotification] caller:", callerEmail, "data:", JSON.stringify(reqData));
-        if (callerEmail !== "nazi2k@gmail.com") {
-            throw new HttpsError("permission-denied", "권한이 없습니다.");
-        }
-
-        const { token, topic, type, lang, customTitle, customBody } = reqData;
-        if (!token && !topic) {
-            throw new HttpsError("invalid-argument", "token 또는 topic은 필수입니다.");
-        }
-
-        let notification;
-        if (type === "custom") {
-            if (!customTitle || !customBody) throw new HttpsError("invalid-argument", "커스텀 알림은 제목과 본문이 필수입니다.");
-            notification = { title: String(customTitle), body: String(customBody) };
-        } else {
-            notification = getLocalizedMessage(type || "raid_start", lang || "ko");
-        }
-
-        const message = {
-            notification,
-            data: {
-                tab: "status",
-                type: "test_" + (type || "raid_start")
-            },
-            android: {
-                priority: "high",
-                notification: {
-                    channelId: "test",
-                    sound: "default"
-                }
-            }
-        };
-
-        if (token) message.token = String(token);
-        else message.topic = String(topic);
-
-        const target = token ? String(token).substring(0, 20) + "..." : "topic:" + topic;
-
-        try {
-            const response = await messaging.send(message);
-            console.log("[sendTestNotification] FCM success:", response);
-
-            await db.collection("push_logs").add({
-                timestamp: new Date(),
-                type: String(type || "raid_start"),
-                target: String(target),
-                success: true,
-                messageId: String(response),
-                sender: String(callerEmail)
-            });
-
-            return { success: true, messageId: String(response) };
-        } catch (e) {
-            console.error("[sendTestNotification] FCM failed:", e.code, e.message);
-            try {
-                await db.collection("push_logs").add({
-                    timestamp: new Date(),
-                    type: String(type || "raid_start"),
-                    target: String(target),
-                    success: false,
-                    error: String(e.code || e.message),
-                    sender: String(callerEmail)
-                });
-            } catch (logErr) {
-                console.error("[sendTestNotification] Log write failed:", logErr.message);
-            }
-
-            throw new HttpsError("failed-precondition", "발송 실패: " + String(e.code || e.message));
-        }
+        return await handleSendTestNotification(request);
     } catch (e) {
         if (e instanceof HttpsError) throw e;
         console.error("[sendTestNotification] Unhandled:", e);
-        throw new HttpsError("unknown", "sendTestNotification crashed: " + String(e.message || e).substring(0, 500));
+        throw new HttpsError("internal", "sendTestNotification crashed: " + String(e.message || e).substring(0, 500));
     }
 });
 
@@ -469,52 +584,11 @@ exports.sendTestNotification = onCall(callableOpts, async (request) => {
 
 exports.getTestUsers = onCall(callableOpts, async (request) => {
     try {
-        const callerEmail = request.auth?.token?.email;
-        if (callerEmail !== "nazi2k@gmail.com") {
-            throw new HttpsError("permission-denied", "권한이 없습니다.");
-        }
-
-        console.log("[getTestUsers] Querying pushEnabled users...");
-        const usersSnap = await db.collection("users")
-            .where("pushEnabled", "==", true)
-            .limit(100)
-            .get();
-        console.log("[getTestUsers] Found", usersSnap.size, "users");
-
-        const now = new Date();
-        const users = [];
-        for (const doc of usersSnap.docs) {
-            try {
-                const data = doc.data();
-                let lastActiveDate = null;
-                let diffDays = null;
-                try {
-                    const streak = JSON.parse(data.streakStr || "{}");
-                    if (streak.lastActiveDate) {
-                        lastActiveDate = String(streak.lastActiveDate);
-                        const d = Math.floor((now - new Date(streak.lastActiveDate)) / (1000 * 60 * 60 * 24));
-                        diffDays = Number.isFinite(d) ? d : null;
-                    }
-                } catch (_e) { /* ignore streak parse error */ }
-
-                users.push({
-                    uid: String(doc.id),
-                    displayName: String(data.displayName || data.nickname || doc.id.substring(0, 8)),
-                    lang: String(data.lang || "ko"),
-                    fcmToken: data.fcmToken ? String(data.fcmToken) : null,
-                    lastActiveDate,
-                    diffDays
-                });
-            } catch (docErr) {
-                console.warn("[getTestUsers] Skipping doc", doc.id, docErr.message);
-            }
-        }
-        console.log("[getTestUsers] Returning", users.length, "users");
-        return { users };
+        return await handleGetTestUsers(request);
     } catch (e) {
         if (e instanceof HttpsError) throw e;
         console.error("[getTestUsers] Error:", e);
-        throw new HttpsError("unknown", "getTestUsers failed: " + String(e.message || e).substring(0, 500));
+        throw new HttpsError("internal", "getTestUsers failed: " + String(e.message || e).substring(0, 500));
     }
 });
 
@@ -522,49 +596,10 @@ exports.getTestUsers = onCall(callableOpts, async (request) => {
 
 exports.getPushLogs = onCall(callableOpts, async (request) => {
     try {
-        const callerEmail = request.auth?.token?.email;
-        if (callerEmail !== "nazi2k@gmail.com") {
-            throw new HttpsError("permission-denied", "권한이 없습니다.");
-        }
-
-        console.log("[getPushLogs] Querying push_logs...");
-        const logsSnap = await db.collection("push_logs")
-            .orderBy("timestamp", "desc")
-            .limit(50)
-            .get();
-        console.log("[getPushLogs] Found", logsSnap.size, "logs");
-
-        const logs = [];
-        for (const doc of logsSnap.docs) {
-            try {
-                const data = doc.data();
-                let ts;
-                try {
-                    ts = data.timestamp && typeof data.timestamp.toDate === "function"
-                        ? data.timestamp.toDate().toISOString()
-                        : String(data.timestamp || "");
-                } catch (_e) {
-                    ts = String(data.timestamp || "");
-                }
-                logs.push({
-                    id: String(doc.id),
-                    timestamp: ts,
-                    type: String(data.type || ""),
-                    target: String(data.target || ""),
-                    success: !!data.success,
-                    messageId: data.messageId ? String(data.messageId) : null,
-                    error: data.error ? String(data.error) : null,
-                    sender: data.sender ? String(data.sender) : null
-                });
-            } catch (docErr) {
-                console.warn("[getPushLogs] Skipping doc", doc.id, docErr.message);
-            }
-        }
-        console.log("[getPushLogs] Returning", logs.length, "logs");
-        return { logs };
+        return await handleGetPushLogs(request);
     } catch (e) {
         if (e instanceof HttpsError) throw e;
         console.error("[getPushLogs] Error:", e);
-        throw new HttpsError("unknown", "getPushLogs failed: " + String(e.message || e).substring(0, 500));
+        throw new HttpsError("internal", "getPushLogs failed: " + String(e.message || e).substring(0, 500));
     }
 });

@@ -682,8 +682,8 @@ window.doSendTest = async function() {
 
     tlog("Send", "Calling sendTestNotification... payload=" + JSON.stringify(payload));
     try {
-        const fn = httpsCallable(functions, "sendTestNotification");
-        const result = await fn(payload);
+        const fn = httpsCallable(functions, "ping");
+        const result = await fn({ action: "sendTestNotification", ...payload });
         tok("Send", "Success! messageId=" + result.data.messageId);
         resultEl.textContent = "Sent successfully! messageId: " + result.data.messageId;
         resultEl.className = "result-box success";
@@ -704,8 +704,8 @@ window.loadUsers = async function() {
 
     let useFallback = false;
     try {
-        const fn = httpsCallable(functions, "getTestUsers");
-        const result = await fn({});
+        const fn = httpsCallable(functions, "ping");
+        const result = await fn({ action: "getTestUsers" });
         usersCache = result.data.users || [];
         tok("Users", "Loaded " + usersCache.length + " push-enabled users");
     } catch (e) {
@@ -786,8 +786,8 @@ window.loadLogs = async function() {
     let logs = [];
     let useFallback = false;
     try {
-        const fn = httpsCallable(functions, "getPushLogs");
-        const result = await fn({});
+        const fn = httpsCallable(functions, "ping");
+        const result = await fn({ action: "getPushLogs" });
         logs = result.data.logs || [];
         tok("History", "Loaded " + logs.length + " log entries");
     } catch (e) {
