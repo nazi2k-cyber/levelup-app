@@ -258,7 +258,7 @@ exports.sendStreakWarnings = onSchedule({
 // ─── 4. 공지사항 수동 발송 (Callable Function — 관리자 전용) ───
 
 exports.sendAnnouncement = onCall(callableOpts, async (request) => {
-    // 관리자 인증 확인
+    try {
     const callerEmail = request.auth?.token?.email;
     if (callerEmail !== "nazi2k@gmail.com") {
         throw new HttpsError("permission-denied", "권한이 없습니다.");
@@ -291,7 +291,11 @@ exports.sendAnnouncement = onCall(callableOpts, async (request) => {
         return { success: true, messageId: response };
     } catch (e) {
         console.error("[공지사항] 발송 실패:", e);
-        throw new HttpsError("unknown", "공지사항 발송 실패: " + e.message);
+        throw new HttpsError("failed-precondition", "공지사항 발송 실패: " + e.message);
+    }
+    } catch (e) {
+        if (e instanceof HttpsError) throw e;
+        throw new HttpsError("failed-precondition", "sendAnnouncement crashed: " + (e.stack || e.message || String(e)));
     }
 });
 
@@ -341,84 +345,88 @@ exports.cleanupInactiveTokens = onSchedule({
 // ─── 6. 테스트 푸시 발송 (Callable — 관리자 전용) ───
 
 exports.sendTestNotification = onCall(callableOpts, async (request) => {
-    const callerEmail = request.auth?.token?.email;
-    if (callerEmail !== "nazi2k@gmail.com") {
-        throw new HttpsError("permission-denied", "권한이 없습니다.");
-    }
-
-    const { token, topic, type, lang, customTitle, customBody } = request.data;
-    if (!token && !topic) {
-        throw new HttpsError("invalid-argument", "token 또는 topic은 필수입니다.");
-    }
-
-    let notification;
-    if (type === "custom") {
-        if (!customTitle || !customBody) throw new HttpsError("invalid-argument", "커스텀 알림은 제목과 본문이 필수입니다.");
-        notification = { title: customTitle, body: customBody };
-    } else {
-        notification = getLocalizedMessage(type || "raid_start", lang || "ko");
-    }
-
-    const message = {
-        notification,
-        data: {
-            tab: "status",
-            type: "test_" + (type || "raid_start")
-        },
-        android: {
-            priority: "high",
-            notification: {
-                channelId: "test",
-                sound: "default"
-            }
-        }
-    };
-
-    if (token) message.token = token;
-    else message.topic = topic;
-
-    const target = token ? token.substring(0, 20) + "..." : "topic:" + topic;
-
     try {
-        const response = await messaging.send(message);
+        const callerEmail = request.auth?.token?.email;
+        if (callerEmail !== "nazi2k@gmail.com") {
+            throw new HttpsError("permission-denied", "권한이 없습니다.");
+        }
 
-        // 발송 이력 기록
-        await db.collection("push_logs").add({
-            timestamp: new Date(),
-            type: type || "raid_start",
-            target,
-            success: true,
-            messageId: response,
-            sender: callerEmail
-        });
+        const { token, topic, type, lang, customTitle, customBody } = request.data;
+        if (!token && !topic) {
+            throw new HttpsError("invalid-argument", "token 또는 topic은 필수입니다.");
+        }
 
-        console.log("[테스트 발송] 성공:", response);
-        return { success: true, messageId: response };
+        let notification;
+        if (type === "custom") {
+            if (!customTitle || !customBody) throw new HttpsError("invalid-argument", "커스텀 알림은 제목과 본문이 필수입니다.");
+            notification = { title: customTitle, body: customBody };
+        } else {
+            notification = getLocalizedMessage(type || "raid_start", lang || "ko");
+        }
+
+        const message = {
+            notification,
+            data: {
+                tab: "status",
+                type: "test_" + (type || "raid_start")
+            },
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: "test",
+                    sound: "default"
+                }
+            }
+        };
+
+        if (token) message.token = token;
+        else message.topic = topic;
+
+        const target = token ? token.substring(0, 20) + "..." : "topic:" + topic;
+
+        try {
+            const response = await messaging.send(message);
+
+            await db.collection("push_logs").add({
+                timestamp: new Date(),
+                type: type || "raid_start",
+                target,
+                success: true,
+                messageId: response,
+                sender: callerEmail
+            });
+
+            console.log("[테스트 발송] 성공:", response);
+            return { success: true, messageId: String(response) };
+        } catch (e) {
+            await db.collection("push_logs").add({
+                timestamp: new Date(),
+                type: type || "raid_start",
+                target,
+                success: false,
+                error: e.code || e.message,
+                sender: callerEmail
+            });
+
+            console.error("[테스트 발송] 실패:", e);
+            throw new HttpsError("failed-precondition", "발송 실패: " + (e.code || e.message));
+        }
     } catch (e) {
-        // 실패 이력 기록
-        await db.collection("push_logs").add({
-            timestamp: new Date(),
-            type: type || "raid_start",
-            target,
-            success: false,
-            error: e.code || e.message,
-            sender: callerEmail
-        });
-
-        console.error("[테스트 발송] 실패:", e);
-        throw new HttpsError("unknown", "발송 실패: " + (e.code || e.message));
+        if (e instanceof HttpsError) throw e;
+        console.error("[sendTestNotification] Unhandled:", e);
+        throw new HttpsError("failed-precondition", "sendTestNotification crashed: " + (e.stack || e.message || String(e)));
     }
 });
 
 // ─── 7. 푸시 활성 유저 목록 조회 (Callable — 관리자 전용) ───
 
 exports.getTestUsers = onCall(callableOpts, async (request) => {
-    const callerEmail = request.auth?.token?.email;
-    if (callerEmail !== "nazi2k@gmail.com") {
-        throw new HttpsError("permission-denied", "권한이 없습니다.");
-    }
-
     try {
+        const callerEmail = request.auth?.token?.email;
+        if (callerEmail !== "nazi2k@gmail.com") {
+            throw new HttpsError("permission-denied", "권한이 없습니다.");
+        }
+
         const usersSnap = await db.collection("users")
             .where("pushEnabled", "==", true)
             .limit(100)
@@ -441,27 +449,28 @@ exports.getTestUsers = onCall(callableOpts, async (request) => {
                 uid: doc.id,
                 displayName: data.displayName || data.nickname || doc.id.substring(0, 8),
                 lang: data.lang || "ko",
-                fcmToken: data.fcmToken || null,
+                fcmToken: data.fcmToken ? String(data.fcmToken) : null,
                 lastActiveDate,
                 diffDays
             };
         });
         return { users };
     } catch (e) {
+        if (e instanceof HttpsError) throw e;
         console.error("[getTestUsers] Error:", e);
-        throw new HttpsError("unknown", "유저 목록 조회 실패: " + e.message);
+        throw new HttpsError("failed-precondition", "getTestUsers failed: " + (e.stack || e.message || String(e)));
     }
 });
 
 // ─── 8. 발송 이력 조회 (Callable — 관리자 전용) ───
 
 exports.getPushLogs = onCall(callableOpts, async (request) => {
-    const callerEmail = request.auth?.token?.email;
-    if (callerEmail !== "nazi2k@gmail.com") {
-        throw new HttpsError("permission-denied", "권한이 없습니다.");
-    }
-
     try {
+        const callerEmail = request.auth?.token?.email;
+        if (callerEmail !== "nazi2k@gmail.com") {
+            throw new HttpsError("permission-denied", "권한이 없습니다.");
+        }
+
         const logsSnap = await db.collection("push_logs")
             .orderBy("timestamp", "desc")
             .limit(50)
@@ -472,17 +481,18 @@ exports.getPushLogs = onCall(callableOpts, async (request) => {
             return {
                 id: doc.id,
                 timestamp: data.timestamp?.toDate?.() ? data.timestamp.toDate().toISOString() : String(data.timestamp),
-                type: data.type,
-                target: data.target,
-                success: data.success,
-                messageId: data.messageId || null,
-                error: data.error || null,
-                sender: data.sender
+                type: String(data.type || ""),
+                target: String(data.target || ""),
+                success: !!data.success,
+                messageId: data.messageId ? String(data.messageId) : null,
+                error: data.error ? String(data.error) : null,
+                sender: data.sender ? String(data.sender) : null
             };
         });
         return { logs };
     } catch (e) {
+        if (e instanceof HttpsError) throw e;
         console.error("[getPushLogs] Error:", e);
-        throw new HttpsError("unknown", "로그 조회 실패: " + e.message);
+        throw new HttpsError("failed-precondition", "getPushLogs failed: " + (e.stack || e.message || String(e)));
     }
 });
