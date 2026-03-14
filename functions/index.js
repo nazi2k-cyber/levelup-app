@@ -25,7 +25,8 @@ exports.ping = onCall(callableOpts, async (request) => {
         node: process.version,
         region: process.env.FUNCTION_REGION || "unknown",
         firestore: null,
-        fcm: null
+        fcm: null,
+        diag: null
     };
 
     // Firestore 접근 테스트
@@ -47,6 +48,46 @@ exports.ping = onCall(callableOpts, async (request) => {
         } else {
             result.fcm = "FAIL: " + (e.code || "") + " " + (e.message || e);
         }
+    }
+
+    // 진단 모드: ping에서 다른 함수들의 핵심 로직 테스트
+    if (request.data && request.data.diag) {
+        const diag = {};
+        // admin check test
+        diag.adminEmail = request.auth?.token?.email || null;
+        diag.isAdmin = (request.auth?.token?.email === "nazi2k@gmail.com");
+
+        // pushEnabled query test
+        try {
+            const usersSnap = await db.collection("users")
+                .where("pushEnabled", "==", true)
+                .limit(5)
+                .get();
+            diag.pushUsers = "ok (" + usersSnap.size + " docs)";
+        } catch (e) {
+            diag.pushUsers = "FAIL: " + (e.code || "") + " " + (e.message || e);
+        }
+
+        // push_logs query test
+        try {
+            const logsSnap = await db.collection("push_logs")
+                .orderBy("timestamp", "desc")
+                .limit(5)
+                .get();
+            diag.pushLogs = "ok (" + logsSnap.size + " docs)";
+        } catch (e) {
+            diag.pushLogs = "FAIL: " + (e.code || "") + " " + (e.message || e);
+        }
+
+        // FCM topic send test (dry-run)
+        try {
+            await messaging.send({ topic: "raid_alerts", notification: { title: "diag" } }, true);
+            diag.fcmTopic = "ok (dry-run)";
+        } catch (e) {
+            diag.fcmTopic = "FAIL: " + (e.code || "") + " " + (e.message || e);
+        }
+
+        result.diag = diag;
     }
 
     return result;
@@ -264,7 +305,7 @@ exports.sendAnnouncement = onCall(callableOpts, async (request) => {
         throw new HttpsError("permission-denied", "권한이 없습니다.");
     }
 
-    const { title, body, targetTab } = request.data;
+    const { title, body, targetTab } = request.data || {};
     if (!title || !body) {
         throw new HttpsError("invalid-argument", "title과 body는 필수입니다.");
     }
@@ -347,12 +388,13 @@ exports.cleanupInactiveTokens = onSchedule({
 exports.sendTestNotification = onCall(callableOpts, async (request) => {
     try {
         const callerEmail = request.auth?.token?.email;
-        console.log("[sendTestNotification] caller:", callerEmail, "data:", JSON.stringify(request.data));
+        const reqData = request.data || {};
+        console.log("[sendTestNotification] caller:", callerEmail, "data:", JSON.stringify(reqData));
         if (callerEmail !== "nazi2k@gmail.com") {
             throw new HttpsError("permission-denied", "권한이 없습니다.");
         }
 
-        const { token, topic, type, lang, customTitle, customBody } = request.data;
+        const { token, topic, type, lang, customTitle, customBody } = reqData;
         if (!token && !topic) {
             throw new HttpsError("invalid-argument", "token 또는 topic은 필수입니다.");
         }
@@ -419,7 +461,7 @@ exports.sendTestNotification = onCall(callableOpts, async (request) => {
     } catch (e) {
         if (e instanceof HttpsError) throw e;
         console.error("[sendTestNotification] Unhandled:", e);
-        throw new HttpsError("internal", "sendTestNotification crashed: " + String(e.message || e).substring(0, 500));
+        throw new HttpsError("unknown", "sendTestNotification crashed: " + String(e.message || e).substring(0, 500));
     }
 });
 

@@ -556,14 +556,26 @@ onAuthStateChanged(auth, (user) => {
 
 // --- Ping (Functions health check) ---
 async function pingFunctions() {
-    tlog("Ping", "Calling ping function to check Cloud Functions health...");
+    tlog("Ping", "Calling ping function with diagnostics...");
     try {
         const fn = httpsCallable(functions, "ping");
-        const result = await fn({});
+        const result = await fn({ diag: true });
         const d = result.data;
         tok("Ping", "Cloud Functions OK — node=" + d.node + " auth=" + d.auth + " ts=" + d.ts);
         (d.firestore && d.firestore.startsWith("ok")) ? tok("Ping", "Firestore: " + d.firestore) : terror("Ping", "Firestore: " + d.firestore);
         (d.fcm && d.fcm.startsWith("ok")) ? tok("Ping", "FCM: " + d.fcm) : terror("Ping", "FCM: " + d.fcm);
+
+        // 진단 결과 표시
+        if (d.diag) {
+            tlog("Ping", "--- Diagnostics ---");
+            tlog("Ping", "Admin: " + d.diag.adminEmail + " (isAdmin=" + d.diag.isAdmin + ")");
+            const chk = (label, val) => (val && val.startsWith("ok")) ? tok("Ping", label + ": " + val) : terror("Ping", label + ": " + val);
+            chk("PushUsers query", d.diag.pushUsers);
+            chk("PushLogs query", d.diag.pushLogs);
+            chk("FCM topic send", d.diag.fcmTopic);
+        } else {
+            twarn("Ping", "Diagnostics not available — functions may need redeployment");
+        }
     } catch (e) {
         terror("Ping", "Cloud Functions UNREACHABLE — code=" + (e.code || "unknown") + " message=" + (e.message || e) + " details=" + JSON.stringify(e.details || null));
         terror("Ping", "Functions may not be deployed. Run: firebase deploy --only functions --force");
