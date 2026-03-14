@@ -36,6 +36,10 @@ jobs:
       - name: Firebase CLI 설치
         run: npm install -g firebase-tools
 
+      - name: 고아 함수 정리 (삭제 실패 방지)
+        continue-on-error: true
+        run: firebase functions:delete sendRaidAlerts --region asia-northeast3 --force 2>/dev/null || true
+
       - name: Firebase Functions 배포
         run: firebase deploy --only functions --force
 
