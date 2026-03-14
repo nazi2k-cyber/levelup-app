@@ -467,7 +467,7 @@ async function loadUserDataFromDB(user) {
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
             AppState.user.name = data.name || user.displayName || "신규 헌터";
-            if(data.photoURL) {
+            if(data.photoURL && (data.photoURL.startsWith('https://') || data.photoURL.startsWith('data:'))) {
                 AppState.user.photoURL = data.photoURL;
                 document.getElementById('profilePreview').src = data.photoURL;
             }
@@ -1490,7 +1490,15 @@ async function simulateGoogleLogin() {
     }
 }
 
-async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+async function logout() {
+    AppLogger.info('[Auth] 로그아웃');
+    await fbSignOut(auth);
+    // 플래너 사진은 기기에만 저장되므로 로그아웃 시에도 보존
+    const diaryBackup = localStorage.getItem('diary_entries');
+    localStorage.clear();
+    if (diaryBackup) localStorage.setItem('diary_entries', diaryBackup);
+    window.location.reload();
+}
 
 function toggleAuthMode() {
     AppState.isLoginMode = !AppState.isLoginMode;
