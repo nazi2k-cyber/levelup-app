@@ -12,10 +12,25 @@ const messaging = getMessaging();
 const callableOpts = {
     region: "asia-northeast3",
     cors: true,
-    invoker: "public"
+    invoker: "public",
+    memory: "512MiB",
+    timeoutSeconds: 60
 };
 
-// ─── 0. 진단용 Ping (Callable) ───
+// ─── 0-1. 진단용 Echo (Callable — 최소 테스트) ───
+
+exports.echo = onCall(callableOpts, async (request) => {
+    return {
+        ok: true,
+        ts: new Date().toISOString(),
+        auth: request.auth?.token?.email || null,
+        data: request.data || null,
+        node: process.version,
+        memory: process.memoryUsage()
+    };
+});
+
+// ─── 0-2. 진단용 Ping (Callable) ───
 
 exports.ping = onCall(callableOpts, async (request) => {
     const result = {
@@ -176,9 +191,10 @@ exports.sendStreakWarnings = onSchedule({
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
 
-    // pushEnabled이고 fcmToken이 있는 전체 유저 조회
+    // pushEnabled이고 fcmToken이 있는 전체 유저 조회 (필요 필드만)
     const usersSnap = await db.collection("users")
         .where("pushEnabled", "==", true)
+        .select("fcmToken", "streakStr", "lang", "pushEnabled")
         .get();
 
     let warningCount = 0;
@@ -312,6 +328,7 @@ exports.cleanupInactiveTokens = onSchedule({
 
     const usersSnap = await db.collection("users")
         .where("pushEnabled", "==", true)
+        .select("fcmToken", "streakStr", "pushEnabled")
         .get();
 
     let cleanedCount = 0;
@@ -435,6 +452,7 @@ exports.getTestUsers = onCall(callableOpts, async (request) => {
         console.log("[getTestUsers] Querying pushEnabled users...");
         const usersSnap = await db.collection("users")
             .where("pushEnabled", "==", true)
+            .select("displayName", "nickname", "lang", "fcmToken", "streakStr", "pushEnabled")
             .limit(100)
             .get();
         console.log("[getTestUsers] Found", usersSnap.size, "users");

@@ -568,6 +568,18 @@ async function pingFunctions() {
         terror("Ping", "Cloud Functions UNREACHABLE — code=" + (e.code || "unknown") + " message=" + (e.message || e) + " details=" + JSON.stringify(e.details || null));
         terror("Ping", "Functions may not be deployed. Run: firebase deploy --only functions --force");
     }
+
+    // Echo 진단 테스트 — 최소 callable 함수 동작 확인
+    tlog("Echo", "Calling echo function (minimal callable test)...");
+    try {
+        const echoFn = httpsCallable(functions, "echo");
+        const echoResult = await echoFn({ test: "hello", ts: Date.now() });
+        const ed = echoResult.data;
+        tok("Echo", "Echo OK — auth=" + ed.auth + " node=" + ed.node + " mem=" + JSON.stringify(ed.memory));
+    } catch (e) {
+        terror("Echo", "Echo FAILED — code=" + (e.code || "unknown") + " message=" + (e.message || e));
+        terror("Echo", "If ping works but echo fails, functions may need redeployment: firebase deploy --only functions --force");
+    }
 }
 
 // --- Dashboard ---
