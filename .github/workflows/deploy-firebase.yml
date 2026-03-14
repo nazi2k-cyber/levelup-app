@@ -1,0 +1,49 @@
+name: Firebase Functions & Hosting 배포
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'functions/**'
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'firebase.json'
+      - 'push-test.html'
+      - 'www/push-test.html'
+  workflow_dispatch:  # 수동 트리거
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Functions 의존성 설치
+        run: cd functions && npm ci
+
+      - name: Firebase CLI 설치
+        run: npm install -g firebase-tools
+
+      - name: Firebase Functions 배포
+        run: firebase deploy --only functions --force
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Firestore Rules & Indexes 배포
+        run: firebase deploy --only firestore
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: 배포 결과 요약
+        if: success()
+        run: |
+          echo "✅ Firebase 배포 완료!"
+          echo "  - Cloud Functions (asia-northeast3)"
+          echo "  - Firestore Rules & Indexes"
