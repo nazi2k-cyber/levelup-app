@@ -18,13 +18,38 @@ const callableOpts = {
 // ─── 0. 진단용 Ping (Callable) ───
 
 exports.ping = onCall(callableOpts, async (request) => {
-    return {
+    const result = {
         ok: true,
         ts: new Date().toISOString(),
         auth: request.auth ? request.auth.token.email : null,
         node: process.version,
-        region: process.env.FUNCTION_REGION || "unknown"
+        region: process.env.FUNCTION_REGION || "unknown",
+        firestore: null,
+        fcm: null
     };
+
+    // Firestore 접근 테스트
+    try {
+        const snap = await db.collection("users").limit(1).get();
+        result.firestore = "ok (" + snap.size + " docs)";
+    } catch (e) {
+        result.firestore = "FAIL: " + (e.code || "") + " " + (e.message || e);
+    }
+
+    // FCM 접근 테스트 (dry-run: 유효하지 않은 토큰으로 send 시도)
+    try {
+        await messaging.send({ token: "test-invalid-token", notification: { title: "ping" } }, true);
+        result.fcm = "ok (dry-run)";
+    } catch (e) {
+        // messaging/invalid-argument = FCM API 연결 성공 (토큰만 무효)
+        if (e.code === "messaging/invalid-argument" || e.code === "messaging/registration-token-not-registered") {
+            result.fcm = "ok (API reachable, token invalid as expected)";
+        } else {
+            result.fcm = "FAIL: " + (e.code || "") + " " + (e.message || e);
+        }
+    }
+
+    return result;
 });
 
 // ─── 다국어 알림 메시지 ───
@@ -266,7 +291,7 @@ exports.sendAnnouncement = onCall(callableOpts, async (request) => {
         return { success: true, messageId: response };
     } catch (e) {
         console.error("[공지사항] 발송 실패:", e);
-        throw new HttpsError("internal", "공지사항 발송 실패: " + e.message);
+        throw new HttpsError("unknown", "공지사항 발송 실패: " + e.message);
     }
 });
 
@@ -381,7 +406,7 @@ exports.sendTestNotification = onCall(callableOpts, async (request) => {
         });
 
         console.error("[테스트 발송] 실패:", e);
-        throw new HttpsError("internal", "발송 실패: " + (e.code || e.message));
+        throw new HttpsError("unknown", "발송 실패: " + (e.code || e.message));
     }
 });
 
@@ -424,7 +449,7 @@ exports.getTestUsers = onCall(callableOpts, async (request) => {
         return { users };
     } catch (e) {
         console.error("[getTestUsers] Error:", e);
-        throw new HttpsError("internal", "유저 목록 조회 실패: " + e.message);
+        throw new HttpsError("unknown", "유저 목록 조회 실패: " + e.message);
     }
 });
 
@@ -458,6 +483,6 @@ exports.getPushLogs = onCall(callableOpts, async (request) => {
         return { logs };
     } catch (e) {
         console.error("[getPushLogs] Error:", e);
-        throw new HttpsError("internal", "로그 조회 실패: " + e.message);
+        throw new HttpsError("unknown", "로그 조회 실패: " + e.message);
     }
 });

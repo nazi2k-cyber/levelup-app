@@ -560,7 +560,10 @@ async function pingFunctions() {
     try {
         const fn = httpsCallable(functions, "ping");
         const result = await fn({});
-        tok("Ping", "Cloud Functions OK — node=" + result.data.node + " auth=" + result.data.auth + " ts=" + result.data.ts);
+        const d = result.data;
+        tok("Ping", "Cloud Functions OK — node=" + d.node + " auth=" + d.auth + " ts=" + d.ts);
+        (d.firestore && d.firestore.startsWith("ok")) ? tok("Ping", "Firestore: " + d.firestore) : terror("Ping", "Firestore: " + d.firestore);
+        (d.fcm && d.fcm.startsWith("ok")) ? tok("Ping", "FCM: " + d.fcm) : terror("Ping", "FCM: " + d.fcm);
     } catch (e) {
         terror("Ping", "Cloud Functions UNREACHABLE — code=" + (e.code || "unknown") + " message=" + (e.message || e) + " details=" + JSON.stringify(e.details || null));
         terror("Ping", "Functions may not be deployed. Run: firebase deploy --only functions --force");
