@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -16,7 +16,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true
+});
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
@@ -2796,7 +2798,7 @@ function loadPlannerForDate(dateStr) {
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) { preview.classList.add('d-none'); preview.src = ''; }
+        if (preview) { preview.classList.add('d-none'); preview.removeAttribute('src'); }
         if (placeholder) placeholder.classList.remove('d-none');
         if (removeBtn) removeBtn.classList.add('d-none');
         const fileInput = document.getElementById('plannerPhotoUpload');
@@ -2938,7 +2940,7 @@ window.removePlannerPhoto = function() {
     const placeholder = document.getElementById('planner-photo-placeholder');
     const removeBtn = document.getElementById('planner-photo-remove');
     preview.classList.add('d-none');
-    preview.src = '';
+    preview.removeAttribute('src');
     placeholder.classList.remove('d-none');
     removeBtn.classList.add('d-none');
     document.getElementById('plannerPhotoUpload').value = '';
