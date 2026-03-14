@@ -452,6 +452,14 @@ async function loadUserDataFromDB(user) {
                 AppState.user.photoURL = data.photoURL;
                 document.getElementById('profilePreview').src = data.photoURL;
             }
+        } else {
+            // 신규 유저: Auth 프로필에서 이름/사진 가져오고 Firestore 문서 생성
+            AppState.user.name = user.displayName || "신규 헌터";
+            if (user.photoURL) {
+                AppState.user.photoURL = user.photoURL;
+                document.getElementById('profilePreview').src = user.photoURL;
+            }
+            await saveUserData();
         }
         loadPlayerName();
     } catch(e) { console.error("데이터 로드 에러:", e); AppLogger.error('[DB] 데이터 로드 실패', e.stack || e.message); }
@@ -1380,7 +1388,7 @@ function renderUsers(criteria, btn = null) {
 
 window.toggleFriend = async (id) => {
     const isFriend = AppState.user.friends.includes(id);
-    await updateDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) });
+    await setDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) }, { merge: true });
     AppState.user.friends = isFriend ? AppState.user.friends.filter(f=>f!==id) : [...AppState.user.friends, id];
     fetchSocialData();
 };
@@ -3030,9 +3038,9 @@ async function saveReelsToFirestore(post) {
         const now = Date.now();
         existingPosts = existingPosts.filter(p => (now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
         existingPosts.push(post);
-        await updateDoc(doc(db, "users", auth.currentUser.uid), {
+        await setDoc(doc(db, "users", auth.currentUser.uid), {
             reelsStr: JSON.stringify(existingPosts)
-        });
+        }, { merge: true });
     } catch(e) { AppLogger.error('[Reels] Firestore 저장 실패: ' + (e.message || e)); }
 }
 
