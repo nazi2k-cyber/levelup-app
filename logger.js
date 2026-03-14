@@ -57,6 +57,22 @@
         } catch (_) { /* 로깅 자체 오류는 무시 */ }
     }
 
+    // ── 순환 참조 안전한 직렬화 ────────────────────────────
+    function safeStringify(obj) {
+        try {
+            var seen = new Set();
+            return JSON.stringify(obj, function (_key, val) {
+                if (typeof val === 'object' && val !== null) {
+                    if (seen.has(val)) return '[Circular]';
+                    seen.add(val);
+                }
+                return val;
+            });
+        } catch (_e) {
+            return String(obj);
+        }
+    }
+
     // ── console 메서드 인터셉트 ────────────────────────────
     function interceptConsole() {
         const _error = console.error.bind(console);
@@ -66,7 +82,7 @@
             _error(...args);
             const msg = args.map(a => {
                 if (a instanceof Error) return a.message;
-                return typeof a === 'object' ? JSON.stringify(a) : String(a);
+                return typeof a === 'object' ? safeStringify(a) : String(a);
             }).join(' ');
             const stack = args.find(a => a instanceof Error)?.stack || '';
             addEntry('ERROR', msg, stack);
@@ -74,7 +90,7 @@
 
         console.warn = function (...args) {
             _warn(...args);
-            addEntry('WARN', args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), '');
+            addEntry('WARN', args.map(a => typeof a === 'object' ? safeStringify(a) : String(a)).join(' '), '');
         };
     }
 
