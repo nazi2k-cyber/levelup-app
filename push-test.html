@@ -225,6 +225,79 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
     display: none;
 }
 .log-panel-spacer { height: 200px; }
+
+/* Conditions Panel */
+.conditions-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.conditions-table th {
+    text-align: left; color: var(--accent); font-weight: 600;
+    padding: 10px 8px; border-bottom: 2px solid var(--accent-dim);
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.conditions-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.conditions-table tr:hover { background: var(--bg-input); }
+
+.cond-type-icon { font-size: 1.1rem; margin-right: 6px; }
+.cond-type-label { font-weight: 600; font-size: 0.85rem; }
+.cond-type-sub { font-size: 0.7rem; color: var(--text-sub); display: block; margin-top: 2px; }
+
+.cond-schedule {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--bg-input); padding: 3px 10px; border-radius: 12px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.75rem;
+    color: var(--accent); border: 1px solid var(--accent-dim);
+}
+.cond-condition {
+    font-size: 0.78rem; line-height: 1.5;
+}
+.cond-condition code {
+    background: var(--bg-input); padding: 1px 6px; border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.72rem;
+    color: var(--warning); border: 1px solid #ffc10722;
+}
+.cond-target-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 12px; font-size: 0.72rem; font-weight: 600;
+}
+.cond-target-topic { background: #7c4dff22; color: #b388ff; border: 1px solid #7c4dff33; }
+.cond-target-individual { background: #ff6e4022; color: #ff8a65; border: 1px solid #ff6e4033; }
+.cond-target-internal { background: #78909c22; color: #90a4ae; border: 1px solid #78909c33; }
+
+.btn-trigger {
+    padding: 5px 12px; border-radius: 6px; font-size: 0.72rem; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); background: var(--bg-input);
+    color: var(--text); transition: all 0.2s;
+}
+.btn-trigger:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.btn-trigger:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-trigger.sending { color: var(--warning); border-color: var(--warning); }
+
+.cond-section-label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-sub); padding: 14px 8px 6px; border-bottom: 1px solid var(--border);
+}
+.cond-section-label td { padding: 14px 8px 6px; }
+
+.cond-legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    padding: 12px 0 4px; border-top: 1px solid var(--border); margin-top: 12px;
+}
+.cond-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-sub); }
+.cond-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.cond-legend-dot.topic { background: #b388ff; }
+.cond-legend-dot.individual { background: #ff8a65; }
+.cond-legend-dot.internal { background: #90a4ae; }
+
+.cond-trigger-result {
+    font-size: 0.72rem; margin-top: 4px; padding: 2px 6px; border-radius: 4px;
+}
+.cond-trigger-result.ok { color: var(--success); }
+.cond-trigger-result.fail { color: var(--error); }
+
+@media (max-width: 600px) {
+    .conditions-table { font-size: 0.7rem; }
+    .conditions-table th:nth-child(4), .conditions-table td:nth-child(4) { display: none; }
+    .cond-schedule { font-size: 0.68rem; padding: 2px 6px; }
+}
 </style>
 </head>
 <body>
@@ -258,6 +331,187 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
             <div class="stat-card"><div class="number" id="stat-push">-</div><div class="label">Push ON</div></div>
             <div class="stat-card"><div class="number" id="stat-token">-</div><div class="label">Active Tokens</div></div>
             <div class="stat-card"><div class="number" id="stat-warn">-</div><div class="label">Streak Risk</div></div>
+        </div>
+    </div>
+
+    <!-- Push Conditions Control Panel -->
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h2 style="margin:0;">Push Notification Conditions</h2>
+            <button class="btn btn-ghost btn-sm" onclick="refreshConditionsStatus()">Refresh Status</button>
+        </div>
+
+        <table class="conditions-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Schedule</th>
+                    <th>Condition</th>
+                    <th>Target</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Scheduled Auto -->
+                <tr><td colspan="5" class="cond-section-label">Scheduled — Auto</td></tr>
+
+                <tr id="cond-raid1">
+                    <td>
+                        <span class="cond-type-icon">⚔️</span>
+                        <span class="cond-type-label">Raid Alert #1</span>
+                        <span class="cond-type-sub">sendRaidAlert0555</span>
+                    </td>
+                    <td><span class="cond-schedule">05:55 KST</span></td>
+                    <td class="cond-condition">Every day (unconditional)</td>
+                    <td><span class="cond-target-badge cond-target-topic">Topic: raid_alerts</span></td>
+                    <td>
+                        <button class="btn-trigger" onclick="triggerCondition('raid_start', 'raid_alerts', this)">Trigger</button>
+                        <div class="cond-trigger-result" id="cond-result-raid1"></div>
+                    </td>
+                </tr>
+
+                <tr id="cond-raid2">
+                    <td>
+                        <span class="cond-type-icon">⚔️</span>
+                        <span class="cond-type-label">Raid Alert #2</span>
+                        <span class="cond-type-sub">sendRaidAlert1125</span>
+                    </td>
+                    <td><span class="cond-schedule">11:25 KST</span></td>
+                    <td class="cond-condition">Every day (unconditional)</td>
+                    <td><span class="cond-target-badge cond-target-topic">Topic: raid_alerts</span></td>
+                    <td>
+                        <button class="btn-trigger" onclick="triggerCondition('raid_start', 'raid_alerts', this)">Trigger</button>
+                        <div class="cond-trigger-result" id="cond-result-raid2"></div>
+                    </td>
+                </tr>
+
+                <tr id="cond-raid3">
+                    <td>
+                        <span class="cond-type-icon">⚔️</span>
+                        <span class="cond-type-label">Raid Alert #3</span>
+                        <span class="cond-type-sub">sendRaidAlert1855</span>
+                    </td>
+                    <td><span class="cond-schedule">18:55 KST</span></td>
+                    <td class="cond-condition">Every day (unconditional)</td>
+                    <td><span class="cond-target-badge cond-target-topic">Topic: raid_alerts</span></td>
+                    <td>
+                        <button class="btn-trigger" onclick="triggerCondition('raid_start', 'raid_alerts', this)">Trigger</button>
+                        <div class="cond-trigger-result" id="cond-result-raid3"></div>
+                    </td>
+                </tr>
+
+                <tr id="cond-daily">
+                    <td>
+                        <span class="cond-type-icon">🎯</span>
+                        <span class="cond-type-label">Daily Reminder</span>
+                        <span class="cond-type-sub">sendDailyReminder</span>
+                    </td>
+                    <td><span class="cond-schedule">09:00 KST</span></td>
+                    <td class="cond-condition">Every day (unconditional)</td>
+                    <td><span class="cond-target-badge cond-target-topic">Topic: daily_reminder</span></td>
+                    <td>
+                        <button class="btn-trigger" onclick="triggerCondition('daily_reminder', 'daily_reminder', this)">Trigger</button>
+                        <div class="cond-trigger-result" id="cond-result-daily"></div>
+                    </td>
+                </tr>
+
+                <tr id="cond-streak-warn">
+                    <td>
+                        <span class="cond-type-icon">🔥</span>
+                        <span class="cond-type-label">Streak Warning</span>
+                        <span class="cond-type-sub">sendStreakWarnings</span>
+                    </td>
+                    <td><span class="cond-schedule">21:00 KST</span></td>
+                    <td class="cond-condition">
+                        <code>lastActiveDate >= 2d</code><br>
+                        <code>pushEnabled == true</code><br>
+                        <code>fcmToken</code> exists
+                    </td>
+                    <td><span class="cond-target-badge cond-target-individual">Individual Token</span></td>
+                    <td>
+                        <button class="btn-trigger" onclick="triggerCondition('streak_warning', null, this)">Trigger</button>
+                        <div class="cond-trigger-result" id="cond-result-streak-warn"></div>
+                    </td>
+                </tr>
+
+                <tr id="cond-streak-broken">
+                    <td>
+                        <span class="cond-type-icon">💔</span>
+                        <span class="cond-type-label">Streak Broken</span>
+                        <span class="cond-type-sub">sendStreakWarnings</span>
+                    </td>
+                    <td><span class="cond-schedule">21:00 KST</span></td>
+                    <td class="cond-condition">
+                        <code>lastActiveDate >= 3d</code><br>
+                        <code>pushEnabled == true</code><br>
+                        <code>fcmToken</code> exists
+                    </td>
+                    <td><span class="cond-target-badge cond-target-individual">Individual Token</span></td>
+                    <td>
+                        <button class="btn-trigger" onclick="triggerCondition('streak_broken', null, this)">Trigger</button>
+                        <div class="cond-trigger-result" id="cond-result-streak-broken"></div>
+                    </td>
+                </tr>
+
+                <!-- Manual / Admin -->
+                <tr><td colspan="5" class="cond-section-label">Manual — Admin</td></tr>
+
+                <tr id="cond-announce">
+                    <td>
+                        <span class="cond-type-icon">📢</span>
+                        <span class="cond-type-label">Announcement</span>
+                        <span class="cond-type-sub">sendAnnouncement</span>
+                    </td>
+                    <td><span class="cond-schedule">On-demand</span></td>
+                    <td class="cond-condition">Admin triggers manually</td>
+                    <td><span class="cond-target-badge cond-target-topic">Topic: announcements</span></td>
+                    <td>
+                        <button class="btn-trigger" onclick="triggerCondition('custom', 'announcements', this)">Trigger</button>
+                        <div class="cond-trigger-result" id="cond-result-announce"></div>
+                    </td>
+                </tr>
+
+                <!-- Maintenance -->
+                <tr><td colspan="5" class="cond-section-label">Maintenance</td></tr>
+
+                <tr id="cond-cleanup">
+                    <td>
+                        <span class="cond-type-icon">🧹</span>
+                        <span class="cond-type-label">Token Cleanup</span>
+                        <span class="cond-type-sub">cleanupInactiveTokens</span>
+                    </td>
+                    <td><span class="cond-schedule">Sun 03:00 KST</span></td>
+                    <td class="cond-condition">
+                        <code>lastActiveDate >= 30d</code><br>
+                        Removes <code>fcmToken</code>, sets <code>pushEnabled = false</code>
+                    </td>
+                    <td><span class="cond-target-badge cond-target-internal">Internal Cleanup</span></td>
+                    <td>
+                        <span style="font-size:0.72rem; color:var(--text-sub);">Auto only</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Live Stats -->
+        <div style="margin-top:16px; padding:12px; background:var(--bg-input); border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:0.8rem; font-weight:600; color:var(--accent);">Condition Match Preview</span>
+                <span style="font-size:0.7rem; color:var(--text-sub);" id="cond-match-time"></span>
+            </div>
+            <div class="stats-grid" id="cond-match-stats">
+                <div class="stat-card"><div class="number" id="cond-stat-raid">-</div><div class="label">Raid Subscribers</div></div>
+                <div class="stat-card"><div class="number" id="cond-stat-daily">-</div><div class="label">Daily Subscribers</div></div>
+                <div class="stat-card"><div class="number" id="cond-stat-warn">-</div><div class="label">Streak Warning (2d)</div></div>
+                <div class="stat-card"><div class="number" id="cond-stat-broken">-</div><div class="label">Streak Broken (3d+)</div></div>
+                <div class="stat-card"><div class="number" id="cond-stat-cleanup">-</div><div class="label">Cleanup Target (30d+)</div></div>
+            </div>
+        </div>
+
+        <div class="cond-legend">
+            <div class="cond-legend-item"><span class="cond-legend-dot topic"></span>Topic-based</div>
+            <div class="cond-legend-item"><span class="cond-legend-dot individual"></span>Individual Token</div>
+            <div class="cond-legend-item"><span class="cond-legend-dot internal"></span>Internal</div>
         </div>
     </div>
 
@@ -547,6 +801,7 @@ onAuthStateChanged(auth, (user) => {
         loadLogs();
         loadFeedback();
         updatePreview();
+        refreshConditionsStatus();
     } else {
         tlog("Auth", user ? "Non-admin user: " + user.email : "Not authenticated");
         document.getElementById("login-section").style.display = "block";
@@ -927,6 +1182,132 @@ function esc(str) {
     div.textContent = String(str);
     return div.innerHTML;
 }
+
+// ─── Conditions Panel ───
+
+window.refreshConditionsStatus = async function() {
+    tlog("Conditions", "Refreshing condition match stats...");
+    try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        const now = new Date();
+        let pushOnCount = 0, warnCount = 0, brokenCount = 0, cleanupCount = 0;
+
+        usersSnap.forEach(doc => {
+            const d = doc.data();
+            if (d.pushEnabled) pushOnCount++;
+
+            try {
+                const s = JSON.parse(d.streakStr || "{}");
+                if (s.lastActiveDate) {
+                    const diff = Math.floor((now - new Date(s.lastActiveDate)) / 86400000);
+                    if (diff >= 30 && d.fcmToken && d.pushEnabled) cleanupCount++;
+                    else if (diff >= 3 && d.fcmToken && d.pushEnabled) brokenCount++;
+                    else if (diff >= 2 && d.fcmToken && d.pushEnabled) warnCount++;
+                }
+            } catch {}
+        });
+
+        // Topic subscriber counts are not directly queryable from client,
+        // so we show pushEnabled count as a proxy
+        document.getElementById("cond-stat-raid").textContent = pushOnCount;
+        document.getElementById("cond-stat-daily").textContent = pushOnCount;
+        document.getElementById("cond-stat-warn").textContent = warnCount;
+        document.getElementById("cond-stat-broken").textContent = brokenCount;
+        document.getElementById("cond-stat-cleanup").textContent = cleanupCount;
+        document.getElementById("cond-match-time").textContent =
+            "Updated: " + now.toLocaleString("ko-KR", { hour12: false });
+
+        tok("Conditions", `Raid/Daily≈${pushOnCount}, Warning=${warnCount}, Broken=${brokenCount}, Cleanup=${cleanupCount}`);
+    } catch (e) {
+        terror("Conditions", "Failed to load stats: " + (e.code || "") + " " + (e.message || e));
+    }
+};
+
+window.triggerCondition = async function(type, topic, btnEl) {
+    const resultEl = btnEl.nextElementSibling;
+    btnEl.disabled = true;
+    btnEl.classList.add("sending");
+    btnEl.textContent = "Sending...";
+    resultEl.textContent = "";
+    resultEl.className = "cond-trigger-result";
+
+    const lang = "ko";
+    const payload = { type, lang };
+
+    if (type === "custom" && topic === "announcements") {
+        // Announcement: send via sendAnnouncement action
+        tlog("Conditions", "Triggering announcement via sendAnnouncement...");
+        try {
+            const fn = httpsCallable(functions, "ping");
+            const result = await fn({
+                action: "sendAnnouncement",
+                title: "📢 테스트 공지",
+                body: "관리자 컨트롤 패널에서 발송된 테스트 공지입니다.",
+                targetTab: ""
+            });
+            tok("Conditions", "Announcement sent: " + result.data.messageId);
+            resultEl.textContent = "OK: " + (result.data.messageId || "").substring(0, 20);
+            resultEl.className = "cond-trigger-result ok";
+        } catch (e) {
+            terror("Conditions", "Announcement failed: " + (e.message || e));
+            resultEl.textContent = "FAIL: " + (e.message || e);
+            resultEl.className = "cond-trigger-result fail";
+        }
+    } else if (topic) {
+        // Topic-based: send via sendTestNotification with topic
+        tlog("Conditions", `Triggering ${type} to topic:${topic}...`);
+        try {
+            const fn = httpsCallable(functions, "ping");
+            const result = await fn({ action: "sendTestNotification", type, lang, topic });
+            tok("Conditions", `${type} sent to ${topic}: ${result.data.messageId}`);
+            resultEl.textContent = "OK: " + (result.data.messageId || "").substring(0, 20);
+            resultEl.className = "cond-trigger-result ok";
+        } catch (e) {
+            terror("Conditions", `${type} trigger failed: ${e.message || e}`);
+            resultEl.textContent = "FAIL: " + (e.message || e);
+            resultEl.className = "cond-trigger-result fail";
+        }
+    } else {
+        // Individual token-based (streak): send to all matching users
+        tlog("Conditions", `Triggering ${type} to matching users...`);
+        try {
+            const now = new Date();
+            const minDays = type === "streak_warning" ? 2 : 3;
+            const matchUsers = usersCache.filter(u =>
+                u.fcmToken && u.diffDays !== null && u.diffDays >= minDays
+            );
+
+            if (!matchUsers.length) {
+                twarn("Conditions", `No users match ${type} condition (need ${minDays}d+ inactive)`);
+                resultEl.textContent = "No matching users";
+                resultEl.className = "cond-trigger-result fail";
+            } else {
+                let okCount = 0, failCount = 0;
+                const fn = httpsCallable(functions, "ping");
+                for (const u of matchUsers) {
+                    try {
+                        await fn({ action: "sendTestNotification", type, lang: u.lang || "ko", token: u.fcmToken });
+                        okCount++;
+                    } catch {
+                        failCount++;
+                    }
+                }
+                tok("Conditions", `${type}: sent=${okCount}, failed=${failCount}`);
+                resultEl.textContent = `OK: ${okCount} sent, ${failCount} failed`;
+                resultEl.className = "cond-trigger-result ok";
+            }
+        } catch (e) {
+            terror("Conditions", `${type} trigger failed: ${e.message || e}`);
+            resultEl.textContent = "FAIL: " + (e.message || e);
+            resultEl.className = "cond-trigger-result fail";
+        }
+    }
+
+    btnEl.disabled = false;
+    btnEl.classList.remove("sending");
+    btnEl.textContent = "Trigger";
+    loadLogs();
+};
 </script>
 </body>
 </html>
