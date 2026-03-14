@@ -472,7 +472,7 @@ exports.getTestUsers = onCall(callableOpts, async (request) => {
     } catch (e) {
         if (e instanceof HttpsError) throw e;
         console.error("[getTestUsers] Error:", e);
-        throw new HttpsError("internal", "getTestUsers failed: " + String(e.message || e).substring(0, 500));
+        throw new HttpsError("unknown", "getTestUsers failed: " + String(e.message || e).substring(0, 500));
     }
 });
 
@@ -523,6 +523,6 @@ exports.getPushLogs = onCall(callableOpts, async (request) => {
     } catch (e) {
         if (e instanceof HttpsError) throw e;
         console.error("[getPushLogs] Error:", e);
-        throw new HttpsError("internal", "getPushLogs failed: " + String(e.message || e).substring(0, 500));
+        throw new HttpsError("unknown", "getPushLogs failed: " + String(e.message || e).substring(0, 500));
     }
 });
