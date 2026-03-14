@@ -690,37 +690,72 @@ window.loadUsers = async function() {
     container.innerHTML = '<p class="loading">Loading...</p>';
     tlog("Users", "Calling getTestUsers...");
 
+    let useFallback = false;
     try {
         const fn = httpsCallable(functions, "getTestUsers");
         const result = await fn({});
         usersCache = result.data.users || [];
         tok("Users", "Loaded " + usersCache.length + " push-enabled users");
+    } catch (e) {
+        twarn("Users", "Cloud Function failed (code=" + (e.code || "unknown") + " msg=" + (e.message || e) + "), trying direct Firestore...");
+        useFallback = true;
+    }
 
-        if (!usersCache.length) {
-            container.innerHTML = '<p class="loading">No push-enabled users found.</p>';
+    if (useFallback) {
+        try {
+            const q = query(collection(db, "users"), where("pushEnabled", "==", true), limit(100));
+            const snap = await getDocs(q);
+            const now = new Date();
+            usersCache = [];
+            snap.forEach(doc => {
+                const data = doc.data();
+                let lastActiveDate = null, diffDays = null;
+                try {
+                    const streak = JSON.parse(data.streakStr || "{}");
+                    if (streak.lastActiveDate) {
+                        lastActiveDate = String(streak.lastActiveDate);
+                        const d = Math.floor((now - new Date(streak.lastActiveDate)) / 86400000);
+                        diffDays = Number.isFinite(d) ? d : null;
+                    }
+                } catch (_e) {}
+                usersCache.push({
+                    uid: doc.id,
+                    displayName: data.displayName || data.nickname || doc.id.substring(0, 8),
+                    lang: data.lang || "ko",
+                    fcmToken: data.fcmToken || null,
+                    lastActiveDate,
+                    diffDays
+                });
+            });
+            tok("Users", "Fallback OK — loaded " + usersCache.length + " users from Firestore directly");
+        } catch (e2) {
+            terror("Users", "Fallback also failed: " + (e2.code || "") + " " + (e2.message || e2));
+            container.innerHTML = '<p style="color:var(--error)">Error loading users. Check console.</p>';
             return;
         }
-
-        let html = '<table><thead><tr><th>User</th><th>Lang</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
-        for (const u of usersCache) {
-            const diffClass = u.diffDays === null ? "" : u.diffDays >= 3 ? "badge-error" : u.diffDays >= 2 ? "badge-warning" : "badge-active";
-            const diffText = u.diffDays === null ? "-" : u.diffDays === 0 ? "Today" : u.diffDays + "d ago";
-            const tokenShort = u.fcmToken ? u.fcmToken.substring(0, 16) + "..." : "none";
-
-            html += `<tr>
-                <td><strong>${esc(u.displayName)}</strong><br><span class="user-email">${esc(u.uid.substring(0, 12))}...</span></td>
-                <td>${esc(u.lang)}</td>
-                <td><span class="badge ${diffClass}">${diffText}</span></td>
-                <td><span class="token-masked">${esc(tokenShort)}</span></td>
-                <td>${u.fcmToken ? `<button class="btn btn-primary btn-sm" onclick="sendToUser('${esc(u.fcmToken)}')">Send</button>` : '-'}</td>
-            </tr>`;
-        }
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch (e) {
-        terror("Users", "code=" + (e.code || "unknown") + " message=" + (e.message || e) + " details=" + JSON.stringify(e.details || null));
-        container.innerHTML = '<p style="color:var(--error)">Error: ' + esc(e.message) + '</p>';
     }
+
+    if (!usersCache.length) {
+        container.innerHTML = '<p class="loading">No push-enabled users found.</p>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>User</th><th>Lang</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
+    for (const u of usersCache) {
+        const diffClass = u.diffDays === null ? "" : u.diffDays >= 3 ? "badge-error" : u.diffDays >= 2 ? "badge-warning" : "badge-active";
+        const diffText = u.diffDays === null ? "-" : u.diffDays === 0 ? "Today" : u.diffDays + "d ago";
+        const tokenShort = u.fcmToken ? u.fcmToken.substring(0, 16) + "..." : "none";
+
+        html += `<tr>
+            <td><strong>${esc(u.displayName)}</strong><br><span class="user-email">${esc(u.uid.substring(0, 12))}...</span></td>
+            <td>${esc(u.lang)}</td>
+            <td><span class="badge ${diffClass}">${diffText}</span></td>
+            <td><span class="token-masked">${esc(tokenShort)}</span></td>
+            <td>${u.fcmToken ? `<button class="btn btn-primary btn-sm" onclick="sendToUser('${esc(u.fcmToken)}')">Send</button>` : '-'}</td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
 };
 
 window.sendToUser = function(token) {
@@ -736,37 +771,71 @@ window.loadLogs = async function() {
     container.innerHTML = '<p class="loading">Loading...</p>';
     tlog("History", "Calling getPushLogs...");
 
+    let logs = [];
+    let useFallback = false;
     try {
         const fn = httpsCallable(functions, "getPushLogs");
         const result = await fn({});
-        const logs = result.data.logs || [];
+        logs = result.data.logs || [];
         tok("History", "Loaded " + logs.length + " log entries");
+    } catch (e) {
+        twarn("History", "Cloud Function failed (code=" + (e.code || "unknown") + " msg=" + (e.message || e) + "), trying direct Firestore...");
+        useFallback = true;
+    }
 
-        if (!logs.length) {
-            container.innerHTML = '<p class="loading">No send history yet.</p>';
+    if (useFallback) {
+        try {
+            const q = query(collection(db, "push_logs"), orderBy("timestamp", "desc"), limit(50));
+            const snap = await getDocs(q);
+            logs = [];
+            snap.forEach(doc => {
+                const data = doc.data();
+                let ts;
+                try {
+                    ts = data.timestamp && typeof data.timestamp.toDate === "function"
+                        ? data.timestamp.toDate().toISOString()
+                        : String(data.timestamp || "");
+                } catch (_e) { ts = String(data.timestamp || ""); }
+                logs.push({
+                    id: doc.id,
+                    timestamp: ts,
+                    type: data.type || "",
+                    target: data.target || "",
+                    success: !!data.success,
+                    messageId: data.messageId || null,
+                    error: data.error || null,
+                    sender: data.sender || null
+                });
+            });
+            tok("History", "Fallback OK — loaded " + logs.length + " logs from Firestore directly");
+        } catch (e2) {
+            terror("History", "Fallback also failed: " + (e2.code || "") + " " + (e2.message || e2));
+            container.innerHTML = '<p style="color:var(--error)">Error loading logs. Check console.</p>';
             return;
         }
-
-        let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th></tr></thead><tbody>';
-        for (const l of logs) {
-            const time = new Date(l.timestamp).toLocaleString("ko-KR", { hour12: false });
-            const badge = l.success ? '<span class="badge badge-success">OK</span>' : '<span class="badge badge-error">FAIL</span>';
-            const id = l.success ? (l.messageId || "").substring(0, 20) : esc(l.error || "");
-
-            html += `<tr>
-                <td>${esc(time)}</td>
-                <td>${esc(l.type)}</td>
-                <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${esc(l.target)}</td>
-                <td>${badge}</td>
-                <td style="font-size:0.7rem; color:var(--text-sub); max-width:140px; overflow:hidden; text-overflow:ellipsis;">${id}</td>
-            </tr>`;
-        }
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch (e) {
-        terror("History", "code=" + (e.code || "unknown") + " message=" + (e.message || e) + " details=" + JSON.stringify(e.details || null));
-        container.innerHTML = '<p style="color:var(--error)">Error: ' + esc(e.message) + '</p>';
     }
+
+    if (!logs.length) {
+        container.innerHTML = '<p class="loading">No send history yet.</p>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th></tr></thead><tbody>';
+    for (const l of logs) {
+        const time = new Date(l.timestamp).toLocaleString("ko-KR", { hour12: false });
+        const badge = l.success ? '<span class="badge badge-success">OK</span>' : '<span class="badge badge-error">FAIL</span>';
+        const id = l.success ? (l.messageId || "").substring(0, 20) : esc(l.error || "");
+
+        html += `<tr>
+            <td>${esc(time)}</td>
+            <td>${esc(l.type)}</td>
+            <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${esc(l.target)}</td>
+            <td>${badge}</td>
+            <td style="font-size:0.7rem; color:var(--text-sub); max-width:140px; overflow:hidden; text-overflow:ellipsis;">${id}</td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
 };
 
 // --- Feedback ---
