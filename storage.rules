@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 프로필 사진: 본인만 쓰기, 인증된 유저 읽기
+    match /users/{uid}/profile.jpg {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid
+                   && request.resource.size < 500 * 1024
+                   && request.resource.contentType.matches('image/jpeg');
+    }
+    // Day1 릴스 사진: 본인만 쓰기, 인증된 유저 읽기, 서버(admin SDK)가 삭제
+    match /reels/{uid}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid
+                   && request.resource.size < 1 * 1024 * 1024
+                   && request.resource.contentType.matches('image/jpeg');
+    }
+  }
+}

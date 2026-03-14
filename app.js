@@ -2,6 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -17,6 +18,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
@@ -31,6 +33,15 @@ try {
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// --- Cloud Storage 이미지 업로드 유틸리티 ---
+async function uploadImageToStorage(path, base64DataUrl) {
+    const resp = await fetch(base64DataUrl);
+    const blob = await resp.blob();
+    const fileRef = storageRef(storage, path);
+    await uploadBytes(fileRef, blob, { contentType: 'image/jpeg' });
+    return await getDownloadURL(fileRef);
+}
 
 // Google Fit: 네이티브 앱 플러그인(Health Connect / Google Fit SDK)만 사용
 // REST API 폴백 제거됨 — 모든 건강 데이터는 네이티브 SDK를 통해 조회
@@ -348,7 +359,17 @@ async function saveUserData() {
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "",
             streakStr: JSON.stringify(AppState.user.streak),
-            diaryStr: localStorage.getItem('diary_entries') || '{}',
+            diaryStr: (() => {
+                try {
+                    const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+                    const stripped = {};
+                    for (const [date, entry] of Object.entries(diaries)) {
+                        const { photo, ...rest } = entry;
+                        stripped[date] = rest;
+                    }
+                    return JSON.stringify(stripped);
+                } catch(e) { return '{}'; }
+            })(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
             lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10)
         }, { merge: true });
@@ -1493,9 +1514,17 @@ async function loadProfileImage(event) {
             canvas.width = 150; canvas.height = 150;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, 150, 150);
-            const base64 = canvas.toDataURL('image/jpeg', 0.6); 
+            const base64 = canvas.toDataURL('image/jpeg', 0.6);
             document.getElementById('profilePreview').src = base64;
-            AppState.user.photoURL = base64;
+            try {
+                const url = await uploadImageToStorage(
+                    `users/${auth.currentUser.uid}/profile.jpg`, base64
+                );
+                AppState.user.photoURL = url;
+            } catch(err) {
+                console.error('[Profile] Storage 업로드 실패, base64 fallback:', err);
+                AppState.user.photoURL = base64;
+            }
             await saveUserData();
         };
         img.src = e.target.result;
@@ -3093,14 +3122,26 @@ async function postToReels() {
         return;
     }
 
-    // 포스트 생성
+    // Cloud Storage에 사진 업로드
     const caption = (entry.caption || '').trim();
     const postTimestamp = Date.now();
+    const photoPath = `reels/${auth.currentUser.uid}/${postTimestamp}.jpg`;
+    let photoUrl;
+    try {
+        photoUrl = await uploadImageToStorage(photoPath, photoData);
+    } catch(err) {
+        console.error('[Reels] 사진 업로드 실패:', err);
+        alert(i18n[lang].reels_upload_fail || '사진 업로드에 실패했습니다. 다시 시도해 주세요.');
+        return;
+    }
+
+    // 포스트 생성 (URL 참조 방식)
     const post = {
         uid: auth.currentUser.uid,
         dateKST: todayKST,
         timestamp: postTimestamp,
-        photo: photoData,
+        photo: photoUrl,
+        photoPath: photoPath,
         caption: caption,
         blocks: entry.blocks,
         tasks: entry.tasks || [],
