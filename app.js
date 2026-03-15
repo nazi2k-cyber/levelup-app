@@ -1259,7 +1259,7 @@ function updatePointUI() {
     
     const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title;
     const titleText = typeof titleObj === 'object' ? titleObj[AppState.currentLang] || titleObj.ko : titleObj;
-    document.getElementById('prof-title-badge').innerHTML = `${titleText} ℹ️`;
+    document.getElementById('prof-title-badge').innerHTML = `${sanitizeText(titleText)} ℹ️`;
 }
 
 function processLevelUp() {
@@ -1407,16 +1407,16 @@ function renderUsers(criteria, btn = null) {
         <div class="user-card ${u.isMe ? 'my-rank' : ''}">
             <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
             <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                ${u.photoURL ? `<img src="${u.photoURL}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
                 <div class="user-info" style="margin-left:0;">
-                    <div class="title-badge" style="font-size:0.6rem;">${u.title}</div>
+                    <div class="title-badge" style="font-size:0.6rem;">${sanitizeText(u.title)}</div>
                     <div style="font-size:0.9rem; display:flex; align-items:center;">
-                        ${u.name} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${u.instaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+                        ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
                     </div>
                 </div>
             </div>
             <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${u[criteria]}</div>
-            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${u.id}')">${u.isFriend ? '친구✓' : '추가'}</button>` : ''}
+            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? '친구✓' : '추가'}</button>` : ''}
         </div>
     `).join('');
 }
@@ -3370,9 +3370,9 @@ function renderReelsCards(posts, lang) {
 
     const html = posts.map(post => {
         const postId = getPostId(post);
-        const profileSrc = post.userPhoto || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+        const profileSrc = post.userPhoto ? sanitizeURL(post.userPhoto) : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
         const isMe = post.uid === auth.currentUser?.uid;
-        const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${post.userInstaId}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
+        const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(post.userInstaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
 
         // 시간표 블록 요약 (최대 6개)
         const blockEntries = Object.entries(post.blocks || {}).sort(([a],[b]) => a.localeCompare(b));
@@ -3390,7 +3390,7 @@ function renderReelsCards(posts, lang) {
                 </div>
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
-            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${post.photo}" alt="Timetable"></div>` : ''}
+            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(post.photo)}" alt="Timetable"></div>` : ''}
             ${post.caption ? `<div class="reels-caption">${post.caption.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
             <div class="reels-timetable">
                 <div class="reels-timetable-title">📋 ${i18n[lang]?.planner_tab_schedule || '시간표'}</div>
@@ -3631,8 +3631,8 @@ function renderCommentsSection(postId, comments) {
         container.innerHTML = `<div class="reels-comment-empty">${i18n[lang].reels_comment_empty}</div>`;
     } else {
         container.innerHTML = comments.map(c => {
-            const cPhoto = c.photoURL || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
-            const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${c.instaId}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
+            const cPhoto = c.photoURL ? sanitizeURL(c.photoURL) : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+            const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(c.instaId)}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
             const timeAgo = getTimeAgo(c.timestamp, lang);
             return `<div class="reels-comment-item">
                 <img class="reels-comment-avatar" src="${cPhoto}" alt="">
@@ -4548,4 +4548,24 @@ function sanitizeText(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/** XSS 방지용 HTML 속성값 새니타이즈 */
+function sanitizeAttr(value) {
+    if (typeof value !== 'string') return '';
+    return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** 인스타그램 ID 검증 (영문, 숫자, 밑줄, 마침표만 허용) */
+function sanitizeInstaId(id) {
+    if (typeof id !== 'string') return '';
+    return id.replace(/[^a-zA-Z0-9._]/g, '');
+}
+
+/** URL 새니타이즈 (javascript: 프로토콜 차단) */
+function sanitizeURL(url) {
+    if (typeof url !== 'string' || !url) return '';
+    const trimmed = url.trim().toLowerCase();
+    if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:text/html')) return '';
+    return sanitizeAttr(url);
 }
