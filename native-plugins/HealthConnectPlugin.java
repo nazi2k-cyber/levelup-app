@@ -3,6 +3,7 @@ package com.levelup.reboot.plugins;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.util.Log;
 
 import com.getcapacitor.JSObject;
@@ -25,14 +26,21 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class HealthConnectPlugin extends Plugin {
     private static final String TAG = "HealthConnect";
     private static final String HC_PACKAGE = "com.google.android.apps.healthdata";
+    private static final String HC_PACKAGE_SYSTEM = "com.android.healthconnect.controller";
 
     private boolean isHCInstalled() {
-        try {
-            getContext().getPackageManager().getPackageInfo(HC_PACKAGE, 0);
-            return true;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
+        // Android 14+ 에서는 Health Connect가 시스템에 내장됨 (다른 패키지명)
+        String[] packages = (Build.VERSION.SDK_INT >= 34)
+                ? new String[]{HC_PACKAGE_SYSTEM, HC_PACKAGE}
+                : new String[]{HC_PACKAGE};
+        for (String pkg : packages) {
+            try {
+                getContext().getPackageManager().getPackageInfo(pkg, 0);
+                Log.i(TAG, "Health Connect found: " + pkg);
+                return true;
+            } catch (PackageManager.NameNotFoundException ignored) {}
         }
+        return false;
     }
 
     /** Health Connect 설치 여부 확인 */

@@ -60,15 +60,32 @@ public class GoogleFitPlugin extends Plugin {
                 == PackageManager.PERMISSION_GRANTED;
     }
 
+    /** 네이티브 Google 계정 획득 (getLastSignedInAccount → getAccountForExtension 폴백) */
+    private GoogleSignInAccount getGoogleAccount() {
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(getContext());
+        if (account == null) {
+            // Firebase Auth WebView 로그인 시 네이티브 계정이 없을 수 있음
+            // getAccountForExtension으로 Fitness 전용 계정 획득 시도
+            try {
+                account = GoogleSignIn.getAccountForExtension(getContext(), getFitnessOptions());
+            } catch (Exception e) {
+                Log.w(TAG, "getAccountForExtension 실패: " + e.getMessage());
+            }
+        }
+        return account;
+    }
+
     /** Google Fit SDK 사용 가능 여부 확인 */
     @PluginMethod()
     public void isAvailable(PluginCall call) {
         JSObject result = new JSObject();
         try {
-            GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(getContext());
+            GoogleSignInAccount account = getGoogleAccount();
             if (account == null) {
-                result.put("available", false);
+                // 계정 없지만 SDK 자체는 사용 가능 (requestPermissions로 로그인 유도)
+                result.put("available", true);
                 result.put("hasPermissions", false);
+                result.put("needsSignIn", true);
                 result.put("reason", "Google 계정 로그인이 필요합니다.");
                 call.resolve(result);
                 return;
@@ -138,7 +155,7 @@ public class GoogleFitPlugin extends Plugin {
     private void requestGoogleFitOAuth(PluginCall call) {
         try {
             FitnessOptions fitnessOptions = getFitnessOptions();
-            GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(getContext());
+            GoogleSignInAccount account = getGoogleAccount();
 
             if (account == null) {
                 JSObject result = new JSObject();
@@ -217,7 +234,7 @@ public class GoogleFitPlugin extends Plugin {
                 }
 
                 FitnessOptions fitnessOptions = getFitnessOptions();
-                GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(getContext());
+                GoogleSignInAccount account = getGoogleAccount();
 
                 if (account == null || !GoogleSignIn.hasPermissions(account, fitnessOptions)) {
                     JSObject result = new JSObject();

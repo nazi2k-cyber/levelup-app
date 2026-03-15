@@ -4034,11 +4034,22 @@ async function syncHealthData(showMsg = false) {
         }
     }
 
-    // 네이티브 SDK에서 데이터를 가져오지 못한 경우
+    // 네이티브 SDK에서 데이터를 가져오지 못한 경우 → 권한 재요청 시도
     if (dataSource === 'none') {
-        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
-        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
-        return;
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패 → 권한 재요청 시도');
+        const reGranted = await requestFitnessScope();
+        if (reGranted) {
+            // 권한 획득 후 재시도
+            const retrySteps = await tryHealthConnectSteps() ?? await tryGoogleFitNativeSteps();
+            if (retrySteps !== null) {
+                totalStepsToday = retrySteps;
+                dataSource = 'fitness_retry';
+            }
+        }
+        if (dataSource === 'none') {
+            if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
+            return;
+        }
     }
 
     // 보상 계산
