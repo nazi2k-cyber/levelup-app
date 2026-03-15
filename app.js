@@ -3711,7 +3711,7 @@ function openAppSettings() {
     }
 }
 
-// --- 로그인 시 네이티브 권한 확인 후 미승인 항목만 순차 요청 ---
+// --- 로그인 시 앱 토글 off + OS 권한 미승인 항목만 순차 요청 ---
 async function showPermissionPrompts() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return;
@@ -3719,8 +3719,8 @@ async function showPermissionPrompts() {
     const cap = window.Capacitor;
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 상태 확인 시작');
 
-    // 1) 푸시 알림 — OS 권한 상태 확인 후 미승인이면 요청
-    if (cap.Plugins && cap.Plugins.PushNotifications) {
+    // 1) 푸시 알림 — 앱 토글 off + OS 미승인일 때만 요청
+    if (!AppState.user.pushEnabled && cap.Plugins && cap.Plugins.PushNotifications) {
         try {
             const { PushNotifications } = cap.Plugins;
             const status = await PushNotifications.checkPermissions();
@@ -3742,8 +3742,8 @@ async function showPermissionPrompts() {
         }
     }
 
-    // 2) GPS 위치 — OS 권한 상태 확인 후 미승인이면 요청
-    if (cap.Plugins && cap.Plugins.Geolocation) {
+    // 2) GPS 위치 — 앱 토글 off + OS 미승인일 때만 요청
+    if (!AppState.user.gpsEnabled && cap.Plugins && cap.Plugins.Geolocation) {
         try {
             const { Geolocation } = cap.Plugins;
             const status = await Geolocation.checkPermissions();
@@ -3763,35 +3763,34 @@ async function showPermissionPrompts() {
         }
     }
 
-    // 3) 건강 데이터(피트니스) — 네이티브 권한 확인 후 미승인이면 요청
-    try {
-        let fitnessGranted = false;
-        const { HealthConnect, GoogleFit } = cap.Plugins || {};
+    // 3) 건강 데이터 — 앱 토글 off일 때만 요청
+    if (!AppState.user.syncEnabled) {
+        try {
+            let fitnessGranted = false;
+            const { HealthConnect, GoogleFit } = cap.Plugins || {};
 
-        // Health Connect 확인
-        if (HealthConnect) {
-            const availability = await HealthConnect.isAvailable();
-            if (availability.available) {
-                const granted = await requestFitnessScope();
-                fitnessGranted = granted;
+            if (HealthConnect) {
+                const availability = await HealthConnect.isAvailable();
+                if (availability.available) {
+                    fitnessGranted = await requestFitnessScope();
+                }
             }
-        }
-        // Google Fit 확인 (Health Connect 미사용 시)
-        if (!fitnessGranted && GoogleFit) {
-            const availability = await GoogleFit.isAvailable();
-            if (availability.available && !availability.hasPermissions) {
-                fitnessGranted = await requestFitnessScope();
+            if (!fitnessGranted && GoogleFit) {
+                const availability = await GoogleFit.isAvailable();
+                if (availability.available && !availability.hasPermissions) {
+                    fitnessGranted = await requestFitnessScope();
+                }
             }
-        }
 
-        if (fitnessGranted) {
-            AppState.user.syncEnabled = true;
-            document.getElementById('sync-toggle').checked = true;
-            saveUserData();
-            syncHealthData(true);
+            if (fitnessGranted) {
+                AppState.user.syncEnabled = true;
+                document.getElementById('sync-toggle').checked = true;
+                saveUserData();
+                syncHealthData(true);
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
         }
-    } catch (e) {
-        if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
     }
 
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 확인/요청 완료');
