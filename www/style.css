@@ -752,3 +752,36 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 [data-theme="light"] .offline-banner {
     background: linear-gradient(135deg, rgba(220, 53, 69, 0.95), rgba(180, 30, 40, 0.95));
 }
+
+/* DIY 퀘스트 */
+.diy-stat-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.diy-stat-btn {
+    padding: 6px 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.diy-stat-btn.active {
+    border-color: var(--neon-gold);
+    color: var(--neon-gold);
+    background: rgba(255, 204, 0, 0.1);
+}
+.diy-quest-edit {
+    font-size: 0.7rem;
+    color: var(--text-sub);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+.diy-quest-edit:hover {
+    opacity: 1;
+}

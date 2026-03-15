@@ -90,7 +90,15 @@ const i18n = {
         share_link_desc: "플래너 요약을 클립보드에 복사합니다",
 
         // 오프라인 모드
-        offline_banner: "오프라인 모드 — 일부 기능이 제한됩니다"
+        offline_banner: "오프라인 모드 — 일부 기능이 제한됩니다",
+
+        // DIY 퀘스트
+        diy_quest_title: "DIY 퀘스트", btn_add_diy: "추가",
+        diy_modal_create: "퀘스트 만들기", diy_modal_edit: "퀘스트 수정",
+        diy_input_title: "제목", diy_input_desc: "설명", diy_select_stat: "스탯 선택",
+        diy_btn_save: "저장", diy_btn_delete: "삭제",
+        diy_limit_reached: "최대 6개까지 추가 가능합니다.",
+        diy_confirm_delete: "이 퀘스트를 삭제하시겠습니까?"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -179,7 +187,15 @@ const i18n = {
         share_link_desc: "Copy planner summary text to clipboard",
 
         // Offline mode
-        offline_banner: "Offline Mode — Some features are limited"
+        offline_banner: "Offline Mode — Some features are limited",
+
+        // DIY Quests
+        diy_quest_title: "DIY Quests", btn_add_diy: "Add",
+        diy_modal_create: "Create Quest", diy_modal_edit: "Edit Quest",
+        diy_input_title: "Title", diy_input_desc: "Description", diy_select_stat: "Select Stat",
+        diy_btn_save: "Save", diy_btn_delete: "Delete",
+        diy_limit_reached: "Max 6 custom quests.",
+        diy_confirm_delete: "Delete this quest?"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -268,7 +284,15 @@ const i18n = {
         share_link_desc: "プランナーの要約テキストをコピーします",
 
         // オフラインモード
-        offline_banner: "オフラインモード — 一部の機能が制限されます"
+        offline_banner: "オフラインモード — 一部の機能が制限されます",
+
+        // DIYクエスト
+        diy_quest_title: "DIYクエスト", btn_add_diy: "追加",
+        diy_modal_create: "クエスト作成", diy_modal_edit: "クエスト編集",
+        diy_input_title: "タイトル", diy_input_desc: "説明", diy_select_stat: "ステータス選択",
+        diy_btn_save: "保存", diy_btn_delete: "削除",
+        diy_limit_reached: "最大6個まで追加可能です。",
+        diy_confirm_delete: "このクエストを削除しますか？"
     }
 };
 

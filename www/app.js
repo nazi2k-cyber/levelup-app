@@ -89,6 +89,7 @@ function getInitialAppState() {
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0 },
+        diyQuests: { definitions: [], completedToday: {}, lastResetDate: null },
     };
 }
 
@@ -428,7 +429,8 @@ async function saveUserData() {
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: localStorage.getItem('diary_entries') || '{}',
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
-            lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10)
+            lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10),
+            diyQuestsStr: JSON.stringify(AppState.diyQuests)
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
@@ -459,6 +461,10 @@ async function loadUserDataFromDB(user) {
                 AppState.dungeon.globalParticipants = 0;
                 AppState.dungeon.globalProgress = 0;
             }
+            if(data.diyQuestsStr) {
+                try { AppState.diyQuests = JSON.parse(data.diyQuestsStr); } catch(e) { AppState.diyQuests = { definitions: [], completedToday: {}, lastResetDate: null }; }
+            }
+            checkDiyDailyReset();
             if(data.pendingStats) AppState.user.pendingStats = data.pendingStats;
             if(data.friends) AppState.user.friends = data.friends;
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
@@ -726,8 +732,12 @@ function showLootModal(loot) {
 
 function checkDailyAllClear() {
     const day = AppState.quest.currentDayOfWeek;
-    const allDone = AppState.quest.completedState[day].every(v => v);
-    if (!allDone) return;
+    const regularAllDone = AppState.quest.completedState[day].every(v => v);
+    if (!regularAllDone) return;
+
+    const diyDefs = AppState.diyQuests.definitions;
+    const diyAllDone = diyDefs.length === 0 || diyDefs.every(q => AppState.diyQuests.completedToday[q.id]);
+    if (!diyAllDone) return;
 
     // 오늘 이미 루트 받았는지 확인
     const todayKey = 'loot_' + getTodayStr();
@@ -843,6 +853,8 @@ function renderQuestList() {
             </div>
         `;
     }).join('');
+
+    renderDiyQuestList();
 }
 
 window.toggleQuest = (i) => {
@@ -892,6 +904,185 @@ window.toggleQuest = (i) => {
     if (state[i]) checkDailyAllClear();
 };
 
+// --- DIY 퀘스트 ---
+function checkDiyDailyReset() {
+    const today = getTodayKST();
+    if (AppState.diyQuests.lastResetDate !== today) {
+        AppState.diyQuests.completedToday = {};
+        AppState.diyQuests.lastResetDate = today;
+    }
+}
+
+function renderDiyQuestList() {
+    const container = document.getElementById('diy-quest-list');
+    const section = document.getElementById('diy-quest-section');
+    if (!container || !section) return;
+
+    checkDiyDailyReset();
+    const defs = AppState.diyQuests.definitions;
+
+    section.style.display = (defs.length > 0) ? 'block' : 'block';
+
+    container.innerHTML = defs.map(q => {
+        const isDone = AppState.diyQuests.completedToday[q.id] || false;
+        return `
+            <div class="quest-row ${isDone ? 'done' : ''}" onclick="window.toggleDiyQuest('${q.id}')">
+                <div>
+                    <div class="quest-title"><span class="quest-stat-tag">${sanitizeText(q.stat)}</span>${sanitizeText(q.title)}</div>
+                    <div class="quest-desc">${sanitizeText(q.desc)}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="diy-quest-edit" onclick="event.stopPropagation(); window.showDiyQuestModal('${q.id}')">✎</span>
+                    <div class="quest-checkbox"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.toggleDiyQuest = (questId) => {
+    const q = AppState.diyQuests.definitions.find(d => d.id === questId);
+    if (!q) return;
+
+    const wasCompleted = AppState.diyQuests.completedToday[questId] || false;
+    AppState.diyQuests.completedToday[questId] = !wasCompleted;
+    const factor = wasCompleted ? -1 : 1;
+    const mult = AppState.user.streak.multiplier || 1.0;
+
+    let pointReward = 20;
+    let statReward = 0.5;
+    let isCritical = false;
+
+    if (!wasCompleted && rollCritical()) {
+        isCritical = true;
+        const critMult = getCriticalMultiplier();
+        pointReward = 20 * critMult;
+        statReward = 0.5 * critMult;
+        showCriticalFlash();
+        updateChallengeProgress('critical_hits');
+    }
+
+    AppState.user.points += Math.floor(pointReward * mult * factor);
+    AppState.user.pendingStats[q.stat.toLowerCase()] += (statReward * factor);
+
+    if (!wasCompleted) {
+        updateStreak();
+        updateChallengeProgress('quest_count');
+    }
+
+    saveUserData();
+    renderDiyQuestList();
+    renderCalendar();
+    updatePointUI();
+    renderRoulette();
+
+    if (!wasCompleted) checkDailyAllClear();
+};
+
+window.showDiyQuestModal = (questId) => {
+    const modal = document.getElementById('diyQuestModal');
+    if (!modal) return;
+
+    const isEdit = !!questId;
+    const existing = isEdit ? AppState.diyQuests.definitions.find(d => d.id === questId) : null;
+
+    if (!isEdit && AppState.diyQuests.definitions.length >= 6) {
+        const lang = AppState.currentLang;
+        alert(i18n[lang]?.diy_limit_reached || 'Max 6 custom quests');
+        return;
+    }
+
+    const titleInput = document.getElementById('diy-title-input');
+    const descInput = document.getElementById('diy-desc-input');
+    const modalTitle = document.getElementById('diy-modal-title');
+    const deleteBtn = document.getElementById('diy-btn-delete');
+
+    if (titleInput) titleInput.value = existing ? existing.title : '';
+    if (descInput) descInput.value = existing ? existing.desc : '';
+    if (modalTitle) {
+        const lang = AppState.currentLang;
+        modalTitle.textContent = isEdit ? (i18n[lang]?.diy_modal_edit || 'Edit Quest') : (i18n[lang]?.diy_modal_create || 'Create Quest');
+    }
+    if (deleteBtn) deleteBtn.style.display = isEdit ? 'inline-block' : 'none';
+
+    // 스탯 선택 초기화
+    document.querySelectorAll('.diy-stat-btn').forEach(btn => {
+        btn.classList.toggle('active', existing && btn.dataset.stat === existing.stat);
+    });
+
+    modal.dataset.editId = questId || '';
+    modal.classList.remove('d-none');
+    modal.classList.add('d-flex');
+};
+
+window.saveDiyQuest = () => {
+    const modal = document.getElementById('diyQuestModal');
+    const titleInput = document.getElementById('diy-title-input');
+    const descInput = document.getElementById('diy-desc-input');
+    const activeStatBtn = document.querySelector('.diy-stat-btn.active');
+
+    const title = (titleInput?.value || '').trim();
+    const desc = (descInput?.value || '').trim();
+    const stat = activeStatBtn?.dataset.stat;
+
+    if (!title) return;
+    if (!stat) return;
+
+    const editId = modal?.dataset.editId;
+
+    if (editId) {
+        const q = AppState.diyQuests.definitions.find(d => d.id === editId);
+        if (q) {
+            q.title = title;
+            q.desc = desc;
+            q.stat = stat;
+        }
+    } else {
+        AppState.diyQuests.definitions.push({
+            id: 'diy_' + Date.now(),
+            title: title,
+            desc: desc,
+            stat: stat,
+            createdAt: Date.now()
+        });
+    }
+
+    saveUserData();
+    renderDiyQuestList();
+    renderCalendar();
+    closeDiyQuestModal();
+};
+
+window.deleteDiyQuest = () => {
+    const modal = document.getElementById('diyQuestModal');
+    const editId = modal?.dataset.editId;
+    if (!editId) return;
+
+    const lang = AppState.currentLang;
+    if (!confirm(i18n[lang]?.diy_confirm_delete || 'Delete this quest?')) return;
+
+    AppState.diyQuests.definitions = AppState.diyQuests.definitions.filter(d => d.id !== editId);
+    delete AppState.diyQuests.completedToday[editId];
+
+    saveUserData();
+    renderDiyQuestList();
+    renderCalendar();
+    closeDiyQuestModal();
+};
+
+function closeDiyQuestModal() {
+    const modal = document.getElementById('diyQuestModal');
+    if (modal) {
+        modal.classList.add('d-none');
+        modal.classList.remove('d-flex');
+    }
+}
+
+window.selectDiyStat = (btn) => {
+    document.querySelectorAll('.diy-stat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+};
+
 function renderCalendar() {
     const container = document.getElementById('calendar-grid');
     if(!container) return;
@@ -918,13 +1109,17 @@ function renderCalendar() {
         const iterDate = new Date(startOfWeek);
         iterDate.setDate(startOfWeek.getDate() + i); 
         const isToday = (i === AppState.quest.currentDayOfWeek);
-        const count = s.filter(v=>v).length;
-        
+        const diyCount = AppState.diyQuests.definitions.length;
+        const regularCount = s.filter(v=>v).length;
+        const diyDoneCount = isToday ? Object.values(AppState.diyQuests.completedToday).filter(v=>v).length : 0;
+        const total = isToday ? 12 + diyCount : 12;
+        const count = regularCount + diyDoneCount;
+
         return `
             <div class="cal-day ${isToday ? 'today' : ''}">
                 <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
                 <div class="cal-date">${iterDate.getDate()}</div>
-                <div class="cal-score">${count}/12</div>
+                <div class="cal-score">${count}/${total}</div>
             </div>
         `;
     }).join('');
