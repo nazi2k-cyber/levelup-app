@@ -64,6 +64,7 @@ function getInitialAppState() {
             pushEnabled: false,
             fcmToken: null,
             stepData: { date: "", rewardedSteps: 0 },
+            permPromptDone: false,
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }
         },
@@ -348,6 +349,7 @@ async function saveUserData() {
             pushEnabled: AppState.user.pushEnabled,
             fcmToken: AppState.user.fcmToken || null,
             stepData: AppState.user.stepData,
+            permPromptDone: AppState.user.permPromptDone || false,
             instaId: AppState.user.instaId || "",
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: localStorage.getItem('diary_entries') || '{}',
@@ -390,6 +392,7 @@ async function loadUserDataFromDB(user) {
             if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
             if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
+            if(data.permPromptDone) AppState.user.permPromptDone = true;
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.streakStr) {
                 try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
@@ -1513,7 +1516,15 @@ async function simulateGoogleLogin() {
     }
 }
 
-async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+async function logout() {
+    AppLogger.info('[Auth] 로그아웃');
+    // 권한 프롬프트 플래그 리셋 (재로그인 시 off 권한 다시 요청)
+    AppState.user.permPromptDone = false;
+    await saveUserData();
+    await fbSignOut(auth);
+    localStorage.clear();
+    window.location.reload();
+}
 
 function toggleAuthMode() {
     AppState.isLoginMode = !AppState.isLoginMode;
@@ -3712,14 +3723,12 @@ function openAppSettings() {
 }
 
 // --- 로그인 후 네이티브 권한 요청 (푸시 → GPS → 피트니스 순서, 모달 없이 직접 호출) ---
-let _permPromptRan = false;
 async function showPermissionPrompts() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return;
 
-    // 앱 실행(로그인)당 1회만 실행
-    if (_permPromptRan) return;
-    _permPromptRan = true;
+    // 이번 로그인 세션에서 이미 실행된 경우 스킵 (DB 기반)
+    if (AppState.user.permPromptDone) return;
 
     // off 상태인 권한이 없으면 스킵
     if (AppState.user.pushEnabled && AppState.user.gpsEnabled && AppState.user.syncEnabled) return;
@@ -3758,6 +3767,10 @@ async function showPermissionPrompts() {
             if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness permission error: ' + (e.message || JSON.stringify(e)));
         }
     }
+
+    // 완료 플래그 DB 저장 (페이지 새로고침 시 중복 실행 방지)
+    AppState.user.permPromptDone = true;
+    saveUserData();
 
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 순차 요청 완료');
 }
