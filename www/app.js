@@ -1917,11 +1917,30 @@ function openDungeonInfoModal() {
     document.getElementById('info-modal-title').innerText = i18n[AppState.currentLang].modal_dungeon_title || "이상 현상 목록";
     const body = document.getElementById('info-modal-body');
     
+    const timeLabels = {
+        ko: { time_title: '🕒 레이드 개방 시간 (KST)', slot1: '1차', slot2: '2차', slot3: '3차', station_title: '📍 출현 가능 역 (18개소)' },
+        en: { time_title: '🕒 Raid Hours (KST)', slot1: '1st', slot2: '2nd', slot3: '3rd', station_title: '📍 Spawn Stations (18)' },
+        ja: { time_title: '🕒 レイド開放時間 (KST)', slot1: '第1回', slot2: '第2回', slot3: '第3回', station_title: '📍 出現可能駅 (18箇所)' }
+    };
+    const tl = timeLabels[AppState.currentLang] || timeLabels.ko;
+
     const timeInfoHtml = `
-        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:8px; border-radius:6px; margin-bottom:10px; text-align:center;">
-            <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:3px;">🕒 던전 시스템 개방 시간 (KST)</div>
-            <div style="font-weight:bold; color:var(--neon-blue); font-size:0.8rem; letter-spacing:0.5px;">
-                06:00 ~ 24:00
+        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:10px; border-radius:6px; margin-bottom:10px; text-align:center;">
+            <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:6px;">${tl.time_title}</div>
+            <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+                <span style="background:rgba(0,217,255,0.15); padding:3px 8px; border-radius:4px; font-size:0.75rem; color:var(--neon-blue); font-weight:bold;">${tl.slot1} 06:00~08:00</span>
+                <span style="background:rgba(0,217,255,0.15); padding:3px 8px; border-radius:4px; font-size:0.75rem; color:var(--neon-blue); font-weight:bold;">${tl.slot2} 11:30~13:30</span>
+                <span style="background:rgba(0,217,255,0.15); padding:3px 8px; border-radius:4px; font-size:0.75rem; color:var(--neon-blue); font-weight:bold;">${tl.slot3} 19:00~21:00</span>
+            </div>
+        </div>
+    `;
+
+    const stationNames = seoulStations.map(s => s.name[AppState.currentLang] || s.name.ko);
+    const stationInfoHtml = `
+        <div style="background:rgba(0, 217, 255, 0.05); border:1px solid var(--neon-blue); padding:10px; border-radius:6px; margin-bottom:10px;">
+            <div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:6px; text-align:center;">${tl.station_title}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
+                ${stationNames.map(n => `<span style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:3px; font-size:0.65rem; color:var(--text-main);">${n}</span>`).join('')}
             </div>
         </div>
     `;
@@ -1935,8 +1954,8 @@ function openDungeonInfoModal() {
             </tr>
         </thead>
         <tbody>`;
-    
-    Object.keys(raidMissions).forEach(k => { 
+
+    Object.keys(raidMissions).forEach(k => {
         const m = raidMissions[k];
         const title = m.title[AppState.currentLang] || m.title.ko;
         const reqTask = m.desc2[AppState.currentLang] || m.desc2.ko;
@@ -1945,9 +1964,9 @@ function openDungeonInfoModal() {
             <td style="text-align:center; vertical-align:middle;"><span class="quest-stat-tag" style="border-color:${m.color}; color:${m.color};">${m.stat}</span></td>
             <td style="word-break:keep-all; font-weight:bold; color:var(--text-main);">${title}</td>
             <td style="word-break:keep-all; color:var(--text-sub); font-size:0.75rem;">${reqTask}</td>
-        </tr>`; 
+        </tr>`;
     });
-    
+
     html += `</tbody></table>`;
 
     // P1: 보스 HP 시스템 & 근접 보너스 안내
@@ -1976,7 +1995,7 @@ function openDungeonInfoModal() {
         <p style="font-size:0.75rem; color:var(--text-sub); line-height:1.5; margin:0;">${de.rush_desc}</p>
     </div>`;
 
-    body.innerHTML = timeInfoHtml + html;
+    body.innerHTML = timeInfoHtml + stationInfoHtml + html;
     const m = document.getElementById('infoModal');
     m.classList.remove('d-none');
     m.classList.add('d-flex');
