@@ -266,6 +266,7 @@ function bindEvents() {
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
+    document.getElementById('btn-sync-info').addEventListener('click', openSyncInfoModal);
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
@@ -1879,6 +1880,100 @@ function openPlannerInfoModal() {
         </div>
     `).join('');
 
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// --- ★ 구글 피트니스 동기화 가이드 모달 ★ ---
+function openSyncInfoModal() {
+    const lang = AppState.currentLang;
+    const guideData = {
+        ko: {
+            title: '구글 피트니스 동기화 가이드',
+            sections: [
+                { icon: '📱', title: '연동 방법', desc: 'Google Fit 또는 Health Connect 앱이 설치되어 있어야 합니다. 토글을 켜면 건강 데이터 접근 권한을 요청합니다.' },
+                { icon: '🚶', title: '걸음 수 보상', desc: '1,000보마다 +10P & STR +0.5 보상이 자동 지급됩니다. 하루 동안 누적된 걸음 수 기준으로 계산됩니다.' },
+                { icon: '🔄', title: '동기화 시점', desc: '앱 실행 시 자동으로 동기화됩니다. 이미 보상받은 걸음 수는 중복 지급되지 않습니다.' },
+                { icon: '📊', title: '데이터 소스', desc: 'Health Connect (Android 14+)를 우선 사용하며, 불가 시 Google Fit SDK로 자동 전환됩니다.' },
+                { icon: '⚠️', title: '주의사항', desc: '네이티브 앱에서만 사용 가능합니다. 웹 브라우저에서는 동기화할 수 없습니다. 앱 권한 설정에서 건강 데이터 접근을 허용해 주세요.' }
+            ],
+            reward_table_title: '보상 체계',
+            col_steps: '걸음 수',
+            col_reward: '보상',
+            rewards: [
+                { steps: '1,000보', reward: '+10P & STR +0.5' },
+                { steps: '5,000보', reward: '+50P & STR +2.5' },
+                { steps: '10,000보', reward: '+100P & STR +5.0' }
+            ]
+        },
+        en: {
+            title: 'Google Fitness Sync Guide',
+            sections: [
+                { icon: '📱', title: 'Setup', desc: 'Google Fit or Health Connect app must be installed. Toggle on to request health data access permission.' },
+                { icon: '🚶', title: 'Step Rewards', desc: 'Earn +10P & STR +0.5 for every 1,000 steps. Calculated based on accumulated daily steps.' },
+                { icon: '🔄', title: 'Sync Timing', desc: 'Syncs automatically when the app launches. Already-rewarded steps are not counted again.' },
+                { icon: '📊', title: 'Data Source', desc: 'Health Connect (Android 14+) is used first. Falls back to Google Fit SDK if unavailable.' },
+                { icon: '⚠️', title: 'Note', desc: 'Only available in the native app. Cannot sync from a web browser. Please allow health data access in app permission settings.' }
+            ],
+            reward_table_title: 'Reward Table',
+            col_steps: 'Steps',
+            col_reward: 'Reward',
+            rewards: [
+                { steps: '1,000', reward: '+10P & STR +0.5' },
+                { steps: '5,000', reward: '+50P & STR +2.5' },
+                { steps: '10,000', reward: '+100P & STR +5.0' }
+            ]
+        },
+        ja: {
+            title: 'Google Fitness同期ガイド',
+            sections: [
+                { icon: '📱', title: '連携方法', desc: 'Google FitまたはHealth Connectアプリがインストールされている必要があります。トグルをオンにすると健康データへのアクセス権限を要求します。' },
+                { icon: '🚶', title: '歩数報酬', desc: '1,000歩ごとに+10P & STR +0.5の報酬が自動付与されます。1日の累積歩数を基準に計算されます。' },
+                { icon: '🔄', title: '同期タイミング', desc: 'アプリ起動時に自動同期されます。既に報酬を受け取った歩数は重複付与されません。' },
+                { icon: '📊', title: 'データソース', desc: 'Health Connect（Android 14+）を優先使用し、利用不可の場合はGoogle Fit SDKに自動切替されます。' },
+                { icon: '⚠️', title: '注意事項', desc: 'ネイティブアプリでのみ使用可能です。ウェブブラウザでは同期できません。アプリの権限設定で健康データへのアクセスを許可してください。' }
+            ],
+            reward_table_title: '報酬体系',
+            col_steps: '歩数',
+            col_reward: '報酬',
+            rewards: [
+                { steps: '1,000歩', reward: '+10P & STR +0.5' },
+                { steps: '5,000歩', reward: '+50P & STR +2.5' },
+                { steps: '10,000歩', reward: '+100P & STR +5.0' }
+            ]
+        }
+    };
+
+    const g = guideData[lang] || guideData.ko;
+    document.getElementById('info-modal-title').innerText = g.title;
+    const body = document.getElementById('info-modal-body');
+
+    let html = g.sections.map(s => `
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color);">
+            <span style="font-size:1.3rem; flex-shrink:0;">${s.icon}</span>
+            <div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:3px;">${s.title}</div>
+                <div style="font-size:0.75rem; color:var(--text-sub); line-height:1.5; word-break:keep-all;">${s.desc}</div>
+            </div>
+        </div>
+    `).join('');
+
+    html += `<div style="margin-top:14px; background:rgba(0,217,255,0.06); border:1px solid rgba(0,217,255,0.3); padding:10px; border-radius:6px;">
+        <div style="font-weight:bold; color:var(--neon-blue); margin-bottom:8px;">${g.reward_table_title}</div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+            <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.1);">
+                <th style="padding:6px; text-align:center; color:var(--text-sub);">${g.col_steps}</th>
+                <th style="padding:6px; text-align:center; color:var(--text-sub);">${g.col_reward}</th>
+            </tr></thead>
+            <tbody>${g.rewards.map(r => `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:6px; text-align:center; color:var(--neon-gold); font-weight:bold;">${r.steps}</td>
+                <td style="padding:6px; text-align:center; color:var(--neon-blue);">${r.reward}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+    </div>`;
+
+    body.innerHTML = html;
     const m = document.getElementById('infoModal');
     m.classList.remove('d-none');
     m.classList.add('d-flex');

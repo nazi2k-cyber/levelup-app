@@ -25,7 +25,7 @@ const i18n = {
         modal_quest_title: "주간 퀘스트 목록", modal_dungeon_title: "이상 현상 목록",
         th_day: "요일", th_stat: "스탯", th_quest: "퀘스트 명", th_raid: "이상 현상", th_req: "요구 데이터",
 
-        btn_status_info: "가이드", modal_status_title: "스탯(능력치) 가이드", th_desc: "상세 설명",
+        btn_status_info: "가이드", btn_sync_info: "가이드", modal_status_title: "스탯(능력치) 가이드", modal_sync_title: "구글 피트니스 동기화 가이드", th_desc: "상세 설명",
         desc_str: "물리적 힘, 신체 단련, 근력 운동 관련 수치 (예: 헬스, 러닝)",
         desc_int: "학습, 독서, 인지 능력, 지식 탐구 관련 수치 (예: 공부, 독서)",
         desc_cha: "인맥 관리, 소통, 외적 매력, 멘탈 케어 수치 (예: 미소, 안부 연락)",
@@ -115,7 +115,7 @@ const i18n = {
         modal_quest_title: "Weekly Quests", modal_dungeon_title: "Anomaly List",
         th_day: "Day", th_stat: "Stat", th_quest: "Quest", th_raid: "Anomaly", th_req: "Requirement",
 
-        btn_status_info: "Guide", modal_status_title: "Stats Guide", th_desc: "Description",
+        btn_status_info: "Guide", btn_sync_info: "Guide", modal_status_title: "Stats Guide", modal_sync_title: "Google Fitness Sync Guide", th_desc: "Description",
         desc_str: "Physical strength, workouts, and fitness. (e.g., Gym, Running)",
         desc_int: "Learning, reading, and cognitive abilities. (e.g., Study, Books)",
         desc_cha: "Networking, communication, and charm. (e.g., Smile, Reach out)",
@@ -201,7 +201,7 @@ const i18n = {
         modal_quest_title: "週間クエスト一覧", modal_dungeon_title: "異常現象一覧",
         th_day: "曜日", th_stat: "ステータス", th_quest: "クエスト名", th_raid: "異常現象", th_req: "要求データ",
 
-        btn_status_info: "ガイド", modal_status_title: "ステータスガイド", th_desc: "詳細説明",
+        btn_status_info: "ガイド", btn_sync_info: "ガイド", modal_status_title: "ステータスガイド", modal_sync_title: "Google Fitness同期ガイド", th_desc: "詳細説明",
         desc_str: "物理的な力、運動、筋力トレーニング関連 (例: ジム、ランニング)",
         desc_int: "学習、読書、認知能力、知識探求関連 (例: 勉強、読書)",
         desc_cha: "人脈管理、コミュニケーション、魅力関連 (例: 笑顔、連絡)",
