@@ -3895,37 +3895,38 @@ async function toggleHealthSync() {
     }
 }
 
-// 네이티브 건강 데이터 권한 요청 (Health Connect → Google Fit SDK 순서)
+// 네이티브 건강 데이터 권한 요청
+// Google Fit SDK 우선 (실제 걸음 수 조회 가능) → HealthConnect는 설정 안내만 가능
 async function requestFitnessScope() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return false;
 
     try {
-        // 1단계: Health Connect 권한 시도
+        // 1단계: Google Fit SDK 권한 시도 (네이티브 Sign-In + OAuth 포함)
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (GoogleFit) {
+            const result = await GoogleFit.requestPermissions();
+            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 결과: ' + JSON.stringify(result));
+            if (result && result.granted) return true;
+        }
+
+        // 2단계: Google Fit 실패 시 Health Connect 설정 화면 안내 (폴백)
         const { HealthConnect } = window.Capacitor.Plugins;
         if (HealthConnect) {
             const availability = await HealthConnect.isAvailable();
             if (availability.available) {
-                await HealthConnect.requestPermissions();
-                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료');
-                return true;
+                const hcResult = await HealthConnect.requestPermissions();
+                if (window.AppLogger) AppLogger.info('[HealthConnect] 설정 화면 열기 결과: ' + JSON.stringify(hcResult));
+                // HC는 설정 화면만 열므로 granted=false가 정상
             }
         }
 
-        // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
-        const { GoogleFit } = window.Capacitor.Plugins;
-        if (GoogleFit) {
-            await GoogleFit.requestPermissions();
-            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
-            return true;
-        }
-
-        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 건강 데이터 플러그인을 찾을 수 없음');
+        if (window.AppLogger) AppLogger.warn('[Fitness] 건강 데이터 권한 획득 실패');
         return false;
     } catch (e) {
         const errCode = String(e.code || (e.error && e.error.code) || '');
         if (errCode === '12501') return false; // 사용자 취소
-        AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
+        if (window.AppLogger) AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
         return false;
     }
 }
