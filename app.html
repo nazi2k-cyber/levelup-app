@@ -172,7 +172,10 @@
                     <div class="quest-list-wrapper" id="quest-list-container"></div>
                     <div id="diy-quest-section" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="diy_quest_title">DIY Quests</span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="diy_quest_title">DIY Quests</span>
+                                <button class="btn-info-sm" onclick="window.openDiyQuestGuide()">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
+                            </div>
                             <button class="btn-info-sm" id="btn-add-diy-quest" onclick="window.showDiyQuestModal()">+ <span data-i18n="btn_add_diy">추가</span></button>
                         </div>
                         <div id="diy-quest-list"></div>

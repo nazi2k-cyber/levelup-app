@@ -932,7 +932,8 @@ function renderDiyQuestList() {
                     <div class="quest-desc">${sanitizeText(q.desc)}</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="diy-quest-edit" onclick="event.stopPropagation(); window.showDiyQuestModal('${q.id}')">✎</span>
+                    <span class="diy-quest-edit" onclick="event.stopPropagation(); window.showDiyQuestModal('${q.id}')" title="Edit">✎</span>
+                    <span class="diy-quest-edit" onclick="event.stopPropagation(); window.deleteDiyQuestDirect('${q.id}')" title="Delete" style="color:var(--neon-red);">✕</span>
                     <div class="quest-checkbox"></div>
                 </div>
             </div>
@@ -1070,13 +1071,83 @@ window.deleteDiyQuest = () => {
     closeDiyQuestModal();
 };
 
-function closeDiyQuestModal() {
+window.deleteDiyQuestDirect = (questId) => {
+    const lang = AppState.currentLang;
+    if (!confirm(i18n[lang]?.diy_confirm_delete || 'Delete this quest?')) return;
+
+    AppState.diyQuests.definitions = AppState.diyQuests.definitions.filter(d => d.id !== questId);
+    delete AppState.diyQuests.completedToday[questId];
+
+    saveUserData();
+    renderDiyQuestList();
+    renderCalendar();
+};
+
+window.closeDiyQuestModal = () => {
     const modal = document.getElementById('diyQuestModal');
     if (modal) {
         modal.classList.add('d-none');
         modal.classList.remove('d-flex');
     }
-}
+};
+
+window.openDiyQuestGuide = () => {
+    const lang = AppState.currentLang;
+    const guide = {
+        ko: {
+            title: 'DIY 퀘스트 가이드',
+            desc: '나만의 커스텀 퀘스트를 만들어 매일 수행하세요!',
+            rules: [
+                '최대 6개까지 DIY 퀘스트를 생성할 수 있습니다.',
+                '각 퀘스트에 제목, 설명, 스탯(STR/INT/CHA/VIT/WLTH/AGI)을 지정합니다.',
+                '완료 시 기본 퀘스트와 동일한 보상: +20P & 스탯 +0.5',
+                '스트릭 배율 및 크리티컬 확률(15%)이 동일하게 적용됩니다.',
+                'DIY 퀘스트도 일일 올클리어 조건에 포함됩니다.',
+                '완료 상태는 매일 자정(KST)에 자동 초기화됩니다.',
+                '✎ 버튼으로 수정, ✕ 버튼으로 삭제할 수 있습니다.'
+            ]
+        },
+        en: {
+            title: 'DIY Quest Guide',
+            desc: 'Create your own custom quests and complete them daily!',
+            rules: [
+                'You can create up to 6 DIY quests.',
+                'Set a title, description, and stat (STR/INT/CHA/VIT/WLTH/AGI) for each.',
+                'Same rewards as regular quests: +20P & Stat +0.5',
+                'Streak multiplier and critical hit chance (15%) apply equally.',
+                'DIY quests count toward daily all-clear condition.',
+                'Completion resets daily at midnight (KST).',
+                'Use ✎ to edit, ✕ to delete quests.'
+            ]
+        },
+        ja: {
+            title: 'DIYクエストガイド',
+            desc: '自分だけのカスタムクエストを作成して毎日実行しましょう！',
+            rules: [
+                'DIYクエストは最大6個まで作成できます。',
+                'タイトル、説明、ステータス(STR/INT/CHA/VIT/WLTH/AGI)を設定します。',
+                '通常クエストと同じ報酬: +20P & ステータス+0.5',
+                'ストリークボーナスとクリティカル確率(15%)が同様に適用されます。',
+                'DIYクエストもデイリーオールクリア条件に含まれます。',
+                '完了状態は毎日深夜(KST)にリセットされます。',
+                '✎で編集、✕で削除できます。'
+            ]
+        }
+    };
+    const g = guide[lang] || guide.ko;
+
+    document.getElementById('info-modal-title').innerText = g.title;
+    const body = document.getElementById('info-modal-body');
+    body.innerHTML = `
+        <p style="font-size:0.8rem; color:var(--neon-gold); margin:0 0 10px 0;">${g.desc}</p>
+        <ul style="font-size:0.75rem; color:var(--text-main); line-height:1.8; padding-left:18px; margin:0;">
+            ${g.rules.map(r => `<li>${r}</li>`).join('')}
+        </ul>
+    `;
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+};
 
 window.selectDiyStat = (btn) => {
     document.querySelectorAll('.diy-stat-btn').forEach(b => b.classList.remove('active'));
