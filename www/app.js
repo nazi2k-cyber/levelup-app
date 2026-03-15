@@ -2096,59 +2096,95 @@ window.sharePlannerAsImage = async function() {
     const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
 
     try {
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('toBlob failed');
 
-        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        let saved = false;
 
-        // 방법 1: Web Share API (네이티브 앱에서 가장 잘 동작)
-        if (navigator.share && navigator.canShare) {
-            const file = new File([blob], fileName, { type: 'image/png' });
-            const shareData = { files: [file] };
-            if (navigator.canShare(shareData)) {
-                await navigator.share(shareData);
-                // 모달 닫기
-                const m = document.getElementById('shareModal');
-                m.classList.add('d-none');
-                m.classList.remove('d-flex');
-                return;
+        // 네이티브 앱: Capacitor Filesystem API로 직접 로컬 저장
+        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+            const Filesystem = window.Capacitor.Plugins.Filesystem;
+            const dataUrl = canvas.toDataURL('image/png');
+            const base64Data = dataUrl.split(',')[1];
+
+            try {
+                // Documents → External → Cache 순서로 저장 시도
+                let savedPath = null;
+                const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
+                for (const dir of dirs) {
+                    try {
+                        const result = await Filesystem.writeFile({
+                            path: fileName,
+                            data: base64Data,
+                            directory: dir,
+                            recursive: true
+                        });
+                        savedPath = result.uri;
+                        break;
+                    } catch(dirErr) {
+                        AppLogger.warn('[Planner] Filesystem write failed for dir ' + dir + ': ' + dirErr.message);
+                    }
+                }
+
+                if (savedPath) {
+                    AppLogger.info('[Planner] Image saved: ' + savedPath);
+                    alert(msgs[lang] || msgs.ko);
+                    saved = true;
+                }
+            } catch(fsErr) {
+                AppLogger.warn('[Planner] Filesystem save failed: ' + fsErr.message);
             }
         }
 
-        // 방법 2: Blob URL + <a> 다운로드 (웹 브라우저)
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        // 클린업
-        setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        }, 1000);
+        // Web Share API 시도 (네이티브 Filesystem 실패 시 또는 웹 브라우저)
+        if (!saved && navigator.share && navigator.canShare) {
+            try {
+                const file = new File([blob], fileName, { type: 'image/png' });
+                const shareData = { files: [file] };
+                if (navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    saved = true;
+                }
+            } catch(shareErr) {
+                AppLogger.warn('[Planner] Share API failed: ' + shareErr.message);
+            }
+        }
 
-        alert(msgs[lang] || msgs.ko);
+        // <a> 태그 다운로드 (데스크톱 웹 브라우저 폴백)
+        if (!saved && !isNative) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 1000);
+            saved = true;
+        }
+
+        if (saved) {
+            alert(msgs[lang] || msgs.ko);
+        } else {
+            throw new Error('All save methods failed');
+        }
     } catch(e) {
-        // 방법 3: 최종 폴백 - 새 탭에서 이미지 열기 (사용자가 길게 눌러 저장)
+        AppLogger.error('[Planner] Image save error: ' + e.message);
+        // 최종 폴백 - 이미지를 화면에 표시하여 길게 눌러 저장
         try {
             const dataUrl = canvas.toDataURL('image/png');
-            const w = window.open();
-            if (w) {
-                w.document.write(`<html><head><title>${fileName}</title></head><body style="margin:0;background:#000;display:flex;justify-content:center;align-items:center;min-height:100vh;"><img src="${dataUrl}" style="max-width:100%;height:auto;"></body></html>`);
-                w.document.close();
-            } else {
-                // 팝업 차단 시 직접 이미지 표시
-                const imgWindow = document.createElement('div');
-                imgWindow.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
-                imgWindow.innerHTML = `
-                    <p style="color:#fff;font-size:0.85rem;margin-bottom:12px;text-align:center;">이미지를 길게 눌러 저장하세요</p>
-                    <img src="${dataUrl}" style="max-width:100%;max-height:80vh;border-radius:8px;">
-                    <button onclick="this.parentElement.remove()" style="margin-top:16px;padding:10px 30px;background:var(--neon-blue);color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">닫기</button>
-                `;
-                document.body.appendChild(imgWindow);
-            }
+            const imgWindow = document.createElement('div');
+            imgWindow.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+            imgWindow.innerHTML = `
+                <p style="color:#fff;font-size:0.85rem;margin-bottom:12px;text-align:center;">이미지를 길게 눌러 저장하세요</p>
+                <img src="${dataUrl}" style="max-width:100%;max-height:80vh;border-radius:8px;">
+                <button onclick="this.parentElement.remove()" style="margin-top:16px;padding:10px 30px;background:var(--neon-blue);color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;">닫기</button>
+            `;
+            document.body.appendChild(imgWindow);
         } catch(e2) {
             alert(failMsgs[lang] || failMsgs.ko);
         }
