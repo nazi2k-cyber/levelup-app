@@ -3092,6 +3092,53 @@ function canSpinRoulette() {
     return anyDone ? 'ready' : 'locked';
 }
 
+// KST 자정까지 남은 시간(ms) 계산
+function getMsUntilNextKSTMidnight() {
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstNow = new Date(now.getTime() + kstOffset + now.getTimezoneOffset() * 60 * 1000);
+    const kstTomorrow = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate() + 1, 0, 0, 0, 0);
+    return kstTomorrow.getTime() - kstNow.getTime();
+}
+
+// 남은 시간을 HH:MM:SS 포맷으로 변환
+function formatCountdown(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+}
+
+let _rouletteTimerInterval = null;
+
+function startRouletteTimer() {
+    stopRouletteTimer();
+    const timerEl = document.getElementById('roulette-timer');
+    if (!timerEl) return;
+
+    function tick() {
+        const ms = getMsUntilNextKSTMidnight();
+        const lang = AppState.currentLang;
+        timerEl.textContent = `${i18n[lang].roulette_next_spin} ${formatCountdown(ms)}`;
+        timerEl.style.display = '';
+        // 자정이 되면 룰렛 상태 갱신
+        if (ms <= 1000) {
+            stopRouletteTimer();
+            setTimeout(() => renderRoulette(), 1100);
+        }
+    }
+    tick();
+    _rouletteTimerInterval = setInterval(tick, 1000);
+}
+
+function stopRouletteTimer() {
+    if (_rouletteTimerInterval) {
+        clearInterval(_rouletteTimerInterval);
+        _rouletteTimerInterval = null;
+    }
+}
+
 function renderRoulette() {
     const container = document.getElementById('roulette-container');
     if (!container) return;
@@ -3105,6 +3152,7 @@ function renderRoulette() {
 
     const btn = document.getElementById('btn-roulette-spin');
     const statusText = document.getElementById('roulette-status');
+    const timerEl = document.getElementById('roulette-timer');
     if (btn && statusText) {
         if (status === 'ready') {
             btn.disabled = false;
@@ -3112,18 +3160,23 @@ function renderRoulette() {
             btn.style.opacity = '1';
             statusText.textContent = i18n[lang].roulette_desc;
             statusText.style.color = 'var(--neon-gold)';
+            stopRouletteTimer();
+            if (timerEl) timerEl.style.display = 'none';
         } else if (status === 'used') {
             btn.disabled = true;
             btn.textContent = i18n[lang].roulette_used;
             btn.style.opacity = '0.4';
             statusText.textContent = i18n[lang].roulette_used;
             statusText.style.color = 'var(--text-sub)';
+            startRouletteTimer();
         } else {
             btn.disabled = true;
             btn.textContent = i18n[lang].roulette_spin;
             btn.style.opacity = '0.4';
             statusText.textContent = i18n[lang].roulette_locked;
             statusText.style.color = 'var(--text-sub)';
+            stopRouletteTimer();
+            if (timerEl) timerEl.style.display = 'none';
         }
     }
 }

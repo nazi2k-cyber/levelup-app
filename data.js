@@ -65,6 +65,7 @@ const i18n = {
         // P4: 일일 보너스 룰렛
         roulette_title: "일일 보너스 룰렛", roulette_spin: "스핀!", roulette_desc: "퀘스트 1개 이상 완료 후 하루 1회 스핀 가능",
         roulette_locked: "퀘스트를 완료하면 스핀 가능", roulette_used: "오늘 스핀 완료", roulette_result: "보상 획득!",
+        roulette_next_spin: "다음 스핀까지",
 
         // 릴스 탭
         nav_reels: "Day1", reels_title: "🎬 Day1", reels_post_btn: "Day1 포스팅",
@@ -171,6 +172,7 @@ const i18n = {
         // P4: Daily Bonus Roulette
         roulette_title: "Daily Bonus Roulette", roulette_spin: "SPIN!", roulette_desc: "Complete 1+ quest to unlock daily spin",
         roulette_locked: "Complete a quest to spin", roulette_used: "Spin used today", roulette_result: "Reward!",
+        roulette_next_spin: "Next spin in",
 
         // Reels tab
         nav_reels: "Reels", reels_title: "🎬 Reels", reels_post_btn: "Post Timetable",
@@ -277,6 +279,7 @@ const i18n = {
         // P4: デイリーボーナスルーレット
         roulette_title: "デイリーボーナスルーレット", roulette_spin: "スピン！", roulette_desc: "クエスト1つ以上完了で1日1回スピン可能",
         roulette_locked: "クエストを完了するとスピン可能", roulette_used: "本日スピン済", roulette_result: "報酬獲得！",
+        roulette_next_spin: "次のスピンまで",
 
         // リールタブ
         nav_reels: "リール", reels_title: "🎬 リール", reels_post_btn: "タイムテーブル投稿",
