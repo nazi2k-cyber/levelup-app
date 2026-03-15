@@ -1124,13 +1124,13 @@ window.deleteDiyQuest = () => {
     closeDiyQuestModal();
 };
 
-function closeDiyQuestModal() {
+window.closeDiyQuestModal = function() {
     const modal = document.getElementById('diyQuestModal');
     if (modal) {
         modal.classList.add('d-none');
         modal.classList.remove('d-flex');
     }
-}
+};
 
 window.selectDiyStat = (btn) => {
     document.querySelectorAll('.diy-stat-btn').forEach(b => b.classList.remove('active'));
