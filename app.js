@@ -344,6 +344,10 @@ function bindEvents() {
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
+    document.getElementById('btn-day1-info').addEventListener('click', openDay1InfoModal);
+    document.getElementById('btn-settings-push-guide').addEventListener('click', () => openSettingsGuideModal('push'));
+    document.getElementById('btn-settings-gps-guide').addEventListener('click', () => openSettingsGuideModal('gps'));
+    document.getElementById('btn-settings-fitness-guide').addEventListener('click', () => openSettingsGuideModal('fitness'));
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
@@ -2439,6 +2443,62 @@ function openPlannerInfoModal() {
             </div>
         </div>
     `).join('');
+
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// --- ★ 설정 가이드 모달 (푸시/GPS/피트니스) ★ ---
+function openSettingsGuideModal(type) {
+    const lang = AppState.currentLang;
+    const l = i18n[lang];
+    const titleKey = `settings_guide_${type}_title`;
+    const descKey = `settings_guide_${type}_desc`;
+    const title = l[titleKey] || titleKey;
+    const desc = l[descKey] || descKey;
+
+    const colors = { push: 'var(--neon-gold)', gps: 'var(--neon-blue)', fitness: 'var(--neon-purple, #b388ff)' };
+    const icons = { push: '🔔', gps: '📍', fitness: '🏃' };
+    const color = colors[type] || 'var(--neon-blue)';
+    const icon = icons[type] || 'ℹ️';
+
+    document.getElementById('info-modal-title').innerText = title;
+    const body = document.getElementById('info-modal-body');
+    body.innerHTML = `
+        <div style="background:rgba(0,217,255,0.06); border:1px solid ${color}; padding:14px; border-radius:8px; text-align:center;">
+            <div style="font-size:2rem; margin-bottom:8px;">${icon}</div>
+            <div style="font-weight:bold; color:${color}; margin-bottom:8px; font-size:0.9rem;">${title}</div>
+            <p style="font-size:0.8rem; color:var(--text-sub); line-height:1.6; margin:0;">${desc}</p>
+        </div>
+    `;
+
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// --- ★ Day1 가이드 모달 ★ ---
+function openDay1InfoModal() {
+    const lang = AppState.currentLang;
+    const l = i18n[lang];
+    document.getElementById('info-modal-title').innerText = l.day1_guide_title || 'Day1 Guide';
+    const body = document.getElementById('info-modal-body');
+    body.innerHTML = `
+        <div style="background:rgba(0,217,255,0.06); border:1px solid var(--neon-blue); padding:12px; border-radius:8px; margin-bottom:10px;">
+            <div style="font-weight:bold; color:var(--neon-blue); margin-bottom:8px;">🎬 ${l.day1_guide_title || 'Day1 Guide'}</div>
+            <p style="font-size:0.8rem; color:var(--text-sub); line-height:1.6; margin:0 0 8px 0;">${l.day1_guide_desc || ''}</p>
+        </div>
+        <div style="background:rgba(255,220,0,0.06); border:1px solid var(--neon-gold); padding:10px; border-radius:8px; margin-bottom:8px;">
+            <div style="font-weight:bold; color:var(--neon-gold); margin-bottom:4px;">🎁 ${l.day1_guide_reward || ''}</div>
+        </div>
+        <div style="background:rgba(255,60,60,0.06); border:1px solid var(--neon-red); padding:10px; border-radius:8px; margin-bottom:8px;">
+            <div style="font-weight:bold; color:var(--neon-red); margin-bottom:4px;">⏰ ${l.day1_guide_auto_delete || ''}</div>
+        </div>
+        <div style="background:rgba(180,0,255,0.06); border:1px solid rgba(180,0,255,0.3); padding:10px; border-radius:8px;">
+            <div style="font-size:0.75rem; color:var(--text-sub);">${l.day1_guide_cooldown || ''}</div>
+        </div>
+    `;
 
     const m = document.getElementById('infoModal');
     m.classList.remove('d-none');
