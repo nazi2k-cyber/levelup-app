@@ -87,7 +87,10 @@ const i18n = {
         share_save_local: "이미지 로컬 저장",
         share_save_local_desc: "플래너를 이미지로 저장합니다",
         share_link: "링크 공유",
-        share_link_desc: "플래너 요약을 클립보드에 복사합니다"
+        share_link_desc: "플래너 요약을 클립보드에 복사합니다",
+
+        // 오프라인 모드
+        offline_banner: "오프라인 모드 — 일부 기능이 제한됩니다"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -173,7 +176,10 @@ const i18n = {
         share_save_local: "Save as Image",
         share_save_local_desc: "Save your planner as an image",
         share_link: "Copy to Clipboard",
-        share_link_desc: "Copy planner summary text to clipboard"
+        share_link_desc: "Copy planner summary text to clipboard",
+
+        // Offline mode
+        offline_banner: "Offline Mode — Some features are limited"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -259,7 +265,10 @@ const i18n = {
         share_save_local: "画像として保存",
         share_save_local_desc: "プランナーを画像として保存します",
         share_link: "クリップボードにコピー",
-        share_link_desc: "プランナーの要約テキストをコピーします"
+        share_link_desc: "プランナーの要約テキストをコピーします",
+
+        // オフラインモード
+        offline_banner: "オフラインモード — 一部の機能が制限されます"
     }
 };
 

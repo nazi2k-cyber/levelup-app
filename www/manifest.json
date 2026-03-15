@@ -1,0 +1,21 @@
+{
+    "name": "LEVEL UP: REBOOT",
+    "short_name": "LEVEL UP",
+    "description": "RPG 게이미피케이션 기반 자기계발 앱 — 현실을 게임처럼, 당신의 삶을 레벨업하세요",
+    "start_url": "/app.html",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0a0a0f",
+    "theme_color": "#00d9ff",
+    "lang": "ko",
+    "categories": ["lifestyle", "health", "productivity"],
+    "icons": [
+        {
+            "src": "/play_store_512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

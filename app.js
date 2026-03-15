@@ -166,10 +166,68 @@ function initNavDragReorder() {
     });
 }
 
+// --- Service Worker 등록 및 오프라인/온라인 감지 ---
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (isNative) return; // Capacitor 네이티브에서는 SW 불필요
+
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => {
+            if (window.AppLogger) AppLogger.info('[SW] Service Worker 등록 완료 (scope: ' + reg.scope + ')');
+
+            // 업데이트 감지
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                        if (window.AppLogger) AppLogger.info('[SW] 새 버전 활성화됨 — 새로고침 권장');
+                    }
+                });
+            });
+        })
+        .catch((err) => {
+            if (window.AppLogger) AppLogger.warn('[SW] 등록 실패: ' + err.message);
+        });
+}
+
+function initOfflineDetection() {
+    const banner = document.getElementById('offline-banner');
+    if (!banner) return;
+
+    function updateOnlineStatus() {
+        if (navigator.onLine) {
+            banner.classList.add('d-none');
+            banner.classList.remove('offline-banner-show');
+            if (window.AppLogger) AppLogger.info('[Network] 온라인 복귀');
+            // SW에 온라인 복귀 알림
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'ONLINE_RESTORED' });
+            }
+        } else {
+            banner.classList.remove('d-none');
+            banner.classList.add('offline-banner-show');
+            if (window.AppLogger) AppLogger.warn('[Network] 오프라인 전환');
+        }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    // 초기 상태 체크
+    if (!navigator.onLine) {
+        updateOnlineStatus();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadNavOrder();
     initTheme();
     bindEvents();
+    registerServiceWorker();
+    initOfflineDetection();
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -4409,11 +4467,11 @@ async function requestWebPushPermission() {
         return null;
     }
 
-    // Service Worker 등록
+    // Service Worker 등록 (sw.js 에 FCM 통합)
     let swRegistration = null;
     if ('serviceWorker' in navigator) {
-        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        if (window.AppLogger) AppLogger.info('[FCM] Service Worker 등록 완료');
+        swRegistration = await navigator.serviceWorker.ready;
+        if (window.AppLogger) AppLogger.info('[FCM] Service Worker 준비 완료');
     }
 
     const token = await getToken(messaging, {

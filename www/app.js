@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -16,9 +16,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true
-});
+const db = getFirestore(app);
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
@@ -168,10 +166,68 @@ function initNavDragReorder() {
     });
 }
 
+// --- Service Worker 등록 및 오프라인/온라인 감지 ---
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (isNative) return; // Capacitor 네이티브에서는 SW 불필요
+
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then((reg) => {
+            if (window.AppLogger) AppLogger.info('[SW] Service Worker 등록 완료 (scope: ' + reg.scope + ')');
+
+            // 업데이트 감지
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                        if (window.AppLogger) AppLogger.info('[SW] 새 버전 활성화됨 — 새로고침 권장');
+                    }
+                });
+            });
+        })
+        .catch((err) => {
+            if (window.AppLogger) AppLogger.warn('[SW] 등록 실패: ' + err.message);
+        });
+}
+
+function initOfflineDetection() {
+    const banner = document.getElementById('offline-banner');
+    if (!banner) return;
+
+    function updateOnlineStatus() {
+        if (navigator.onLine) {
+            banner.classList.add('d-none');
+            banner.classList.remove('offline-banner-show');
+            if (window.AppLogger) AppLogger.info('[Network] 온라인 복귀');
+            // SW에 온라인 복귀 알림
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'ONLINE_RESTORED' });
+            }
+        } else {
+            banner.classList.remove('d-none');
+            banner.classList.add('offline-banner-show');
+            if (window.AppLogger) AppLogger.warn('[Network] 오프라인 전환');
+        }
+    }
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    // 초기 상태 체크
+    if (!navigator.onLine) {
+        updateOnlineStatus();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadNavOrder();
     initTheme();
     bindEvents();
+    registerServiceWorker();
+    initOfflineDetection();
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -204,14 +260,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderWeeklyChallenges();
             renderRoulette();
+            updateReelsResetTimer();
 
             if (AppState.user.syncEnabled) { syncHealthData(false); }
             initPushNotifications();
 
-            // 최초 설치 시 권한 요청 온보딩 표시
-            if (shouldShowPermissionOnboarding()) {
-                setTimeout(() => showPermissionOnboarding(), 500);
-            }
+            // OS 권한 상태와 앱 토글 동기화 (OS에서 차단/해제된 경우 토글 off)
+            await syncToggleWithOSPermissions();
+
+            // 로그인 후 권한 요청 프롬프트 표시 (푸시/GPS/피트니스)
+            showPermissionPrompts();
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
             _initializedUid = null;
@@ -224,11 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     setInterval(() => {
+        // updateDungeonStatus() 내부에서 syncGlobalDungeon()을 이미 호출하므로 별도 호출 불필요
         updateDungeonStatus();
-        if(document.getElementById('dungeon').classList.contains('active')) {
-            window.syncGlobalDungeon();
-        }
-    }, 30000); 
+    }, 30000);
 });
 
 function initTheme() {
@@ -968,6 +1024,17 @@ window.syncGlobalDungeon = async () => {
     }
 };
 
+function getKSTDate(now) {
+    // KST(UTC+9) 기준 Date 객체 생성
+    const kst = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+    return kst;
+}
+
+function getKSTDateStr(now) {
+    const kst = getKSTDate(now);
+    return `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,'0')}-${String(kst.getDate()).padStart(2,'0')}`;
+}
+
 function updateDungeonStatus() {
     const now = new Date();
 
@@ -980,7 +1047,8 @@ function updateDungeonStatus() {
     // 06:00~24:00 → kstHour 6~23 (24:00은 다음날 00:00이므로 23시까지)
     const currentSlot = (kstHour >= 6) ? 1 : 0;
 
-    const dateStr = now.toDateString();
+    // KST 기준 날짜 문자열 사용 (로컬 타임존 의존 제거)
+    const dateStr = getKSTDateStr(now);
     if (AppState.dungeon.lastGeneratedDate !== dateStr || AppState.dungeon.slot !== currentSlot) {
         AppState.dungeon.lastGeneratedDate = dateStr;
         AppState.dungeon.slot = currentSlot;
@@ -1163,6 +1231,10 @@ window.joinDungeon = async () => {
         AppState.dungeon.bossMaxHP = isBossRush() ? 10 : 5;
         AppState.dungeon.bossDamageDealt = 0;
     }
+    // 로컬 상태 즉시 반영 (서버 sync 전 UI 업데이트)
+    AppState.dungeon.globalParticipants = (AppState.dungeon.globalParticipants || 0) + 1;
+    renderDungeon();
+
     await saveUserData();
     await window.syncGlobalDungeon();
 
@@ -1175,14 +1247,20 @@ window.joinDungeon = async () => {
 
 window.simulateRaidAction = async () => {
     if (AppState.dungeon.hasContributed || AppState.dungeon.globalProgress >= 100) return;
-    
+
     const btn = document.getElementById('btn-raid-action');
     btn.innerText = `데이터 전송 중...`;
     btn.disabled = true;
 
     AppState.dungeon.hasContributed = true;
-    await saveUserData(); 
-    await window.syncGlobalDungeon(); 
+    // 로컬 상태 즉시 반영 (서버 sync 전 UI 업데이트)
+    AppState.dungeon.bossDamageDealt = (AppState.dungeon.bossDamageDealt || 0) + 1;
+    const bossMaxHP = AppState.dungeon.bossMaxHP || 5;
+    AppState.dungeon.globalProgress = Math.min(100, (AppState.dungeon.bossDamageDealt / bossMaxHP) * 100);
+    renderDungeon();
+
+    await saveUserData();
+    await window.syncGlobalDungeon();
 };
 
 window.completeDungeon = () => {
@@ -1222,11 +1300,11 @@ function switchTab(tabId, el) {
     
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); renderWeeklyChallenges(); renderRoulette(); }
-    if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); }
+    if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); updateReelsResetTimer(); }
     if(tabId === 'reels') { renderReelsFeed(); updateReelsResetTimer(); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
-        window.syncGlobalDungeon(); 
+        // syncGlobalDungeon()은 updateDungeonStatus() 내부에서 이미 호출됨
     }
 }
 
@@ -1336,6 +1414,10 @@ async function renderQuote() {
 
 // --- 소셜 탭 ---
 async function fetchSocialData() {
+    const container = document.getElementById('user-list-container');
+    if (container && AppState.social.users.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-sub); font-size:0.85rem;">데이터 로딩 중...</div>';
+    }
     try {
         const snap = await getDocs(collection(db, "users"));
         AppState.social.users = snap.docs.map(d => {
@@ -1348,10 +1430,16 @@ async function fetchSocialData() {
                     title = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last;
                 } catch(e) {}
             }
-            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, isFriend: AppState.user.friends.includes(d.id), isMe: auth.currentUser?.uid === d.id };
+            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
         });
         renderUsers(AppState.social.sortCriteria);
-    } catch(e) { console.error("소셜 로드 에러", e); }
+    } catch(e) {
+        console.error("소셜 로드 에러", e);
+        AppLogger.error('[Social] 데이터 로드 실패', e.stack || e.message);
+        if (container) {
+            container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--neon-red); font-size:0.85rem;">랭킹 데이터를 불러올 수 없습니다.<br><button onclick="fetchSocialData()" style="margin-top:10px; padding:6px 16px; background:var(--neon-blue); color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">다시 시도</button></div>';
+        }
+    }
 }
 
 function renderUsers(criteria, btn = null) {
@@ -1390,6 +1478,8 @@ function renderUsers(criteria, btn = null) {
         </div>
     `).join('');
 }
+
+window.fetchSocialData = fetchSocialData;
 
 window.toggleFriend = async (id) => {
     const isFriend = AppState.user.friends.includes(id);
@@ -2947,7 +3037,7 @@ function loadPlannerForDate(dateStr) {
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) { preview.classList.add('d-none'); preview.removeAttribute('src'); }
+        if (preview) { preview.classList.add('d-none'); preview.src = ''; }
         if (placeholder) placeholder.classList.remove('d-none');
         if (removeBtn) removeBtn.classList.add('d-none');
         const fileInput = document.getElementById('plannerPhotoUpload');
@@ -3089,7 +3179,7 @@ window.removePlannerPhoto = function() {
     const placeholder = document.getElementById('planner-photo-placeholder');
     const removeBtn = document.getElementById('planner-photo-remove');
     preview.classList.add('d-none');
-    preview.removeAttribute('src');
+    preview.src = '';
     placeholder.classList.remove('d-none');
     removeBtn.classList.add('d-none');
     document.getElementById('plannerPhotoUpload').value = '';
@@ -3467,10 +3557,14 @@ function updateReelsResetTimer() {
     // 릴스 탭 활성시 1초마다 업데이트
     if (window._reelsTimerInterval) clearInterval(window._reelsTimerInterval);
     window._reelsTimerInterval = setInterval(() => {
-        if (document.getElementById('reels').classList.contains('active')) {
+        const reelsActive = document.getElementById('reels').classList.contains('active');
+        const diaryActive = document.getElementById('diary').classList.contains('active');
+        if (reelsActive || diaryActive) {
             update();
-            // 24시간 경과 포스트 자동 삭제 체크
-            checkReelsReset();
+            if (reelsActive) {
+                // 24시간 경과 포스트 자동 삭제 체크
+                checkReelsReset();
+            }
         }
     }, 1000);
 }
@@ -3678,110 +3772,89 @@ function openAppSettings() {
     }
 }
 
-// --- 권한 요청 온보딩 (최초 설치 시 1회) ---
-let _permStep = 0; // 0=GPS, 1=Fitness
-
-function shouldShowPermissionOnboarding() {
-    if (localStorage.getItem('perm_onboarding_done')) return false;
+// --- 로그인 시 앱 토글 off + OS 권한 미승인 항목만 순차 요청 ---
+async function showPermissionPrompts() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-    return isNative;
-}
+    if (!isNative) return;
 
-function showPermissionOnboarding() {
-    _permStep = 0;
-    const overlay = document.getElementById('permission-onboarding');
-    overlay.classList.remove('d-none');
-    updatePermissionUI();
-    // i18n 적용
-    const lang = i18n[AppState.currentLang];
-    overlay.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (lang[key]) el.innerHTML = lang[key];
-    });
-    if (window.AppLogger) AppLogger.info('[Onboarding] 권한 요청 온보딩 표시');
-}
+    const cap = window.Capacitor;
+    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 상태 확인 시작');
 
-function updatePermissionUI() {
-    const gpsStep = document.getElementById('perm-step-gps');
-    const fitnessStep = document.getElementById('perm-step-fitness');
-    const gpsStatus = document.getElementById('perm-gps-status');
-    const fitnessStatus = document.getElementById('perm-fitness-status');
-    const allowBtn = document.getElementById('perm-allow-btn');
-    const lang = i18n[AppState.currentLang];
-
-    gpsStep.classList.remove('perm-active', 'perm-done', 'perm-skipped');
-    fitnessStep.classList.remove('perm-active', 'perm-done', 'perm-skipped');
-
-    if (_permStep === 0) {
-        gpsStep.classList.add('perm-active');
-        gpsStatus.innerHTML = '';
-        fitnessStatus.innerHTML = '';
-        allowBtn.querySelector('span').textContent = lang.perm_gps_allow || '위치 권한 허용';
-    } else if (_permStep === 1) {
-        gpsStep.classList.add(AppState.user.gpsEnabled ? 'perm-done' : 'perm-skipped');
-        gpsStatus.innerHTML = AppState.user.gpsEnabled
-            ? '<span style="color:#4caf50;">✓</span>'
-            : '<span style="color:var(--neon-gold);">-</span>';
-        fitnessStep.classList.add('perm-active');
-        fitnessStatus.innerHTML = '';
-        allowBtn.querySelector('span').textContent = lang.perm_fitness_allow || '피트니스 권한 허용';
-    }
-}
-
-async function handlePermissionStep() {
-    const lang = i18n[AppState.currentLang];
-
-    if (_permStep === 0) {
-        // GPS 권한 요청
+    // 1) 푸시 알림 — 앱 토글 off + OS 미승인일 때만 요청
+    if (!AppState.user.pushEnabled && cap.Plugins && cap.Plugins.PushNotifications) {
         try {
-            const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-            if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation) {
-                const { Geolocation } = window.Capacitor.Plugins;
-                const permResult = await Geolocation.requestPermissions();
-                if (window.AppLogger) AppLogger.info('[Onboarding] GPS permission result: ' + JSON.stringify(permResult));
-
-                if (permResult.location !== 'denied') {
-                    AppState.user.gpsEnabled = true;
-                    document.getElementById('gps-toggle').checked = true;
+            const { PushNotifications } = cap.Plugins;
+            const status = await PushNotifications.checkPermissions();
+            if (status.receive !== 'granted') {
+                const token = await requestNativePushPermission();
+                if (token) {
+                    AppState.user.pushEnabled = true;
+                    AppState.user.fcmToken = token;
+                    document.getElementById('push-toggle').checked = true;
+                    const statusDiv = document.getElementById('push-status');
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].push_on || '푸시 알림 활성화됨'}</span>`;
+                    await setupNativePushListeners();
                     saveUserData();
                 }
             }
         } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[Onboarding] GPS permission error: ' + (e.message || ''));
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Push check/request error: ' + (e.message || JSON.stringify(e)));
         }
-        _permStep = 1;
-        updatePermissionUI();
-    } else if (_permStep === 1) {
-        // 피트니스 권한 요청
+    }
+
+    // 2) GPS 위치 — 앱 토글 off + OS 미승인일 때만 요청
+    if (!AppState.user.gpsEnabled && cap.Plugins && cap.Plugins.Geolocation) {
         try {
-            const granted = await requestFitnessScope();
-            if (granted) {
+            const { Geolocation } = cap.Plugins;
+            const status = await Geolocation.checkPermissions();
+            if (status.location !== 'granted') {
+                const permResult = await Geolocation.requestPermissions();
+                if (permResult.location !== 'denied') {
+                    AppState.user.gpsEnabled = true;
+                    document.getElementById('gps-toggle').checked = true;
+                    const statusDiv = document.getElementById('gps-status');
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on || '위치 권한 활성화됨'}</span>`;
+                    saveUserData();
+                }
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] GPS check/request error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    // 3) 건강 데이터 — 앱 토글 off일 때만 요청
+    if (!AppState.user.syncEnabled) {
+        try {
+            let fitnessGranted = false;
+            const { HealthConnect, GoogleFit } = cap.Plugins || {};
+
+            if (HealthConnect) {
+                const availability = await HealthConnect.isAvailable();
+                if (availability.available) {
+                    fitnessGranted = await requestFitnessScope();
+                }
+            }
+            if (!fitnessGranted && GoogleFit) {
+                const availability = await GoogleFit.isAvailable();
+                if (availability.available && !availability.hasPermissions) {
+                    fitnessGranted = await requestFitnessScope();
+                }
+            }
+
+            if (fitnessGranted) {
                 AppState.user.syncEnabled = true;
                 document.getElementById('sync-toggle').checked = true;
                 saveUserData();
-                syncHealthData(false);
+                syncHealthData(true);
             }
         } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[Onboarding] Fitness permission error: ' + (e.message || ''));
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
         }
-        finishPermissionOnboarding();
     }
-}
 
-function skipPermissionOnboarding() {
-    if (_permStep === 0) {
-        _permStep = 1;
-        updatePermissionUI();
-    } else {
-        finishPermissionOnboarding();
-    }
-}
-
-function finishPermissionOnboarding() {
-    localStorage.setItem('perm_onboarding_done', '1');
-    const overlay = document.getElementById('permission-onboarding');
-    overlay.classList.add('d-none');
-    if (window.AppLogger) AppLogger.info('[Onboarding] 권한 요청 온보딩 완료 (GPS: ' + AppState.user.gpsEnabled + ', Sync: ' + AppState.user.syncEnabled + ')');
+    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 확인/요청 완료');
 }
 
 async function toggleGPS() {
@@ -3795,6 +3868,15 @@ async function toggleGPS() {
         AppState.user.gpsEnabled = false;
         saveUserData();
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.gps_off || '위치 탐색 중지됨'}</span>`;
+
+        // 네이티브 앱: OS 권한 해제 안내
+        const isNativeOff = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (isNativeOff) {
+            const msg = lang.gps_revoke_confirm || '위치 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
+        }
         return;
     }
 
@@ -3892,41 +3974,50 @@ async function toggleHealthSync() {
         saveUserData();
         statusDiv.style.display = 'flex';
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off || '동기화 해제됨'}</span>`;
+
+        // 네이티브 앱: OS 권한 해제 안내
+        const isNativeOff = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (isNativeOff) {
+            const lang = i18n[AppState.currentLang];
+            const msg = lang.sync_revoke_confirm || '건강 데이터 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
+        }
     }
 }
 
-// 네이티브 건강 데이터 권한 요청
-// Google Fit SDK 우선 (실제 걸음 수 조회 가능) → HealthConnect는 설정 안내만 가능
+// 네이티브 건강 데이터 권한 요청 (Health Connect → Google Fit SDK 순서)
 async function requestFitnessScope() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return false;
 
     try {
-        // 1단계: Google Fit SDK 권한 시도 (네이티브 Sign-In + OAuth 포함)
-        const { GoogleFit } = window.Capacitor.Plugins;
-        if (GoogleFit) {
-            const result = await GoogleFit.requestPermissions();
-            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 결과: ' + JSON.stringify(result));
-            if (result && result.granted) return true;
-        }
-
-        // 2단계: Google Fit 실패 시 Health Connect 설정 화면 안내 (폴백)
+        // 1단계: Health Connect 권한 시도
         const { HealthConnect } = window.Capacitor.Plugins;
         if (HealthConnect) {
             const availability = await HealthConnect.isAvailable();
             if (availability.available) {
-                const hcResult = await HealthConnect.requestPermissions();
-                if (window.AppLogger) AppLogger.info('[HealthConnect] 설정 화면 열기 결과: ' + JSON.stringify(hcResult));
-                // HC는 설정 화면만 열므로 granted=false가 정상
+                await HealthConnect.requestPermissions();
+                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료');
+                return true;
             }
         }
 
-        if (window.AppLogger) AppLogger.warn('[Fitness] 건강 데이터 권한 획득 실패');
+        // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (GoogleFit) {
+            await GoogleFit.requestPermissions();
+            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
+            return true;
+        }
+
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 건강 데이터 플러그인을 찾을 수 없음');
         return false;
     } catch (e) {
         const errCode = String(e.code || (e.error && e.error.code) || '');
         if (errCode === '12501') return false; // 사용자 취소
-        if (window.AppLogger) AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
+        AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
         return false;
     }
 }
@@ -4035,22 +4126,11 @@ async function syncHealthData(showMsg = false) {
         }
     }
 
-    // 네이티브 SDK에서 데이터를 가져오지 못한 경우 → 권한 재요청 시도
+    // 네이티브 SDK에서 데이터를 가져오지 못한 경우
     if (dataSource === 'none') {
-        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패 → 권한 재요청 시도');
-        const reGranted = await requestFitnessScope();
-        if (reGranted) {
-            // 권한 획득 후 재시도
-            const retrySteps = await tryHealthConnectSteps() ?? await tryGoogleFitNativeSteps();
-            if (retrySteps !== null) {
-                totalStepsToday = retrySteps;
-                dataSource = 'fitness_retry';
-            }
-        }
-        if (dataSource === 'none') {
-            if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
-            return;
-        }
+        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
+        return;
     }
 
     // 보상 계산
@@ -4085,6 +4165,145 @@ async function syncHealthData(showMsg = false) {
 }
 
 // --- 푸시 알림 (FCM) ---
+
+/** 앱 토글과 OS 권한 상태 양방향 동기화 — 로그인 시 호출 */
+async function syncToggleWithOSPermissions() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return;
+
+    const cap = window.Capacitor;
+    const lang = i18n[AppState.currentLang];
+    let changed = false;
+
+    // 1) 푸시 알림: OS 상태와 앱 토글 양방향 동기화
+    if (cap.Plugins && cap.Plugins.PushNotifications) {
+        try {
+            const { PushNotifications } = cap.Plugins;
+            const status = await PushNotifications.checkPermissions();
+            const osGranted = status.receive === 'granted';
+
+            if (AppState.user.pushEnabled && !osGranted) {
+                // OS 차단 → 앱 토글 off
+                AppState.user.pushEnabled = false;
+                AppState.user.fcmToken = null;
+                const pushToggle = document.getElementById('push-toggle');
+                if (pushToggle) pushToggle.checked = false;
+                const statusDiv = document.getElementById('push-status');
+                if (statusDiv) {
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off_by_os || 'OS 설정에서 알림이 차단되어 비활성화됨'}</span>`;
+                }
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] Push disabled: OS permission not granted');
+            } else if (!AppState.user.pushEnabled && osGranted) {
+                // OS 허용 → 앱 토글 on + 리스너 설정
+                const token = await requestNativePushPermission();
+                if (token) {
+                    AppState.user.pushEnabled = true;
+                    AppState.user.fcmToken = token;
+                    const pushToggle = document.getElementById('push-toggle');
+                    if (pushToggle) pushToggle.checked = true;
+                    const statusDiv = document.getElementById('push-status');
+                    if (statusDiv) {
+                        statusDiv.style.display = 'flex';
+                        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+                    }
+                    await setupNativePushListeners();
+                    changed = true;
+                    if (window.AppLogger) AppLogger.info('[SyncPerm] Push enabled: OS permission granted');
+                }
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[SyncPerm] Push check error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    // 2) GPS 위치: OS 상태와 앱 토글 양방향 동기화
+    if (cap.Plugins && cap.Plugins.Geolocation) {
+        try {
+            const { Geolocation } = cap.Plugins;
+            const status = await Geolocation.checkPermissions();
+            const osGranted = status.location === 'granted';
+
+            if (AppState.user.gpsEnabled && !osGranted) {
+                // OS 거부 → 앱 토글 off
+                AppState.user.gpsEnabled = false;
+                const gpsToggle = document.getElementById('gps-toggle');
+                if (gpsToggle) gpsToggle.checked = false;
+                const statusDiv = document.getElementById('gps-status');
+                if (statusDiv) {
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.gps_off_by_os || 'OS 설정에서 위치 권한이 해제되어 비활성화됨'}</span>`;
+                }
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] GPS disabled: OS permission not granted');
+            } else if (!AppState.user.gpsEnabled && osGranted) {
+                // OS 허용 → 앱 토글 on
+                AppState.user.gpsEnabled = true;
+                const gpsToggle = document.getElementById('gps-toggle');
+                if (gpsToggle) gpsToggle.checked = true;
+                const statusDiv = document.getElementById('gps-status');
+                if (statusDiv) {
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
+                }
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] GPS enabled: OS permission granted');
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[SyncPerm] GPS check error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    // 3) 건강 데이터: OS 상태와 앱 토글 양방향 동기화
+    if (cap.Plugins) {
+        try {
+            let hasPermission = false;
+            const { HealthConnect, GoogleFit } = cap.Plugins;
+
+            if (HealthConnect) {
+                const availability = await HealthConnect.isAvailable();
+                if (availability.available && availability.hasPermissions) {
+                    hasPermission = true;
+                }
+            }
+            if (!hasPermission && GoogleFit) {
+                const availability = await GoogleFit.isAvailable();
+                if (availability.available && availability.hasPermissions) {
+                    hasPermission = true;
+                }
+            }
+
+            if (AppState.user.syncEnabled && !hasPermission) {
+                // OS 해제 → 앱 토글 off
+                AppState.user.syncEnabled = false;
+                const syncToggle = document.getElementById('sync-toggle');
+                if (syncToggle) syncToggle.checked = false;
+                const statusDiv = document.getElementById('sync-status');
+                if (statusDiv) {
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.sync_off_by_os || 'OS 설정에서 건강 데이터 권한이 해제되어 비활성화됨'}</span>`;
+                }
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] Fitness disabled: OS permission not granted');
+            } else if (!AppState.user.syncEnabled && hasPermission) {
+                // OS 허용 → 앱 토글 on + 데이터 동기화
+                AppState.user.syncEnabled = true;
+                const syncToggle = document.getElementById('sync-toggle');
+                if (syncToggle) syncToggle.checked = true;
+                syncHealthData(true);
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] Fitness enabled: OS permission granted');
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[SyncPerm] Fitness check error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    if (changed) {
+        saveUserData();
+    }
+}
 
 /** 푸시 알림 초기화 — 로그인 후 호출 */
 async function initPushNotifications() {
@@ -4128,10 +4347,14 @@ async function togglePushNotifications() {
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
         if (window.AppLogger) AppLogger.info('[FCM] 푸시 알림 비활성화');
 
-        // 네이티브: 토픽 구독 해제
+        // 네이티브: 토픽 구독 해제 및 OS 권한 해제 안내
         const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
         if (isNative) {
             await unsubscribeNativeTopics();
+            const msg = lang.push_revoke_confirm || '알림 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
         }
         return;
     }
@@ -4244,11 +4467,11 @@ async function requestWebPushPermission() {
         return null;
     }
 
-    // Service Worker 등록
+    // Service Worker 등록 (sw.js 에 FCM 통합)
     let swRegistration = null;
     if ('serviceWorker' in navigator) {
-        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        if (window.AppLogger) AppLogger.info('[FCM] Service Worker 등록 완료');
+        swRegistration = await navigator.serviceWorker.ready;
+        if (window.AppLogger) AppLogger.info('[FCM] Service Worker 준비 완료');
     }
 
     const token = await getToken(messaging, {
