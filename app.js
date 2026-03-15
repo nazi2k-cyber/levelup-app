@@ -2177,7 +2177,12 @@ window.sharePlannerAsImage = async function() {
     ctx.fillText(footerText, pad + 6, totalH - pad + 4);
 
     // 다운로드 (네이티브 앱 + 웹 모두 지원)
-    const fileName = `planner_${dateStr}.png`;
+    const userName = (AppState.user && AppState.user.name) ? AppState.user.name.replace(/[^a-zA-Z0-9가-힣]/g, '') : '';
+    const saveCountKey = `planner_save_count_${dateStr}_${userName}`;
+    let saveCount = parseInt(localStorage.getItem(saveCountKey) || '0', 10) + 1;
+    localStorage.setItem(saveCountKey, String(saveCount));
+    const countSuffix = saveCount > 1 ? String(saveCount) : '';
+    const fileName = `planner_${dateStr}_${userName}${countSuffix}.png`;
     const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
     const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
 
@@ -2215,7 +2220,6 @@ window.sharePlannerAsImage = async function() {
 
                 if (savedPath) {
                     AppLogger.info('[Planner] Image saved: ' + savedPath);
-                    alert(msgs[lang] || msgs.ko);
                     saved = true;
                 }
             } catch(fsErr) {
