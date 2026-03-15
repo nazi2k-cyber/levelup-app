@@ -3711,7 +3711,7 @@ function openAppSettings() {
     }
 }
 
-// --- 로그인 후 권한 요청 프롬프트 (푸시 → GPS → 피트니스 순서) ---
+// --- 로그인 후 네이티브 권한 요청 (푸시 → GPS → 피트니스 순서, 모달 없이 직접 호출) ---
 async function showPermissionPrompts() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return;
@@ -3719,96 +3719,47 @@ async function showPermissionPrompts() {
     // 이미 모든 권한이 활성화된 경우 스킵
     if (AppState.user.pushEnabled && AppState.user.gpsEnabled && AppState.user.syncEnabled) return;
 
-    // 이미 권한 프롬프트를 본 적 있는지 확인 (세션당 1회)
+    // 세션당 1회만 요청
     const promptKey = 'perm_prompt_shown_' + (auth.currentUser ? auth.currentUser.uid : '');
     if (localStorage.getItem(promptKey)) return;
     localStorage.setItem(promptKey, Date.now().toString());
 
-    const lang = i18n[AppState.currentLang] || i18n.ko;
-    const modal = document.getElementById('permPromptModal');
-    const stepIndicator = document.getElementById('perm-step-indicator');
-    const iconEl = document.getElementById('perm-icon');
-    const titleEl = document.getElementById('perm-title');
-    const descEl = document.getElementById('perm-desc');
-    const btnAllow = document.getElementById('perm-btn-allow');
-    const btnSkip = document.getElementById('perm-btn-skip');
+    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 순차 요청 시작');
 
-    // 권한 요청 스텝 정의 (아직 활성화되지 않은 것만)
-    const steps = [];
+    // 1) 푸시 알림 권한
     if (!AppState.user.pushEnabled) {
-        steps.push({ key: 'push', icon: '🔔', title: lang.perm_push_title, desc: lang.perm_push_desc });
-    }
-    if (!AppState.user.gpsEnabled) {
-        steps.push({ key: 'gps', icon: '📍', title: lang.perm_gps_title, desc: lang.perm_gps_desc });
-    }
-    if (!AppState.user.syncEnabled) {
-        steps.push({ key: 'fitness', icon: '💪', title: lang.perm_fitness_title, desc: lang.perm_fitness_desc });
-    }
-
-    if (steps.length === 0) return;
-
-    // 각 스텝을 순차적으로 표시
-    for (let i = 0; i < steps.length; i++) {
-        const step = steps[i];
-        const stepNum = i + 1;
-        const totalSteps = steps.length;
-
-        await new Promise((resolve) => {
-            stepIndicator.textContent = `${lang.perm_step || '단계'} ${stepNum} / ${totalSteps}`;
-            iconEl.textContent = step.icon;
-            titleEl.textContent = step.title;
-            descEl.textContent = step.desc;
-            btnAllow.textContent = lang.perm_btn_allow || '허용';
-            btnSkip.textContent = (i === steps.length - 1 && i === 0) ? (lang.perm_btn_skip || '나중에') : (lang.perm_btn_skip || '나중에');
-
-            modal.classList.remove('d-none');
-            modal.classList.add('d-flex');
-
-            // 이전 리스너 제거를 위해 클론
-            const newBtnAllow = btnAllow.cloneNode(true);
-            const newBtnSkip = btnSkip.cloneNode(true);
-            btnAllow.parentNode.replaceChild(newBtnAllow, btnAllow);
-            btnSkip.parentNode.replaceChild(newBtnSkip, btnSkip);
-
-            newBtnAllow.addEventListener('click', async () => {
-                // 모달 숨기고 네이티브 권한 요청 트리거
-                modal.classList.add('d-none');
-                modal.classList.remove('d-flex');
-
-                try {
-                    if (step.key === 'push') {
-                        const pushToggle = document.getElementById('push-toggle');
-                        pushToggle.checked = true;
-                        await togglePushNotifications();
-                    } else if (step.key === 'gps') {
-                        const gpsToggle = document.getElementById('gps-toggle');
-                        gpsToggle.checked = true;
-                        await toggleGPS();
-                    } else if (step.key === 'fitness') {
-                        const syncToggle = document.getElementById('sync-toggle');
-                        syncToggle.checked = true;
-                        await toggleHealthSync();
-                    }
-                } catch (e) {
-                    if (window.AppLogger) AppLogger.warn('[PermPrompt] Permission request error: ' + (e.message || JSON.stringify(e)));
-                }
-                resolve();
-            });
-
-            newBtnSkip.addEventListener('click', () => {
-                modal.classList.add('d-none');
-                modal.classList.remove('d-flex');
-                resolve();
-            });
-        });
-
-        // 다음 스텝 전 잠시 대기 (UI 전환 자연스럽게)
-        if (i < steps.length - 1) {
-            await new Promise(r => setTimeout(r, 400));
+        try {
+            const pushToggle = document.getElementById('push-toggle');
+            pushToggle.checked = true;
+            await togglePushNotifications();
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Push permission error: ' + (e.message || JSON.stringify(e)));
         }
     }
 
-    if (window.AppLogger) AppLogger.info('[PermPrompt] Permission prompts completed');
+    // 2) GPS 위치 권한
+    if (!AppState.user.gpsEnabled) {
+        try {
+            const gpsToggle = document.getElementById('gps-toggle');
+            gpsToggle.checked = true;
+            await toggleGPS();
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] GPS permission error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    // 3) 건강 데이터(피트니스) 권한
+    if (!AppState.user.syncEnabled) {
+        try {
+            const syncToggle = document.getElementById('sync-toggle');
+            syncToggle.checked = true;
+            await toggleHealthSync();
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness permission error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 순차 요청 완료');
 }
 
 async function toggleGPS() {
