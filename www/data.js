@@ -87,7 +87,19 @@ const i18n = {
         share_save_local: "이미지 로컬 저장",
         share_save_local_desc: "플래너를 이미지로 저장합니다",
         share_link: "링크 공유",
-        share_link_desc: "플래너 요약을 클립보드에 복사합니다"
+        share_link_desc: "플래너 요약을 클립보드에 복사합니다",
+
+        // 권한 요청 온보딩
+        perm_title: "앱 권한 설정",
+        perm_desc: "최고의 경험을 위해 아래 권한을 허용해주세요.",
+        perm_gps_title: "위치 권한 (GPS)",
+        perm_gps_desc: "던전 레이드 근접 보너스 및 위치 기반 기능에 사용됩니다.",
+        perm_fitness_title: "피트니스 데이터",
+        perm_fitness_desc: "걸음 수를 동기화하여 포인트와 STR 스탯을 획득합니다.",
+        perm_gps_allow: "위치 권한 허용",
+        perm_fitness_allow: "피트니스 권한 허용",
+        perm_allow_btn: "권한 허용하기",
+        perm_skip_btn: "나중에 설정"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -173,7 +185,19 @@ const i18n = {
         share_save_local: "Save as Image",
         share_save_local_desc: "Save your planner as an image",
         share_link: "Copy to Clipboard",
-        share_link_desc: "Copy planner summary text to clipboard"
+        share_link_desc: "Copy planner summary text to clipboard",
+
+        // Permission onboarding
+        perm_title: "App Permissions",
+        perm_desc: "Please allow the following permissions for the best experience.",
+        perm_gps_title: "Location (GPS)",
+        perm_gps_desc: "Used for dungeon raid proximity bonus and location-based features.",
+        perm_fitness_title: "Fitness Data",
+        perm_fitness_desc: "Sync step count to earn points and STR stats.",
+        perm_gps_allow: "Allow Location",
+        perm_fitness_allow: "Allow Fitness",
+        perm_allow_btn: "Allow Permissions",
+        perm_skip_btn: "Set up later"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -259,7 +283,19 @@ const i18n = {
         share_save_local: "画像として保存",
         share_save_local_desc: "プランナーを画像として保存します",
         share_link: "クリップボードにコピー",
-        share_link_desc: "プランナーの要約テキストをコピーします"
+        share_link_desc: "プランナーの要約テキストをコピーします",
+
+        // 権限リクエスト オンボーディング
+        perm_title: "アプリ権限設定",
+        perm_desc: "最高の体験のために以下の権限を許可してください。",
+        perm_gps_title: "位置情報 (GPS)",
+        perm_gps_desc: "ダンジョンレイドの近接ボーナスや位置情報機能に使用します。",
+        perm_fitness_title: "フィットネスデータ",
+        perm_fitness_desc: "歩数を同期してポイントとSTRステータスを獲得します。",
+        perm_gps_allow: "位置情報を許可",
+        perm_fitness_allow: "フィットネスを許可",
+        perm_allow_btn: "権限を許可する",
+        perm_skip_btn: "後で設定"
     }
 };
 
