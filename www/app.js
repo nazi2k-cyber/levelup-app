@@ -3,6 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
@@ -17,6 +18,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
@@ -27,6 +29,19 @@ try {
     }
 } catch (e) {
     console.warn('[FCM] Messaging 초기화 스킵:', e.message);
+}
+
+// --- Cloud Storage 헬퍼 ---
+function isBase64Image(str) {
+    return typeof str === 'string' && str.startsWith('data:image/');
+}
+
+async function uploadImageToStorage(storagePath, base64str) {
+    const res = await fetch(base64str);
+    const blob = await res.blob();
+    const storageRef = ref(storage, storagePath);
+    await uploadBytes(storageRef, blob, { contentType: blob.type });
+    return await getDownloadURL(storageRef);
 }
 
 const googleProvider = new GoogleAuthProvider();
@@ -512,6 +527,16 @@ async function loadUserDataFromDB(user) {
             if(data.photoURL) {
                 AppState.user.photoURL = data.photoURL;
                 document.getElementById('profilePreview').src = data.photoURL;
+                // 기존 base64 프로필 이미지를 Cloud Storage로 자동 마이그레이션
+                if (isBase64Image(data.photoURL) && auth.currentUser) {
+                    uploadImageToStorage(`profile_images/${auth.currentUser.uid}/profile.jpg`, data.photoURL)
+                        .then(downloadURL => {
+                            AppState.user.photoURL = downloadURL;
+                            document.getElementById('profilePreview').src = downloadURL;
+                            saveUserData();
+                        })
+                        .catch(e => console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e));
+                }
             }
         } else {
             // 신규 유저: Auth 프로필에서 이름/사진 가져오고 Firestore 문서 생성
@@ -1598,9 +1623,17 @@ async function loadProfileImage(event) {
             canvas.width = 150; canvas.height = 150;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, 150, 150);
-            const base64 = canvas.toDataURL('image/jpeg', 0.6); 
+            const base64 = canvas.toDataURL('image/jpeg', 0.6);
             document.getElementById('profilePreview').src = base64;
-            AppState.user.photoURL = base64;
+            try {
+                const uid = auth.currentUser.uid;
+                const downloadURL = await uploadImageToStorage(`profile_images/${uid}/profile.jpg`, base64);
+                AppState.user.photoURL = downloadURL;
+                document.getElementById('profilePreview').src = downloadURL;
+            } catch (e) {
+                console.error('[Profile] Storage 업로드 실패, base64 폴백:', e);
+                AppState.user.photoURL = base64;
+            }
             await saveUserData();
         };
         img.src = e.target.result;
@@ -3337,11 +3370,23 @@ async function postToReels() {
     // 포스트 생성
     const caption = (entry.caption || '').trim();
     const postTimestamp = Date.now();
+
+    // 릴스 사진을 Cloud Storage에 업로드
+    let finalPhotoURL = photoData;
+    if (isBase64Image(photoData)) {
+        try {
+            const uid = auth.currentUser.uid;
+            finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}.jpg`, photoData);
+        } catch (e) {
+            console.error('[Reels] Storage 업로드 실패, base64 폴백:', e);
+        }
+    }
+
     const post = {
         uid: auth.currentUser.uid,
         dateKST: todayKST,
         timestamp: postTimestamp,
-        photo: photoData,
+        photo: finalPhotoURL,
         caption: caption,
         blocks: entry.blocks,
         tasks: entry.tasks || [],
