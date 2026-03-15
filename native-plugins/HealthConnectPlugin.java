@@ -55,7 +55,7 @@ public class HealthConnectPlugin extends Plugin {
 
     /**
      * Health Connect 설정 화면 열기 (권한 관리)
-     * 복잡한 권한 계약 대신 설정 화면으로 안내
+     * 참고: 설정 화면을 열 뿐이며 실제 권한 승인은 사용자가 직접 해야 함
      */
     @PluginMethod()
     public void requestPermissions(PluginCall call) {
@@ -71,8 +71,10 @@ public class HealthConnectPlugin extends Plugin {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             getActivity().startActivity(intent);
             JSObject result = new JSObject();
-            result.put("granted", true);
-            result.put("message", "Health Connect 설정 화면이 열렸습니다.");
+            // 설정 화면만 열었으므로 granted=false (사용자가 직접 허용해야 함)
+            result.put("granted", false);
+            result.put("settingsOpened", true);
+            result.put("message", "Health Connect 설정 화면이 열렸습니다. 걸음 수 권한을 허용해주세요.");
             call.resolve(result);
         } catch (Exception e) {
             Log.e(TAG, "HC 설정 열기 실패: " + e.getMessage());
