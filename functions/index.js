@@ -3,6 +3,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { getStorage } = require("firebase-admin/storage");
 
 initializeApp();
 const db = getFirestore();
@@ -602,4 +603,26 @@ exports.getPushLogs = onCall(callableOpts, async (request) => {
         console.error("[getPushLogs] Error:", e);
         throw new HttpsError("internal", "getPushLogs failed: " + String(e.message || e).substring(0, 500));
     }
+});
+
+// --- 만료 릴스 사진 정리 (매일 04:00 KST) ---
+exports.cleanupExpiredReelsPhotos = onSchedule({
+    schedule: "0 4 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3"
+}, async () => {
+    const bucket = getStorage().bucket();
+    const [files] = await bucket.getFiles({ prefix: "reels_photos/" });
+    const cutoff = Date.now() - (25 * 60 * 60 * 1000);
+
+    let deletedCount = 0;
+    for (const file of files) {
+        const filename = file.name.split("/").pop().replace(".jpg", "");
+        const ts = parseInt(filename, 10);
+        if (!isNaN(ts) && ts < cutoff) {
+            await file.delete();
+            deletedCount++;
+        }
+    }
+    console.log(`[Storage Cleanup] ${deletedCount}개 만료 릴스 사진 삭제 완료`);
 });
