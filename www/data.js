@@ -299,7 +299,19 @@ const seoulStations = [
     { name: {ko: "잠실역", en: "Jamsil Stn", ja: "蚕室駅"}, lat: 37.5133, lng: 127.1001 },
     { name: {ko: "여의도역", en: "Yeouido Stn", ja: "汝矣島駅"}, lat: 37.5216, lng: 126.9241 },
     { name: {ko: "신도림역", en: "Sindorim Stn", ja: "新道林駅"}, lat: 37.5088, lng: 126.8912 },
-    { name: {ko: "발산역", en: "Balsan Stn", ja: "鉢山駅"}, lat: 37.5583, lng: 126.8384 }
+    { name: {ko: "발산역", en: "Balsan Stn", ja: "鉢山駅"}, lat: 37.5583, lng: 126.8384 },
+    { name: {ko: "서울역", en: "Seoul Stn", ja: "ソウル駅"}, lat: 37.5547, lng: 126.9707 },
+    { name: {ko: "명동역", en: "Myeongdong Stn", ja: "明洞駅"}, lat: 37.5609, lng: 126.9862 },
+    { name: {ko: "건대입구역", en: "Konkuk Univ Stn", ja: "建大入口駅"}, lat: 37.5404, lng: 127.0696 },
+    { name: {ko: "삼성역", en: "Samsung Stn", ja: "三成駅"}, lat: 37.5089, lng: 127.0637 },
+    { name: {ko: "선릉역", en: "Seolleung Stn", ja: "宣陵駅"}, lat: 37.5046, lng: 127.0490 },
+    { name: {ko: "합정역", en: "Hapjeong Stn", ja: "合井駅"}, lat: 37.5495, lng: 126.9138 },
+    { name: {ko: "왕십리역", en: "Wangsimni Stn", ja: "往十里駅"}, lat: 37.5614, lng: 127.0380 },
+    { name: {ko: "사당역", en: "Sadang Stn", ja: "舎堂駅"}, lat: 37.4766, lng: 126.9816 },
+    { name: {ko: "교대역", en: "Gyodae Stn", ja: "教大駅"}, lat: 37.4937, lng: 127.0145 },
+    { name: {ko: "노원역", en: "Nowon Stn", ja: "蘆原駅"}, lat: 37.6551, lng: 127.0614 },
+    { name: {ko: "천호역", en: "Cheonho Stn", ja: "千戸駅"}, lat: 37.5392, lng: 127.1236 },
+    { name: {ko: "구로디지털단지역", en: "Guro Digital Complex Stn", ja: "九老デジタル団地駅"}, lat: 37.4851, lng: 126.9015 }
 ];
 
 const raidMissions = {

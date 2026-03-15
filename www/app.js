@@ -980,7 +980,7 @@ function getFixedDungeonData(dateStr, slot) {
     stationHash = Math.abs(stationHash);
 
     return {
-        stationIdx: stationHash % seoulStations.length, // 6개 역 중 랜덤
+        stationIdx: stationHash % seoulStations.length, // 18개 역 중 랜덤
         targetStat: statKeys[hash % statKeys.length]
     };
 }
@@ -996,20 +996,33 @@ function startRaidTimer() {
         const kstOffset = 9 * 60;
         const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
         const kstMinutes = (utcMinutes + kstOffset) % (24 * 60);
-        const kstHour = Math.floor(kstMinutes / 60);
 
-        if (kstHour >= 6) {
-            // 개방 중: 24:00(자정)까지 남은 시간 표시
-            const remainMin = (24 * 60) - kstMinutes;
+        const slots = [
+            { start: 360, end: 480 },   // 06:00~08:00
+            { start: 690, end: 810 },   // 11:30~13:30
+            { start: 1140, end: 1260 }  // 19:00~21:00
+        ];
+
+        let activeSlot = null;
+        for (const s of slots) {
+            if (kstMinutes >= s.start && kstMinutes < s.end) { activeSlot = s; break; }
+        }
+
+        if (activeSlot) {
+            const remainMin = activeSlot.end - kstMinutes;
             const h = Math.floor(remainMin / 60);
             const m = remainMin % 60;
             timerEl.innerText = `마감까지 ${h}시간 ${m}분`;
         } else {
-            // 비개방: 06:00까지 남은 시간 표시
-            const remainMin = (6 * 60) - kstMinutes;
+            let nextStart = null;
+            for (const s of slots) {
+                if (s.start > kstMinutes) { nextStart = s.start; break; }
+            }
+            if (!nextStart) nextStart = slots[0].start + 1440;
+            const remainMin = nextStart - kstMinutes;
             const h = Math.floor(remainMin / 60);
             const m = remainMin % 60;
-            timerEl.innerText = `개방까지 ${h}시간 ${m}분`;
+            timerEl.innerText = `다음 레이드까지 ${h}시간 ${m}분`;
         }
     }
 
@@ -1067,17 +1080,25 @@ function getKSTDateStr(now) {
     return `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,'0')}-${String(kst.getDate()).padStart(2,'0')}`;
 }
 
-function updateDungeonStatus() {
+function getCurrentRaidSlot() {
     const now = new Date();
-
-    // 개방시간: 06:00~24:00 KST
-    const kstOffset = 9 * 60; // KST = UTC+9
+    const kstOffset = 9 * 60;
     const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
     const kstMinutes = (utcMinutes + kstOffset) % (24 * 60);
-    const kstHour = Math.floor(kstMinutes / 60);
+    const slots = [
+        { slot: 1, start: 360, end: 480 },   // 06:00~08:00
+        { slot: 2, start: 690, end: 810 },   // 11:30~13:30
+        { slot: 3, start: 1140, end: 1260 }  // 19:00~21:00
+    ];
+    for (const s of slots) {
+        if (kstMinutes >= s.start && kstMinutes < s.end) return s.slot;
+    }
+    return 0;
+}
 
-    // 06:00~24:00 → kstHour 6~23 (24:00은 다음날 00:00이므로 23시까지)
-    const currentSlot = (kstHour >= 6) ? 1 : 0;
+function updateDungeonStatus() {
+    const now = new Date();
+    const currentSlot = getCurrentRaidSlot();
 
     // KST 기준 날짜 문자열 사용 (로컬 타임존 의존 제거)
     const dateStr = getKSTDateStr(now);
