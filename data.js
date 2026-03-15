@@ -98,7 +98,16 @@ const i18n = {
         diy_input_title: "제목", diy_input_desc: "설명", diy_select_stat: "스탯 선택",
         diy_btn_save: "저장", diy_btn_delete: "삭제",
         diy_limit_reached: "최대 6개까지 추가 가능합니다.",
-        diy_confirm_delete: "이 퀘스트를 삭제하시겠습니까?"
+        diy_confirm_delete: "이 퀘스트를 삭제하시겠습니까?",
+        diy_duplicate_name: "같은 이름의 퀘스트가 이미 존재합니다.",
+
+        // 퀘스트 통계 서브탭
+        quest_tab_main: "📜 퀘스트", quest_tab_stats: "📊 통계",
+        qstats_monthly_title: "월간 퀘스트 통계", qstats_annual_title: "연간 퀘스트 통계",
+        qstats_empty: "퀘스트를 완료하면 통계가 기록됩니다.",
+        qstats_diy_only: "DIY 퀘스트만",
+        qstats_active_days: "활동일", qstats_total_completed: "완료 퀘스트", qstats_avg_rate: "평균 달성률", qstats_perfect_days: "올클리어",
+        month_names_short: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"]
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -195,7 +204,16 @@ const i18n = {
         diy_input_title: "Title", diy_input_desc: "Description", diy_select_stat: "Select Stat",
         diy_btn_save: "Save", diy_btn_delete: "Delete",
         diy_limit_reached: "Max 6 custom quests.",
-        diy_confirm_delete: "Delete this quest?"
+        diy_confirm_delete: "Delete this quest?",
+        diy_duplicate_name: "A quest with this name already exists.",
+
+        // Quest Stats Subtab
+        quest_tab_main: "📜 Quests", quest_tab_stats: "📊 Stats",
+        qstats_monthly_title: "Monthly Quest Stats", qstats_annual_title: "Annual Quest Stats",
+        qstats_empty: "Complete quests to start tracking statistics.",
+        qstats_diy_only: "DIY Quests Only",
+        qstats_active_days: "Active Days", qstats_total_completed: "Completed", qstats_avg_rate: "Avg. Rate", qstats_perfect_days: "Perfect Days",
+        month_names_short: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -292,7 +310,16 @@ const i18n = {
         diy_input_title: "タイトル", diy_input_desc: "説明", diy_select_stat: "ステータス選択",
         diy_btn_save: "保存", diy_btn_delete: "削除",
         diy_limit_reached: "最大6個まで追加可能です。",
-        diy_confirm_delete: "このクエストを削除しますか？"
+        diy_confirm_delete: "このクエストを削除しますか？",
+        diy_duplicate_name: "同じ名前のクエストがすでに存在します。",
+
+        // クエスト統計サブタブ
+        quest_tab_main: "📜 クエスト", quest_tab_stats: "📊 統計",
+        qstats_monthly_title: "月間クエスト統計", qstats_annual_title: "年間クエスト統計",
+        qstats_empty: "クエストを完了すると統計が記録されます。",
+        qstats_diy_only: "DIYクエストのみ",
+        qstats_active_days: "活動日数", qstats_total_completed: "完了クエスト", qstats_avg_rate: "平均達成率", qstats_perfect_days: "全完了日",
+        month_names_short: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
     }
 };
 

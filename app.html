@@ -162,48 +162,100 @@
             </section>
 
             <section id="quests" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
-                        <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
-                    </div>
-                </div>
-                <div class="system-card" style="padding:10px;">
-                    <div class="quest-list-wrapper" id="quest-list-container"></div>
-                    <div id="diy-quest-section" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="diy_quest_title">DIY Quests</span>
-                            <button class="btn-info-sm" id="btn-add-diy-quest" onclick="window.showDiyQuestModal()">+ <span data-i18n="btn_add_diy">추가</span></button>
-                        </div>
-                        <div id="diy-quest-list"></div>
-                    </div>
-                </div>
-                <div class="system-card calendar-wrapper">
-                    <div class="cal-header">
-                        <span data-i18n="cal_title">주간 진척도</span>
-                        <span style="font-size:0.75rem; color:var(--text-sub);" id="cal-month"></span>
-                    </div>
-                    <div class="cal-grid" id="calendar-grid"></div>
+                <!-- Quest subtab bar -->
+                <div class="quest-tab-bar">
+                    <button class="quest-tab-btn active" data-quest-tab="main" data-i18n="quest_tab_main">📜 퀘스트</button>
+                    <button class="quest-tab-btn" data-quest-tab="stats" data-i18n="quest_tab_stats">📊 통계</button>
                 </div>
 
-                <!-- P3: 주간 도전과제 -->
-                <div class="system-card" style="padding:12px;">
+                <!-- Main quest content -->
+                <div class="quest-tab-content active" id="quest-tab-main">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="challenge_title">주간 도전과제</h3>
-                        <span style="font-size:0.6rem; color:var(--text-sub);" data-i18n="challenge_reset_info">매주 일요일 자동 초기화</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
+                            <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
+                        </div>
                     </div>
-                    <div id="challenge-list"></div>
+                    <div class="system-card" style="padding:10px;">
+                        <div class="quest-list-wrapper" id="quest-list-container"></div>
+                        <div id="diy-quest-section" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="diy_quest_title">DIY Quests</span>
+                                <button class="btn-info-sm" id="btn-add-diy-quest" onclick="window.showDiyQuestModal()">+ <span data-i18n="btn_add_diy">추가</span></button>
+                            </div>
+                            <div id="diy-quest-list"></div>
+                        </div>
+                    </div>
+                    <div class="system-card calendar-wrapper">
+                        <div class="cal-header">
+                            <span data-i18n="cal_title">주간 진척도</span>
+                            <span style="font-size:0.75rem; color:var(--text-sub);" id="cal-month"></span>
+                        </div>
+                        <div class="cal-grid" id="calendar-grid"></div>
+                    </div>
+
+                    <!-- P3: 주간 도전과제 -->
+                    <div class="system-card" style="padding:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="challenge_title">주간 도전과제</h3>
+                            <span style="font-size:0.6rem; color:var(--text-sub);" data-i18n="challenge_reset_info">매주 일요일 자동 초기화</span>
+                        </div>
+                        <div id="challenge-list"></div>
+                    </div>
+
+                    <!-- P4: 일일 보너스 룰렛 -->
+                    <div class="system-card" style="padding:15px; text-align:center;">
+                        <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</h3>
+                        <div id="roulette-container" style="position:relative; display:inline-block;">
+                            <div class="roulette-arrow"></div>
+                            <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
+                        </div>
+                        <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
+                        <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
+                    </div>
                 </div>
 
-                <!-- P4: 일일 보너스 룰렛 -->
-                <div class="system-card" style="padding:15px; text-align:center;">
-                    <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</h3>
-                    <div id="roulette-container" style="position:relative; display:inline-block;">
-                        <div class="roulette-arrow"></div>
-                        <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
+                <!-- Statistics content -->
+                <div class="quest-tab-content" id="quest-tab-stats">
+                    <!-- DIY Only Filter -->
+                    <div style="display:flex; align-items:center; justify-content:flex-end; margin-bottom:8px;">
+                        <label class="qstats-diy-filter-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; color:var(--text-sub);">
+                            <input type="checkbox" id="qstats-diy-filter" style="accent-color:var(--neon-blue); cursor:pointer;">
+                            <span data-i18n="qstats_diy_only">DIY 퀘스트만</span>
+                        </label>
                     </div>
-                    <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
-                    <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
+                    <!-- Monthly stats card -->
+                    <div class="system-card" style="padding:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-blue);" data-i18n="qstats_monthly_title">월간 퀘스트 통계</h3>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button class="btn-info-sm" id="btn-qstats-prev-month">◀</button>
+                                <span id="qstats-month-label" style="font-size:0.8rem; color:var(--neon-gold); min-width:80px; text-align:center;"></span>
+                                <button class="btn-info-sm" id="btn-qstats-next-month">▶</button>
+                            </div>
+                        </div>
+                        <div id="qstats-monthly-summary" style="display:flex; gap:8px; margin-bottom:12px;"></div>
+                        <div id="qstats-monthly-heatmap"></div>
+                    </div>
+
+                    <!-- Annual stats card -->
+                    <div class="system-card" style="padding:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="qstats_annual_title">연간 퀘스트 통계</h3>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button class="btn-info-sm" id="btn-qstats-prev-year">◀</button>
+                                <span id="qstats-year-label" style="font-size:0.8rem; color:var(--neon-gold);"></span>
+                                <button class="btn-info-sm" id="btn-qstats-next-year">▶</button>
+                            </div>
+                        </div>
+                        <svg id="qstats-annual-chart" viewBox="0 0 320 180" style="width:100%;"></svg>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="qstats-empty-state" class="d-none" style="text-align:center; padding:30px; color:var(--text-sub);">
+                        <div style="font-size:2rem; margin-bottom:8px;">📊</div>
+                        <div style="font-size:0.85rem;" data-i18n="qstats_empty">퀘스트를 완료하면 통계가 기록됩니다.</div>
+                    </div>
                 </div>
             </section>
 

@@ -90,6 +90,7 @@ function getInitialAppState() {
         social: { mode: 'global', sortCriteria: 'total', users: [] },
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0 },
         diyQuests: { definitions: [], completedToday: {}, lastResetDate: null },
+        questHistory: {},
     };
 }
 
@@ -391,6 +392,26 @@ function bindEvents() {
             if (prioritySave) prioritySave.style.display = tab === 'priority' ? 'block' : 'none';
         });
     });
+    // 퀘스트 서브탭 전환 (퀘스트 / 통계)
+    document.querySelectorAll('.quest-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.quest-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.quest-tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.getAttribute('data-quest-tab');
+            const target = document.getElementById('quest-tab-' + tab);
+            if (target) target.classList.add('active');
+            if (tab === 'stats') renderQuestStats();
+        });
+    });
+    // 퀘스트 통계 월/연 네비게이션
+    document.getElementById('btn-qstats-prev-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() - 1); renderQuestStats(); });
+    document.getElementById('btn-qstats-next-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() + 1); renderQuestStats(); });
+    document.getElementById('btn-qstats-prev-year').addEventListener('click', () => { _qstatsYear--; renderQuestStats(); });
+    document.getElementById('btn-qstats-next-year').addEventListener('click', () => { _qstatsYear++; renderQuestStats(); });
+    // DIY 전용 통계 필터
+    document.getElementById('qstats-diy-filter')?.addEventListener('change', (e) => { _qstatsDiyOnly = e.target.checked; renderQuestStats(); });
+
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
 
     // Reels tab
@@ -430,7 +451,8 @@ async function saveUserData() {
             diaryStr: localStorage.getItem('diary_entries') || '{}',
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
             lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10),
-            diyQuestsStr: JSON.stringify(AppState.diyQuests)
+            diyQuestsStr: JSON.stringify(AppState.diyQuests),
+            questHistoryStr: JSON.stringify(AppState.questHistory)
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
@@ -463,6 +485,15 @@ async function loadUserDataFromDB(user) {
             }
             if(data.diyQuestsStr) {
                 try { AppState.diyQuests = JSON.parse(data.diyQuestsStr); } catch(e) { AppState.diyQuests = { definitions: [], completedToday: {}, lastResetDate: null }; }
+            }
+            if(data.questHistoryStr) {
+                try {
+                    AppState.questHistory = JSON.parse(data.questHistoryStr);
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - 400);
+                    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
+                    Object.keys(AppState.questHistory).forEach(k => { if (k < cutoffStr) delete AppState.questHistory[k]; });
+                } catch(e) { AppState.questHistory = {}; }
             }
             checkDiyDailyReset();
             if(data.pendingStats) AppState.user.pendingStats = data.pendingStats;
@@ -857,6 +888,17 @@ function renderQuestList() {
     renderDiyQuestList();
 }
 
+// --- 퀘스트 히스토리 스냅샷 ---
+function updateQuestHistory() {
+    const today = getTodayKST();
+    const day = AppState.quest.currentDayOfWeek;
+    const regularCompleted = AppState.quest.completedState[day].filter(v => v).length;
+    const diyCompleted = Object.values(AppState.diyQuests.completedToday).filter(v => v).length;
+    const totalPossible = 12 + AppState.diyQuests.definitions.length;
+    const diyTotal = AppState.diyQuests.definitions.length;
+    AppState.questHistory[today] = { r: regularCompleted, d: diyCompleted, t: totalPossible, dt: diyTotal };
+}
+
 window.toggleQuest = (i) => {
     const day = AppState.quest.currentDayOfWeek;
     const state = AppState.quest.completedState[day];
@@ -887,6 +929,7 @@ window.toggleQuest = (i) => {
         updateChallengeProgress('quest_count');
     }
 
+    updateQuestHistory();
     saveUserData();
     renderQuestList();
     renderCalendar();
@@ -970,6 +1013,7 @@ window.toggleDiyQuest = (questId) => {
         updateChallengeProgress('quest_count');
     }
 
+    updateQuestHistory();
     saveUserData();
     renderDiyQuestList();
     renderCalendar();
@@ -1029,6 +1073,16 @@ window.saveDiyQuest = () => {
     if (!stat) return;
 
     const editId = modal?.dataset.editId;
+    const lang = AppState.currentLang;
+
+    // 중복 명칭 체크
+    const duplicate = AppState.diyQuests.definitions.find(d =>
+        d.title.trim().toLowerCase() === title.toLowerCase() && d.id !== editId
+    );
+    if (duplicate) {
+        alert(i18n[lang]?.diy_duplicate_name || '같은 이름의 퀘스트가 이미 존재합니다.');
+        return;
+    }
 
     if (editId) {
         const q = AppState.diyQuests.definitions.find(d => d.id === editId);
@@ -1123,6 +1177,189 @@ function renderCalendar() {
             </div>
         `;
     }).join('');
+}
+
+// --- 퀘스트 통계 렌더링 ---
+let _qstatsMonth = new Date();
+let _qstatsYear = new Date().getFullYear();
+let _qstatsDiyOnly = false;
+
+function renderQuestStats() {
+    const history = AppState.questHistory || {};
+    const hasData = Object.keys(history).length > 0;
+    const emptyEl = document.getElementById('qstats-empty-state');
+    if (emptyEl) emptyEl.classList.toggle('d-none', hasData);
+
+    const y = _qstatsMonth.getFullYear();
+    const m = _qstatsMonth.getMonth();
+    renderMonthlySummary(y, m, history);
+    renderMonthlyHeatmap(y, m, history);
+    renderAnnualChart(_qstatsYear, history);
+
+    const lang = AppState.currentLang;
+    const monthNames = i18n[lang]?.month_names_short || ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+    const monthLabel = document.getElementById('qstats-month-label');
+    if (monthLabel) monthLabel.textContent = `${y} ${monthNames[m]}`;
+    const yearLabel = document.getElementById('qstats-year-label');
+    if (yearLabel) yearLabel.textContent = `${_qstatsYear}`;
+}
+
+function renderMonthlySummary(year, month, history) {
+    const container = document.getElementById('qstats-monthly-summary');
+    if (!container) return;
+    const lang = AppState.currentLang;
+    const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const keys = Object.keys(history).filter(k => k.startsWith(prefix));
+
+    const activeDays = keys.length;
+    let totalRate = 0, perfectDays = 0;
+    keys.forEach(k => {
+        const rec = history[k];
+        let done, total;
+        if (_qstatsDiyOnly) {
+            done = rec.d || 0;
+            total = rec.dt != null ? rec.dt : (rec.t - 12);
+        } else {
+            done = rec.r + rec.d;
+            total = rec.t;
+        }
+        const rate = done / Math.max(total, 1);
+        totalRate += rate;
+        if (rate >= 1 && total > 0) perfectDays++;
+    });
+    const avgRate = activeDays > 0 ? Math.round(totalRate / activeDays * 100) : 0;
+
+    const labels = {
+        ko: { days: '활동일', avg: '평균 달성률', perfect: '올클리어' },
+        en: { days: 'Active Days', avg: 'Avg. Rate', perfect: 'Perfect Days' },
+        ja: { days: '活動日数', avg: '平均達成率', perfect: '全完了日' }
+    };
+    const l = labels[lang] || labels.en;
+
+    container.innerHTML = `
+        <div class="qstats-summary-item"><div class="qstats-summary-val">${activeDays}</div><div class="qstats-summary-label">${l.days}</div></div>
+        <div class="qstats-summary-item"><div class="qstats-summary-val">${avgRate}%</div><div class="qstats-summary-label">${l.avg}</div></div>
+        <div class="qstats-summary-item"><div class="qstats-summary-val">${perfectDays}</div><div class="qstats-summary-label">${l.perfect}</div></div>
+    `;
+}
+
+function renderMonthlyHeatmap(year, month, history) {
+    const container = document.getElementById('qstats-monthly-heatmap');
+    if (!container) return;
+    const lang = AppState.currentLang;
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["S","M","T","W","T","F","S"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    let headerHTML = '<div class="qstats-heatmap-header">';
+    (dayNames[lang] || dayNames.en).forEach(d => { headerHTML += `<span>${d}</span>`; });
+    headerHTML += '</div>';
+
+    let gridHTML = '<div class="qstats-heatmap-grid">';
+    for (let i = 0; i < firstDay; i++) gridHTML += '<div class="qstats-heatmap-cell empty"></div>';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const rec = history[key];
+        let level = 0;
+        if (rec) {
+            let done, total;
+            if (_qstatsDiyOnly) {
+                done = rec.d || 0;
+                total = rec.dt != null ? rec.dt : (rec.t - 12);
+            } else {
+                done = rec.r + rec.d;
+                total = rec.t;
+            }
+            const rate = done / Math.max(total, 1) * 100;
+            if (rate >= 76) level = 4;
+            else if (rate >= 51) level = 3;
+            else if (rate >= 26) level = 2;
+            else if (rate >= 1) level = 1;
+        }
+        gridHTML += `<div class="qstats-heatmap-cell level-${level}">${d}</div>`;
+    }
+    gridHTML += '</div>';
+
+    const legendHTML = `<div class="qstats-legend">
+        <span>0%</span>
+        <div class="qstats-legend-cell level-0" style="background:rgba(255,255,255,0.05);"></div>
+        <div class="qstats-legend-cell level-1" style="background:rgba(0,217,255,0.15);"></div>
+        <div class="qstats-legend-cell level-2" style="background:rgba(0,217,255,0.3);"></div>
+        <div class="qstats-legend-cell level-3" style="background:rgba(0,217,255,0.5);"></div>
+        <div class="qstats-legend-cell level-4" style="background:rgba(0,217,255,0.75);"></div>
+        <span>100%</span>
+    </div>`;
+
+    container.innerHTML = headerHTML + gridHTML + legendHTML;
+}
+
+function renderAnnualChart(year, history) {
+    const svg = document.getElementById('qstats-annual-chart');
+    if (!svg) return;
+    const lang = AppState.currentLang;
+    const monthNames = i18n[lang]?.month_names_short || ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+
+    const padding = { top: 20, right: 10, bottom: 30, left: 30 };
+    const W = 320, H = 180;
+    const chartW = W - padding.left - padding.right;
+    const chartH = H - padding.top - padding.bottom;
+    const barGap = chartW / 12;
+    const barW = barGap * 0.6;
+
+    let svgContent = '';
+
+    // Gridlines
+    for (let pct = 0; pct <= 100; pct += 25) {
+        const y = padding.top + chartH - (pct / 100 * chartH);
+        svgContent += `<line x1="${padding.left}" y1="${y}" x2="${W - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
+        svgContent += `<text x="${padding.left - 4}" y="${y + 3}" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="7">${pct}%</text>`;
+    }
+
+    // Bars
+    for (let m = 0; m < 12; m++) {
+        const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+        const keys = Object.keys(history).filter(k => k.startsWith(prefix));
+        let avgRate = 0;
+        if (keys.length > 0) {
+            let totalRate = 0;
+            keys.forEach(k => {
+                const rec = history[k];
+                let done, total;
+                if (_qstatsDiyOnly) {
+                    done = rec.d || 0;
+                    total = rec.dt != null ? rec.dt : (rec.t - 12);
+                } else {
+                    done = rec.r + rec.d;
+                    total = rec.t;
+                }
+                totalRate += done / Math.max(total, 1);
+            });
+            avgRate = totalRate / keys.length * 100;
+        }
+
+        const x = padding.left + m * barGap + (barGap - barW) / 2;
+        const barH = (avgRate / 100) * chartH;
+        const y = padding.top + chartH - barH;
+
+        if (barH > 0) {
+            const opacity = 0.3 + (avgRate / 100) * 0.6;
+            svgContent += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="2" fill="rgba(0,217,255,${opacity.toFixed(2)})"/>`;
+            if (avgRate >= 5) {
+                svgContent += `<text x="${x + barW / 2}" y="${y - 3}" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="6">${Math.round(avgRate)}%</text>`;
+            }
+        }
+
+        // Month label
+        svgContent += `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="7">${monthNames[m]}</text>`;
+    }
+
+    svg.innerHTML = svgContent;
 }
 
 // --- 던전 로직 ---
@@ -1578,6 +1815,7 @@ function changeLanguage(langCode) {
         updatePointUI();
         updateDungeonStatus();
         loadPlayerName();
+        if (document.querySelector('.quest-tab-btn[data-quest-tab="stats"].active')) renderQuestStats();
     }
 }
 
