@@ -64,7 +64,6 @@ function getInitialAppState() {
             pushEnabled: false,
             fcmToken: null,
             stepData: { date: "", rewardedSteps: 0 },
-            permPromptDone: false,
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }
         },
@@ -349,7 +348,6 @@ async function saveUserData() {
             pushEnabled: AppState.user.pushEnabled,
             fcmToken: AppState.user.fcmToken || null,
             stepData: AppState.user.stepData,
-            permPromptDone: AppState.user.permPromptDone || false,
             instaId: AppState.user.instaId || "",
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: localStorage.getItem('diary_entries') || '{}',
@@ -392,7 +390,6 @@ async function loadUserDataFromDB(user) {
             if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
             if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
-            if(data.permPromptDone) AppState.user.permPromptDone = true;
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.streakStr) {
                 try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
@@ -1516,15 +1513,7 @@ async function simulateGoogleLogin() {
     }
 }
 
-async function logout() {
-    AppLogger.info('[Auth] 로그아웃');
-    // 권한 프롬프트 플래그 리셋 (재로그인 시 off 권한 다시 요청)
-    AppState.user.permPromptDone = false;
-    await saveUserData();
-    await fbSignOut(auth);
-    localStorage.clear();
-    window.location.reload();
-}
+async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
 
 function toggleAuthMode() {
     AppState.isLoginMode = !AppState.isLoginMode;
@@ -3722,77 +3711,90 @@ function openAppSettings() {
     }
 }
 
-// --- 로그인 후 네이티브 권한 요청 (푸시 → GPS → 피트니스 순서, 모달 없이 직접 호출) ---
+// --- 로그인 시 네이티브 권한 확인 후 미승인 항목만 순차 요청 ---
 async function showPermissionPrompts() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return;
 
-    // 이번 로그인 세션에서 이미 실행된 경우 스킵 (DB 기반)
-    if (AppState.user.permPromptDone) return;
-
-    // off 상태인 권한이 없으면 스킵
-    if (AppState.user.pushEnabled && AppState.user.gpsEnabled && AppState.user.syncEnabled) return;
-
-    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 순차 요청 시작');
     const cap = window.Capacitor;
+    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 상태 확인 시작');
 
-    // 1) 푸시 알림 권한 — 네이티브 API 직접 호출
-    if (!AppState.user.pushEnabled) {
+    // 1) 푸시 알림 — OS 권한 상태 확인 후 미승인이면 요청
+    if (cap.Plugins && cap.Plugins.PushNotifications) {
         try {
-            const token = await requestNativePushPermission();
-            if (token) {
-                AppState.user.pushEnabled = true;
-                AppState.user.fcmToken = token;
-                document.getElementById('push-toggle').checked = true;
-                const statusDiv = document.getElementById('push-status');
-                statusDiv.style.display = 'flex';
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].push_on || '푸시 알림 활성화됨'}</span>`;
-                await setupNativePushListeners();
-                saveUserData();
+            const { PushNotifications } = cap.Plugins;
+            const status = await PushNotifications.checkPermissions();
+            if (status.receive !== 'granted') {
+                const token = await requestNativePushPermission();
+                if (token) {
+                    AppState.user.pushEnabled = true;
+                    AppState.user.fcmToken = token;
+                    document.getElementById('push-toggle').checked = true;
+                    const statusDiv = document.getElementById('push-status');
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].push_on || '푸시 알림 활성화됨'}</span>`;
+                    await setupNativePushListeners();
+                    saveUserData();
+                }
             }
         } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[PermPrompt] Push permission error: ' + (e.message || JSON.stringify(e)));
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Push check/request error: ' + (e.message || JSON.stringify(e)));
         }
     }
 
-    // 2) GPS 위치 권한 — 네이티브 API 직접 호출
-    if (!AppState.user.gpsEnabled && cap.Plugins && cap.Plugins.Geolocation) {
+    // 2) GPS 위치 — OS 권한 상태 확인 후 미승인이면 요청
+    if (cap.Plugins && cap.Plugins.Geolocation) {
         try {
             const { Geolocation } = cap.Plugins;
-            const permResult = await Geolocation.requestPermissions();
-            if (permResult.location !== 'denied') {
-                AppState.user.gpsEnabled = true;
-                document.getElementById('gps-toggle').checked = true;
-                const statusDiv = document.getElementById('gps-status');
-                statusDiv.style.display = 'flex';
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on || '위치 권한 활성화됨'}</span>`;
-                saveUserData();
+            const status = await Geolocation.checkPermissions();
+            if (status.location !== 'granted') {
+                const permResult = await Geolocation.requestPermissions();
+                if (permResult.location !== 'denied') {
+                    AppState.user.gpsEnabled = true;
+                    document.getElementById('gps-toggle').checked = true;
+                    const statusDiv = document.getElementById('gps-status');
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on || '위치 권한 활성화됨'}</span>`;
+                    saveUserData();
+                }
             }
         } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[PermPrompt] GPS permission error: ' + (e.message || JSON.stringify(e)));
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] GPS check/request error: ' + (e.message || JSON.stringify(e)));
         }
     }
 
-    // 3) 건강 데이터(피트니스) 권한 — 네이티브 API 직접 호출
-    if (!AppState.user.syncEnabled) {
-        try {
-            const granted = await requestFitnessScope();
-            if (granted) {
-                AppState.user.syncEnabled = true;
-                document.getElementById('sync-toggle').checked = true;
-                saveUserData();
-                syncHealthData(true);
+    // 3) 건강 데이터(피트니스) — 네이티브 권한 확인 후 미승인이면 요청
+    try {
+        let fitnessGranted = false;
+        const { HealthConnect, GoogleFit } = cap.Plugins || {};
+
+        // Health Connect 확인
+        if (HealthConnect) {
+            const availability = await HealthConnect.isAvailable();
+            if (availability.available) {
+                const granted = await requestFitnessScope();
+                fitnessGranted = granted;
             }
-        } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness permission error: ' + (e.message || JSON.stringify(e)));
         }
+        // Google Fit 확인 (Health Connect 미사용 시)
+        if (!fitnessGranted && GoogleFit) {
+            const availability = await GoogleFit.isAvailable();
+            if (availability.available && !availability.hasPermissions) {
+                fitnessGranted = await requestFitnessScope();
+            }
+        }
+
+        if (fitnessGranted) {
+            AppState.user.syncEnabled = true;
+            document.getElementById('sync-toggle').checked = true;
+            saveUserData();
+            syncHealthData(true);
+        }
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
     }
 
-    // 완료 플래그 DB 저장 (페이지 새로고침 시 중복 실행 방지)
-    AppState.user.permPromptDone = true;
-    saveUserData();
-
-    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 순차 요청 완료');
+    if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 확인/요청 완료');
 }
 
 async function toggleGPS() {
