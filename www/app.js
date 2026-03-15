@@ -916,15 +916,22 @@ function renderCalendar() {
     
     container.innerHTML = AppState.quest.completedState.map((s, i) => {
         const iterDate = new Date(startOfWeek);
-        iterDate.setDate(startOfWeek.getDate() + i); 
+        iterDate.setDate(startOfWeek.getDate() + i);
         const isToday = (i === AppState.quest.currentDayOfWeek);
-        const count = s.filter(v=>v).length;
-        
+        const isFuture = (i > AppState.quest.currentDayOfWeek);
+        const diyCount = AppState.diyQuests.definitions.length;
+        const regularCount = s.filter(v=>v).length;
+        const diyDoneCount = isToday ? Object.values(AppState.diyQuests.completedToday).filter(v=>v).length : 0;
+        const dateStr = `${iterDate.getFullYear()}-${String(iterDate.getMonth()+1).padStart(2,'0')}-${String(iterDate.getDate()).padStart(2,'0')}`;
+        const historyEntry = AppState.questHistory && AppState.questHistory[dateStr];
+        const total = (isToday || isFuture) ? 12 + diyCount : (historyEntry ? historyEntry.t : 12);
+        const count = regularCount + diyDoneCount + (!isToday && !isFuture && historyEntry ? historyEntry.d : 0);
+
         return `
             <div class="cal-day ${isToday ? 'today' : ''}">
                 <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
                 <div class="cal-date">${iterDate.getDate()}</div>
-                <div class="cal-score">${count}/12</div>
+                <div class="cal-score">${count}/${total}</div>
             </div>
         `;
     }).join('');
