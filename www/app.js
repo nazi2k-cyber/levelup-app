@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -17,14 +17,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+const db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+    ...(isNativePlatform && { experimentalForceLongPolling: true })
+});
 const storage = getStorage(app);
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
 try {
-    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-    if (!isNative) {
+    if (!isNativePlatform) {
         messaging = getMessaging(app);
     }
 } catch (e) {
