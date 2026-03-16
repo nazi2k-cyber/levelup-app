@@ -80,7 +80,8 @@ function getInitialAppState() {
             fcmToken: null,
             stepData: { date: "", rewardedSteps: 0 },
             instaId: "",
-            streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }
+            streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
+            nameLastChanged: null
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -464,6 +465,7 @@ async function saveUserData() {
             fcmToken: AppState.user.fcmToken || null,
             stepData: AppState.user.stepData,
             instaId: AppState.user.instaId || "",
+            nameLastChanged: AppState.user.nameLastChanged || null,
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: localStorage.getItem('diary_entries') || '{}',
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
@@ -521,6 +523,7 @@ async function loadUserDataFromDB(user) {
             if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
+            if(data.nameLastChanged) AppState.user.nameLastChanged = data.nameLastChanged;
             if(data.streakStr) {
                 try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
             }
@@ -809,10 +812,21 @@ function loadPlayerName() {
 }
 
 function changePlayerName() {
+    // 1개월(30일) 쿨다운 체크
+    if (AppState.user.nameLastChanged) {
+        const lastChanged = new Date(AppState.user.nameLastChanged);
+        const now = new Date();
+        const diffDays = (now - lastChanged) / (1000 * 60 * 60 * 24);
+        if (diffDays < 30) {
+            alert(i18n[AppState.currentLang].name_err || "명칭 변경은 1개월에 한 번만 가능합니다.");
+            return;
+        }
+    }
     const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
-    if (newName && newName.trim() !== "") {
+    if (newName && newName.trim() !== "" && newName.trim() !== AppState.user.name) {
         AppState.user.name = newName.trim();
-        loadPlayerName(); 
+        AppState.user.nameLastChanged = new Date().toISOString();
+        loadPlayerName();
         saveUserData().then(() => fetchSocialData());
     }
 }
