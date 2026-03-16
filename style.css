@@ -97,6 +97,12 @@ body {
 
 .login-toggle { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 16px; cursor: pointer; text-decoration: underline; }
 
+/* 이메일 인증 안내 */
+.verify-icon { font-size: 3rem; margin-bottom: 16px; }
+.verify-title { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 0 0 12px 0; text-align: center; }
+.verify-email { font-size: 0.9rem; color: var(--neon-blue); font-weight: 600; margin: 0 0 8px 0; word-break: break-all; text-align: center; }
+.verify-desc { font-size: 0.8rem; color: rgba(255,255,255,0.5); text-align: center; line-height: 1.5; margin: 0 0 24px 0; }
+
 /* 하단 사명 */
 .login-bottom-brand {
     padding: 20px 0 40px 0; text-align: center;

@@ -120,7 +120,12 @@ const i18n = {
         qstats_empty: "퀘스트를 완료하면 통계가 기록됩니다.",
         qstats_diy_only: "DIY 퀘스트만",
         qstats_active_days: "활동일", qstats_total_completed: "완료 퀘스트", qstats_avg_rate: "평균 달성률", qstats_perfect_days: "올클리어",
-        month_names_short: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"]
+        month_names_short: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+
+        // 이메일 인증
+        verify_title: "이메일 인증이 필요합니다", verify_desc: "받은편지함에서 인증 링크를 클릭한 후 로그인해주세요.",
+        verify_sent: "인증 메일이 발송되었습니다.", verify_resend: "인증 메일 재발송", verify_back: "로그인으로 돌아가기",
+        verify_login_blocked: "이메일 인증을 완료해주세요. 받은편지함을 확인하세요.", verify_resent: "인증 메일이 재발송되었습니다."
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -239,7 +244,12 @@ const i18n = {
         qstats_empty: "Complete quests to start tracking statistics.",
         qstats_diy_only: "DIY Quests Only",
         qstats_active_days: "Active Days", qstats_total_completed: "Completed", qstats_avg_rate: "Avg. Rate", qstats_perfect_days: "Perfect Days",
-        month_names_short: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        month_names_short: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+
+        // Email Verification
+        verify_title: "Email Verification Required", verify_desc: "Please click the verification link in your inbox, then log in.",
+        verify_sent: "Verification email sent.", verify_resend: "Resend Verification Email", verify_back: "Back to Login",
+        verify_login_blocked: "Please verify your email first. Check your inbox.", verify_resent: "Verification email resent."
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -358,7 +368,12 @@ const i18n = {
         qstats_empty: "クエストを完了すると統計が記録されます。",
         qstats_diy_only: "DIYクエストのみ",
         qstats_active_days: "活動日数", qstats_total_completed: "完了クエスト", qstats_avg_rate: "平均達成率", qstats_perfect_days: "全完了日",
-        month_names_short: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
+        month_names_short: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
+
+        // メール認証
+        verify_title: "メール認証が必要です", verify_desc: "受信トレイの認証リンクをクリックしてからログインしてください。",
+        verify_sent: "認証メールを送信しました。", verify_resend: "認証メール再送信", verify_back: "ログインに戻る",
+        verify_login_blocked: "メール認証を完了してください。受信トレイを確認してください。", verify_resent: "認証メールを再送信しました。"
     }
 };
 
