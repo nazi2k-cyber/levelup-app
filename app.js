@@ -31,6 +31,19 @@ try {
     console.warn('[FCM] Messaging 초기화 스킵:', e.message);
 }
 
+// --- 프로필 이미지 기본값 & 안전한 로드 ---
+const DEFAULT_PROFILE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+
+function setProfilePreview(url) {
+    const el = document.getElementById('profilePreview');
+    if (!el) return;
+    el.onerror = function() {
+        this.onerror = null;
+        this.src = DEFAULT_PROFILE_SVG;
+    };
+    el.src = url;
+}
+
 // --- Cloud Storage 헬퍼 ---
 function isBase64Image(str) {
     return typeof str === 'string' && str.startsWith('data:image/');
@@ -594,13 +607,13 @@ async function loadUserDataFromDB(user) {
             AppState.user.name = data.name || user.displayName || "신규 헌터";
             if(data.photoURL) {
                 AppState.user.photoURL = data.photoURL;
-                document.getElementById('profilePreview').src = data.photoURL;
+                setProfilePreview(data.photoURL);
                 // 기존 base64 프로필 이미지를 Cloud Storage로 자동 마이그레이션
                 if (isBase64Image(data.photoURL) && auth.currentUser) {
                     uploadImageToStorage(`profile_images/${auth.currentUser.uid}/profile.jpg`, data.photoURL)
                         .then(downloadURL => {
                             AppState.user.photoURL = downloadURL;
-                            document.getElementById('profilePreview').src = downloadURL;
+                            setProfilePreview(downloadURL);
                             saveUserData();
                         })
                         .catch(e => console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e));
@@ -611,7 +624,7 @@ async function loadUserDataFromDB(user) {
             AppState.user.name = user.displayName || "신규 헌터";
             if (user.photoURL) {
                 AppState.user.photoURL = user.photoURL;
-                document.getElementById('profilePreview').src = user.photoURL;
+                setProfilePreview(user.photoURL);
             }
             await saveUserData();
         }
@@ -1992,7 +2005,7 @@ function renderUsers(criteria, btn = null) {
         <div class="user-card ${u.isMe ? 'my-rank' : ''}">
             <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
             <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);">` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display=''" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
                 <div class="user-info" style="margin-left:0;">
                     <div class="title-badge" style="font-size:0.6rem;">${sanitizeText(u.title)}</div>
                     <div style="font-size:0.9rem; display:flex; align-items:center;">
@@ -2196,7 +2209,7 @@ async function loadProfileImage(event) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, 150, 150);
             const base64 = canvas.toDataURL('image/jpeg', 0.6);
-            document.getElementById('profilePreview').src = base64;
+            setProfilePreview(base64);
             if (!auth.currentUser) {
                 alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in first.');
                 return;
@@ -2205,7 +2218,7 @@ async function loadProfileImage(event) {
                 const uid = auth.currentUser.uid;
                 const downloadURL = await uploadImageToStorage(`profile_images/${uid}/profile.jpg`, base64);
                 AppState.user.photoURL = downloadURL;
-                document.getElementById('profilePreview').src = downloadURL;
+                setProfilePreview(downloadURL);
             } catch (e) {
                 console.error('[Profile] Storage 업로드 실패, base64 폴백:', e);
                 AppState.user.photoURL = base64;
@@ -4228,7 +4241,7 @@ function renderReelsCards(posts, lang) {
 
         return `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
-                <img class="reels-avatar" src="${profileSrc}" alt="">
+                <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
                 <div class="reels-user-info">
                     <div class="reels-username">${(post.userName || '헌터').replace(/</g,'&lt;')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
@@ -4482,7 +4495,7 @@ function renderCommentsSection(postId, comments) {
             const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(c.instaId)}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
             const timeAgo = getTimeAgo(c.timestamp, lang);
             return `<div class="reels-comment-item">
-                <img class="reels-comment-avatar" src="${cPhoto}" alt="">
+                <img class="reels-comment-avatar" src="${cPhoto}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
                 <div class="reels-comment-body">
                     <div class="reels-comment-meta">
                         <span class="reels-comment-name">${(c.name || '헌터').replace(/</g,'&lt;')}</span>${instaBtn}
