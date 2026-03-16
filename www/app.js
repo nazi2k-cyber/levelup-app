@@ -39,8 +39,9 @@ function isBase64Image(str) {
 async function uploadImageToStorage(storagePath, base64str) {
     const res = await fetch(base64str);
     const blob = await res.blob();
+    const contentType = blob.type || (base64str.match(/^data:([^;]+);/) || [])[1] || 'image/jpeg';
     const storageRef = ref(storage, storagePath);
-    await uploadBytes(storageRef, blob, { contentType: blob.type });
+    await uploadBytes(storageRef, blob, { contentType });
     return await getDownloadURL(storageRef);
 }
 
@@ -1657,6 +1658,12 @@ function toggleAuthMode() {
 async function loadProfileImage(event) {
     const file = event.target.files[0];
     if (!file) return;
+    if (!auth.currentUser) {
+        const lang = AppState.currentLang || 'ko';
+        alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in first.');
+        return;
+    }
+    const lang = AppState.currentLang || 'ko';
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
@@ -1676,9 +1683,22 @@ async function loadProfileImage(event) {
                 console.error('[Profile] Storage 업로드 실패, base64 폴백:', e);
                 AppState.user.photoURL = base64;
             }
-            await saveUserData();
+            try {
+                await saveUserData();
+            } catch (e) {
+                console.error('[Profile] 프로필 사진 DB 저장 실패:', e);
+                alert(lang === 'ko' ? '프로필 사진 저장에 실패했습니다. 다시 시도해주세요.' : 'Failed to save profile picture. Please try again.');
+            }
+        };
+        img.onerror = () => {
+            console.error('[Profile] 이미지 로드 실패');
+            alert(lang === 'ko' ? '이미지를 불러올 수 없습니다. 다른 파일을 선택해주세요.' : 'Unable to load image. Please select a different file.');
         };
         img.src = e.target.result;
+    };
+    reader.onerror = () => {
+        console.error('[Profile] 파일 읽기 실패');
+        alert(lang === 'ko' ? '파일을 읽을 수 없습니다. 다시 시도해주세요.' : 'Unable to read file. Please try again.');
     };
     reader.readAsDataURL(file);
 }
