@@ -471,6 +471,18 @@ function bindEvents() {
 }
 
 // --- 데이터 저장/로드 ---
+function getCleanDiaryStrForFirestore() {
+    try {
+        const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        const cleaned = {};
+        for (const [dateStr, entry] of Object.entries(diaries)) {
+            const { photo, ...rest } = entry;
+            cleaned[dateStr] = rest;
+        }
+        return JSON.stringify(cleaned);
+    } catch(e) { return '{}'; }
+}
+
 async function saveUserData() {
     if(!auth.currentUser) return;
     try {
@@ -494,7 +506,7 @@ async function saveUserData() {
             instaId: AppState.user.instaId || "",
             nameLastChanged: AppState.user.nameLastChanged || null,
             streakStr: JSON.stringify(AppState.user.streak),
-            diaryStr: localStorage.getItem('diary_entries') || '{}',
+            diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
             lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10),
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
@@ -2230,6 +2242,8 @@ async function loadProfileImage(event) {
                 await saveUserData();
                 // 소셜 탭에 변경된 프로필 사진 즉시 반영
                 updateSocialUserData();
+                // 로컬 릴스 캐시의 프로필 이미지도 갱신
+                updateLocalReelsProfileImage();
             } catch (e) {
                 console.error('[Profile] 프로필 사진 DB 저장 실패:', e);
                 alert(lang === 'ko' ? '프로필 사진 저장에 실패했습니다. 다시 시도해주세요.' : 'Failed to save profile picture. Please try again.');
@@ -4029,6 +4043,23 @@ function saveReelsData(data) {
     localStorage.setItem('reels_posts', JSON.stringify(data));
 }
 
+function updateLocalReelsProfileImage() {
+    if (!auth.currentUser) return;
+    try {
+        const data = JSON.parse(localStorage.getItem('reels_posts') || '{}');
+        if (!data.posts || data.posts.length === 0) return;
+        const uid = auth.currentUser.uid;
+        let changed = false;
+        data.posts.forEach(p => {
+            if (p.uid === uid && p.userPhoto !== AppState.user.photoURL) {
+                p.userPhoto = AppState.user.photoURL;
+                changed = true;
+            }
+        });
+        if (changed) localStorage.setItem('reels_posts', JSON.stringify(data));
+    } catch(e) {}
+}
+
 // Firestore에 릴스 포스트 저장/로드
 async function saveReelsToFirestore(post) {
     if (!auth.currentUser) return;
@@ -4041,6 +4072,9 @@ async function saveReelsToFirestore(post) {
         // 24시간 이내 포스트만 유지
         const now = Date.now();
         existingPosts = existingPosts.filter(p => (now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
+        // 기존 포스트의 프로필 이미지를 최신 값으로 갱신
+        const currentPhoto = AppState.user.photoURL || null;
+        existingPosts.forEach(p => { p.userPhoto = currentPhoto; });
         existingPosts.push(post);
         await setDoc(doc(db, "users", auth.currentUser.uid), {
             reelsStr: JSON.stringify(existingPosts)
