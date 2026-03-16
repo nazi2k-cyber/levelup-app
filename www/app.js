@@ -3288,7 +3288,7 @@ function loadPlannerForDate(dateStr) {
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) { preview.classList.add('d-none'); preview.src = ''; }
+        if (preview) { preview.classList.add('d-none'); preview.removeAttribute('src'); }
         if (placeholder) placeholder.classList.remove('d-none');
         if (removeBtn) removeBtn.classList.add('d-none');
         const fileInput = document.getElementById('plannerPhotoUpload');
@@ -3430,7 +3430,7 @@ window.removePlannerPhoto = function() {
     const placeholder = document.getElementById('planner-photo-placeholder');
     const removeBtn = document.getElementById('planner-photo-remove');
     preview.classList.add('d-none');
-    preview.src = '';
+    preview.removeAttribute('src');
     placeholder.classList.remove('d-none');
     removeBtn.classList.add('d-none');
     document.getElementById('plannerPhotoUpload').value = '';
