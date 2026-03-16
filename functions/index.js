@@ -345,14 +345,14 @@ function getLocalizedMessage(type, lang) {
     return msgs[lang] || msgs.en || msgs.ko;
 }
 
-// ─── 1. 레이드 알림 (매일 05:55, 11:25, 18:55 KST — 레이드 시작 5분 전) ───
+// ─── 1. 레이드 알림 (매일 06:00, 11:30, 19:00 KST — 레이드 오픈 시간과 동기화) ───
 
 async function handleRaidAlert() {
     const kstHour = new Date(Date.now() + 9 * 60 * 60 * 1000).getHours();
 
     let slotLabel;
-    if (kstHour <= 6) slotLabel = "06:00~08:00";
-    else if (kstHour <= 12) slotLabel = "11:30~13:30";
+    if (kstHour <= 8) slotLabel = "06:00~08:00";
+    else if (kstHour <= 13) slotLabel = "11:30~13:30";
     else slotLabel = "19:00~21:00";
 
     // 토픽 기반 발송 (pushEnabled 유저가 구독 중)
@@ -387,9 +387,9 @@ async function handleRaidAlert() {
 
 const raidScheduleOpts = { timeZone: "Asia/Seoul", region: "asia-northeast3" };
 
-exports.sendRaidAlert0555 = onSchedule({ schedule: "55 5 * * *", ...raidScheduleOpts }, handleRaidAlert);
-exports.sendRaidAlert1125 = onSchedule({ schedule: "25 11 * * *", ...raidScheduleOpts }, handleRaidAlert);
-exports.sendRaidAlert1855 = onSchedule({ schedule: "55 18 * * *", ...raidScheduleOpts }, handleRaidAlert);
+exports.sendRaidAlert0600 = onSchedule({ schedule: "0 6 * * *", ...raidScheduleOpts }, handleRaidAlert);
+exports.sendRaidAlert1130 = onSchedule({ schedule: "30 11 * * *", ...raidScheduleOpts }, handleRaidAlert);
+exports.sendRaidAlert1900 = onSchedule({ schedule: "0 19 * * *", ...raidScheduleOpts }, handleRaidAlert);
 
 // ─── 2. 일일 리마인더 (매일 09:00 KST) ───
 

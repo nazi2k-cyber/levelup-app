@@ -5358,6 +5358,27 @@ function handleNotificationAction(data) {
     }
 }
 
+// 서비스 워커에서 알림 클릭 시 postMessage로 탭 이동 처리
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+            handleNotificationAction(event.data);
+        }
+    });
+}
+
+// URL 해시 기반 탭 이동 (서비스 워커가 새 창을 열 때 #tab 사용)
+window.addEventListener('load', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+        const tabEl = document.querySelector(`.nav-item[data-tab="${hash}"]`);
+        if (tabEl) {
+            // 약간의 지연으로 앱 초기화 완료 후 탭 전환
+            setTimeout(() => switchTab(hash, tabEl), 300);
+        }
+    }
+});
+
 /** XSS 방지용 텍스트 새니타이즈 */
 function sanitizeText(text) {
     const div = document.createElement('div');

@@ -212,13 +212,15 @@ self.addEventListener('notificationclick', (event) => {
     console.log('[SW] 알림 클릭:', event);
     event.notification.close();
 
-    const targetTab = event.notification.data?.tab || '';
+    const data = event.notification.data || {};
+    const targetTab = data.tab || '';
     const urlToOpen = '/app.html' + (targetTab ? '#' + targetTab : '');
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (const client of clientList) {
                 if (client.url.includes('app.html') && 'focus' in client) {
+                    client.postMessage({ type: 'NOTIFICATION_CLICK', tab: targetTab, data: data });
                     return client.focus();
                 }
             }

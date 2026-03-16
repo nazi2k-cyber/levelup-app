@@ -40,14 +40,16 @@ self.addEventListener('notificationclick', (event) => {
     console.log('[SW] 알림 클릭:', event);
     event.notification.close();
 
-    const targetTab = event.notification.data?.tab || '';
+    const data = event.notification.data || {};
+    const targetTab = data.tab || '';
     const urlToOpen = '/app.html' + (targetTab ? '#' + targetTab : '');
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            // 이미 열린 창이 있으면 포커스
+            // 이미 열린 창이 있으면 탭 이동 메시지 전송 후 포커스
             for (const client of clientList) {
                 if (client.url.includes('app.html') && 'focus' in client) {
+                    client.postMessage({ type: 'NOTIFICATION_CLICK', tab: targetTab, data: data });
                     return client.focus();
                 }
             }
