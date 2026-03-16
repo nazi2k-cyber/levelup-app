@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -17,7 +17,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true
+});
 const storage = getStorage(app);
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
@@ -37,9 +39,19 @@ function isBase64Image(str) {
 }
 
 async function uploadImageToStorage(storagePath, base64str) {
-    const res = await fetch(base64str);
-    const blob = await res.blob();
-    const contentType = blob.type || (base64str.match(/^data:([^;]+);/) || [])[1] || 'image/jpeg';
+    let blob, contentType;
+    if (base64str.startsWith('data:')) {
+        const parts = base64str.split(',');
+        contentType = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+        const byteString = atob(parts[1]);
+        const u8arr = new Uint8Array(byteString.length);
+        for (let i = 0; i < byteString.length; i++) u8arr[i] = byteString.charCodeAt(i);
+        blob = new Blob([u8arr], { type: contentType });
+    } else {
+        const res = await fetch(base64str);
+        blob = await res.blob();
+        contentType = blob.type || 'image/jpeg';
+    }
     const storageRef = ref(storage, storagePath);
     await uploadBytes(storageRef, blob, { contentType });
     return await getDownloadURL(storageRef);
@@ -770,15 +782,17 @@ function changePlayerName() {
         AppState.user.name = newName.trim();
         AppState.user.nameLastChanged = new Date().toISOString();
         loadPlayerName();
-        saveUserData().then(() => fetchSocialData());
+        updateSocialUserData();
+        saveUserData();
     }
 }
 
 function changeInstaId() {
     const newId = prompt(i18n[AppState.currentLang].insta_prompt || "인스타 ID를 입력하세요", AppState.user.instaId);
-    if (newId !== null) { 
-        AppState.user.instaId = newId.trim().replace('@', ''); 
-        saveUserData().then(() => fetchSocialData());
+    if (newId !== null) {
+        AppState.user.instaId = newId.trim().replace('@', '');
+        updateSocialUserData();
+        saveUserData();
     }
 }
 
@@ -1550,6 +1564,20 @@ function renderUsers(criteria, btn = null) {
 
 window.fetchSocialData = fetchSocialData;
 
+// 현재 유저의 프로필 변경사항을 소셜 탭에 즉시 반영
+function updateSocialUserData() {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const idx = AppState.social.users.findIndex(u => u.id === uid);
+    if (idx !== -1) {
+        AppState.social.users[idx].name = AppState.user.name;
+        AppState.social.users[idx].photoURL = AppState.user.photoURL;
+        AppState.social.users[idx].instaId = AppState.user.instaId || '';
+        AppState.social.users[idx].stats = { ...AppState.user.stats };
+        renderUsers(AppState.social.sortCriteria);
+    }
+}
+
 window.toggleFriend = async (id) => {
     const isFriend = AppState.user.friends.includes(id);
     await setDoc(doc(db, "users", auth.currentUser.uid), { friends: isFriend ? arrayRemove(id) : arrayUnion(id) }, { merge: true });
@@ -1675,6 +1703,10 @@ async function loadProfileImage(event) {
             ctx.drawImage(img, 0, 0, 150, 150);
             const base64 = canvas.toDataURL('image/jpeg', 0.6);
             document.getElementById('profilePreview').src = base64;
+            if (!auth.currentUser) {
+                alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in first.');
+                return;
+            }
             try {
                 const uid = auth.currentUser.uid;
                 const downloadURL = await uploadImageToStorage(`profile_images/${uid}/profile.jpg`, base64);
@@ -1686,6 +1718,8 @@ async function loadProfileImage(event) {
             }
             try {
                 await saveUserData();
+                // 소셜 탭에 변경된 프로필 사진 즉시 반영
+                updateSocialUserData();
             } catch (e) {
                 console.error('[Profile] 프로필 사진 DB 저장 실패:', e);
                 alert(lang === 'ko' ? '프로필 사진 저장에 실패했습니다. 다시 시도해주세요.' : 'Failed to save profile picture. Please try again.');
