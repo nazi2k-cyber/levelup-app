@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -258,6 +258,12 @@ function initOfflineDetection() {
             banner.classList.add('d-none');
             banner.classList.remove('offline-banner-show');
             if (window.AppLogger) AppLogger.info('[Network] 온라인 복귀');
+            // Firestore 네트워크 복구 — 기존 끊어진 스트림을 정리하고 재연결
+            enableNetwork(db).then(() => {
+                if (window.AppLogger) AppLogger.info('[Firestore] 네트워크 재활성화 완료');
+            }).catch((e) => {
+                if (window.AppLogger) AppLogger.warn('[Firestore] 네트워크 재활성화 실패: ' + e.message);
+            });
             // SW에 온라인 복귀 알림
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({ type: 'ONLINE_RESTORED' });
@@ -266,6 +272,12 @@ function initOfflineDetection() {
             banner.classList.remove('d-none');
             banner.classList.add('offline-banner-show');
             if (window.AppLogger) AppLogger.warn('[Network] 오프라인 전환');
+            // Firestore 네트워크 비활성화 — 불필요한 재연결 시도 방지
+            disableNetwork(db).then(() => {
+                if (window.AppLogger) AppLogger.info('[Firestore] 네트워크 비활성화 완료');
+            }).catch((e) => {
+                if (window.AppLogger) AppLogger.warn('[Firestore] 네트워크 비활성화 실패: ' + e.message);
+            });
         }
     }
 
