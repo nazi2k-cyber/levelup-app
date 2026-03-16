@@ -19,8 +19,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 const db = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true,
-    ...(isNativePlatform && { experimentalForceLongPolling: true })
+    ...(isNativePlatform
+        ? { experimentalForceLongPolling: true }
+        : { experimentalAutoDetectLongPolling: true })
 });
 const storage = getStorage(app);
 
