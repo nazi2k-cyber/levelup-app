@@ -1,6 +1,6 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
@@ -249,6 +249,17 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             if (_initializedUid === user.uid) return; // 토큰 갱신 등 재발화 시 중복 초기화 방지
+
+            // 이메일/비밀번호 사용자의 이메일 인증 확인 (Google OAuth 등은 건너뜀)
+            const isEmailUser = user.providerData.some(p => p.providerId === 'password');
+            if (isEmailUser && !user.emailVerified) {
+                AppLogger.info('[Auth] 미인증 이메일 사용자 차단: ' + user.email);
+                const lang = AppState.currentLang || 'ko';
+                alert(i18n[lang]?.verify_login_blocked || "이메일 인증을 완료해주세요. 받은편지함을 확인하세요.");
+                await fbSignOut(auth);
+                return;
+            }
+
             _initializedUid = user.uid;
 
             AppLogger.info('[Auth] 로그인 감지: ' + (user.email || user.uid));
@@ -322,6 +333,8 @@ function bindEvents() {
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
     document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
     document.getElementById('login-email').addEventListener('focus', showEmailLoginFields);
+    document.getElementById('btn-resend-verify').addEventListener('click', resendVerificationEmail);
+    document.getElementById('btn-back-login').addEventListener('click', hideEmailVerificationNotice);
     document.getElementById('login-pw').addEventListener('input', function() {
         const hint = document.getElementById('pw-hint');
         if (!hint.classList.contains('d-none')) {
@@ -1986,20 +1999,30 @@ function validatePassword(pw) {
     return pw.length >= 8 && /[A-Z]/.test(pw) && (pw.match(/[^A-Za-z0-9]/g) || []).length >= 2;
 }
 
+function validateEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
     const btn = document.getElementById('btn-login-submit');
-    if(!email || !pw) { alert("이메일과 비밀번호를 입력해주세요."); return; }
+    const lang = AppState.currentLang || 'ko';
+    if(!email || !pw) { alert(i18n[lang]?.login_err_empty || "이메일과 비밀번호를 입력해주세요."); return; }
+    if(!validateEmail(email)) { alert(i18n[lang]?.login_err_email || "유효한 이메일 주소를 입력해주세요."); return; }
     btn.innerText = "Processing..."; btn.disabled = true;
     try {
         if(!AppState.isLoginMode) {
-            if(!validatePassword(pw)) throw new Error("비밀번호는 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함해야 합니다.");
+            if(!validatePassword(pw)) throw new Error(i18n[lang]?.login_err_pw_req || "비밀번호는 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함해야 합니다.");
             const pwConfirm = document.getElementById('login-pw-confirm').value;
-            if(pw !== pwConfirm) throw new Error("비밀번호 불일치");
-            await createUserWithEmailAndPassword(auth, email, pw);
+            if(pw !== pwConfirm) throw new Error(i18n[lang]?.pw_mismatch || "비밀번호 불일치");
+            const userCredential = await createUserWithEmailAndPassword(auth, email, pw);
+            await sendEmailVerification(userCredential.user);
+            await fbSignOut(auth);
+            showEmailVerificationNotice(email);
+            return;
         } else { await signInWithEmailAndPassword(auth, email, pw); }
-    } catch (e) { alert("인증 오류: " + e.message); } 
+    } catch (e) { alert("인증 오류: " + e.message); }
     finally { btn.innerText = AppState.isLoginMode ? "시스템 접속" : "회원가입"; btn.disabled = false; }
 }
 
@@ -2071,6 +2094,46 @@ function toggleAuthMode() {
     document.getElementById('disclaimer-box').classList.toggle('d-none', AppState.isLoginMode);
     btnSubmit.innerText = AppState.isLoginMode ? "시스템 접속" : "플레이어 등록";
     toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
+}
+
+// --- 이메일 인증 안내 화면 ---
+let _pendingVerifyEmail = '';
+
+function showEmailVerificationNotice(email) {
+    _pendingVerifyEmail = email;
+    document.querySelector('#login-screen > .login-center').classList.add('d-none');
+    document.getElementById('email-verify-notice').classList.remove('d-none');
+    document.getElementById('verify-email-addr').textContent = email;
+    const lang = AppState.currentLang || 'ko';
+    alert(i18n[lang]?.verify_sent || "인증 메일이 발송되었습니다.");
+}
+
+function hideEmailVerificationNotice() {
+    document.getElementById('email-verify-notice').classList.add('d-none');
+    document.querySelector('#login-screen > .login-center').classList.remove('d-none');
+    _pendingVerifyEmail = '';
+}
+
+async function resendVerificationEmail() {
+    const lang = AppState.currentLang || 'ko';
+    const email = _pendingVerifyEmail || document.getElementById('login-email').value;
+    const pw = document.getElementById('login-pw').value;
+    if (!email || !pw) {
+        alert(i18n[lang]?.login_err_empty || "이메일과 비밀번호를 입력해주세요.");
+        return;
+    }
+    const btn = document.getElementById('btn-resend-verify');
+    btn.disabled = true;
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, pw);
+        await sendEmailVerification(userCredential.user);
+        await fbSignOut(auth);
+        alert(i18n[lang]?.verify_resent || "인증 메일이 재발송되었습니다.");
+    } catch (e) {
+        alert("오류: " + e.message);
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 async function loadProfileImage(event) {
