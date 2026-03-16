@@ -118,6 +118,8 @@ function getInitialAppState() {
         },
         social: { mode: 'global', sortCriteria: 'total', users: [] },
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0 },
+        diyQuests: { definitions: [], completedToday: {}, lastResetDate: null },
+        questHistory: {},
     };
 }
 
@@ -433,6 +435,18 @@ function bindEvents() {
 }
 
 // --- 데이터 저장/로드 ---
+function getCleanDiaryStrForFirestore() {
+    try {
+        const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        const cleaned = {};
+        for (const [dateStr, entry] of Object.entries(diaries)) {
+            const { photo, ...rest } = entry;
+            cleaned[dateStr] = rest;
+        }
+        return JSON.stringify(cleaned);
+    } catch(e) { return '{}'; }
+}
+
 async function saveUserData() {
     if(!auth.currentUser) return;
     try {
@@ -456,9 +470,11 @@ async function saveUserData() {
             instaId: AppState.user.instaId || "",
             nameLastChanged: AppState.user.nameLastChanged || null,
             streakStr: JSON.stringify(AppState.user.streak),
-            diaryStr: localStorage.getItem('diary_entries') || '{}',
+            diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
-            lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10)
+            lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10),
+            diyQuestsStr: JSON.stringify(AppState.diyQuests),
+            questHistoryStr: JSON.stringify(AppState.questHistory)
         }, { merge: true });
     } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
 }
@@ -501,6 +517,19 @@ async function loadUserDataFromDB(user) {
             if(data.streakStr) {
                 try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
             }
+            if(data.diyQuestsStr) {
+                try { AppState.diyQuests = JSON.parse(data.diyQuestsStr); } catch(e) { AppState.diyQuests = { definitions: [], completedToday: {}, lastResetDate: null }; }
+            }
+            if(data.questHistoryStr) {
+                try {
+                    AppState.questHistory = JSON.parse(data.questHistoryStr);
+                    const cutoff = new Date();
+                    cutoff.setDate(cutoff.getDate() - 400);
+                    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
+                    Object.keys(AppState.questHistory).forEach(k => { if (k < cutoffStr) delete AppState.questHistory[k]; });
+                } catch(e) { AppState.questHistory = {}; }
+            }
+            checkDiyDailyReset();
             // 스트릭 계산 및 스탯 감소
             applyStreakAndDecay();
             if(data.diaryStr) {
@@ -3416,6 +3445,14 @@ function getTodayKST() {
     const now = new Date();
     const kst = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
     return `${kst.getFullYear()}-${String(kst.getMonth()+1).padStart(2,'0')}-${String(kst.getDate()).padStart(2,'0')}`;
+}
+
+function checkDiyDailyReset() {
+    const today = getTodayKST();
+    if (AppState.diyQuests.lastResetDate !== today) {
+        AppState.diyQuests.completedToday = {};
+        AppState.diyQuests.lastResetDate = today;
+    }
 }
 
 // 릴스 데이터 로드 (localStorage) — 업로드 후 24시간 경과 포스트 자동 삭제
