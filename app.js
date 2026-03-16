@@ -54,22 +54,32 @@ function isBase64Image(str) {
 }
 
 async function uploadImageToStorage(storagePath, base64str) {
+    const _log = (step, msg) => { console.log(`[Upload:${step}] ${msg}`); if (window.AppLogger) AppLogger.info(`[Upload:${step}] ${msg}`); };
+    _log('1-START', `path=${storagePath}, inputLen=${base64str ? base64str.length : 'null'}, startsWithData=${base64str ? base64str.startsWith('data:') : 'N/A'}`);
     let blob, contentType;
     if (base64str.startsWith('data:')) {
         const parts = base64str.split(',');
         contentType = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+        _log('2-DECODE', `contentType=${contentType}, base64PartLen=${parts[1] ? parts[1].length : 0}`);
         const byteString = atob(parts[1]);
         const u8arr = new Uint8Array(byteString.length);
         for (let i = 0; i < byteString.length; i++) u8arr[i] = byteString.charCodeAt(i);
         blob = new Blob([u8arr], { type: contentType });
+        _log('3-BLOB', `blobSize=${blob.size}, blobType=${blob.type}`);
     } else {
+        _log('2-FETCH', 'Using fetch() for non-data URI');
         const res = await fetch(base64str);
         blob = await res.blob();
         contentType = blob.type || 'image/jpeg';
+        _log('3-BLOB', `blobSize=${blob.size}, blobType=${blob.type}`);
     }
     const storageRef = ref(storage, storagePath);
+    _log('4-UPLOAD', 'Calling uploadBytes...');
     await uploadBytes(storageRef, blob, { contentType });
-    return await getDownloadURL(storageRef);
+    _log('5-GETURL', 'uploadBytes OK, calling getDownloadURL...');
+    const url = await getDownloadURL(storageRef);
+    _log('6-DONE', `downloadURL=${url.substring(0, 80)}...`);
+    return url;
 }
 
 const googleProvider = new GoogleAuthProvider();
@@ -485,9 +495,9 @@ function getCleanDiaryStrForFirestore() {
 }
 
 async function saveUserData() {
-    if(!auth.currentUser) return;
+    if(!auth.currentUser) { console.warn('[SaveData] auth.currentUser is null, skipping save'); return; }
     try {
-        await setDoc(doc(db, "users", auth.currentUser.uid), {
+        const payload = {
             name: AppState.user.name,
             stats: AppState.user.stats,
             pendingStats: AppState.user.pendingStats,
@@ -512,8 +522,20 @@ async function saveUserData() {
             lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10),
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
             questHistoryStr: JSON.stringify(AppState.questHistory)
-        }, { merge: true });
-    } catch(e) { console.error("DB 저장 실패:", e); AppLogger.error('[DB] 저장 실패', e.stack || e.message); }
+        };
+        // 진단: 페이로드 크기 및 photoURL 상태 로그
+        const payloadSize = new Blob([JSON.stringify(payload)]).size;
+        const photoType = payload.photoURL ? (payload.photoURL.startsWith('data:') ? 'base64' : payload.photoURL.startsWith('http') ? 'url' : 'other') : 'null';
+        const photoLen = payload.photoURL ? payload.photoURL.length : 0;
+        console.log(`[SaveData] uid=${auth.currentUser.uid}, payloadSize=${payloadSize}bytes, photoURL.type=${photoType}, photoURL.len=${photoLen}`);
+        if (window.AppLogger) AppLogger.info(`[SaveData] size=${payloadSize}B, photo=${photoType}(${photoLen})`);
+        await setDoc(doc(db, "users", auth.currentUser.uid), payload, { merge: true });
+        console.log('[SaveData] setDoc OK');
+        if (window.AppLogger) AppLogger.info('[SaveData] Firestore 저장 성공');
+    } catch(e) {
+        console.error("DB 저장 실패:", e);
+        if (window.AppLogger) AppLogger.error('[DB] 저장 실패: ' + (e.code || '') + ' ' + (e.message || ''), e.stack || '');
+    }
 }
 
 async function loadUserDataFromDB(user) {
@@ -621,6 +643,8 @@ async function loadUserDataFromDB(user) {
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
             AppState.user.name = data.name || user.displayName || "신규 헌터";
+            console.log(`[LoadData] photoURL in Firestore: ${data.photoURL ? (data.photoURL.startsWith('http') ? 'url' : data.photoURL.startsWith('data:') ? 'base64' : 'other') + '(' + data.photoURL.length + ')' : 'MISSING'}`);
+            if (window.AppLogger) AppLogger.info(`[LoadData] photoURL=${data.photoURL ? (data.photoURL.substring(0, 60) + '...') : 'null'}`);
             if(data.photoURL) {
                 AppState.user.photoURL = data.photoURL;
                 setProfilePreview(data.photoURL);
@@ -2220,32 +2244,45 @@ async function loadProfileImage(event) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = async () => {
+            const _plog = (step, msg) => { console.log(`[ProfileImg:${step}] ${msg}`); if (window.AppLogger) AppLogger.info(`[ProfileImg:${step}] ${msg}`); };
+            _plog('A', `img loaded: ${img.naturalWidth}x${img.naturalHeight}`);
             const canvas = document.createElement('canvas');
             canvas.width = 150; canvas.height = 150;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, 150, 150);
             const base64 = canvas.toDataURL('image/jpeg', 0.6);
+            _plog('B', `canvas→base64: len=${base64.length}, starts=${base64.substring(0, 30)}`);
             setProfilePreview(base64);
             if (!auth.currentUser) {
+                _plog('C-FAIL', 'auth.currentUser is null after canvas');
                 alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in first.');
                 return;
             }
+            _plog('C', `auth OK: uid=${auth.currentUser.uid}`);
             try {
                 const uid = auth.currentUser.uid;
+                _plog('D', 'Calling uploadImageToStorage...');
                 const downloadURL = await uploadImageToStorage(`profile_images/${uid}/profile.jpg`, base64);
+                _plog('E', `Upload OK: url=${downloadURL.substring(0, 80)}...`);
                 AppState.user.photoURL = downloadURL;
                 setProfilePreview(downloadURL);
             } catch (e) {
+                _plog('D-FAIL', `Storage 업로드 실패: ${e.code || ''} ${e.message || e}`);
                 console.error('[Profile] Storage 업로드 실패, base64 폴백:', e);
                 AppState.user.photoURL = base64;
             }
+            _plog('F', `photoURL set to: type=${AppState.user.photoURL.startsWith('http') ? 'url' : 'base64'}, len=${AppState.user.photoURL.length}`);
             try {
+                _plog('G', 'Calling saveUserData...');
                 await saveUserData();
+                _plog('H', 'saveUserData OK');
                 // 소셜 탭에 변경된 프로필 사진 즉시 반영
                 updateSocialUserData();
                 // 로컬 릴스 캐시의 프로필 이미지도 갱신
                 updateLocalReelsProfileImage();
+                _plog('I', 'All done - profile image saved successfully');
             } catch (e) {
+                _plog('G-FAIL', `saveUserData 실패: ${e.code || ''} ${e.message || e}`);
                 console.error('[Profile] 프로필 사진 DB 저장 실패:', e);
                 alert(lang === 'ko' ? '프로필 사진 저장에 실패했습니다. 다시 시도해주세요.' : 'Failed to save profile picture. Please try again.');
             }
