@@ -1649,6 +1649,7 @@ async function loadProfileImage(event) {
         alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in first.');
         return;
     }
+    const lang = AppState.currentLang || 'ko';
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
@@ -1672,11 +1673,18 @@ async function loadProfileImage(event) {
                 await saveUserData();
             } catch (e) {
                 console.error('[Profile] 프로필 사진 DB 저장 실패:', e);
-                const lang = AppState.currentLang || 'ko';
                 alert(lang === 'ko' ? '프로필 사진 저장에 실패했습니다. 다시 시도해주세요.' : 'Failed to save profile picture. Please try again.');
             }
         };
+        img.onerror = () => {
+            console.error('[Profile] 이미지 로드 실패');
+            alert(lang === 'ko' ? '이미지를 불러올 수 없습니다. 다른 파일을 선택해주세요.' : 'Unable to load image. Please select a different file.');
+        };
         img.src = e.target.result;
+    };
+    reader.onerror = () => {
+        console.error('[Profile] 파일 읽기 실패');
+        alert(lang === 'ko' ? '파일을 읽을 수 없습니다. 다시 시도해주세요.' : 'Unable to read file. Please try again.');
     };
     reader.readAsDataURL(file);
 }
