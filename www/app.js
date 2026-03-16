@@ -1411,6 +1411,7 @@ function changeLanguage(langCode) {
         updatePointUI();
         updateDungeonStatus();
         loadPlayerName();
+        updateReelsResetTimer(); // i18n 업데이트 후 버튼 쿨다운 상태 재적용
     }
 }
 
@@ -3419,62 +3420,80 @@ async function postToReels() {
         return;
     }
 
-    // 포스트 생성
-    const caption = (entry.caption || '').trim();
-    const postTimestamp = Date.now();
+    // 즉시 버튼 비활성화 (중복 클릭 방지 + 시각 피드백)
+    const postBtn = document.getElementById('btn-reels-post');
+    if (postBtn) {
+        postBtn.disabled = true;
+        postBtn.removeAttribute('data-i18n');
+        postBtn.textContent = '포스팅 중...';
+        postBtn.style.background = '#333';
+        postBtn.style.color = '#666';
+        postBtn.style.opacity = '0.6';
+        postBtn.style.cursor = 'not-allowed';
+    }
 
-    // 릴스 사진을 Cloud Storage에 업로드
-    let finalPhotoURL = photoData;
-    if (isBase64Image(photoData)) {
-        try {
-            const uid = auth.currentUser.uid;
-            finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}.jpg`, photoData);
-        } catch (e) {
-            console.error('[Reels] Storage 업로드 실패, base64 폴백:', e);
+    try {
+        // 포스트 생성
+        const caption = (entry.caption || '').trim();
+        const postTimestamp = Date.now();
+
+        // 릴스 사진을 Cloud Storage에 업로드
+        let finalPhotoURL = photoData;
+        if (isBase64Image(photoData)) {
+            try {
+                const uid = auth.currentUser.uid;
+                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}.jpg`, photoData);
+            } catch (e) {
+                console.error('[Reels] Storage 업로드 실패, base64 폴백:', e);
+            }
         }
+
+        const post = {
+            uid: auth.currentUser.uid,
+            dateKST: todayKST,
+            timestamp: postTimestamp,
+            photo: finalPhotoURL,
+            caption: caption,
+            blocks: entry.blocks,
+            tasks: entry.tasks || [],
+            mood: entry.mood || '',
+            userName: AppState.user.name,
+            userPhoto: AppState.user.photoURL || null,
+            userLevel: AppState.user.level
+        };
+
+        // 로컬 저장
+        const reelsData = getReelsData();
+        reelsData.posts.push(post);
+        saveReelsData(reelsData);
+
+        // 포스팅 타임스탬프 저장 (로그아웃 후에도 비활성화 유지용)
+        localStorage.setItem('reels_last_post_ts', String(postTimestamp));
+
+        // Firestore 저장
+        await saveReelsToFirestore(post);
+
+        // 포스팅 보상: +20P & CHA +0.5 (24시간 내 중복 지급 방지)
+        const lastRewardTs = parseInt(localStorage.getItem('reels_reward_ts') || '0', 10);
+        const alreadyRewarded = lastRewardTs && (Date.now() - lastRewardTs) < 24 * 60 * 60 * 1000;
+        if (!alreadyRewarded) {
+            AppState.user.points += 20;
+            AppState.user.pendingStats.cha = (AppState.user.pendingStats.cha || 0) + 0.5;
+            localStorage.setItem('reels_reward_ts', String(postTimestamp));
+            updatePointUI();
+            drawRadarChart();
+            AppLogger.info('[Reels] 포스팅 보상 지급: +20P, CHA +0.5');
+        }
+
+        await saveUserData();
+        alert(i18n[lang].reels_posted);
+        renderReelsFeed();
+    } catch(e) {
+        AppLogger.error('[Reels] 포스팅 오류: ' + (e.message || e));
+    } finally {
+        // 항상 타이머/버튼 상태 갱신 (에러 발생 시에도)
+        updateReelsResetTimer();
     }
-
-    const post = {
-        uid: auth.currentUser.uid,
-        dateKST: todayKST,
-        timestamp: postTimestamp,
-        photo: finalPhotoURL,
-        caption: caption,
-        blocks: entry.blocks,
-        tasks: entry.tasks || [],
-        mood: entry.mood || '',
-        userName: AppState.user.name,
-        userPhoto: AppState.user.photoURL || null,
-        userLevel: AppState.user.level
-    };
-
-    // 로컬 저장
-    const reelsData = getReelsData();
-    reelsData.posts.push(post);
-    saveReelsData(reelsData);
-
-    // 포스팅 타임스탬프 저장 (로그아웃 후에도 비활성화 유지용)
-    localStorage.setItem('reels_last_post_ts', String(postTimestamp));
-
-    // Firestore 저장
-    await saveReelsToFirestore(post);
-
-    // 포스팅 보상: +20P & CHA +0.5 (24시간 내 중복 지급 방지)
-    const lastRewardTs = parseInt(localStorage.getItem('reels_reward_ts') || '0', 10);
-    const alreadyRewarded = lastRewardTs && (Date.now() - lastRewardTs) < 24 * 60 * 60 * 1000;
-    if (!alreadyRewarded) {
-        AppState.user.points += 20;
-        AppState.user.pendingStats.cha = (AppState.user.pendingStats.cha || 0) + 0.5;
-        localStorage.setItem('reels_reward_ts', String(postTimestamp));
-        updatePointUI();
-        drawRadarChart();
-        AppLogger.info('[Reels] 포스팅 보상 지급: +20P, CHA +0.5');
-    }
-
-    await saveUserData();
-    alert(i18n[lang].reels_posted);
-    renderReelsFeed();
-    updateReelsResetTimer();
 }
 
 // 릴스 피드 렌더링
@@ -3626,6 +3645,7 @@ function updateReelsResetTimer() {
             // 버튼 비활성화 (룰렛 스타일)
             if (postBtn) {
                 postBtn.disabled = true;
+                postBtn.removeAttribute('data-i18n'); // changeLanguage()가 텍스트 덮어쓰기 방지
                 postBtn.textContent = '포스팅 완료';
                 postBtn.style.background = '#333';
                 postBtn.style.color = '#666';
@@ -3642,6 +3662,7 @@ function updateReelsResetTimer() {
             // 버튼 활성화
             if (postBtn) {
                 postBtn.disabled = false;
+                postBtn.setAttribute('data-i18n', 'reels_post_btn'); // i18n 속성 복원
                 postBtn.textContent = i18n[AppState.currentLang]?.reels_post_btn || 'Day1 포스팅';
                 postBtn.style.background = 'var(--neon-gold)';
                 postBtn.style.color = '#000';
