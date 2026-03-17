@@ -330,10 +330,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updateReelsResetTimer();
 
             if (AppState.user.syncEnabled) { syncHealthData(false); }
-            initPushNotifications();
 
             // OS 권한 상태와 앱 토글 동기화 (OS에서 차단/해제된 경우 토글 off)
+            // ⚠️ 반드시 initPushNotifications보다 먼저 실행해야 올바른 pushEnabled 상태로 리스너 설정
             await syncToggleWithOSPermissions();
+
+            initPushNotifications();
 
             // 로그인 후 권한 요청 프롬프트 표시 (푸시/GPS/피트니스)
             showPermissionPrompts();
@@ -494,8 +496,25 @@ function getCleanDiaryStrForFirestore() {
     } catch(e) { return '{}'; }
 }
 
+let _saveDebounceTimer = null;
+let _saveInFlight = false;
+let _savePendingAfterFlight = false;
+
 async function saveUserData() {
-    if(!auth.currentUser) { console.warn('[SaveData] auth.currentUser is null, skipping save'); return; }
+    if(!auth.currentUser) {
+        if (window.AppLogger) AppLogger.warn('[SaveData] auth.currentUser is null, skipping save');
+        return;
+    }
+    // 디바운스: 연속 호출 시 마지막 호출만 실행 (2초 대기)
+    if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
+    if (_saveInFlight) { _savePendingAfterFlight = true; return; }
+    _saveDebounceTimer = setTimeout(() => _doSaveUserData(), 2000);
+}
+
+async function _doSaveUserData() {
+    _saveDebounceTimer = null;
+    if(!auth.currentUser) return;
+    _saveInFlight = true;
     try {
         const payload = {
             name: AppState.user.name,
@@ -535,6 +554,12 @@ async function saveUserData() {
     } catch(e) {
         console.error("DB 저장 실패:", e);
         if (window.AppLogger) AppLogger.error('[DB] 저장 실패: ' + (e.code || '') + ' ' + (e.message || ''), e.stack || '');
+    } finally {
+        _saveInFlight = false;
+        if (_savePendingAfterFlight) {
+            _savePendingAfterFlight = false;
+            saveUserData(); // 대기 중이던 저장 재시도
+        }
     }
 }
 
@@ -656,7 +681,10 @@ async function loadUserDataFromDB(user) {
                             setProfilePreview(downloadURL);
                             saveUserData();
                         })
-                        .catch(e => console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e));
+                        .catch(e => {
+                            console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e);
+                            if (window.AppLogger) AppLogger.error('[ProfileImg:ERR] 마이그레이션 실패: ' + (e.code || '') + ' ' + (e.message || ''));
+                        });
                 }
             }
         } else {
@@ -5290,19 +5318,25 @@ async function requestNativePushPermission() {
             return null;
         }
 
-        // 토큰 수신 대기
+        // 기존 registration 리스너 제거 후 토큰 수신 대기 (중복 방지)
+        await PushNotifications.removeAllListeners();
         return new Promise((resolve, reject) => {
+            let settled = false;
             const timeout = setTimeout(() => {
-                reject(new Error('FCM 토큰 수신 타임아웃'));
+                if (!settled) { settled = true; reject(new Error('FCM 토큰 수신 타임아웃')); }
             }, 15000);
 
             PushNotifications.addListener('registration', (tokenData) => {
+                if (settled) return; // 중복 이벤트 무시
+                settled = true;
                 clearTimeout(timeout);
                 if (window.AppLogger) AppLogger.info('[FCM] 네이티브 토큰 수신: ' + tokenData.value.substring(0, 20) + '...');
                 resolve(tokenData.value);
             });
 
             PushNotifications.addListener('registrationError', (error) => {
+                if (settled) return;
+                settled = true;
                 clearTimeout(timeout);
                 if (window.AppLogger) AppLogger.error('[FCM] 네이티브 등록 실패: ' + JSON.stringify(error));
                 reject(new Error(error.error || '등록 실패'));
@@ -5359,8 +5393,13 @@ async function requestWebPushPermission() {
     return token || null;
 }
 
-/** 네이티브 앱: 포그라운드 메시지 리스너 설정 */
+/** 네이티브 앱: 포그라운드 메시지 리스너 설정 (중복 호출 방지) */
+let _nativePushListenersReady = false;
 async function setupNativePushListeners() {
+    if (_nativePushListenersReady) {
+        if (window.AppLogger) AppLogger.info('[FCM] 리스너 이미 설정됨, 건너뜀');
+        return;
+    }
     const cap = window.Capacitor;
     if (!cap || !cap.Plugins) return;
 
@@ -5382,6 +5421,7 @@ async function setupNativePushListeners() {
 
         // 기본 토픽 구독
         await subscribeNativeTopics();
+        _nativePushListenersReady = true;
     }
 }
 
