@@ -2987,7 +2987,6 @@ window.sharePlannerAsImage = async function() {
     const mood = (entry && entry.mood) ? entry.mood : '';
     const moodMap = { great: '😄', good: '🙂', neutral: '😐', bad: '😞', terrible: '😫' };
     const moodEmoji = moodMap[mood] || '';
-    const location = AppState.selectedLocation || null;
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -3013,24 +3012,19 @@ window.sharePlannerAsImage = async function() {
         } catch(e) { photoImg = null; }
     }
 
-    // 시간표 블록 (연속 동일 업무 합치기, 포스팅과 동일하게 최대 6개 표시)
+    // 시간표 블록 (연속 동일 업무 합치기, 최대 8개 표시)
     const mergedImageBlocks = mergeConsecutiveBlocks(Object.fromEntries(blocks));
-    const maxBlocks = 6;
+    const maxBlocks = 8;
     const displayBlocks = mergedImageBlocks.slice(0, maxBlocks);
     const moreCount = mergedImageBlocks.length > maxBlocks ? mergedImageBlocks.length - maxBlocks : 0;
-
-    // 캡션 멀티라인 처리 (포스팅과 동일하게)
-    const captionLines = caption ? caption.split('\n').filter(l => l.length > 0) : [];
 
     // 높이 계산
     const lineH = 24;
     const headerH = 56;
-    const locationH = location ? 20 : 0;
     let totalH = pad;                   // top padding
     totalH += headerH;                  // 프로필 헤더
-    totalH += locationH;                // 위치 정보
     if (photoImg) totalH += photoH + 12; // 사진
-    if (captionLines.length > 0) totalH += 12 + captionLines.length * 20 + 12; // 캡션 (멀티라인)
+    if (caption) totalH += 40;           // 캡션
     if (displayBlocks.length > 0) {
         totalH += 32;                    // 시간표 제목
         totalH += displayBlocks.length * lineH; // 블록 행
@@ -3125,14 +3119,6 @@ window.sharePlannerAsImage = async function() {
 
     y += headerH;
 
-    // --- 위치 정보 (포스팅과 동일) ---
-    if (location) {
-        ctx.fillStyle = '#aaaaaa';
-        ctx.font = '11px Pretendard, sans-serif';
-        ctx.fillText('📍 ' + location.name, pad + 10, y + 14);
-        y += locationH;
-    }
-
     // --- 사진 ---
     if (photoImg) {
         const imgX = pad;
@@ -3141,24 +3127,20 @@ window.sharePlannerAsImage = async function() {
         y += photoH + 12;
     }
 
-    // --- 캡션 (멀티라인, 포스팅과 동일) ---
-    if (captionLines.length > 0) {
+    // --- 캡션 ---
+    if (caption) {
         ctx.fillStyle = '#ffffff';
         ctx.font = '13px Pretendard, sans-serif';
-        y += 12;
-        captionLines.forEach(line => {
-            // 긴 줄은 줄임
-            let displayLine = line;
-            if (ctx.measureText(displayLine).width > innerW - 20) {
-                while (ctx.measureText(displayLine + '...').width > innerW - 20 && displayLine.length > 0) {
-                    displayLine = displayLine.slice(0, -1);
-                }
-                displayLine += '...';
+        // 텍스트가 긴 경우 줄임
+        let displayCaption = caption;
+        if (ctx.measureText(displayCaption).width > innerW - 20) {
+            while (ctx.measureText(displayCaption + '...').width > innerW - 20 && displayCaption.length > 0) {
+                displayCaption = displayCaption.slice(0, -1);
             }
-            ctx.fillText(displayLine, pad + 10, y + 14);
-            y += 20;
-        });
-        y += 12;
+            displayCaption += '...';
+        }
+        ctx.fillText(displayCaption, pad + 10, y + 18);
+        y += 40;
     }
 
     // --- 시간표 블록 (reels-timetable 스타일) ---
