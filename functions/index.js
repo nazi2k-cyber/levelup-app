@@ -127,10 +127,22 @@ async function handleSendTestNotification(request) {
         notification = getLocalizedMessage(type || "raid_start", lang || "ko");
     }
 
+    // 알림 타입에 따른 대상 탭 매핑
+    const typeTabMap = {
+        raid_start: "dungeon",
+        raid_alert: "dungeon",
+        daily_reminder: "diary",
+        quest_reminder: "quests",
+        streak_warning: "status",
+        streak_broken: "status",
+        custom: "status"
+    };
+    const targetTab = typeTabMap[type] || "status";
+
     const message = {
         notification,
         data: {
-            tab: "status",
+            tab: targetTab,
             type: "test_" + (type || "raid_start")
         },
         android: {

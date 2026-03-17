@@ -35,6 +35,14 @@
     },
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "App": {
+      "deepLinks": [
+        {
+          "scheme": "levelup",
+          "host": "tab"
+        }
+      ]
     }
   }
 }

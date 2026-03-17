@@ -321,6 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
     registerServiceWorker();
     initOfflineDetection();
 
+    // 앱 시작 즉시 네이티브 푸시 알림 클릭 리스너 등록 (콜드 스타트 대응)
+    registerEarlyPushListeners();
+
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             if (_initializedUid === user.uid) return; // 토큰 갱신 등 재발화 시 중복 초기화 방지
@@ -397,6 +400,9 @@ document.addEventListener('DOMContentLoaded', () => {
             await syncToggleWithOSPermissions();
 
             initPushNotifications();
+
+            // 콜드 스타트 시 대기 중인 알림 데이터 처리 (푸시 클릭으로 앱 진입 시)
+            processPendingNotification();
 
             // 로그인 후 권한 요청 프롬프트 표시 (푸시/GPS/피트니스)
             showPermissionPrompts();
@@ -5573,7 +5579,7 @@ async function setupNativePushListeners() {
             showInAppNotification(notification.title, notification.body, notification.data);
         });
 
-        // 알림 탭(클릭) 처리
+        // 알림 탭(클릭) 처리 — 앱이 백그라운드 상태일 때
         PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
             if (window.AppLogger) AppLogger.info('[FCM] 알림 탭: ' + JSON.stringify(action));
             handleNotificationAction(action.notification.data);
@@ -5582,6 +5588,100 @@ async function setupNativePushListeners() {
         // 기본 토픽 구독
         await subscribeNativeTopics();
         _nativePushListenersReady = true;
+    }
+}
+
+/**
+ * 앱 시작 시 즉시 푸시 알림 클릭 리스너 등록 (콜드 스타트 대응)
+ * - 앱이 종료된 상태에서 푸시 알림 클릭으로 앱이 실행된 경우,
+ *   auth 완료 전에 리스너가 등록되어야 알림 데이터를 놓치지 않음
+ * - 앱이 아직 준비되지 않은 경우 _pendingNotificationData에 저장 후
+ *   앱 초기화 완료 시 처리
+ */
+let _pendingNotificationData = null;
+let _appNavigationReady = false;
+
+function registerEarlyPushListeners() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+    if (!cap.Plugins || !cap.Plugins.PushNotifications) return;
+
+    const { PushNotifications } = cap.Plugins;
+
+    // 콜드 스타트: 알림 클릭으로 앱이 열린 경우 처리
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+        console.log('[FCM] 얼리 리스너 — 알림 클릭 감지:', JSON.stringify(action));
+        const data = action.notification?.data;
+        if (!data) return;
+
+        if (_appNavigationReady) {
+            // 앱이 이미 준비된 경우 바로 네비게이션
+            handleNotificationAction(data);
+        } else {
+            // 앱 초기화 중 — 대기열에 저장
+            _pendingNotificationData = data;
+            if (window.AppLogger) AppLogger.info('[FCM] 콜드 스타트 알림 데이터 대기: ' + JSON.stringify(data));
+        }
+    });
+
+    // @capacitor/app 플러그인으로 딥링크 (appUrlOpen) 처리
+    if (cap.Plugins.App) {
+        cap.Plugins.App.addListener('appUrlOpen', (event) => {
+            console.log('[DeepLink] URL 열림:', event.url);
+            if (window.AppLogger) AppLogger.info('[DeepLink] appUrlOpen: ' + event.url);
+
+            try {
+                const url = new URL(event.url);
+                // levelup://tab/quests 또는 levelup://quests 형식 처리
+                const pathParts = url.pathname.replace(/^\/+/, '').split('/');
+                const tab = url.hostname === 'tab' ? pathParts[0] : url.hostname;
+
+                if (tab) {
+                    if (_appNavigationReady) {
+                        handleNotificationAction({ tab: tab });
+                    } else {
+                        _pendingNotificationData = { tab: tab };
+                    }
+                }
+            } catch (e) {
+                console.warn('[DeepLink] URL 파싱 실패:', e.message);
+            }
+        });
+
+        // 앱이 콜드 스타트로 열렸을 때 launch URL 확인
+        cap.Plugins.App.getLaunchUrl().then((result) => {
+            if (result && result.url) {
+                console.log('[DeepLink] 런치 URL:', result.url);
+                if (window.AppLogger) AppLogger.info('[DeepLink] getLaunchUrl: ' + result.url);
+
+                try {
+                    const url = new URL(result.url);
+                    const pathParts = url.pathname.replace(/^\/+/, '').split('/');
+                    const tab = url.hostname === 'tab' ? pathParts[0] : url.hostname;
+
+                    if (tab && !_appNavigationReady) {
+                        _pendingNotificationData = { tab: tab };
+                    }
+                } catch (e) {
+                    console.warn('[DeepLink] 런치 URL 파싱 실패:', e.message);
+                }
+            }
+        }).catch(() => {});
+    }
+
+    console.log('[FCM] 얼리 푸시 리스너 등록 완료');
+}
+
+/** 앱 초기화 완료 후 대기 중인 알림 데이터 처리 */
+function processPendingNotification() {
+    _appNavigationReady = true;
+    if (_pendingNotificationData) {
+        if (window.AppLogger) AppLogger.info('[FCM] 대기 중인 알림 처리: ' + JSON.stringify(_pendingNotificationData));
+        // 약간의 지연으로 DOM 렌더링 완료 후 탭 전환
+        setTimeout(() => {
+            handleNotificationAction(_pendingNotificationData);
+            _pendingNotificationData = null;
+        }, 500);
     }
 }
 
@@ -5671,10 +5771,29 @@ function showInAppNotification(title, body, data) {
 /** 알림 데이터에 따라 해당 탭으로 이동 */
 function handleNotificationAction(data) {
     if (!data) return;
-    const tab = data.tab || data.target;
+    if (window.AppLogger) AppLogger.info('[Navigate] 알림 액션 처리: ' + JSON.stringify(data));
+
+    // 알림 타입에 따른 탭 자동 매핑
+    let tab = data.tab || data.target;
+    if (!tab && data.type) {
+        const typeTabMap = {
+            'raid_start': 'dungeon',
+            'raid_end': 'dungeon',
+            'raid_alert': 'dungeon',
+            'quest_reminder': 'quests',
+            'daily_reminder': 'diary',
+            'social_update': 'social',
+            'announcement': 'status'
+        };
+        tab = typeTabMap[data.type] || 'status';
+    }
+
     if (tab) {
         const tabEl = document.querySelector(`.nav-item[data-tab="${tab}"]`);
-        if (tabEl) switchTab(tab, tabEl);
+        if (tabEl) {
+            switchTab(tab, tabEl);
+            if (window.AppLogger) AppLogger.info('[Navigate] 탭 이동 완료: ' + tab);
+        }
     }
 }
 
