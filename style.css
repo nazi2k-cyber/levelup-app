@@ -578,7 +578,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .reels-timetable-title {
     font-size: 0.75rem; font-weight: bold; color: var(--neon-gold);
-    margin-bottom: 6px;
+    margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;
 }
 .reels-block-item {
     display: flex; gap: 8px; padding: 3px 0; font-size: 0.72rem;
@@ -591,6 +591,20 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .reels-block-task {
     color: var(--text-main); word-break: break-word;
 }
+.schedule-fold-icon {
+    font-size: 0.6rem; color: var(--text-sub); transition: transform 0.3s ease; margin-left: 4px;
+}
+.reels-block-extra {
+    max-height: 0; overflow: hidden; transition: max-height 0.35s ease;
+}
+.reels-block-extra.open {
+    max-height: 800px;
+}
+.schedule-fold-toggle {
+    font-size: 0.65rem; color: var(--neon-blue); text-align: right;
+    cursor: pointer; padding-top: 2px; user-select: none;
+}
+.schedule-fold-toggle:hover { text-decoration: underline; }
 [data-theme="light"] .reels-timetable { background: rgba(0,100,200,0.04); }
 [data-theme="light"] .reels-block-item { border-bottom-color: rgba(0,0,0,0.06); }
 

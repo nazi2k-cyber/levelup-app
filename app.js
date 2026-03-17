@@ -4412,12 +4412,16 @@ function renderReelsCards(posts, lang) {
         const isMe = post.uid === auth.currentUser?.uid;
         const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(post.userInstaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
 
-        // 시간표 블록 요약 (최대 6개)
+        // 시간표 블록 (폴딩/언폴딩 지원)
         const blockEntries = Object.entries(post.blocks || {}).sort(([a],[b]) => a.localeCompare(b));
-        const blockSummary = blockEntries.slice(0, 6).map(([time, task]) =>
+        const FOLD_LIMIT = 6;
+        const blockSummary = blockEntries.slice(0, FOLD_LIMIT).map(([time, task]) =>
             `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${task.replace(/</g,'&lt;')}</span></div>`
         ).join('');
-        const moreCount = blockEntries.length > 6 ? blockEntries.length - 6 : 0;
+        const blockExtra = blockEntries.slice(FOLD_LIMIT).map(([time, task]) =>
+            `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${task.replace(/</g,'&lt;')}</span></div>`
+        ).join('');
+        const moreCount = blockEntries.length > FOLD_LIMIT ? blockEntries.length - FOLD_LIMIT : 0;
 
         return `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
@@ -4431,9 +4435,15 @@ function renderReelsCards(posts, lang) {
             ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(post.photo)}" alt="Timetable"></div>` : ''}
             ${post.caption ? `<div class="reels-caption">${post.caption.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
             <div class="reels-timetable">
-                <div class="reels-timetable-title">📋 ${i18n[lang]?.planner_tab_schedule || '시간표'}</div>
+                <div class="reels-timetable-title" ${moreCount > 0 ? `onclick="toggleScheduleFold('${postId}')" style="cursor:pointer;"` : ''}>
+                    📋 ${i18n[lang]?.planner_tab_schedule || '시간표'}
+                    ${moreCount > 0 ? `<span class="schedule-fold-icon" data-fold-icon="${postId}">▼</span>` : ''}
+                </div>
                 ${blockSummary}
-                ${moreCount > 0 ? `<div style="font-size:0.65rem; color:var(--text-sub); text-align:right;">+${moreCount} more</div>` : ''}
+                ${moreCount > 0 ? `<div class="reels-block-extra" data-fold-extra="${postId}">${blockExtra}</div>
+                <div class="schedule-fold-toggle" onclick="toggleScheduleFold('${postId}')">
+                    <span data-fold-label="${postId}">+${moreCount} more</span>
+                </div>` : ''}
             </div>
             <div class="reels-actions">
                 <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count"></span>
@@ -4712,10 +4722,30 @@ function toggleCommentsPanel(postId) {
     }
 }
 
+// 시간표 폴딩/언폴딩 토글
+function toggleScheduleFold(postId) {
+    const extra = document.querySelector(`[data-fold-extra="${postId}"]`);
+    const icon = document.querySelector(`[data-fold-icon="${postId}"]`);
+    const label = document.querySelector(`[data-fold-label="${postId}"]`);
+    if (!extra) return;
+    const isOpen = extra.classList.toggle('open');
+    if (icon) icon.textContent = isOpen ? '▲' : '▼';
+    const lang = localStorage.getItem('lang') || 'ko';
+    if (label) {
+        if (isOpen) {
+            label.textContent = lang === 'ko' ? '접기' : lang === 'ja' ? '折りたたむ' : 'Show less';
+        } else {
+            const count = extra.querySelectorAll('.reels-block-item').length;
+            label.textContent = `+${count} more`;
+        }
+    }
+}
+
 // 전역 등록 (onclick에서 호출)
 window.toggleReelsLike = toggleReelsLike;
 window.addReelsComment = addReelsComment;
 window.toggleCommentsPanel = toggleCommentsPanel;
+window.toggleScheduleFold = toggleScheduleFold;
 
 function changeTheme() {
     const light = document.getElementById('theme-toggle').checked;
