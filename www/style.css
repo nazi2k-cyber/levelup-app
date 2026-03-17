@@ -97,6 +97,12 @@ body {
 
 .login-toggle { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 16px; cursor: pointer; text-decoration: underline; }
 
+/* 이메일 인증 안내 */
+.verify-icon { font-size: 3rem; margin-bottom: 16px; }
+.verify-title { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 0 0 12px 0; text-align: center; }
+.verify-email { font-size: 0.9rem; color: var(--neon-blue); font-weight: 600; margin: 0 0 8px 0; word-break: break-all; text-align: center; }
+.verify-desc { font-size: 0.8rem; color: rgba(255,255,255,0.5); text-align: center; line-height: 1.5; margin: 0 0 24px 0; }
+
 /* 하단 사명 */
 .login-bottom-brand {
     padding: 20px 0 40px 0; text-align: center;
@@ -108,6 +114,10 @@ body {
 .login-bottom-brand-tagline {
     font-size: 0.6rem; font-weight: 600; color: rgba(0,217,255,0.25);
     letter-spacing: 2px; margin-top: 4px;
+}
+.login-bottom-copyright {
+    font-size: 0.55rem; color: rgba(255,255,255,0.2);
+    margin-top: 8px; letter-spacing: 0.5px;
 }
 
 #app-container { flex-direction: column; width: 100%; height: 100%; }
@@ -280,6 +290,46 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .planner-tab-btn:not(.active):hover { color: var(--text-main); }
 .planner-tab-content { display: none; }
 .planner-tab-content.active { display: block; }
+
+/* Quest subtab bar (mirrors planner-tab-bar) */
+.quest-tab-bar { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+.quest-tab-btn {
+    flex: 1; padding: 10px 0; font-size: 0.85rem; font-weight: bold; color: var(--text-sub);
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+}
+.quest-tab-btn.active { color: var(--neon-blue); border-bottom-color: var(--neon-blue); }
+.quest-tab-btn:not(.active):hover { color: var(--text-main); }
+.quest-tab-content { display: none; }
+.quest-tab-content.active { display: block; }
+
+/* Quest stats - monthly heatmap */
+.qstats-heatmap-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 4px; }
+.qstats-heatmap-header span { text-align: center; font-size: 0.55rem; color: var(--text-sub); font-weight: bold; }
+.qstats-heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.qstats-heatmap-cell {
+    aspect-ratio: 1; border-radius: 3px; position: relative;
+    font-size: 0.55rem; display: flex; align-items: center; justify-content: center;
+    color: var(--text-sub);
+}
+.qstats-heatmap-cell.empty { background: transparent; }
+.qstats-heatmap-cell.level-0 { background: rgba(255,255,255,0.05); }
+.qstats-heatmap-cell.level-1 { background: rgba(0,217,255,0.15); }
+.qstats-heatmap-cell.level-2 { background: rgba(0,217,255,0.3); }
+.qstats-heatmap-cell.level-3 { background: rgba(0,217,255,0.5); }
+.qstats-heatmap-cell.level-4 { background: rgba(0,217,255,0.75); color: #fff; }
+
+/* Quest stats - summary boxes */
+.qstats-summary-item {
+    flex: 1; text-align: center; padding: 8px 4px; border-radius: 6px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
+}
+.qstats-summary-val { font-size: 1.1rem; font-weight: 900; color: var(--neon-cyan); }
+.qstats-summary-label { font-size: 0.6rem; color: var(--text-sub); margin-top: 2px; }
+
+/* Quest stats - heatmap legend */
+.qstats-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 8px; font-size: 0.5rem; color: var(--text-sub); }
+.qstats-legend-cell { width: 10px; height: 10px; border-radius: 2px; }
 
 /* 플래너 통합 태스크 목록 */
 .planner-section-title { font-size: 0.65rem; font-weight: bold; color: var(--neon-blue); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -751,4 +801,37 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 [data-theme="light"] .offline-banner {
     background: linear-gradient(135deg, rgba(220, 53, 69, 0.95), rgba(180, 30, 40, 0.95));
+}
+
+/* DIY 퀘스트 */
+.diy-stat-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.diy-stat-btn {
+    padding: 6px 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.diy-stat-btn.active {
+    border-color: var(--neon-gold);
+    color: var(--neon-gold);
+    background: rgba(255, 204, 0, 0.1);
+}
+.diy-quest-edit {
+    font-size: 0.7rem;
+    color: var(--text-sub);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+.diy-quest-edit:hover {
+    opacity: 1;
 }

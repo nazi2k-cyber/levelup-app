@@ -60,10 +60,21 @@
             <div class="login-toggle" id="auth-toggle-btn" data-i18n="auth_toggle_signup">계정이 없으신가요? 회원가입</div>
         </div>
 
+        <!-- 이메일 인증 안내 화면 -->
+        <div id="email-verify-notice" class="login-center d-none">
+            <div class="verify-icon">✉️</div>
+            <h2 class="verify-title" data-i18n="verify_title">이메일 인증이 필요합니다</h2>
+            <p class="verify-email" id="verify-email-addr"></p>
+            <p class="verify-desc" data-i18n="verify_desc">받은편지함에서 인증 링크를 클릭한 후 로그인해주세요.</p>
+            <button class="btn-primary" id="btn-resend-verify" data-i18n="verify_resend">인증 메일 재발송</button>
+            <div class="login-toggle" id="btn-back-login" data-i18n="verify_back">로그인으로 돌아가기</div>
+        </div>
+
         <!-- 하단 사명 -->
         <div class="login-bottom-brand">
             <div class="login-bottom-brand-name">BRAVECAT</div>
             <div class="login-bottom-brand-tagline">LEVEL UP YOUR LIFE</div>
+            <div class="login-bottom-copyright">&copy; 2025-2026 BRAVECAT STUDIOS. All rights reserved.</div>
         </div>
     </div>
 
@@ -162,41 +173,101 @@
             </section>
 
             <section id="quests" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
-                        <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
-                    </div>
-                </div>
-                <div class="system-card" style="padding:10px;">
-                    <div class="quest-list-wrapper" id="quest-list-container"></div>
-                </div>
-                <div class="system-card calendar-wrapper">
-                    <div class="cal-header">
-                        <span data-i18n="cal_title">주간 진척도</span>
-                        <span style="font-size:0.75rem; color:var(--text-sub);" id="cal-month"></span>
-                    </div>
-                    <div class="cal-grid" id="calendar-grid"></div>
+                <!-- Quest subtab bar -->
+                <div class="quest-tab-bar">
+                    <button class="quest-tab-btn active" data-quest-tab="main" data-i18n="quest_tab_main">📜 퀘스트</button>
+                    <button class="quest-tab-btn" data-quest-tab="stats" data-i18n="quest_tab_stats">📊 통계</button>
                 </div>
 
-                <!-- P3: 주간 도전과제 -->
-                <div class="system-card" style="padding:12px;">
+                <!-- Main quest content -->
+                <div class="quest-tab-content active" id="quest-tab-main">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="challenge_title">주간 도전과제</h3>
-                        <span style="font-size:0.6rem; color:var(--text-sub);" data-i18n="challenge_reset_info">매주 일요일 자동 초기화</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
+                            <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
+                        </div>
                     </div>
-                    <div id="challenge-list"></div>
+                    <div class="system-card" style="padding:10px;">
+                        <div class="quest-list-wrapper" id="quest-list-container"></div>
+                        <div id="diy-quest-section" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="diy_quest_title">DIY Quests</span>
+                                <button class="btn-info-sm" id="btn-add-diy-quest" onclick="window.showDiyQuestModal()">+ <span data-i18n="btn_add_diy">추가</span></button>
+                            </div>
+                            <div id="diy-quest-list"></div>
+                        </div>
+                    </div>
+                    <div class="system-card calendar-wrapper">
+                        <div class="cal-header">
+                            <span data-i18n="cal_title">주간 진척도</span>
+                            <span style="font-size:0.75rem; color:var(--text-sub);" id="cal-month"></span>
+                        </div>
+                        <div class="cal-grid" id="calendar-grid"></div>
+                    </div>
+
+                    <!-- P3: 주간 도전과제 -->
+                    <div class="system-card" style="padding:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="challenge_title">주간 도전과제</h3>
+                            <span style="font-size:0.6rem; color:var(--text-sub);" data-i18n="challenge_reset_info">매주 일요일 자동 초기화</span>
+                        </div>
+                        <div id="challenge-list"></div>
+                    </div>
+
+                    <!-- P4: 일일 보너스 룰렛 -->
+                    <div class="system-card" style="padding:15px; text-align:center;">
+                        <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</h3>
+                        <div id="roulette-container" style="position:relative; display:inline-block;">
+                            <div class="roulette-arrow"></div>
+                            <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
+                        </div>
+                        <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
+                        <div id="roulette-timer" style="font-size:0.75rem; color:var(--neon-cyan); margin:4px 0; display:none;"></div>
+                        <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
+                    </div>
                 </div>
 
-                <!-- P4: 일일 보너스 룰렛 -->
-                <div class="system-card" style="padding:15px; text-align:center;">
-                    <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</h3>
-                    <div id="roulette-container" style="position:relative; display:inline-block;">
-                        <div class="roulette-arrow"></div>
-                        <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
+                <!-- Statistics content -->
+                <div class="quest-tab-content" id="quest-tab-stats">
+                    <!-- DIY Only Filter -->
+                    <div style="display:flex; align-items:center; justify-content:flex-end; margin-bottom:8px;">
+                        <label class="qstats-diy-filter-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; color:var(--text-sub);">
+                            <input type="checkbox" id="qstats-diy-filter" style="accent-color:var(--neon-blue); cursor:pointer;">
+                            <span data-i18n="qstats_diy_only">DIY 퀘스트만</span>
+                        </label>
                     </div>
-                    <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
-                    <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
+                    <!-- Monthly stats card -->
+                    <div class="system-card" style="padding:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-blue);" data-i18n="qstats_monthly_title">월간 퀘스트 통계</h3>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button class="btn-info-sm" id="btn-qstats-prev-month">◀</button>
+                                <span id="qstats-month-label" style="font-size:0.8rem; color:var(--neon-gold); min-width:80px; text-align:center;"></span>
+                                <button class="btn-info-sm" id="btn-qstats-next-month">▶</button>
+                            </div>
+                        </div>
+                        <div id="qstats-monthly-summary" style="display:flex; gap:8px; margin-bottom:12px;"></div>
+                        <div id="qstats-monthly-heatmap"></div>
+                    </div>
+
+                    <!-- Annual stats card -->
+                    <div class="system-card" style="padding:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="qstats_annual_title">연간 퀘스트 통계</h3>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button class="btn-info-sm" id="btn-qstats-prev-year">◀</button>
+                                <span id="qstats-year-label" style="font-size:0.8rem; color:var(--neon-gold);"></span>
+                                <button class="btn-info-sm" id="btn-qstats-next-year">▶</button>
+                            </div>
+                        </div>
+                        <svg id="qstats-annual-chart" viewBox="0 0 320 180" style="width:100%;"></svg>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="qstats-empty-state" class="d-none" style="text-align:center; padding:30px; color:var(--text-sub);">
+                        <div style="font-size:2rem; margin-bottom:8px;">📊</div>
+                        <div style="font-size:0.85rem;" data-i18n="qstats_empty">퀘스트를 완료하면 통계가 기록됩니다.</div>
+                    </div>
                 </div>
             </section>
 
@@ -380,6 +451,7 @@
             <section id="reels" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <h2 data-i18n="reels_title" style="margin:0;">🎬 Day1</h2>
+                    <button class="btn-info-sm" id="btn-day1-info">ℹ️ <span data-i18n="btn_day1_info">가이드</span></button>
                 </div>
 
                 <!-- Day1 피드 -->
@@ -408,20 +480,29 @@
                 <div class="system-card">
                     <div class="setting-row">
                         <span data-i18n="set_push">푸시 알림 수신</span>
-                        <label class="switch"><input type="checkbox" id="push-toggle"><span class="slider"></span></label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="btn-info-sm" id="btn-settings-push-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
+                            <label class="switch"><input type="checkbox" id="push-toggle"><span class="slider"></span></label>
+                        </div>
                     </div>
                     <div class="setting-row" id="push-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
                 </div>
                 <div class="system-card">
                     <div class="setting-row">
                         <span data-i18n="set_gps">앱 실행 시 현위치 탐색</span>
-                        <label class="switch"><input type="checkbox" id="gps-toggle"><span class="slider"></span></label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="btn-info-sm" id="btn-settings-gps-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
+                            <label class="switch"><input type="checkbox" id="gps-toggle"><span class="slider"></span></label>
+                        </div>
                     </div>
                     <div class="setting-row" id="gps-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
-                    
+
                     <div class="setting-row">
                         <span data-i18n="set_sync">구글 피트니스 앱 동기화</span>
-                        <label class="switch"><input type="checkbox" id="sync-toggle"><span class="slider"></span></label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="btn-info-sm" id="btn-settings-fitness-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
+                            <label class="switch"><input type="checkbox" id="sync-toggle"><span class="slider"></span></label>
+                        </div>
                     </div>
                     <div class="setting-row" id="sync-status" style="font-size:0.7rem; color:var(--neon-blue); display:none; justify-content:flex-end; padding-top:0; text-align:right;"></div>
                 </div>
@@ -495,6 +576,41 @@
                 <button class="modal-close" onclick="document.getElementById('legalModal').classList.add('d-none');document.getElementById('legalModal').classList.remove('d-flex');">×</button>
             </div>
             <div id="legal-modal-body" style="overflow-y:auto; flex-grow:1; max-height:60vh; font-size:0.8rem; color:var(--text-main); line-height:1.7;"></div>
+        </div>
+    </div>
+
+    <!-- DIY 퀘스트 생성/수정 모달 -->
+    <div class="modal-overlay d-none" id="diyQuestModal" onclick="if(event.target===this){closeDiyQuestModal();}">
+        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px;">
+            <div class="modal-header" style="margin-bottom: 10px; padding-bottom: 8px;">
+                <span id="diy-modal-title" style="font-weight:bold; color:var(--neon-gold);" data-i18n="diy_modal_create">퀘스트 만들기</span>
+                <button class="modal-close" onclick="closeDiyQuestModal()">×</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <div>
+                    <label style="font-size:0.75rem; color:var(--text-sub);" data-i18n="diy_input_title">제목</label>
+                    <input type="text" id="diy-title-input" maxlength="20" class="login-input" style="margin-top:4px; font-size:0.85rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem; color:var(--text-sub);" data-i18n="diy_input_desc">설명</label>
+                    <input type="text" id="diy-desc-input" maxlength="40" class="login-input" style="margin-top:4px; font-size:0.85rem;">
+                </div>
+                <div>
+                    <label style="font-size:0.75rem; color:var(--text-sub);" data-i18n="diy_select_stat">스탯 선택</label>
+                    <div class="diy-stat-selector" style="margin-top:6px;">
+                        <button class="diy-stat-btn" data-stat="STR" onclick="window.selectDiyStat(this)">STR</button>
+                        <button class="diy-stat-btn" data-stat="INT" onclick="window.selectDiyStat(this)">INT</button>
+                        <button class="diy-stat-btn" data-stat="CHA" onclick="window.selectDiyStat(this)">CHA</button>
+                        <button class="diy-stat-btn" data-stat="VIT" onclick="window.selectDiyStat(this)">VIT</button>
+                        <button class="diy-stat-btn" data-stat="WLTH" onclick="window.selectDiyStat(this)">WLTH</button>
+                        <button class="diy-stat-btn" data-stat="AGI" onclick="window.selectDiyStat(this)">AGI</button>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:6px;">
+                    <button class="btn-primary" style="flex:1;" onclick="window.saveDiyQuest()" data-i18n="diy_btn_save">저장</button>
+                    <button id="diy-btn-delete" class="btn-primary" style="flex:1; background:var(--neon-red); display:none;" onclick="window.deleteDiyQuest()" data-i18n="diy_btn_delete">삭제</button>
+                </div>
+            </div>
         </div>
     </div>
 
