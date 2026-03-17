@@ -75,7 +75,12 @@ async function uploadImageToStorage(storagePath, base64str) {
     }
     const storageRef = ref(storage, storagePath);
     _log('4-UPLOAD', 'Calling uploadBytes...');
-    await uploadBytes(storageRef, blob, { contentType });
+    // 타임아웃 30초: 네트워크 불안정 시 uploadBytes가 무한 대기하는 문제 방지
+    const uploadPromise = uploadBytes(storageRef, blob, { contentType });
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Upload timed out after 30s')), 30000)
+    );
+    await Promise.race([uploadPromise, timeoutPromise]);
     _log('5-GETURL', 'uploadBytes OK, calling getDownloadURL...');
     const url = await getDownloadURL(storageRef);
     _log('6-DONE', `downloadURL=${url.substring(0, 80)}...`);
@@ -283,6 +288,25 @@ function initOfflineDetection() {
 
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
+
+    // 네이티브 WebView에서 WebChannel transport error 발생 시 자동 복구
+    // online/offline 이벤트 없이 Firestore 스트림이 끊어질 수 있음
+    if (isNativePlatform) {
+        let _lastNetworkRecovery = 0;
+        window.addEventListener('unhandledrejection', (event) => {
+            const msg = String(event.reason && event.reason.message || event.reason || '');
+            if (msg.includes('transport errored') || msg.includes('WebChannel') || msg.includes('UNAVAILABLE')) {
+                const now = Date.now();
+                if (now - _lastNetworkRecovery < 30000) return; // 30초 내 중복 방지
+                _lastNetworkRecovery = now;
+                if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel transport error detected, reconnecting...');
+                disableNetwork(db)
+                    .then(() => enableNetwork(db))
+                    .then(() => { if (window.AppLogger) AppLogger.info('[Firestore] WebChannel 복구 완료'); })
+                    .catch((e) => { if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel 복구 실패: ' + e.message); });
+            }
+        });
+    }
 
     // 초기 상태 체크
     if (!navigator.onLine) {
@@ -548,6 +572,7 @@ function getCleanDiaryStrForFirestore() {
 let _saveDebounceTimer = null;
 let _saveInFlight = false;
 let _savePendingAfterFlight = false;
+let _profileUploadInFlight = false; // 프로필 업로드 중 다른 save가 photoURL을 null로 덮어쓰는 것을 방지
 
 async function saveUserData() {
     if(!auth.currentUser) {
@@ -576,7 +601,7 @@ async function _doSaveUserData() {
             questWeekStart: AppState.quest.weekStart,
             dungeonStr: JSON.stringify(AppState.dungeon),
             friends: AppState.user.friends || [],
-            photoURL: AppState.user.photoURL || null,
+            ...(_profileUploadInFlight ? {} : { photoURL: AppState.user.photoURL || null }),
             syncEnabled: AppState.user.syncEnabled,
             gpsEnabled: AppState.user.gpsEnabled,
             pushEnabled: AppState.user.pushEnabled,
@@ -2336,6 +2361,7 @@ async function loadProfileImage(event) {
                 return;
             }
             _plog('C', `auth OK: uid=${auth.currentUser.uid}`);
+            _profileUploadInFlight = true;
             try {
                 const uid = auth.currentUser.uid;
                 _plog('D', 'Calling uploadImageToStorage...');
@@ -2347,6 +2373,8 @@ async function loadProfileImage(event) {
                 _plog('D-FAIL', `Storage 업로드 실패: ${e.code || ''} ${e.message || e}`);
                 console.error('[Profile] Storage 업로드 실패, base64 폴백:', e);
                 AppState.user.photoURL = base64;
+            } finally {
+                _profileUploadInFlight = false;
             }
             _plog('F', `photoURL set to: type=${AppState.user.photoURL.startsWith('http') ? 'url' : 'base64'}, len=${AppState.user.photoURL.length}`);
             try {
@@ -4991,14 +5019,14 @@ async function tryHealthConnectSteps() {
         // Health Connect SDK 사용 가능 여부 확인
         const availability = await HealthConnect.isAvailable();
         if (!availability.available) {
-            if (window.AppLogger) AppLogger.info('[HealthConnect] SDK not available, falling back to REST API');
+            if (window.AppLogger) AppLogger.info('[HealthConnect] SDK not available, falling back to Google Fit SDK');
             return null;
         }
 
         // 걸음 수 조회
         const result = await HealthConnect.getTodaySteps();
         if (result.fallbackToRest) {
-            if (window.AppLogger) AppLogger.info('[HealthConnect] Fallback to REST API: ' + (result.error || 'unknown'));
+            if (window.AppLogger) AppLogger.info('[HealthConnect] Fallback: ' + (result.error || 'unknown'));
             return null;
         }
 
@@ -5026,14 +5054,14 @@ async function tryGoogleFitNativeSteps() {
         // Google Fit SDK 사용 가능 여부 확인
         const availability = await GoogleFit.isAvailable();
         if (!availability.available || !availability.hasPermissions) {
-            if (window.AppLogger) AppLogger.info('[GoogleFit] SDK not available or no permissions, falling back to REST API');
+            if (window.AppLogger) AppLogger.info('[GoogleFit] SDK not available or no permissions, skipping');
             return null;
         }
 
         // 걸음 수 조회
         const result = await GoogleFit.getTodaySteps();
         if (result.fallbackToRest) {
-            if (window.AppLogger) AppLogger.info('[GoogleFit] Fallback to REST API: ' + (result.error || 'unknown'));
+            if (window.AppLogger) AppLogger.info('[GoogleFit] Fallback: ' + (result.error || 'unknown'));
             return null;
         }
 
