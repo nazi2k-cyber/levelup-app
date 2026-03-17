@@ -403,6 +403,17 @@
                             <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
                         </div>
 
+                        <!-- 위치 태그 -->
+                        <div class="planner-location-box" id="planner-location-box">
+                            <button type="button" class="planner-location-btn" id="btn-location-tag" onclick="window.openLocationModal()">
+                                <span>📍</span> <span data-i18n="location_add">위치 추가</span>
+                            </button>
+                            <div class="planner-location-result d-none" id="planner-location-result">
+                                <span class="planner-location-name" id="planner-location-name"></span>
+                                <button type="button" class="planner-location-remove" id="btn-location-remove" onclick="window.removeSelectedLocation()">✕</button>
+                            </div>
+                        </div>
+
                         <!-- 사진 첨부 -->
                         <div class="planner-photo-box" id="planner-photo-box">
                             <label for="plannerPhotoUpload" class="planner-photo-label" id="planner-photo-label">
@@ -668,6 +679,23 @@
     </div>
 
     <script src="logger.js"></script>
+    <!-- 위치 검색 모달 -->
+    <div class="location-search-modal d-none" id="location-search-modal" onclick="if(event.target===this)window.closeLocationModal()">
+        <div class="location-search-content">
+            <div class="location-search-header">
+                <span data-i18n="location_search_title">위치 검색</span>
+                <button type="button" onclick="window.closeLocationModal()" style="background:none;border:none;color:var(--text);font-size:1.2rem;cursor:pointer;">✕</button>
+            </div>
+            <button type="button" class="location-current-btn" id="btn-location-current" onclick="window.useCurrentLocation()">
+                <span data-i18n="location_use_current">📍 현재 위치 사용</span>
+            </button>
+            <input type="text" class="location-search-input" id="location-search-input"
+                   placeholder="장소를 검색하세요..." data-i18n-placeholder="location_search_placeholder"
+                   oninput="window.onLocationSearchInput(this.value)">
+            <div class="location-search-list" id="location-search-list"></div>
+        </div>
+    </div>
+
     <script src="data.js"></script>
     <script type="module" src="app.js"></script>
 </body>

@@ -851,3 +851,55 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .diy-quest-edit:hover {
     opacity: 1;
 }
+
+/* ===== 위치 태그 (Location Tag) ===== */
+.planner-location-box { margin: 6px 0; }
+.planner-location-btn {
+    background: none; border: 1px dashed var(--border, #444); border-radius: 8px;
+    padding: 6px 12px; color: var(--text-sub, #aaa); cursor: pointer;
+    font-size: 0.75rem; width: 100%; text-align: left; display: flex; align-items: center; gap: 4px;
+}
+.planner-location-btn:active { background: rgba(255,215,0,0.06); }
+.planner-location-result {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+    background: rgba(255,215,0,0.08); border-radius: 8px; font-size: 0.75rem;
+}
+.planner-location-name { color: var(--neon-gold, #ffd700); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.planner-location-remove { background: none; border: none; color: var(--text-sub, #aaa); cursor: pointer; font-size: 0.85rem; padding: 2px 4px; }
+
+/* 위치 검색 모달 */
+.location-search-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999;
+    display: flex; align-items: flex-end; justify-content: center;
+}
+.location-search-content {
+    background: var(--card-bg, #1a1a2e); border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 420px; max-height: 70vh; padding: 16px;
+    display: flex; flex-direction: column;
+}
+.location-search-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; font-size: 0.9rem; font-weight: 600; color: var(--text, #eee);
+}
+.location-search-input {
+    width: 100%; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border, #444); background: var(--bg, #0f0f1a);
+    color: var(--text, #eee); font-size: 0.85rem; box-sizing: border-box;
+}
+.location-search-list { max-height: 50vh; overflow-y: auto; margin-top: 8px; flex: 1; }
+.location-search-item {
+    padding: 10px 8px; border-bottom: 1px solid var(--border, #333); cursor: pointer; font-size: 0.8rem; color: var(--text, #eee);
+}
+.location-search-item:active { background: rgba(255,215,0,0.1); }
+.location-search-item-name { font-weight: 500; }
+.location-search-item-addr { font-size: 0.7rem; color: var(--text-sub, #888); margin-top: 2px; }
+.location-current-btn {
+    width: 100%; padding: 10px; border-radius: 8px;
+    border: 1px solid var(--neon-gold, #ffd700); background: none;
+    color: var(--neon-gold, #ffd700); cursor: pointer; margin-bottom: 8px; font-size: 0.8rem;
+}
+.location-current-btn:active { background: rgba(255,215,0,0.1); }
+.location-search-status { text-align: center; padding: 16px; font-size: 0.75rem; color: var(--text-sub, #888); }
+
+/* 피드 카드 위치 표시 */
+.reels-location { font-size: 0.65rem; color: var(--text-sub, #999); margin-top: 1px; }
