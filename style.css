@@ -592,7 +592,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .reels-block-item:last-child { border-bottom: none; }
 .reels-block-time {
-    color: var(--neon-blue); font-weight: bold; flex-shrink: 0; width: 40px;
+    color: var(--neon-blue); font-weight: bold; flex-shrink: 0; min-width: 40px;
 }
 .reels-block-task {
     color: var(--text-main); word-break: break-word;

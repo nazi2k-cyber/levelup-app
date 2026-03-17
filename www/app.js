@@ -3012,10 +3012,11 @@ window.sharePlannerAsImage = async function() {
         } catch(e) { photoImg = null; }
     }
 
-    // 시간표 블록 (최대 8개 표시)
+    // 시간표 블록 (연속 동일 업무 합치기, 최대 8개 표시)
+    const mergedImageBlocks = mergeConsecutiveBlocks(Object.fromEntries(blocks));
     const maxBlocks = 8;
-    const displayBlocks = blocks.slice(0, maxBlocks);
-    const moreCount = blocks.length > maxBlocks ? blocks.length - maxBlocks : 0;
+    const displayBlocks = mergedImageBlocks.slice(0, maxBlocks);
+    const moreCount = mergedImageBlocks.length > maxBlocks ? mergedImageBlocks.length - maxBlocks : 0;
 
     // 높이 계산
     const lineH = 24;
@@ -3164,7 +3165,7 @@ window.sharePlannerAsImage = async function() {
         y += 32;
 
         // 블록 행
-        displayBlocks.forEach(([time, task]) => {
+        displayBlocks.forEach(({time, task}) => {
             ctx.fillStyle = '#00d9ff';
             ctx.font = 'bold 12px Pretendard, monospace';
             ctx.fillText(time, ttX + 10, y + 16);
@@ -3172,14 +3173,14 @@ window.sharePlannerAsImage = async function() {
             ctx.font = '12px Pretendard, sans-serif';
             // 긴 텍스트 줄임
             let displayTask = task;
-            const maxTaskW = ttW - 80;
+            const maxTaskW = ttW - 130;
             if (ctx.measureText(displayTask).width > maxTaskW) {
                 while (ctx.measureText(displayTask + '...').width > maxTaskW && displayTask.length > 0) {
                     displayTask = displayTask.slice(0, -1);
                 }
                 displayTask += '...';
             }
-            ctx.fillText(displayTask, ttX + 60, y + 16);
+            ctx.fillText(displayTask, ttX + 110, y + 16);
 
             // 구분선
             ctx.strokeStyle = 'rgba(255,255,255,0.04)';
@@ -4608,6 +4609,33 @@ async function renderReelsFeed() {
     }
 }
 
+function mergeConsecutiveBlocks(blocks) {
+    const entries = Object.entries(blocks || {}).sort(([a],[b]) => a.localeCompare(b));
+    if (entries.length === 0) return [];
+    const merged = [];
+    let [startTime, currentTask] = entries[0];
+    let endTime = startTime;
+    for (let i = 1; i < entries.length; i++) {
+        const [time, task] = entries[i];
+        const [eh, em] = endTime.split(':').map(Number);
+        const expectedNext = `${String(eh + (em === 30 ? 1 : 0)).padStart(2,'0')}:${em === 30 ? '00' : '30'}`;
+        if (task === currentTask && time === expectedNext) {
+            endTime = time;
+        } else {
+            const [fh, fm] = endTime.split(':').map(Number);
+            const finalEnd = `${String(fh + (fm === 30 ? 1 : 0)).padStart(2,'0')}:${fm === 30 ? '00' : '30'}`;
+            merged.push({ time: `${startTime}~${finalEnd}`, task: currentTask });
+            startTime = time;
+            currentTask = task;
+            endTime = time;
+        }
+    }
+    const [fh, fm] = endTime.split(':').map(Number);
+    const finalEnd = `${String(fh + (fm === 30 ? 1 : 0)).padStart(2,'0')}:${fm === 30 ? '00' : '30'}`;
+    merged.push({ time: `${startTime}~${finalEnd}`, task: currentTask });
+    return merged;
+}
+
 function renderReelsCards(posts, lang) {
     const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="color:#ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
 
@@ -4620,16 +4648,16 @@ function renderReelsCards(posts, lang) {
         const isMe = post.uid === auth.currentUser?.uid;
         const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(post.userInstaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
 
-        // 시간표 블록 (폴딩/언폴딩 지원)
-        const blockEntries = Object.entries(post.blocks || {}).sort(([a],[b]) => a.localeCompare(b));
+        // 시간표 블록 (폴딩/언폴딩 지원, 연속 동일 업무 합치기)
+        const mergedBlocks = mergeConsecutiveBlocks(post.blocks);
         const FOLD_LIMIT = 6;
-        const blockSummary = blockEntries.slice(0, FOLD_LIMIT).map(([time, task]) =>
+        const blockSummary = mergedBlocks.slice(0, FOLD_LIMIT).map(({time, task}) =>
             `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${task.replace(/</g,'&lt;')}</span></div>`
         ).join('');
-        const blockExtra = blockEntries.slice(FOLD_LIMIT).map(([time, task]) =>
+        const blockExtra = mergedBlocks.slice(FOLD_LIMIT).map(({time, task}) =>
             `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${task.replace(/</g,'&lt;')}</span></div>`
         ).join('');
-        const moreCount = blockEntries.length > FOLD_LIMIT ? blockEntries.length - FOLD_LIMIT : 0;
+        const moreCount = mergedBlocks.length > FOLD_LIMIT ? mergedBlocks.length - FOLD_LIMIT : 0;
 
         return `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
