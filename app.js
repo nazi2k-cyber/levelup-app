@@ -4316,6 +4316,153 @@ async function fetchAllReelsPosts() {
     return posts;
 }
 
+// ===== 위치 태그 (Location Tag) =====
+let _locationSearchTimer = null;
+AppState.selectedLocation = null;
+
+function openLocationModal() {
+    const modal = document.getElementById('location-search-modal');
+    if (!modal) return;
+    modal.classList.remove('d-none');
+    const input = document.getElementById('location-search-input');
+    if (input) { input.value = ''; input.focus(); }
+    document.getElementById('location-search-list').innerHTML = '';
+}
+window.openLocationModal = openLocationModal;
+
+function closeLocationModal() {
+    const modal = document.getElementById('location-search-modal');
+    if (modal) modal.classList.add('d-none');
+}
+window.closeLocationModal = closeLocationModal;
+
+function selectLocation(name, lat, lng) {
+    AppState.selectedLocation = { name, lat, lng };
+    const btn = document.getElementById('btn-location-tag');
+    const result = document.getElementById('planner-location-result');
+    const nameEl = document.getElementById('planner-location-name');
+    if (btn) btn.classList.add('d-none');
+    if (result) { result.classList.remove('d-none'); }
+    if (nameEl) nameEl.textContent = '📍 ' + name;
+    closeLocationModal();
+}
+window.selectLocation = selectLocation;
+
+function removeSelectedLocation() {
+    AppState.selectedLocation = null;
+    const btn = document.getElementById('btn-location-tag');
+    const result = document.getElementById('planner-location-result');
+    if (btn) btn.classList.remove('d-none');
+    if (result) result.classList.add('d-none');
+}
+window.removeSelectedLocation = removeSelectedLocation;
+
+function resetLocationUI() {
+    AppState.selectedLocation = null;
+    const btn = document.getElementById('btn-location-tag');
+    const result = document.getElementById('planner-location-result');
+    if (btn) btn.classList.remove('d-none');
+    if (result) result.classList.add('d-none');
+}
+
+async function searchLocationNominatim(query) {
+    const lang = AppState.currentLang || 'ko';
+    const acceptLang = lang === 'ja' ? 'ja' : lang === 'en' ? 'en' : 'ko';
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=8&accept-language=${acceptLang}&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'LevelUpApp/1.0' } });
+    if (!res.ok) return [];
+    return await res.json();
+}
+
+async function reverseGeocodeNominatim(lat, lng) {
+    const lang = AppState.currentLang || 'ko';
+    const acceptLang = lang === 'ja' ? 'ja' : lang === 'en' ? 'en' : 'ko';
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${acceptLang}&addressdetails=1`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'LevelUpApp/1.0' } });
+    if (!res.ok) return null;
+    return await res.json();
+}
+
+function renderLocationResults(results) {
+    const lang = AppState.currentLang || 'ko';
+    const list = document.getElementById('location-search-list');
+    if (!list) return;
+    if (!results || results.length === 0) {
+        list.innerHTML = `<div class="location-search-status">${i18n[lang]?.location_no_results || 'No results found.'}</div>`;
+        return;
+    }
+    list.innerHTML = results.map(r => {
+        const name = r.name || r.display_name?.split(',')[0] || '';
+        const addr = r.display_name || '';
+        const lat = r.lat;
+        const lng = r.lon;
+        return `<div class="location-search-item" onclick="window.selectLocation('${name.replace(/'/g, "\\'")}', ${lat}, ${lng})">
+            <div class="location-search-item-name">📍 ${name}</div>
+            <div class="location-search-item-addr">${addr}</div>
+        </div>`;
+    }).join('');
+}
+
+function onLocationSearchInput(query) {
+    clearTimeout(_locationSearchTimer);
+    const lang = AppState.currentLang || 'ko';
+    const list = document.getElementById('location-search-list');
+    if (!query || query.trim().length < 2) {
+        if (list) list.innerHTML = '';
+        return;
+    }
+    if (list) list.innerHTML = `<div class="location-search-status">${i18n[lang]?.location_searching || 'Searching...'}</div>`;
+    _locationSearchTimer = setTimeout(async () => {
+        try {
+            const results = await searchLocationNominatim(query.trim());
+            renderLocationResults(results);
+        } catch (e) {
+            console.error('[Location] Search error:', e);
+            if (list) list.innerHTML = `<div class="location-search-status">${i18n[lang]?.location_error || 'Error'}</div>`;
+        }
+    }, 400);
+}
+window.onLocationSearchInput = onLocationSearchInput;
+
+async function useCurrentLocation() {
+    const lang = AppState.currentLang || 'ko';
+    const list = document.getElementById('location-search-list');
+    const btn = document.getElementById('btn-location-current');
+    if (btn) btn.disabled = true;
+    if (list) list.innerHTML = `<div class="location-search-status">${i18n[lang]?.location_searching || 'Searching...'}</div>`;
+    try {
+        const { Geolocation } = window.Capacitor?.Plugins || {};
+        let lat, lng;
+        if (Geolocation) {
+            const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+        } else if (navigator.geolocation) {
+            const pos = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 }));
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+        } else {
+            throw new Error('No geolocation available');
+        }
+        const result = await reverseGeocodeNominatim(lat, lng);
+        if (result) {
+            const addr = result.address || {};
+            const name = addr.road || addr.neighbourhood || addr.suburb || addr.city_district || result.name || result.display_name?.split(',')[0] || '';
+            const area = addr.city || addr.town || addr.village || '';
+            const displayName = area ? `${name}, ${area}` : name;
+            selectLocation(displayName, lat, lng);
+        } else {
+            if (list) list.innerHTML = `<div class="location-search-status">${i18n[lang]?.location_error || 'Error'}</div>`;
+        }
+    } catch (e) {
+        console.error('[Location] GPS error:', e);
+        if (list) list.innerHTML = `<div class="location-search-status">${i18n[lang]?.location_error || 'Unable to get location.'}</div>`;
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+window.useCurrentLocation = useCurrentLocation;
+
 // 릴스 포스팅
 async function postToReels() {
     const lang = AppState.currentLang;
@@ -4382,7 +4529,8 @@ async function postToReels() {
             mood: entry.mood || '',
             userName: AppState.user.name,
             userPhoto: AppState.user.photoURL || null,
-            userLevel: AppState.user.level
+            userLevel: AppState.user.level,
+            location: AppState.selectedLocation || null
         };
 
         // 로컬 저장
@@ -4409,6 +4557,7 @@ async function postToReels() {
         }
 
         await saveUserData();
+        resetLocationUI();
         alert(i18n[lang].reels_posted);
         renderReelsFeed();
     } catch(e) {
@@ -4488,6 +4637,7 @@ function renderReelsCards(posts, lang) {
                 <div class="reels-user-info">
                     <div class="reels-username">${(post.userName || '헌터').replace(/</g,'&lt;')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
+                    ${post.location ? `<div class="reels-location">📍 ${post.location.name.replace(/</g,'&lt;')}</div>` : ''}
                 </div>
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
