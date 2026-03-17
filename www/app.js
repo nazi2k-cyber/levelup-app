@@ -4274,10 +4274,13 @@ async function saveReelsToFirestore(post) {
         // 24시간 이내 포스트만 유지
         const now = Date.now();
         existingPosts = existingPosts.filter(p => (now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
-        // 기존 포스트의 프로필 이미지를 최신 값으로 갱신
-        const currentPhoto = AppState.user.photoURL || null;
-        existingPosts.forEach(p => { p.userPhoto = currentPhoto; });
-        existingPosts.push(post);
+        // userPhoto는 reelsStr에 저장하지 않음 — fetchAllReelsPosts()가
+        // 유저 문서의 photoURL에서 직접 읽으므로 중복 저장 불필요.
+        // base64 프로필 이미지로 인한 페이로드 비대화 방지.
+        existingPosts.forEach(p => { delete p.userPhoto; });
+        const cleanPost = { ...post };
+        delete cleanPost.userPhoto;
+        existingPosts.push(cleanPost);
         await setDoc(doc(db, "users", auth.currentUser.uid), {
             reelsStr: JSON.stringify(existingPosts)
         }, { merge: true });
