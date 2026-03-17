@@ -393,6 +393,14 @@
                         <!-- 타임박스 그리드 -->
                         <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
 
+                        <!-- 사진 캡션 텍스트 -->
+                        <div class="planner-caption-box">
+                            <textarea id="planner-caption" class="planner-caption-input" maxlength="280"
+                                      placeholder="오늘의 한마디를 남겨보세요..."
+                                      oninput="window.updateCaptionCounter()"></textarea>
+                            <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
+                        </div>
+
                         <!-- 사진 첨부 -->
                         <div class="planner-photo-box" id="planner-photo-box">
                             <label for="plannerPhotoUpload" class="planner-photo-label" id="planner-photo-label">
@@ -404,14 +412,7 @@
                             </label>
                             <input type="file" id="plannerPhotoUpload" accept="image/*" class="d-none">
                             <button class="planner-photo-remove d-none" id="planner-photo-remove" onclick="window.removePlannerPhoto()">✕</button>
-                        </div>
-
-                        <!-- 사진 캡션 텍스트 -->
-                        <div class="planner-caption-box">
-                            <textarea id="planner-caption" class="planner-caption-input" maxlength="280"
-                                      placeholder="오늘의 한마디를 남겨보세요..."
-                                      oninput="window.updateCaptionCounter()"></textarea>
-                            <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
+                            <div style="font-size:0.6rem; color:var(--accent-warning, #ff6b6b); margin-top:4px; text-align:center;" data-i18n="planner_photo_warning">⚠️ 로그아웃 시 사진이 삭제됩니다. 중요한 사진은 미리 저장하세요.</div>
                         </div>
 
                         <!-- 저장 버튼 + Day1 포스팅 버튼 (시간표 탭 전용) -->
