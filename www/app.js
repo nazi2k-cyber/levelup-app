@@ -4510,15 +4510,11 @@ async function postToReels() {
         const caption = (entry.caption || '').trim();
         const postTimestamp = Date.now();
 
-        // 릴스 사진을 Cloud Storage에 업로드
+        // 릴스 사진을 Cloud Storage에 업로드 (base64 폴백 없음 — 페이로드 비대화 방지)
         let finalPhotoURL = photoData;
         if (isBase64Image(photoData)) {
-            try {
-                const uid = auth.currentUser.uid;
-                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}.jpg`, photoData);
-            } catch (e) {
-                console.error('[Reels] Storage 업로드 실패, base64 폴백:', e);
-            }
+            const uid = auth.currentUser.uid;
+            finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}.jpg`, photoData);
         }
 
         const post = {
@@ -4565,6 +4561,7 @@ async function postToReels() {
         renderReelsFeed();
     } catch(e) {
         AppLogger.error('[Reels] 포스팅 오류: ' + (e.message || e));
+        alert(i18n[lang]?.reels_post_fail || '포스팅에 실패했습니다. 네트워크를 확인하고 다시 시도해 주세요.');
     } finally {
         // 항상 타이머/버튼 상태 갱신 (에러 발생 시에도)
         updateReelsResetTimer();
