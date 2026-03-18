@@ -19,16 +19,34 @@ const callableOpts = {
 
 // ─── Admin claim helper ───
 
-function assertAdmin(request) {
-    if (!request.auth?.token?.admin) {
-        throw new HttpsError("permission-denied", "권한이 없습니다.");
+const ADMIN_EMAILS = ["nazi2k@gmail.com"];
+
+async function assertAdmin(request) {
+    if (request.auth?.token?.admin) return;
+
+    // Fallback: check admin email list + verify/repair custom claim
+    const email = request.auth?.token?.email;
+    if (email && ADMIN_EMAILS.includes(email)) {
+        // Token custom claim missing — re-verify from Auth server
+        try {
+            const user = await getAuth().getUser(request.auth.uid);
+            if (user.customClaims?.admin) return; // claim exists server-side, token was stale
+            // Claim not set yet — set it now for future requests
+            await getAuth().setCustomUserClaims(request.auth.uid, { admin: true });
+            console.log("[assertAdmin] Auto-repaired admin claim for", email);
+        } catch (e) {
+            console.error("[assertAdmin] Claim repair failed:", e.message);
+        }
+        return; // Allow through since email is in admin list
     }
+
+    throw new HttpsError("permission-denied", "권한이 없습니다.");
 }
 
 // ─── setAdminClaim: 관리자 Custom Claims 설정 (기존 관리자만 호출 가능) ───
 
 exports.setAdminClaim = onCall(callableOpts, async (request) => {
-    assertAdmin(request);
+    await assertAdmin(request);
 
     const { uid } = request.data || {};
     if (!uid || typeof uid !== "string") {
@@ -43,7 +61,7 @@ exports.setAdminClaim = onCall(callableOpts, async (request) => {
 // ─── Admin action handlers (shared between ping router and individual exports) ───
 
 async function handleGetTestUsers(request) {
-    assertAdmin(request);
+    await assertAdmin(request);
 
     console.log("[getTestUsers] Querying pushEnabled users...");
     const usersSnap = await db.collection("users")
@@ -85,7 +103,7 @@ async function handleGetTestUsers(request) {
 }
 
 async function handleGetPushLogs(request) {
-    assertAdmin(request);
+    await assertAdmin(request);
 
     console.log("[getPushLogs] Querying push_logs...");
     const logsSnap = await db.collection("push_logs")
@@ -128,7 +146,7 @@ async function handleSendTestNotification(request) {
     const callerEmail = request.auth?.token?.email;
     const reqData = request.data || {};
     console.log("[sendTestNotification] caller:", callerEmail, "data:", JSON.stringify(reqData));
-    assertAdmin(request);
+    await assertAdmin(request);
 
     const { token, topic, type, lang, customTitle, customBody } = reqData;
     if (!token && !topic) {
@@ -209,7 +227,7 @@ async function handleSendTestNotification(request) {
 }
 
 async function handleSendAnnouncement(request) {
-    assertAdmin(request);
+    await assertAdmin(request);
 
     const { title, body, targetTab } = request.data || {};
     if (!title || !body) {

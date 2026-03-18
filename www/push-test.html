@@ -819,6 +819,17 @@ async function isAdminUser(user) {
     return tokenResult.claims.admin === true;
 }
 
+// Force refresh ID token to pick up latest custom claims (prevents stale-token permission errors)
+async function ensureFreshToken() {
+    const user = auth.currentUser;
+    if (!user) return;
+    try {
+        await user.getIdToken(true);
+    } catch (e) {
+        console.warn("[ensureFreshToken]", e.message);
+    }
+}
+
 const MESSAGES = {
     raid_start: {
         ko: { title: "\u2694\uFE0F \uB808\uC774\uB4DC \uCD9C\uD604!", body: "\uC774\uC0C1 \uD604\uC0C1\uC774 \uAC10\uC9C0\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC9C0\uAE08 \uBC14\uB85C \uCC38\uC5EC\uD558\uC138\uC694!" },
@@ -1011,6 +1022,7 @@ window.doSendTest = async function() {
 
     tlog("Send", "Calling sendTestNotification... payload=" + JSON.stringify(payload));
     try {
+        await ensureFreshToken();
         const fn = httpsCallable(functions, "ping");
         const result = await fn({ action: "sendTestNotification", ...payload });
         tok("Send", "Success! messageId=" + result.data.messageId);
@@ -1305,6 +1317,8 @@ window.triggerCondition = async function(type, topic, btnEl) {
     resultEl.className = "cond-trigger-result";
 
     const lang = "ko";
+
+    await ensureFreshToken();
 
     if (type === "custom" && topic === "announcements") {
         tlog("Conditions", "Triggering announcement via sendAnnouncement...");

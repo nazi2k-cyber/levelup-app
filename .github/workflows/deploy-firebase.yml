@@ -8,9 +8,25 @@ on:
       - 'firestore.rules'
       - 'firestore.indexes.json'
       - 'firebase.json'
+      - 'www/**'
       - 'push-test.html'
-      - 'www/push-test.html'
-  workflow_dispatch:  # 수동 트리거
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: '배포 대상'
+        required: true
+        type: choice
+        options:
+          - auto
+          - all
+          - functions
+          - hosting
+          - firestore
+        default: 'auto'
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -19,6 +35,8 @@ jobs:
     steps:
       - name: 소스코드 체크아웃
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Node.js 셋업
         uses: actions/setup-node@v4
@@ -30,27 +48,138 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      - name: Functions 의존성 설치
-        run: cd functions && npm ci
-
       - name: Firebase CLI 설치
         run: npm install -g firebase-tools
 
+      - name: 변경된 파일 감지 및 배포 대상 결정
+        id: detect
+        run: |
+          MANUAL_TARGET="${{ github.event.inputs.deploy_target }}"
+
+          if [ "$MANUAL_TARGET" = "all" ]; then
+            echo "deploy_functions=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_hosting=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_firestore=true" >> "$GITHUB_OUTPUT"
+            echo "전체 배포 (수동 선택)"
+            exit 0
+          fi
+
+          if [ "$MANUAL_TARGET" = "functions" ]; then
+            echo "deploy_functions=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_hosting=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_firestore=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$MANUAL_TARGET" = "hosting" ]; then
+            echo "deploy_functions=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_hosting=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_firestore=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$MANUAL_TARGET" = "firestore" ]; then
+            echo "deploy_functions=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_hosting=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_firestore=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # auto: 변경된 파일 기반으로 판단
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          echo "변경된 파일:"
+          echo "$CHANGED"
+
+          DEPLOY_FUNCTIONS=false
+          DEPLOY_HOSTING=false
+          DEPLOY_FIRESTORE=false
+
+          if echo "$CHANGED" | grep -qE '^functions/'; then
+            DEPLOY_FUNCTIONS=true
+          fi
+          if echo "$CHANGED" | grep -qE '^(www/|push-test\.html)'; then
+            DEPLOY_HOSTING=true
+          fi
+          if echo "$CHANGED" | grep -qE '^(firestore\.rules|firestore\.indexes\.json)'; then
+            DEPLOY_FIRESTORE=true
+          fi
+          if echo "$CHANGED" | grep -qE '^firebase\.json'; then
+            DEPLOY_FUNCTIONS=true
+            DEPLOY_HOSTING=true
+            DEPLOY_FIRESTORE=true
+          fi
+
+          # workflow_dispatch(auto)에서 변경 감지 실패 시 전체 배포
+          if [ "$DEPLOY_FUNCTIONS" = "false" ] && [ "$DEPLOY_HOSTING" = "false" ] && [ "$DEPLOY_FIRESTORE" = "false" ]; then
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              DEPLOY_FUNCTIONS=true
+              DEPLOY_HOSTING=true
+              DEPLOY_FIRESTORE=true
+            fi
+          fi
+
+          echo "deploy_functions=$DEPLOY_FUNCTIONS" >> "$GITHUB_OUTPUT"
+          echo "deploy_hosting=$DEPLOY_HOSTING" >> "$GITHUB_OUTPUT"
+          echo "deploy_firestore=$DEPLOY_FIRESTORE" >> "$GITHUB_OUTPUT"
+          echo "Functions=$DEPLOY_FUNCTIONS, Hosting=$DEPLOY_HOSTING, Firestore=$DEPLOY_FIRESTORE"
+
+      - name: Functions 의존성 설치
+        if: steps.detect.outputs.deploy_functions == 'true'
+        run: cd functions && npm ci
+
       - name: 고아 함수 정리 (sendRaidAlerts — scheduler job 누락)
+        if: steps.detect.outputs.deploy_functions == 'true'
         continue-on-error: true
         run: |
           gcloud functions delete sendRaidAlerts --region=asia-northeast3 --gen2 --quiet 2>/dev/null || true
           gcloud scheduler jobs delete firebase-schedule-sendRaidAlerts-asia-northeast3 --location=asia-northeast3 --quiet 2>/dev/null || true
 
       - name: Firebase Functions 배포
+        if: steps.detect.outputs.deploy_functions == 'true'
         run: firebase deploy --only functions --force
 
+      - name: push-test.html 동기화 (root → www)
+        if: steps.detect.outputs.deploy_hosting == 'true'
+        run: |
+          # root push-test.html이 www보다 새로우면 복사
+          if [ -f push-test.html ]; then
+            cp push-test.html www/push-test.html
+            echo "root push-test.html → www/push-test.html 동기화 완료"
+          fi
+
+      - name: Firebase Hosting 배포
+        if: steps.detect.outputs.deploy_hosting == 'true'
+        run: firebase deploy --only hosting
+
       - name: Firestore Rules & Indexes 배포
+        if: steps.detect.outputs.deploy_firestore == 'true'
         run: firebase deploy --only firestore
 
       - name: 배포 결과 요약
-        if: success()
+        if: always()
         run: |
-          echo "✅ Firebase 배포 완료!"
-          echo "  - Cloud Functions (asia-northeast3)"
-          echo "  - Firestore Rules & Indexes"
+          echo "## Firebase 배포 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 대상 | 상태 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.detect.outputs.deploy_functions }}" = "true" ]; then
+            echo "| Cloud Functions | 배포됨 |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Cloud Functions | 건너뜀 (변경 없음) |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ steps.detect.outputs.deploy_hosting }}" = "true" ]; then
+            echo "| Hosting (www) | 배포됨 |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Hosting (www) | 건너뜀 (변경 없음) |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ steps.detect.outputs.deploy_firestore }}" = "true" ]; then
+            echo "| Firestore Rules | 배포됨 |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Firestore Rules | 건너뜀 (변경 없음) |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "커밋: \`$(git rev-parse --short HEAD)\` | 브랜치: \`${{ github.ref_name }}\` | 실행자: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
