@@ -53,6 +53,23 @@ function isBase64Image(str) {
     return typeof str === 'string' && str.startsWith('data:image/');
 }
 
+// 업로드 실패 재전송 큐 (로컬 메모리 + localStorage 백업)
+const _uploadRetryQueue = [];
+function _persistRetryQueue() {
+    try {
+        const serializable = _uploadRetryQueue.map(item => ({
+            storagePath: item.storagePath,
+            timestamp: item.timestamp
+        }));
+        localStorage.setItem('upload_retry_queue', JSON.stringify(serializable));
+    } catch (e) { /* quota exceeded 등 무시 */ }
+}
+function _addToRetryQueue(storagePath, base64str) {
+    _uploadRetryQueue.push({ storagePath, base64str, timestamp: Date.now() });
+    _persistRetryQueue();
+    console.warn(`[UploadRetry] 재전송 큐에 추가: ${storagePath} (큐 크기: ${_uploadRetryQueue.length})`);
+}
+
 async function uploadImageToStorage(storagePath, base64str) {
     const _log = (step, msg) => { console.log(`[Upload:${step}] ${msg}`); if (window.AppLogger) AppLogger.info(`[Upload:${step}] ${msg}`); };
     _log('1-START', `path=${storagePath}, inputLen=${base64str ? base64str.length : 'null'}, startsWithData=${base64str ? base64str.startsWith('data:') : 'N/A'}`);
@@ -74,17 +91,36 @@ async function uploadImageToStorage(storagePath, base64str) {
         _log('3-BLOB', `blobSize=${blob.size}, blobType=${blob.type}`);
     }
     const storageRef = ref(storage, storagePath);
-    _log('4-UPLOAD', 'Calling uploadBytes...');
-    // 타임아웃 30초: 네트워크 불안정 시 uploadBytes가 무한 대기하는 문제 방지
-    const uploadPromise = uploadBytes(storageRef, blob, { contentType });
-    const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Upload timed out after 30s')), 30000)
-    );
-    await Promise.race([uploadPromise, timeoutPromise]);
-    _log('5-GETURL', 'uploadBytes OK, calling getDownloadURL...');
-    const url = await getDownloadURL(storageRef);
-    _log('6-DONE', `downloadURL=${url.substring(0, 80)}...`);
-    return url;
+
+    // 지수 백오프 재시도 (최대 3회, 2s → 4s → 실패)
+    const MAX_RETRIES = 3;
+    const BASE_DELAY_MS = 2000;
+    let lastError;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            _log('4-UPLOAD', `Calling uploadBytes... (attempt ${attempt}/${MAX_RETRIES})`);
+            const uploadPromise = uploadBytes(storageRef, blob, { contentType });
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Upload timed out after 30s')), 30000)
+            );
+            await Promise.race([uploadPromise, timeoutPromise]);
+            _log('5-GETURL', 'uploadBytes OK, calling getDownloadURL...');
+            const url = await getDownloadURL(storageRef);
+            _log('6-DONE', `downloadURL=${url.substring(0, 80)}...`);
+            return url;
+        } catch (e) {
+            lastError = e;
+            _log('4-RETRY', `attempt ${attempt}/${MAX_RETRIES} failed: ${e.message}`);
+            if (attempt < MAX_RETRIES) {
+                const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                _log('4-WAIT', `Waiting ${delay}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+    }
+    // 모든 재시도 실패 — 재전송 큐에 추가
+    _addToRetryQueue(storagePath, base64str);
+    throw lastError;
 }
 
 const googleProvider = new GoogleAuthProvider();
@@ -2431,8 +2467,11 @@ async function loadProfileImage(event) {
                 setProfilePreview(downloadURL);
             } catch (e) {
                 _plog('D-FAIL', `Storage 업로드 실패: ${e.code || ''} ${e.message || e}`);
-                console.error('[Profile] Storage 업로드 실패, base64 폴백:', e);
-                AppState.user.photoURL = base64;
+                console.error('[Profile] Storage 업로드 실패 (3회 재시도 후):', e);
+                // base64 직접 저장 대신 실패 플래그 기록 — Firestore 문서 비대화 방지
+                AppState.user.photoURL = AppState.user.photoURL || DEFAULT_PROFILE_SVG;
+                AppState.user._profileUploadFailed = true;
+                alert(lang === 'ko' ? '프로필 사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.' : 'Profile photo upload failed. Please check your network and try again.');
             } finally {
                 _profileUploadInFlight = false;
             }
@@ -4511,13 +4550,24 @@ async function postToReels() {
 
         // 릴스 사진을 Cloud Storage에 업로드
         let finalPhotoURL = photoData;
+        let uploadFailed = false;
         if (isBase64Image(photoData)) {
             try {
                 const uid = auth.currentUser.uid;
                 finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}.jpg`, photoData);
             } catch (e) {
-                console.error('[Reels] Storage 업로드 실패, base64 폴백:', e);
+                console.error('[Reels] Storage 업로드 실패 (3회 재시도 후):', e);
+                // base64 직접 저장 대신 에러 상태 기록 — Firestore 문서 비대화 방지
+                finalPhotoURL = null;
+                uploadFailed = true;
             }
+        }
+
+        if (uploadFailed) {
+            alert(lang === 'ko' ? '사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.' : 'Photo upload failed. Please check your network and try again.');
+            // 버튼 재활성화 후 중단
+            updateReelsResetTimer();
+            return;
         }
 
         const post = {
