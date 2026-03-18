@@ -142,7 +142,7 @@ function getInitialAppState() {
 let _initializedUid = null;
 
 // --- 탭 순서 관리 ---
-const DEFAULT_NAV_ORDER = ['status', 'diary', 'quests', 'dungeon', 'reels', 'social', 'settings'];
+const DEFAULT_NAV_ORDER = ['status', 'quests', 'dungeon', 'diary', 'reels', 'social', 'settings'];
 
 function loadNavOrder() {
     const saved = localStorage.getItem('navTabOrder');
