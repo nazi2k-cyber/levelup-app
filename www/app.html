@@ -667,6 +667,15 @@
         </div>
     </div>
 
+    <!-- 업로드 진행률 토스트 -->
+    <div id="upload-progress-toast" style="display:none; position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:9999; background:rgba(20,20,30,0.95); border:1px solid var(--neon-blue, #00d9ff); border-radius:12px; padding:10px 20px; min-width:220px; text-align:center; box-shadow:0 4px 20px rgba(0,217,255,0.3);">
+        <div style="font-size:0.75rem; color:#ccc; margin-bottom:6px;" id="upload-progress-label">Uploading...</div>
+        <div style="height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+            <div id="upload-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg, #00d9ff, #b53cff); border-radius:3px; transition:width 0.2s ease;"></div>
+        </div>
+        <div style="font-size:0.65rem; color:#888; margin-top:4px;" id="upload-progress-pct">0%</div>
+    </div>
+
     <script src="logger.js"></script>
     <script src="data.js"></script>
     <script type="module" src="app.js"></script>

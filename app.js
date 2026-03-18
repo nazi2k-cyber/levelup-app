@@ -3,7 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
@@ -88,7 +88,35 @@ function getImageExtension() {
     return _supportsWebP ? '.webp' : '.jpg';
 }
 
-async function uploadImageToStorage(storagePath, base64str) {
+// 업로드 진행률 토스트 UI 헬퍼
+let _uploadToastHideTimer = null;
+function showUploadProgress(pct, label) {
+    const toast = document.getElementById('upload-progress-toast');
+    if (!toast) return;
+    toast.style.display = 'block';
+    const bar = document.getElementById('upload-progress-bar');
+    const pctEl = document.getElementById('upload-progress-pct');
+    const labelEl = document.getElementById('upload-progress-label');
+    if (bar) bar.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (labelEl && label) labelEl.textContent = label;
+    if (_uploadToastHideTimer) { clearTimeout(_uploadToastHideTimer); _uploadToastHideTimer = null; }
+}
+function hideUploadProgress() {
+    if (_uploadToastHideTimer) clearTimeout(_uploadToastHideTimer);
+    _uploadToastHideTimer = setTimeout(() => {
+        const toast = document.getElementById('upload-progress-toast');
+        if (toast) toast.style.display = 'none';
+        _uploadToastHideTimer = null;
+    }, 800);
+}
+function createUploadProgressCallback(label) {
+    const lang = AppState?.currentLang || 'ko';
+    const defaultLabel = lang === 'ko' ? '업로드 중...' : 'Uploading...';
+    return (pct) => showUploadProgress(pct, label || defaultLabel);
+}
+
+async function uploadImageToStorage(storagePath, base64str, onProgress) {
     const _log = (step, msg) => { console.log(`[Upload:${step}] ${msg}`); if (window.AppLogger) AppLogger.info(`[Upload:${step}] ${msg}`); };
     _log('1-START', `path=${storagePath}, inputLen=${base64str ? base64str.length : 'null'}, startsWithData=${base64str ? base64str.startsWith('data:') : 'N/A'}`);
     let blob, contentType;
@@ -116,19 +144,39 @@ async function uploadImageToStorage(storagePath, base64str) {
     let lastError;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
-            _log('4-UPLOAD', `Calling uploadBytes... (attempt ${attempt}/${MAX_RETRIES})`);
-            const uploadPromise = uploadBytes(storageRef, blob, { contentType });
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Upload timed out after 30s')), 30000)
-            );
-            await Promise.race([uploadPromise, timeoutPromise]);
-            _log('5-GETURL', 'uploadBytes OK, calling getDownloadURL...');
-            const url = await getDownloadURL(storageRef);
+            _log('4-UPLOAD', `Calling uploadBytesResumable... (attempt ${attempt}/${MAX_RETRIES})`);
+            const url = await new Promise((resolve, reject) => {
+                const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
+                const timeout = setTimeout(() => {
+                    uploadTask.cancel();
+                    reject(new Error('Upload timed out after 60s'));
+                }, 60000);
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                        _log('4-PROGRESS', `${pct}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
+                        if (onProgress) onProgress(pct);
+                    },
+                    (error) => {
+                        clearTimeout(timeout);
+                        reject(error);
+                    },
+                    async () => {
+                        clearTimeout(timeout);
+                        try {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            resolve(downloadURL);
+                        } catch (e) { reject(e); }
+                    }
+                );
+            });
             _log('6-DONE', `downloadURL=${url.substring(0, 80)}...`);
+            if (onProgress) onProgress(100);
             return url;
         } catch (e) {
             lastError = e;
             _log('4-RETRY', `attempt ${attempt}/${MAX_RETRIES} failed: ${e.message}`);
+            if (onProgress) onProgress(0);
             if (attempt < MAX_RETRIES) {
                 const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
                 _log('4-WAIT', `Waiting ${delay}ms before retry...`);
@@ -2479,11 +2527,15 @@ async function loadProfileImage(event) {
             try {
                 const uid = auth.currentUser.uid;
                 _plog('D', 'Calling uploadImageToStorage...');
-                const downloadURL = await uploadImageToStorage(`profile_images/${uid}/profile${getImageExtension()}`, base64);
+                const lang = AppState.currentLang || 'ko';
+                const progressCb = createUploadProgressCallback(lang === 'ko' ? '프로필 사진 업로드 중...' : 'Uploading profile photo...');
+                const downloadURL = await uploadImageToStorage(`profile_images/${uid}/profile${getImageExtension()}`, base64, progressCb);
+                hideUploadProgress();
                 _plog('E', `Upload OK: url=${downloadURL.substring(0, 80)}...`);
                 AppState.user.photoURL = downloadURL;
                 setProfilePreview(downloadURL);
             } catch (e) {
+                hideUploadProgress();
                 _plog('D-FAIL', `Storage 업로드 실패: ${e.code || ''} ${e.message || e}`);
                 console.error('[Profile] Storage 업로드 실패 (3회 재시도 후):', e);
                 // base64 직접 저장 대신 실패 플래그 기록 — Firestore 문서 비대화 방지
@@ -4172,13 +4224,17 @@ async function savePlannerEntry() {
         if (isBase64Image(photoValue) && auth.currentUser) {
             try {
                 const uid = auth.currentUser.uid;
+                const plannerLang = AppState.currentLang || 'ko';
+                const plannerProgressCb = createUploadProgressCallback(plannerLang === 'ko' ? '플래너 사진 업로드 중...' : 'Uploading planner photo...');
                 const photoURL = await uploadImageToStorage(
-                    `planner_photos/${uid}/${dateStr}${getImageExtension()}`, photoValue
+                    `planner_photos/${uid}/${dateStr}${getImageExtension()}`, photoValue, plannerProgressCb
                 );
+                hideUploadProgress();
                 photoValue = photoURL;
                 plannerPhotoData = photoURL; // 메모리 캐시도 URL로 교체
                 AppLogger.info('[Planner] 사진 Storage 업로드 완료');
             } catch (e) {
+                hideUploadProgress();
                 AppLogger.error('[Planner] 사진 Storage 업로드 실패: ' + (e.message || e));
                 // 업로드 실패 시 사진 없이 저장 (base64 Firestore 저장 방지)
                 photoValue = null;
@@ -4610,8 +4666,12 @@ async function postToReels() {
         if (isBase64Image(photoData)) {
             try {
                 const uid = auth.currentUser.uid;
-                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}${getImageExtension()}`, photoData);
+                const reelsLang = AppState.currentLang || 'ko';
+                const reelsProgressCb = createUploadProgressCallback(reelsLang === 'ko' ? '릴스 사진 업로드 중...' : 'Uploading reel photo...');
+                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}${getImageExtension()}`, photoData, reelsProgressCb);
+                hideUploadProgress();
             } catch (e) {
+                hideUploadProgress();
                 console.error('[Reels] Storage 업로드 실패 (3회 재시도 후):', e);
                 // base64 직접 저장 대신 에러 상태 기록 — Firestore 문서 비대화 방지
                 finalPhotoURL = null;

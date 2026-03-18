@@ -101,18 +101,20 @@ function supportsWebP() {
 }
 ```
 
-### P1-2. uploadBytesResumable 전환
+### P1-2. uploadBytesResumable 전환 ✅ 구현 완료
 
 **출처:** Codex #4 | **복잡도:** 중 | **임팩트:** 업로드 성공률↑, UX↑
 
-`uploadBytes` → `uploadBytesResumable` 전환으로 모바일 네트워크 대응.
+~~`uploadBytes` → `uploadBytesResumable` 전환으로 모바일 네트워크 대응.~~ 전환 완료. 60초 타임아웃 + 진행률 토스트 UI 적용.
 
-**변경 대상:**
-| 파일 | 위치 | 변경 내용 |
-|------|------|-----------|
-| `app.js` | L56-88 | `uploadBytes()` → `uploadBytesResumable()` + 진행률 콜백 |
-| `app.js` | 신규 | 업로드 진행률 토스트 UI 컴포넌트 |
-| `app.html` | 신규 | 프로그레스바 마크업 |
+**구현 내역:**
+| 파일 | 변경 내용 | 상태 |
+|------|-----------|------|
+| `app.js` L6 | `uploadBytes` → `uploadBytesResumable` import 전환 | ✅ |
+| `app.js` `uploadImageToStorage()` | `uploadBytesResumable()` + state_changed 리스너 + 60s 타임아웃 + onProgress 콜백 | ✅ |
+| `app.js` | `showUploadProgress()` / `hideUploadProgress()` / `createUploadProgressCallback()` 헬퍼 추가 | ✅ |
+| `app.js` 프로필/릴스/플래너 업로드 | 진행률 토스트 연동 (성공/실패 시 자동 hide) | ✅ |
+| `app.html` / `www/app.html` | 업로드 진행률 토스트 마크업 (프로그레스바 + 퍼센트 표시) | ✅ |
 
 ### P1-3. Firestore Rules 필드 검증 강화
 
