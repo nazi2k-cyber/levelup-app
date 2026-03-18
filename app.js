@@ -89,17 +89,32 @@ async function uploadImageToStorage(storagePath, imageData) {
         _log('3-BLOB', `blobSize=${blob.size}, blobType=${blob.type}`);
     }
     const storageRef = ref(storage, storagePath);
-    _log('4-UPLOAD', 'Calling uploadBytes...');
-    // 타임아웃 30초: 네트워크 불안정 시 uploadBytes가 무한 대기하는 문제 방지
-    const uploadPromise = uploadBytes(storageRef, blob, { contentType });
-    const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Upload timed out after 30s')), 30000)
-    );
-    await Promise.race([uploadPromise, timeoutPromise]);
-    _log('5-GETURL', 'uploadBytes OK, calling getDownloadURL...');
-    const url = await getDownloadURL(storageRef);
-    _log('6-DONE', `downloadURL=${url.substring(0, 80)}...`);
-    return url;
+    // 최대 3회 시도 (재시도 간 지수 백오프: 2s, 6s)
+    const TIMEOUTS = [60000, 60000, 60000]; // 모바일 환경 고려 60초
+    const BACKOFFS = [0, 2000, 6000];
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) {
+            _log('4-RETRY', `Attempt ${attempt + 1}/3 after ${BACKOFFS[attempt]}ms backoff...`);
+            await new Promise(r => setTimeout(r, BACKOFFS[attempt]));
+        }
+        try {
+            _log('4-UPLOAD', `Calling uploadBytes (attempt ${attempt + 1}/3, timeout ${TIMEOUTS[attempt] / 1000}s)...`);
+            const uploadPromise = uploadBytes(storageRef, blob, { contentType });
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(`Upload timed out after ${TIMEOUTS[attempt] / 1000}s`)), TIMEOUTS[attempt])
+            );
+            await Promise.race([uploadPromise, timeoutPromise]);
+            _log('5-GETURL', 'uploadBytes OK, calling getDownloadURL...');
+            const url = await getDownloadURL(storageRef);
+            _log('6-DONE', `downloadURL=${url.substring(0, 80)}...`);
+            return url;
+        } catch (e) {
+            lastError = e;
+            _log('4-FAIL', `Attempt ${attempt + 1} failed: ${e.message}`);
+        }
+    }
+    throw lastError;
 }
 
 // --- Blob 해시 헬퍼 (중복 업로드 방지) ---
@@ -630,7 +645,8 @@ async function _doSaveUserData() {
             questWeekStart: AppState.quest.weekStart,
             dungeonStr: JSON.stringify(AppState.dungeon),
             friends: AppState.user.friends || [],
-            ...(_profileUploadInFlight ? {} : { photoURL: AppState.user.photoURL || null }),
+            // base64 photoURL은 Firestore에 저장하지 않음 (문서 크기 보호, 마이그레이션이 변환 예정)
+            ...(_profileUploadInFlight || isBase64Image(AppState.user.photoURL) ? {} : { photoURL: AppState.user.photoURL || null }),
             syncEnabled: AppState.user.syncEnabled,
             gpsEnabled: AppState.user.gpsEnabled,
             pushEnabled: AppState.user.pushEnabled,
@@ -4573,6 +4589,8 @@ async function postToReels() {
         const postTimestamp = Date.now();
 
         // 릴스 사진을 Cloud Storage에 업로드 (Blob 또는 base64)
+        // base64 폴백: Blob 업로드 실패 시 plannerPhotoData.base64ForLocal 또는 entry.photo 사용
+        const base64Fallback = (photoDataRaw && photoDataRaw.base64ForLocal) || entry.photo || null;
         let finalPhotoURL = typeof photoData === 'string' ? photoData : null;
         if (photoData instanceof Blob || isBase64Image(photoData)) {
             if (postBtn) postBtn.textContent = '사진 업로드 중...';
@@ -4580,8 +4598,8 @@ async function postToReels() {
                 const uid = auth.currentUser.uid;
                 finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}.jpg`, photoData);
             } catch (e) {
-                console.error('[Reels] Storage 업로드 실패:', e);
-                if (typeof photoData === 'string') finalPhotoURL = photoData; // base64 폴백
+                console.error('[Reels] Storage 업로드 실패, base64 폴백:', e);
+                finalPhotoURL = base64Fallback; // Blob 업로드 실패 시 base64로 폴백
             }
             if (postBtn) postBtn.textContent = '저장 중...';
         }
