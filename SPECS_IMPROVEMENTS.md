@@ -35,54 +35,46 @@
 
 ## Phase 0 (P0) — 즉시 적용 (1주차)
 
-### P0-1. 관리자 권한 Custom Claims 전환
+### P0-1. 관리자 권한 Custom Claims 전환 ✅ 구현 완료
 
 **출처:** Codex #2 | **복잡도:** 중 | **임팩트:** 보안↑, 유연성↑
 
-현재 `nazi2k@gmail.com` 문자열이 7곳 이상에 하드코딩되어 있다. Firebase Auth Custom Claims (`admin: true`)로 전환한다.
+~~현재 `nazi2k@gmail.com` 문자열이 7곳 이상에 하드코딩되어 있다.~~ Firebase Auth Custom Claims (`admin: true`)로 전환 완료.
 
-**변경 대상:**
-| 파일 | 위치 | 변경 내용 |
-|------|------|-----------|
-| `functions/index.js` | L23, 68, 113, 197, 291 | `callerEmail !== "nazi2k@gmail.com"` → `!request.auth.token.admin` |
-| `firestore.rules` | L15, 22, 34 | `request.auth.token.email == 'nazi2k@gmail.com'` → `request.auth.token.admin == true` |
-| `app.js` | L352 | `user.email === 'nazi2k@gmail.com'` → `getIdTokenResult()` claims 확인 |
-| `functions/index.js` | 신규 | `setAdminClaim(uid)` 함수 추가 |
+**구현 내역:**
+| 파일 | 변경 내용 | 상태 |
+|------|-----------|------|
+| `functions/index.js` | `assertAdmin()` — Custom Claims 우선 확인 + 이메일 폴백(자동 복구) | ✅ |
+| `functions/index.js` | `setAdminClaim(uid)` callable 함수 추가 | ✅ |
+| `firestore.rules` | `request.auth.token.admin == true` 전환 완료 | ✅ |
+| `app.js` | `getIdTokenResult()` claims 기반 관리자 UI 분기 | ✅ |
 
-### P0-2. 이미지 업로드 재시도 로직 (base64 폴백 축소)
+### P0-2. 이미지 업로드 재시도 로직 (base64 폴백 축소) ✅ 구현 완료
 
 **출처:** Codex #3 | **복잡도:** 낮 | **임팩트:** 문서 크기↓, 일관성↑
 
-현재 업로드 실패 시 base64를 Firestore에 직접 저장하여 문서가 비대해진다. 지수 백오프 재시도(3회)를 우선 적용하고, 최종 실패 시에만 에러 상태를 기록한다.
+~~현재 업로드 실패 시 base64를 Firestore에 직접 저장하여 문서가 비대해진다.~~ 지수 백오프 재시도(3회) 적용 완료. 최종 실패 시 에러 상태를 기록하고 base64 저장을 차단한다.
 
-**변경 대상:**
-| 파일 | 위치 | 변경 내용 |
-|------|------|-----------|
-| `app.js` | L56-88 | `uploadImageToStorage()`에 지수 백오프 재시도 3회 래핑 |
-| `app.js` | L2433 | 프로필 폴백: base64 영구 저장 → 실패 상태 플래그 |
-| `app.js` | L4518 | 릴스 폴백: 동일 처리 |
+**구현 내역:**
+| 파일 | 변경 내용 | 상태 |
+|------|-----------|------|
+| `app.js` | `uploadImageToStorage()` — 3회 지수 백오프(2s→4s) + localStorage 재전송 큐 | ✅ |
+| `app.js` | 프로필 폴백: `_profileUploadFailed` 플래그, base64 저장 차단 | ✅ |
+| `app.js` | 릴스 폴백: `uploadFailed` 플래그, `finalPhotoURL = null` 처리 | ✅ |
 
-**재시도 전략:**
-```
-1차 시도 → 실패 → 2초 대기
-2차 시도 → 실패 → 4초 대기
-3차 시도 → 실패 → 에러 상태 기록 + 로컬 재전송 큐
-```
+### P0-3. Storage 경로 분리 + 플래너 사진 Storage 업로드 ✅ 구현 완료
 
-### P0-3. Storage 경로 분리
+**출처:** Codex #1 | **복잡도:** 낮 | **임팩트:** 운영 명확성↑, 문서 크기↓↓
 
-**출처:** Codex #1 | **복잡도:** 낮 | **임팩트:** 운영 명확성↑
+플래너/릴스/프로필 이미지의 Storage 경로 분리 완료. 플래너 사진을 base64 대신 Cloud Storage에 업로드하여 Firestore 문서 비대화 방지.
 
-플래너 임시 이미지와 릴스 게시 이미지의 Storage 경로를 분리한다. 기존 릴스 데이터는 24시간 후 자동 삭제되므로 마이그레이션 불필요.
-
-> **코드 실사 추가 발견:** 플래너 사진이 `diaryStr` 내부에 base64로 저장되고 있다 (app.js:4098). 일기 항목이 누적되면 `users/{uid}` 문서가 1MB Firestore 한계에 도달할 위험이 있다. 경로 분리와 함께 플래너 사진을 Cloud Storage로 즉시 업로드하는 것이 **P0의 가장 중요한 항목**이다.
-
-**변경 대상:**
-| 파일 | 변경 내용 |
-|------|-----------|
-| `storage.rules` | `planner_photos/{userId}/` 경로 규칙 추가 (2MB, image/*) |
-| `app.js` L4136 | `loadPlannerPhoto()` — Canvas 처리 후 즉시 Storage 업로드, base64 대신 URL 저장 |
-| `app.js` L4098 | 일기 저장 시 `photo` 필드에 download URL 사용 |
+**구현 내역:**
+| 파일 | 변경 내용 | 상태 |
+|------|-----------|------|
+| `storage.rules` | `planner_photos/{userId}/` 경로 규칙 추가 (2MB, image/*) | ✅ |
+| `app.js` `savePlannerEntry()` | 저장 시 base64 → Storage 업로드, download URL만 diary에 기록 | ✅ |
+| `app.js` 사진 복원 | 기존 base64 사진 로드 시 백그라운드 Storage 자동 마이그레이션 | ✅ |
+| Storage 경로 체계 | `profile_images/`, `planner_photos/`, `reels_photos/` 3분리 | ✅ |
 
 ---
 
