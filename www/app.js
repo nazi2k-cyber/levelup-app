@@ -4062,6 +4062,24 @@ function loadPlannerForDate(dateStr) {
         if (preview) { preview.src = saved.photo; preview.classList.remove('d-none'); }
         if (placeholder) placeholder.classList.add('d-none');
         if (removeBtn) removeBtn.classList.remove('d-none');
+
+        // 기존 base64 사진 → Storage 자동 마이그레이션 (백그라운드)
+        if (isBase64Image(saved.photo) && auth.currentUser) {
+            const migDateStr = diarySelectedDate;
+            uploadImageToStorage(
+                `planner_photos/${auth.currentUser.uid}/${migDateStr}.jpg`, saved.photo
+            ).then(url => {
+                try {
+                    const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+                    if (diaries[migDateStr]) {
+                        diaries[migDateStr].photo = url;
+                        localStorage.setItem('diary_entries', JSON.stringify(diaries));
+                        plannerPhotoData = url;
+                        AppLogger.info('[Planner] base64→Storage 마이그레이션 완료: ' + migDateStr);
+                    }
+                } catch (e) { /* 마이그레이션 실패 무시 — 다음 저장 시 재시도 */ }
+            }).catch(() => { /* 백그라운드 마이그레이션 실패 무시 */ });
+        }
     } else {
         plannerPhotoData = null;
         const preview = document.getElementById('planner-photo-preview');
@@ -4130,12 +4148,32 @@ async function savePlannerEntry() {
         const giveReward = !alreadyRewarded && hasContent;
 
         const text = Object.entries(blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500);
+
+        // 플래너 사진: base64 → Cloud Storage 업로드, URL만 저장 (Firestore 문서 비대화 방지)
+        let photoValue = plannerPhotoData || (diaries[dateStr]?.photo || null);
+        if (isBase64Image(photoValue) && auth.currentUser) {
+            try {
+                const uid = auth.currentUser.uid;
+                const photoURL = await uploadImageToStorage(
+                    `planner_photos/${uid}/${dateStr}.jpg`, photoValue
+                );
+                photoValue = photoURL;
+                plannerPhotoData = photoURL; // 메모리 캐시도 URL로 교체
+                AppLogger.info('[Planner] 사진 Storage 업로드 완료');
+            } catch (e) {
+                AppLogger.error('[Planner] 사진 Storage 업로드 실패: ' + (e.message || e));
+                // 업로드 실패 시 사진 없이 저장 (base64 Firestore 저장 방지)
+                photoValue = null;
+                alert(AppState.currentLang === 'ko' ? '사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.' : 'Photo upload failed. Please check your network and try again.');
+            }
+        }
+
         diaries[dateStr] = {
             text, mood, timestamp: Date.now(), blocks,
             tasks: tasksData,
             priorities: rankedByOrder,
             brainDump,
-            photo: plannerPhotoData || (diaries[dateStr]?.photo || null),
+            photo: photoValue,
             caption: (document.getElementById('planner-caption')?.value || '').trim()
         };
 
