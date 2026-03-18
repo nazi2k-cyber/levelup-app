@@ -133,16 +133,18 @@ function supportsWebP() {
 | `firestore.rules` | `push_feedback` — 생성 시 필드 화이트리스트 + 타입 강제 | ✅ |
 | `firestore.rules` | `reels_reactions` — likes/comments 배열 크기 제한 (1000/500) | ✅ |
 
-### P1-4. Optimistic UI (좋아요)
+### P1-4. Optimistic UI (좋아요) ✅ 구현 완료
 
 **출처:** Gemini #9 | **복잡도:** 낮 | **임팩트:** 체감 반응성↑↑
 
-서버 응답 전 UI를 먼저 변경하고, 실패 시 롤백한다.
+~~서버 응답 전 UI를 먼저 변경하고, 실패 시 롤백한다.~~ Optimistic UI 패턴 적용 완료. 좋아요 버튼 클릭 시 UI를 즉시 반영하고, Firestore 쓰기 완료 후 서버 데이터로 최종 동기화. 실패 시 이전 상태로 롤백.
 
-**변경 대상:**
-| 파일 | 위치 | 변경 내용 |
-|------|------|-----------|
-| `app.js` | L4831-4854 | `toggleLike()` → UI 즉시 반영 후 Firestore 쓰기, catch 시 롤백 |
+**구현 내역:**
+| 파일 | 변경 내용 | 상태 |
+|------|-----------|------|
+| `app.js` / `www/app.js` | `toggleReelsLike()` — 클릭 즉시 하트 아이콘/카운트 변경 (Optimistic) | ✅ |
+| `app.js` / `www/app.js` | Firestore 쓰기 성공 시 서버 데이터로 최종 동기화 (`updateLikeUI`) | ✅ |
+| `app.js` / `www/app.js` | Firestore 쓰기 실패 시 이전 상태로 롤백 (아이콘 + 카운트 복원) | ✅ |
 
 ### P1-5. 릴스 피드 쿼리 최적화
 

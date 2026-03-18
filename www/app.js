@@ -4991,11 +4991,31 @@ async function loadReelsReactions(postId) {
     return { likes: [], comments: [] };
 }
 
-// 좋아요 토글
+// 좋아요 토글 (Optimistic UI: 즉시 반영 후 서버 쓰기, 실패 시 롤백)
 async function toggleReelsLike(postId) {
     if (!auth.currentUser) return;
     const uid = auth.currentUser.uid;
     const reactRef = doc(db, "reels_reactions", postId);
+
+    // 현재 UI 상태에서 좋아요 목록 추론
+    const likeBtn = document.querySelector(`[data-post-id="${postId}"] .reels-like-btn`);
+    const isCurrentlyLiked = likeBtn?.classList.contains('liked');
+    const likeCountEl = document.querySelector(`[data-post-id="${postId}"] .reels-like-count`);
+    const prevCount = parseInt(likeCountEl?.textContent) || 0;
+
+    // Optimistic UI: 즉시 반영
+    const optimisticCount = isCurrentlyLiked ? Math.max(0, prevCount - 1) : prevCount + 1;
+    if (likeBtn) {
+        likeBtn.classList.toggle('liked', !isCurrentlyLiked);
+        likeBtn.innerHTML = !isCurrentlyLiked
+            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="#ff3c3c"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+            : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    }
+    if (likeCountEl) {
+        likeCountEl.textContent = formatReactCount(optimisticCount);
+    }
+
+    // 서버 쓰기 (백그라운드)
     try {
         const docSnap = await getDoc(reactRef);
         let likes = [];
@@ -5017,9 +5037,21 @@ async function toggleReelsLike(postId) {
             });
         }
         await setDoc(reactRef, { likes, comments }, { merge: true });
-        // UI 업데이트
+        // 서버 결과로 최종 동기화
         updateLikeUI(postId, likes);
-    } catch(e) { AppLogger.error('[Reels] 좋아요 실패: ' + (e.message || e)); }
+    } catch(e) {
+        // 실패 시 롤백
+        AppLogger.error('[Reels] 좋아요 실패, 롤백: ' + (e.message || e));
+        if (likeBtn) {
+            likeBtn.classList.toggle('liked', isCurrentlyLiked);
+            likeBtn.innerHTML = isCurrentlyLiked
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="#ff3c3c"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+        }
+        if (likeCountEl) {
+            likeCountEl.textContent = formatReactCount(prevCount);
+        }
+    }
 }
 
 // 숫자 포맷 (최대 9999, 이상은 9999+)
