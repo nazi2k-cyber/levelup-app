@@ -4488,7 +4488,9 @@ async function fetchAllReelsPosts() {
                         }
                     });
                     // 모든 릴스가 만료된 사용자는 hasActiveReels 리셋
-                    if (!hasValidPost) {
+                    // 다른 유저 문서 직접 수정 불가 (보안 규칙: 본인 문서만 쓰기 허용)
+                    // 본인 문서만 클라이언트에서 리셋, 타인은 Cloud Functions에서 처리
+                    if (!hasValidPost && d.id === auth.currentUser?.uid) {
                         setDoc(doc(db, "users", d.id), { hasActiveReels: false }, { merge: true }).catch(() => {});
                     }
                 } catch(e) {}
