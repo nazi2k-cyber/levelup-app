@@ -1,0 +1,36 @@
+/* ─── Tab Navigation ─── */
+.tab-nav {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+    overflow-x: auto;
+}
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-sub);
+    padding: 10px 18px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.tab-btn:hover {
+    color: var(--text);
+    background: var(--accent-dim);
+    border-radius: 8px 8px 0 0;
+}
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}

@@ -1,0 +1,50 @@
+/* ─── Diagnostic Tool Styles ─── */
+.diag-checklist {
+    list-style: none;
+    padding: 0;
+}
+.diag-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+.diag-item:last-child { border-bottom: none; }
+
+.diag-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+.diag-icon.pass { background: #4caf5033; color: var(--success); }
+.diag-icon.fail { background: #ff525233; color: var(--error); }
+.diag-icon.warn { background: #ffc10733; color: var(--warning); }
+.diag-icon.pending { background: var(--accent-dim); color: var(--accent); animation: pulse 1s infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.diag-body { flex: 1; }
+.diag-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
+.diag-detail { font-size: 0.8rem; color: var(--text-sub); word-break: break-all; }
+.diag-detail code {
+    background: var(--bg-input);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+}
+
+.diag-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+}
