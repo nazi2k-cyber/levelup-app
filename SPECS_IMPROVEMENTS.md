@@ -160,7 +160,7 @@ function supportsWebP() {
 | `app.js` `fetchAllReelsPosts()` | `where("hasActiveReels", "==", true)` 쿼리로 전환, 전체 스캔 제거 | ✅ |
 | `app.js` `fetchAllReelsPosts()` | 모든 릴스 만료 사용자 감지 시 `hasActiveReels: false` 리셋 | ✅ |
 | `functions/index.js` `cleanupExpiredReelsPhotos` | 스케줄러에서 만료 사용자 `hasActiveReels: false` 일괄 리셋 | ✅ |
-| `firestore.indexes.json` | `hasActiveReels` 단일 필드 인덱스 추가 | ✅ |
+| `firestore.indexes.json` | 단일 필드 인덱스는 Firestore 자동 생성으로 별도 선언 불필요 | ✅ |
 
 ---
 
