@@ -1,4 +1,12 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "hasActiveReels", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
