@@ -129,7 +129,8 @@ const i18n = {
         // 이메일 인증
         verify_title: "이메일 인증이 필요합니다", verify_desc: "받은편지함에서 인증 링크를 클릭한 후 로그인해주세요.",
         verify_sent: "인증 메일이 발송되었습니다.", verify_resend: "인증 메일 재발송", verify_back: "로그인으로 돌아가기",
-        verify_login_blocked: "이메일 인증을 완료해주세요. 받은편지함을 확인하세요.", verify_resent: "인증 메일이 재발송되었습니다."
+        verify_login_blocked: "이메일 인증을 완료해주세요. 받은편지함을 확인하세요.", verify_resent: "인증 메일이 재발송되었습니다.",
+        img_compressing: "이미지 최적화 중...", img_too_large: "이미지가 너무 큽니다. 다른 사진을 선택해주세요."
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -257,7 +258,8 @@ const i18n = {
         // Email Verification
         verify_title: "Email Verification Required", verify_desc: "Please click the verification link in your inbox, then log in.",
         verify_sent: "Verification email sent.", verify_resend: "Resend Verification Email", verify_back: "Back to Login",
-        verify_login_blocked: "Please verify your email first. Check your inbox.", verify_resent: "Verification email resent."
+        verify_login_blocked: "Please verify your email first. Check your inbox.", verify_resent: "Verification email resent.",
+        img_compressing: "Optimizing image...", img_too_large: "Image is too large. Please select a different photo."
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
