@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -4432,7 +4432,8 @@ async function saveReelsToFirestore(post) {
         existingPosts.forEach(p => { p.userPhoto = currentPhoto; });
         existingPosts.push(post);
         await setDoc(doc(db, "users", auth.currentUser.uid), {
-            reelsStr: JSON.stringify(existingPosts)
+            reelsStr: JSON.stringify(existingPosts),
+            hasActiveReels: true
         }, { merge: true });
     } catch(e) { AppLogger.error('[Reels] Firestore 저장 실패: ' + (e.message || e)); }
 }
@@ -4441,15 +4442,18 @@ async function fetchAllReelsPosts() {
     const now = Date.now();
     const posts = [];
     try {
-        const snap = await getDocs(collection(db, "users"));
+        const q = query(collection(db, "users"), where("hasActiveReels", "==", true));
+        const snap = await getDocs(q);
         snap.docs.forEach(d => {
             const data = d.data();
             if (data.reelsStr) {
                 try {
                     const userPosts = JSON.parse(data.reelsStr);
+                    let hasValidPost = false;
                     userPosts.forEach(p => {
                         // 업로드 후 24시간 이내 포스트만 표시
                         if ((now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000) {
+                            hasValidPost = true;
                             posts.push({
                                 ...p,
                                 uid: d.id,
@@ -4460,6 +4464,10 @@ async function fetchAllReelsPosts() {
                             });
                         }
                     });
+                    // 모든 릴스가 만료된 사용자는 hasActiveReels 리셋
+                    if (!hasValidPost) {
+                        setDoc(doc(db, "users", d.id), { hasActiveReels: false }, { merge: true }).catch(() => {});
+                    }
                 } catch(e) {}
             }
         });

@@ -146,21 +146,21 @@ function supportsWebP() {
 | `app.js` / `www/app.js` | Firestore 쓰기 성공 시 서버 데이터로 최종 동기화 (`updateLikeUI`) | ✅ |
 | `app.js` / `www/app.js` | Firestore 쓰기 실패 시 이전 상태로 롤백 (아이콘 + 카운트 복원) | ✅ |
 
-### P1-5. 릴스 피드 쿼리 최적화
+### P1-5. 릴스 피드 쿼리 최적화 ✅ 구현 완료
 
 **출처:** 코드 실사 발견 | **복잡도:** 낮 | **임팩트:** Firestore 읽기 90%↓↓
 
-현재 `fetchAllReelsPosts()` (app.js:4288)가 **전체 `users` 컬렉션을 스캔**하여 `reelsStr`을 추출한다. 모든 사용자의 전체 데이터(stats, diary, quests 등)를 다운로드하는 극심한 비효율.
+~~현재 `fetchAllReelsPosts()` (app.js:4288)가 **전체 `users` 컬렉션을 스캔**하여 `reelsStr`을 추출한다.~~ `hasActiveReels: true` 필드 기반 필터링 쿼리로 전환 완료.
 
-**해결:** `hasActiveReels: true` 필드를 추가하여 릴스 활성 사용자만 쿼리.
-
-**변경 대상:**
-| 파일 | 위치 | 변경 내용 |
-|------|------|-----------|
-| `app.js` | L4267 | `saveReelsToFirestore()` — `hasActiveReels: true` 필드 추가 |
-| `app.js` | L4288 | `fetchAllReelsPosts()` — `where("hasActiveReels", "==", true)` 쿼리로 변경 |
-| `app.js` | 릴스 만료 시 | `hasActiveReels: false` 리셋 |
-| `firestore.indexes.json` | 신규 | `hasActiveReels` + 관련 복합 인덱스 |
+**구현 내역:**
+| 파일 | 변경 내용 | 상태 |
+|------|-----------|------|
+| `app.js` | Firestore import에 `query`, `where` 추가 | ✅ |
+| `app.js` `saveReelsToFirestore()` | 릴스 저장 시 `hasActiveReels: true` 필드 함께 저장 | ✅ |
+| `app.js` `fetchAllReelsPosts()` | `where("hasActiveReels", "==", true)` 쿼리로 전환, 전체 스캔 제거 | ✅ |
+| `app.js` `fetchAllReelsPosts()` | 모든 릴스 만료 사용자 감지 시 `hasActiveReels: false` 리셋 | ✅ |
+| `functions/index.js` `cleanupExpiredReelsPhotos` | 스케줄러에서 만료 사용자 `hasActiveReels: false` 일괄 리셋 | ✅ |
+| `firestore.indexes.json` | `hasActiveReels` 단일 필드 인덱스 추가 | ✅ |
 
 ---
 
