@@ -35,6 +35,17 @@ try {
     console.warn('[FCM] Messaging 초기화 스킵:', e.message);
 }
 
+// --- Firestore 네트워크 복원력 ---
+// 오프라인→온라인 전환 시 Firestore 네트워크 재연결 (WebChannel 오류 복구)
+window.addEventListener('online', () => {
+    console.log('[Firestore] 네트워크 복구 감지 — enableNetwork 호출');
+    enableNetwork(db).catch(e => console.warn('[Firestore] enableNetwork 실패:', e.message));
+});
+window.addEventListener('offline', () => {
+    console.log('[Firestore] 오프라인 전환 감지 — disableNetwork 호출');
+    disableNetwork(db).catch(e => console.warn('[Firestore] disableNetwork 실패:', e.message));
+});
+
 // --- 프로필 이미지 기본값 & 안전한 로드 ---
 const DEFAULT_PROFILE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
@@ -55,6 +66,7 @@ function isBase64Image(str) {
 
 // 업로드 실패 재전송 큐 (로컬 메모리 + localStorage 백업)
 const _uploadRetryQueue = [];
+let _retryProcessing = false;
 function _persistRetryQueue() {
     try {
         const serializable = _uploadRetryQueue.map(item => ({
@@ -65,10 +77,54 @@ function _persistRetryQueue() {
     } catch (e) { /* quota exceeded 등 무시 */ }
 }
 function _addToRetryQueue(storagePath, base64str) {
+    // 동일 경로 중복 방지
+    const exists = _uploadRetryQueue.some(item => item.storagePath === storagePath);
+    if (exists) {
+        console.warn(`[UploadRetry] 이미 큐에 존재: ${storagePath}`);
+        return;
+    }
     _uploadRetryQueue.push({ storagePath, base64str, timestamp: Date.now() });
     _persistRetryQueue();
     console.warn(`[UploadRetry] 재전송 큐에 추가: ${storagePath} (큐 크기: ${_uploadRetryQueue.length})`);
 }
+
+// 재전송 큐 자동 처리 (네트워크 복구 시 호출)
+async function _processRetryQueue() {
+    if (_retryProcessing || _uploadRetryQueue.length === 0) return;
+    _retryProcessing = true;
+    console.log(`[UploadRetry] 큐 처리 시작 (${_uploadRetryQueue.length}건)`);
+    while (_uploadRetryQueue.length > 0) {
+        const item = _uploadRetryQueue[0];
+        // 24시간 이상 경과한 항목은 폐기
+        if (Date.now() - item.timestamp > 24 * 60 * 60 * 1000) {
+            _uploadRetryQueue.shift();
+            _persistRetryQueue();
+            console.warn(`[UploadRetry] 만료 폐기: ${item.storagePath}`);
+            continue;
+        }
+        if (!item.base64str) {
+            _uploadRetryQueue.shift();
+            _persistRetryQueue();
+            continue;
+        }
+        try {
+            await uploadImageToStorage(item.storagePath, item.base64str);
+            _uploadRetryQueue.shift();
+            _persistRetryQueue();
+            console.log(`[UploadRetry] 재전송 성공: ${item.storagePath}`);
+        } catch (e) {
+            console.warn(`[UploadRetry] 재전송 실패, 나중에 재시도: ${e.message}`);
+            break; // 네트워크가 여전히 불안정하면 중단
+        }
+    }
+    _retryProcessing = false;
+}
+
+// 네트워크 복구 시 재전송 큐 자동 처리
+window.addEventListener('online', () => {
+    console.log('[Network] 온라인 복구 — 재전송 큐 처리');
+    setTimeout(_processRetryQueue, 3000); // 3초 대기 후 처리 (네트워크 안정화)
+});
 
 // WebP 포맷 지원 감지 — canvas.toDataURL('image/webp') 결과로 판별
 const _supportsWebP = (() => {
@@ -86,6 +142,26 @@ function canvasToOptimalDataURL(canvas, quality) {
 
 function getImageExtension() {
     return _supportsWebP ? '.webp' : '.jpg';
+}
+
+// base64 이미지 압축 유틸리티 (maxDim: 최대 픽셀, quality: 0~1)
+function compressBase64Image(base64str, maxDim, quality) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvasToOptimalDataURL(canvas, quality));
+        };
+        img.onerror = () => resolve(base64str); // 실패 시 원본 반환
+        img.src = base64str;
+    });
 }
 
 // 업로드 진행률 토스트 UI 헬퍼
@@ -138,31 +214,48 @@ async function uploadImageToStorage(storagePath, base64str, onProgress) {
     }
     const storageRef = ref(storage, storagePath);
 
-    // 지수 백오프 재시도 (최대 3회, 2s → 4s → 실패)
+    // 지수 백오프 재시도 (최대 3회, 3s → 6s → 실패)
     const MAX_RETRIES = 3;
-    const BASE_DELAY_MS = 2000;
+    const BASE_DELAY_MS = 3000;
+    // 적응형 타임아웃: 파일 크기 기반 (최소 30초, 1MB당 60초, 최대 180초)
+    const blobSizeMB = blob.size / (1024 * 1024);
+    const UPLOAD_TIMEOUT_MS = Math.max(30000, Math.min(180000, Math.ceil(blobSizeMB * 60000) + 30000));
+    _log('3-TIMEOUT', `adaptiveTimeout=${UPLOAD_TIMEOUT_MS}ms for ${blob.size} bytes`);
     let lastError;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
             _log('4-UPLOAD', `Calling uploadBytesResumable... (attempt ${attempt}/${MAX_RETRIES})`);
             const url = await new Promise((resolve, reject) => {
                 const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
+                let lastProgressTime = Date.now();
                 const timeout = setTimeout(() => {
                     uploadTask.cancel();
-                    reject(new Error('Upload timed out after 60s'));
-                }, 60000);
+                    reject(new Error(`Upload timed out after ${UPLOAD_TIMEOUT_MS / 1000}s`));
+                }, UPLOAD_TIMEOUT_MS);
+                // 진행률 감시: 30초간 진행 없으면 조기 타임아웃
+                const stallCheck = setInterval(() => {
+                    if (Date.now() - lastProgressTime > 30000) {
+                        clearInterval(stallCheck);
+                        clearTimeout(timeout);
+                        uploadTask.cancel();
+                        reject(new Error('Upload stalled — no progress for 30s'));
+                    }
+                }, 5000);
                 uploadTask.on('state_changed',
                     (snapshot) => {
+                        lastProgressTime = Date.now();
                         const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
                         _log('4-PROGRESS', `${pct}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
                         if (onProgress) onProgress(pct);
                     },
                     (error) => {
                         clearTimeout(timeout);
+                        clearInterval(stallCheck);
                         reject(error);
                     },
                     async () => {
                         clearTimeout(timeout);
+                        clearInterval(stallCheck);
                         try {
                             const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                             resolve(downloadURL);
@@ -4346,7 +4439,7 @@ function loadPlannerPhoto(e) {
         const img = new Image();
         img.onload = function() {
             const canvas = document.createElement('canvas');
-            const maxSize = 600;
+            const maxSize = 480;
             let w = img.width, h = img.height;
             if (w > maxSize || h > maxSize) {
                 if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
@@ -4354,7 +4447,7 @@ function loadPlannerPhoto(e) {
             }
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            plannerPhotoData = canvasToOptimalDataURL(canvas, 0.7);
+            plannerPhotoData = canvasToOptimalDataURL(canvas, 0.6);
             const preview = document.getElementById('planner-photo-preview');
             const placeholder = document.getElementById('planner-photo-placeholder');
             const removeBtn = document.getElementById('planner-photo-remove');
@@ -4723,7 +4816,7 @@ async function postToReels() {
         const caption = (entry.caption || '').trim();
         const postTimestamp = Date.now();
 
-        // 릴스 사진을 Cloud Storage에 업로드
+        // 릴스 사진을 Cloud Storage에 업로드 (압축 후)
         let finalPhotoURL = photoData;
         let uploadFailed = false;
         if (isBase64Image(photoData)) {
@@ -4731,7 +4824,9 @@ async function postToReels() {
                 const uid = auth.currentUser.uid;
                 const reelsLang = AppState.currentLang || 'ko';
                 const reelsProgressCb = createUploadProgressCallback(reelsLang === 'ko' ? '릴스 사진 업로드 중...' : 'Uploading reel photo...');
-                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}${getImageExtension()}`, photoData, reelsProgressCb);
+                // 릴스 사진 압축 (최대 480px, quality 0.6) — Storage 2MB 제한 대응
+                const compressedPhotoData = await compressBase64Image(photoData, 480, 0.6);
+                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}${getImageExtension()}`, compressedPhotoData, reelsProgressCb);
                 hideUploadProgress();
             } catch (e) {
                 hideUploadProgress();
