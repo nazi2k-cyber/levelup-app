@@ -50,12 +50,22 @@ service cloud.firestore {
       ];
     }
 
-    // users 문서 필드 검증 (request.resource.data = 쓰기 후 최종 상태)
+    // 쓰기 시 변경된 필드만 허용 목록에 있는지 검증
+    // merge:true 사용 시 request.resource.data는 기존 문서 + 새 필드의 합산이므로
+    // 기존 레거시 필드(displayName, lang 등)가 있으면 hasOnly가 실패함
+    // → create는 전체 필드 검증, update는 변경된 필드(affectedKeys)만 검증
+    function areWrittenFieldsAllowed() {
+      return resource == null
+        ? request.resource.data.keys().hasOnly(allowedUserFields())
+        : request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserFields());
+    }
+
+    // users 문서 필드 타입 검증 (request.resource.data = 쓰기 후 최종 상태)
     function isValidUserData() {
       let d = request.resource.data;
       return
-        // 허용된 필드만 포함
-        d.keys().hasOnly(allowedUserFields())
+        // 변경된 필드가 허용 목록에 있는지 확인
+        areWrittenFieldsAllowed()
 
         // ── 핵심 필드 ──
         // name: 문자열, 1~50자
