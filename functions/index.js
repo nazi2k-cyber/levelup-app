@@ -142,6 +142,32 @@ async function handleGetPushLogs(request) {
     return { logs };
 }
 
+async function handleGetClientErrorLogs(request) {
+    await assertAdmin(request);
+
+    const limit = Math.min(Number(request.data?.limit || 50), 200);
+    console.log("[getClientErrorLogs] Querying app_error_logs, limit=", limit);
+
+    const logsSnap = await db.collection("app_error_logs")
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+
+    const logs = logsSnap.docs.map((d) => {
+        const data = d.data();
+        return {
+            id: String(d.id),
+            uid: String(data.uid || ""),
+            category: String(data.category || ""),
+            message: String(data.message || ""),
+            detail: String(data.detail || ""),
+            createdAt: Number(data.createdAt || 0)
+        };
+    });
+
+    return { logs };
+}
+
 async function handleSendTestNotification(request) {
     const callerEmail = request.auth?.token?.email;
     const reqData = request.data || {};
@@ -273,6 +299,8 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleSendTestNotification(request);
                 case "sendAnnouncement":
                     return await handleSendAnnouncement(request);
+                case "getClientErrorLogs":
+                    return await handleGetClientErrorLogs(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }
