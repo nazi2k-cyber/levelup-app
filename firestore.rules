@@ -60,8 +60,8 @@ service cloud.firestore {
         // ── 핵심 필드 ──
         // name: 문자열, 1~50자
         && (!('name' in d) || (d.name is string && d.name.size() >= 1 && d.name.size() <= 50))
-        // level: 정수, 1~999
-        && (!('level' in d) || (d.level is int && d.level >= 1 && d.level <= 999))
+        // level: 정수, 1~999 (JavaScript에서는 int/float 구분 없으므로 number로 허용)
+        && (!('level' in d) || (d.level is number && d.level >= 1 && d.level <= 999))
         // points: 숫자, >= 0
         && (!('points' in d) || (d.points is number && d.points >= 0))
         // photoURL: null 또는 문자열 (Storage URL)
