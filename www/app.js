@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -24,6 +24,17 @@ const db = initializeFirestore(app, {
         : { experimentalAutoDetectLongPolling: true })
 });
 const storage = getStorage(app);
+
+// Firestore 오프라인 지속성 활성화 — 네트워크 끊김 시에도 캐시된 데이터 사용 가능
+enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+        // 여러 탭이 열린 경우 — 첫 번째 탭만 지속성 사용 가능
+        console.warn('[Firestore] 오프라인 지속성: 다른 탭에서 이미 활성화됨');
+    } else if (err.code === 'unimplemented') {
+        // 브라우저가 IndexedDB를 지원하지 않는 경우
+        console.warn('[Firestore] 오프라인 지속성: IndexedDB 미지원 브라우저');
+    }
+});
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
@@ -48,6 +59,65 @@ function setProfilePreview(url) {
     el.src = url;
 }
 
+// --- 네트워크 연결 품질 모니터 (제1원칙: 연결은 이분법이 아닌 스펙트럼) ---
+const NetworkMonitor = (() => {
+    let _quality = 'good'; // 'good' | 'weak' | 'offline'
+    let _listeners = [];
+    let _lastCheck = 0;
+
+    function getQuality() { return _quality; }
+    function isUsable() { return _quality !== 'offline'; }
+
+    async function checkNow() {
+        if (!navigator.onLine) { _setQuality('offline'); return 'offline'; }
+        const now = Date.now();
+        if (now - _lastCheck < 5000) return _quality; // 5초 내 중복 방지
+        _lastCheck = now;
+        try {
+            const start = performance.now();
+            // Firebase Auth 엔드포인트에 HEAD 요청 — 실제 연결 품질 측정
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            await fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=' + firebaseConfig.apiKey, {
+                method: 'HEAD', mode: 'no-cors', signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            const latency = performance.now() - start;
+            _setQuality(latency > 3000 ? 'weak' : 'good');
+        } catch (e) {
+            _setQuality(navigator.onLine ? 'weak' : 'offline');
+        }
+        return _quality;
+    }
+
+    function _setQuality(q) {
+        if (_quality !== q) {
+            const prev = _quality;
+            _quality = q;
+            if (window.AppLogger) AppLogger.info(`[Network] 품질 변경: ${prev} → ${q}`);
+            _listeners.forEach(fn => { try { fn(q, prev); } catch(e) {} });
+        }
+    }
+
+    function onQualityChange(fn) { _listeners.push(fn); }
+
+    // navigator.connection API 활용 (지원 브라우저)
+    if (navigator.connection) {
+        navigator.connection.addEventListener('change', () => {
+            const conn = navigator.connection;
+            if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
+                _setQuality('weak');
+            } else if (!navigator.onLine) {
+                _setQuality('offline');
+            } else {
+                _setQuality('good');
+            }
+        });
+    }
+
+    return { getQuality, isUsable, checkNow, onQualityChange };
+})();
+
 // --- Cloud Storage 헬퍼 ---
 function isBase64Image(str) {
     return typeof str === 'string' && str.startsWith('data:image/');
@@ -68,6 +138,39 @@ function _addToRetryQueue(storagePath, base64str) {
     _uploadRetryQueue.push({ storagePath, base64str, timestamp: Date.now() });
     _persistRetryQueue();
     console.warn(`[UploadRetry] 재전송 큐에 추가: ${storagePath} (큐 크기: ${_uploadRetryQueue.length})`);
+    if (window.AppLogger) AppLogger.warn(`[UploadRetry] 큐 추가: ${storagePath}`);
+}
+
+// 제1원칙: 재시도 큐는 온라인 복귀 시 자동으로 비워져야 한다
+let _flushingRetryQueue = false;
+async function _flushRetryQueue() {
+    if (_flushingRetryQueue || _uploadRetryQueue.length === 0) return;
+    if (!navigator.onLine) return;
+    _flushingRetryQueue = true;
+    if (window.AppLogger) AppLogger.info(`[UploadRetry] 큐 자동 재전송 시작 (${_uploadRetryQueue.length}건)`);
+    const items = [..._uploadRetryQueue];
+    for (const item of items) {
+        if (!navigator.onLine) break; // 재전송 중 오프라인 전환 시 중단
+        if (!item.base64str) continue; // base64 데이터 없으면 스킵
+        // 24시간 이상 경과된 항목은 폐기
+        if (Date.now() - item.timestamp > 24 * 60 * 60 * 1000) {
+            const idx = _uploadRetryQueue.indexOf(item);
+            if (idx >= 0) _uploadRetryQueue.splice(idx, 1);
+            if (window.AppLogger) AppLogger.info(`[UploadRetry] 만료 항목 제거: ${item.storagePath}`);
+            continue;
+        }
+        try {
+            await uploadImageToStorage(item.storagePath, item.base64str);
+            const idx = _uploadRetryQueue.indexOf(item);
+            if (idx >= 0) _uploadRetryQueue.splice(idx, 1);
+            if (window.AppLogger) AppLogger.info(`[UploadRetry] 재전송 성공: ${item.storagePath}`);
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn(`[UploadRetry] 재전송 실패: ${item.storagePath} — ${e.message}`);
+            break; // 네트워크 문제일 수 있으므로 중단
+        }
+    }
+    _persistRetryQueue();
+    _flushingRetryQueue = false;
 }
 
 // WebP 포맷 지원 감지 — canvas.toDataURL('image/webp') 결과로 판별
@@ -160,6 +263,16 @@ function createUploadProgressCallback(label) {
 
 async function uploadImageToStorage(storagePath, base64str, onProgress) {
     const _log = (step, msg) => { console.log(`[Upload:${step}] ${msg}`); if (window.AppLogger) AppLogger.info(`[Upload:${step}] ${msg}`); };
+
+    // 제1원칙: 오프라인에서 업로드 시도는 배터리 낭비 — 즉시 큐에 넣고 종료
+    if (!navigator.onLine) {
+        _log('0-OFFLINE', 'Offline detected, queuing for later');
+        _addToRetryQueue(storagePath, base64str);
+        const err = new Error('Device is offline — upload queued for retry');
+        err.code = 'client/offline-queued';
+        throw err;
+    }
+
     _log('1-START', `path=${storagePath}, inputLen=${base64str ? base64str.length : 'null'}, startsWithData=${base64str ? base64str.startsWith('data:') : 'N/A'}`);
     let blob, contentType;
     if (base64str.startsWith('data:')) {
@@ -437,27 +550,49 @@ function initOfflineDetection() {
         }
     }
 
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
+    window.addEventListener('online', () => {
+        updateOnlineStatus();
+        // 제1원칙: 온라인 복귀 즉시 대기 중인 업로드 자동 재전송
+        setTimeout(() => _flushRetryQueue(), 2000); // 연결 안정화 2초 대기 후 실행
+        NetworkMonitor.checkNow();
+    });
+    window.addEventListener('offline', () => {
+        updateOnlineStatus();
+        NetworkMonitor.checkNow();
+    });
 
-    // 네이티브 WebView에서 WebChannel transport error 발생 시 자동 복구
-    // online/offline 이벤트 없이 Firestore 스트림이 끊어질 수 있음
-    if (isNativePlatform) {
-        let _lastNetworkRecovery = 0;
-        window.addEventListener('unhandledrejection', (event) => {
-            const msg = String(event.reason && event.reason.message || event.reason || '');
-            if (msg.includes('transport errored') || msg.includes('WebChannel') || msg.includes('UNAVAILABLE')) {
-                const now = Date.now();
-                if (now - _lastNetworkRecovery < 30000) return; // 30초 내 중복 방지
-                _lastNetworkRecovery = now;
-                if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel transport error detected, reconnecting...');
-                disableNetwork(db)
-                    .then(() => enableNetwork(db))
-                    .then(() => { if (window.AppLogger) AppLogger.info('[Firestore] WebChannel 복구 완료'); })
-                    .catch((e) => { if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel 복구 실패: ' + e.message); });
-            }
-        });
-    }
+    // 제1원칙: WebChannel 오류는 네이티브/웹 모두에서 발생 — 플랫폼 구분 없이 처리
+    let _lastNetworkRecovery = 0;
+    let _webChannelErrorCount = 0;
+    window.addEventListener('unhandledrejection', (event) => {
+        const msg = String(event.reason && event.reason.message || event.reason || '');
+        if (msg.includes('transport errored') || msg.includes('WebChannel') || msg.includes('UNAVAILABLE')) {
+            _webChannelErrorCount++;
+            const now = Date.now();
+            // 동적 디바운스: 연속 오류 시 대기 시간 증가 (30초 → 60초 → 120초)
+            const debounceMs = Math.min(30000 * Math.pow(2, Math.min(_webChannelErrorCount - 1, 2)), 120000);
+            if (now - _lastNetworkRecovery < debounceMs) return;
+            _lastNetworkRecovery = now;
+            if (window.AppLogger) AppLogger.warn(`[Firestore] WebChannel error #${_webChannelErrorCount}, reconnecting (debounce: ${debounceMs}ms)...`);
+            disableNetwork(db)
+                .then(() => enableNetwork(db))
+                .then(() => {
+                    _webChannelErrorCount = 0; // 복구 성공 시 카운터 리셋
+                    if (window.AppLogger) AppLogger.info('[Firestore] WebChannel 복구 완료');
+                    // 복구 후 재전송 큐 처리
+                    setTimeout(() => _flushRetryQueue(), 3000);
+                })
+                .catch((e) => { if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel 복구 실패: ' + e.message); });
+        }
+    });
+
+    // NetworkMonitor 연동: 품질 변화 시 UI/로직 반응
+    NetworkMonitor.onQualityChange((quality, prev) => {
+        if (quality === 'good' && prev !== 'good') {
+            // 연결 품질 복구 시 재전송 큐 처리
+            setTimeout(() => _flushRetryQueue(), 1000);
+        }
+    });
 
     // 초기 상태 체크
     if (!navigator.onLine) {

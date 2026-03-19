@@ -155,28 +155,66 @@ const ERROR_PATTERNS = [
         severity: "warning",
         tag: "NETWORK",
         title: "네트워크 오류",
-        diagnose: () => ({
-            cause: "네트워크 연결 문제로 Firebase 작업이 실패했습니다.\nWebChannel 전송 오류 또는 인터넷 연결 끊김.",
-            fixes: [
-                "네트워크 연결 상태 확인",
-                "Firestore 오프라인 지속성(enablePersistence) 활성화 여부 확인",
-                "재시도 로직 추가 고려"
-            ]
-        })
+        diagnose: (entry) => {
+            const msg = entry.msg.toLowerCase();
+            if (msg.includes('webchannel') || msg.includes('transport errored')) {
+                return {
+                    cause: "WebChannel 스트림 연결이 끊어졌습니다.\nauto-recovery 로직이 자동 재연결을 시도합니다.\n반복 발생 시 네트워크 환경(WiFi/LTE 전환, VPN 등)을 확인하세요.",
+                    fixes: [
+                        "WebChannel 복구 로그 확인: '[Firestore] WebChannel 복구 완료' 로그 존재 여부",
+                        "동적 디바운스 적용됨 — 연속 오류 시 30s → 60s → 120s 대기",
+                        "Firestore IndexedDB 오프라인 지속성 활성화됨 — 캐시된 데이터 사용 가능",
+                        "네트워크 품질 모니터(NetworkMonitor) 로그에서 연결 상태 이력 확인"
+                    ]
+                };
+            }
+            if (msg.includes('offline-queued') || msg.includes('offline')) {
+                return {
+                    cause: "오프라인 상태에서 작업이 시도되어 자동 큐에 저장되었습니다.\n온라인 복귀 시 자동 재전송됩니다.",
+                    fixes: [
+                        "업로드 재전송 큐 로그 확인: '[UploadRetry] 큐 자동 재전송' 검색",
+                        "24시간 이상 경과 항목은 자동 폐기됨",
+                        "NetworkMonitor 품질 변화 로그에서 연결 복구 시점 확인"
+                    ]
+                };
+            }
+            return {
+                cause: "네트워크 연결 문제로 Firebase 작업이 실패했습니다.\nFirestore IndexedDB 오프라인 지속성이 활성화되어 캐시된 데이터는 사용 가능합니다.",
+                fixes: [
+                    "NetworkMonitor 로그에서 연결 품질 이력 확인 (good/weak/offline)",
+                    "온라인 복귀 시 업로드 재전송 큐 자동 처리 확인",
+                    "WebChannel 자동 복구 로그 확인",
+                    "WiFi/LTE 전환 시 일시적 끊김은 정상 — 자동 복구됨"
+                ]
+            };
+        }
     },
     {
         match: /storage.*upload|upload.*fail|프로필.*실패|마이그레이션.*실패/i,
         severity: "warning",
         tag: "STORAGE",
         title: "Storage 업로드 오류",
-        diagnose: () => ({
-            cause: "Firebase Storage 파일 업로드 실패.\n이미지 크기 제한 또는 Storage 규칙 위반 가능.",
-            fixes: [
-                "프로필 이미지: 500KB 이하로 압축",
-                "플래너 사진: 2MB 이하로 압축",
-                "Storage 규칙에서 인증 확인: request.auth != null"
-            ]
-        })
+        diagnose: (entry) => {
+            const msg = entry.msg.toLowerCase();
+            if (msg.includes('offline-queued') || msg.includes('offline')) {
+                return {
+                    cause: "오프라인 상태에서 업로드가 시도되어 재전송 큐에 저장되었습니다.\n온라인 복귀 시 자동 재전송됩니다.",
+                    fixes: [
+                        "정상 동작 — 온라인 복귀 후 '[UploadRetry] 재전송 성공' 로그 확인",
+                        "24시간 이상 미전송 항목은 자동 폐기됨"
+                    ]
+                };
+            }
+            return {
+                cause: "Firebase Storage 파일 업로드 실패.\n이미지 크기 제한 또는 Storage 규칙 위반 가능.\n3회 재시도 후 재전송 큐에 저장되어 온라인 복귀 시 자동 재시도.",
+                fixes: [
+                    "프로필 이미지: 500KB 이하로 압축",
+                    "플래너 사진: 2MB 이하로 압축",
+                    "Storage 규칙에서 인증 확인: request.auth != null",
+                    "재전송 큐 로그 확인: '[UploadRetry]' 로그 검색"
+                ]
+            };
+        }
     },
     {
         match: /reels.*실패|리액션.*실패|좋아요.*실패|피드.*실패/i,
