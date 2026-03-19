@@ -146,11 +146,18 @@ async function uploadImageToStorage(storagePath, base64str, onProgress) {
         try {
             _log('4-UPLOAD', `Calling uploadBytesResumable... (attempt ${attempt}/${MAX_RETRIES})`);
             const url = await new Promise((resolve, reject) => {
+                // 네트워크 오프라인이면 즉시 실패 (재시도 큐에 추가됨)
+                if (!navigator.onLine) {
+                    reject(new Error('Network offline, skipping upload'));
+                    return;
+                }
                 const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
+                // 네이티브 플랫폼(모바일)에서는 타임아웃을 120초로 늘림
+                const timeoutMs = isNativePlatform ? 120000 : 60000;
                 const timeout = setTimeout(() => {
                     uploadTask.cancel();
-                    reject(new Error('Upload timed out after 60s'));
-                }, 60000);
+                    reject(new Error(`Upload timed out after ${timeoutMs / 1000}s`));
+                }, timeoutMs);
                 uploadTask.on('state_changed',
                     (snapshot) => {
                         const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
@@ -768,8 +775,14 @@ async function _doSaveUserData() {
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
             lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
-            questHistoryStr: JSON.stringify(AppState.questHistory)
+            questHistoryStr: JSON.stringify(AppState.questHistory),
+            hasActiveReels: normalizeBooleanForFirestore(AppState.user.hasActiveReels),
+            _profileUploadFailed: normalizeBooleanForFirestore(AppState.user._profileUploadFailed)
         };
+        // reelsStr가 있으면 포함 (릴스 포스팅 시에만 설정됨)
+        if (typeof AppState.user.reelsStr === 'string') {
+            payload.reelsStr = AppState.user.reelsStr;
+        }
         // 진단: 페이로드 크기 및 photoURL 상태 로그
         const payloadSize = new Blob([JSON.stringify(payload)]).size;
         const photoType = payload.photoURL ? (payload.photoURL.startsWith('data:') ? 'base64' : payload.photoURL.startsWith('http') ? 'url' : 'other') : 'null';
@@ -782,6 +795,12 @@ async function _doSaveUserData() {
     } catch(e) {
         console.error("DB 저장 실패:", e);
         if (window.AppLogger) AppLogger.error('[DB] 저장 실패: ' + (e.code || '') + ' ' + (e.message || ''), e.stack || '');
+        // permission-denied 진단: 페이로드 키 목록 로깅 (보안 규칙 디버깅용)
+        if (e.code === 'permission-denied') {
+            const keys = Object.keys(payload).sort().join(', ');
+            console.warn('[SaveData:DIAG] permission-denied — payload keys:', keys);
+            if (window.AppLogger) AppLogger.warn('[SaveData:DIAG] keys=' + keys);
+        }
     } finally {
         _saveInFlight = false;
         if (_savePendingAfterFlight) {
@@ -902,22 +921,36 @@ async function loadUserDataFromDB(user) {
                 AppState.user.photoURL = data.photoURL;
                 setProfilePreview(data.photoURL);
                 // 기존 base64 프로필 이미지를 Cloud Storage로 자동 마이그레이션
-                if (isBase64Image(data.photoURL) && auth.currentUser) {
+                // 네트워크 상태 확인 후 시도, 오프라인이면 스킵
+                if (isBase64Image(data.photoURL) && auth.currentUser && navigator.onLine) {
                     _profileUploadInFlight = true;
-                    uploadImageToStorage(`profile_images/${auth.currentUser.uid}/profile${getImageExtension()}`, data.photoURL)
-                        .then(downloadURL => {
-                            AppState.user.photoURL = downloadURL;
-                            setProfilePreview(downloadURL);
-                            _profileUploadInFlight = false;
-                            saveUserData();
-                        })
-                        .catch(e => {
-                            console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e);
-                            if (window.AppLogger) AppLogger.error('[ProfileImg:ERR] 마이그레이션 실패: ' + (e.code || '') + ' ' + (e.message || ''));
-                            AppState.user.photoURL = null;
-                            _profileUploadInFlight = false;
-                            saveUserData();
-                        });
+                    // base64 → 150x150 리사이즈 후 업로드 (500KB 이하로 보장)
+                    const _migrateImg = new Image();
+                    _migrateImg.onload = () => {
+                        const _mc = document.createElement('canvas');
+                        _mc.width = 150; _mc.height = 150;
+                        _mc.getContext('2d').drawImage(_migrateImg, 0, 0, 150, 150);
+                        const compressedBase64 = canvasToOptimalDataURL(_mc, 0.6);
+                        uploadImageToStorage(`profile_images/${auth.currentUser.uid}/profile${getImageExtension()}`, compressedBase64)
+                            .then(downloadURL => {
+                                AppState.user.photoURL = downloadURL;
+                                setProfilePreview(downloadURL);
+                                _profileUploadInFlight = false;
+                                saveUserData();
+                            })
+                            .catch(e => {
+                                console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e);
+                                if (window.AppLogger) AppLogger.error('[ProfileImg:ERR] 마이그레이션 실패: ' + (e.code || '') + ' ' + (e.message || ''));
+                                // 마이그레이션 실패 시 기존 photoURL 유지 (null로 초기화하지 않음)
+                                _profileUploadInFlight = false;
+                                saveUserData();
+                            });
+                    };
+                    _migrateImg.onerror = () => {
+                        if (window.AppLogger) AppLogger.warn('[Migration] 프로필 이미지 로드 실패, 마이그레이션 스킵');
+                        _profileUploadInFlight = false;
+                    };
+                    _migrateImg.src = data.photoURL;
                 }
             }
         } else {
