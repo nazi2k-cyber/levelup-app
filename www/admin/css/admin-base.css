@@ -1,0 +1,149 @@
+/* ─── LEVEL UP: REBOOT — Admin Base Styles ─── */
+:root {
+    --bg-deep: #0a0a0f;
+    --bg-card: #141420;
+    --bg-input: #1a1a2e;
+    --accent: #00e5ff;
+    --accent-dim: #00e5ff33;
+    --text: #e0e0e0;
+    --text-sub: #888;
+    --success: #4caf50;
+    --error: #ff5252;
+    --warning: #ffc107;
+    --border: #2a2a3e;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container { max-width: 900px; margin: 0 auto; }
+
+h1 {
+    font-size: 1.3rem;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+h2 { font-size: 1rem; color: var(--accent); margin-bottom: 12px; }
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+/* ─── Buttons ─── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-outline {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+.btn-outline:hover { background: var(--accent-dim); }
+.btn-danger { background: var(--error); color: #fff; }
+.btn-danger:hover { opacity: 0.85; }
+.btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── Login Section ─── */
+#login-section {
+    text-align: center;
+    padding: 60px 20px;
+}
+#login-section p { color: var(--text-sub); margin-bottom: 20px; }
+
+/* ─── Stats Grid ─── */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.stat-card {
+    background: var(--bg-input);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+}
+.stat-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-sub);
+    margin-top: 4px;
+}
+
+/* ─── Badge ─── */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+.badge-ok { background: #4caf5033; color: var(--success); }
+.badge-fail { background: #ff525233; color: var(--error); }
+.badge-warn { background: #ffc10733; color: var(--warning); }
+.badge-info { background: var(--accent-dim); color: var(--accent); }
+
+/* ─── Form Elements ─── */
+input[type="text"], input[type="email"], select, textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+}
+
+/* ─── Table ─── */
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th { text-align: left; padding: 8px; color: var(--text-sub); border-bottom: 1px solid var(--border); }
+td { padding: 8px; border-bottom: 1px solid var(--border); }
+
+/* ─── Utility ─── */
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.text-sub { color: var(--text-sub); }
+.text-sm { font-size: 0.8rem; }
+.text-success { color: var(--success); }
+.text-error { color: var(--error); }
+.text-warning { color: var(--warning); }
+.flex-center { display: flex; align-items: center; gap: 8px; }
+.gap-8 { gap: 8px; }
+.hidden { display: none !important; }

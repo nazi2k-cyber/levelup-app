@@ -133,7 +133,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['device', 'os', 'received', 'type', 'memo', 'timestamp', 'reporter'])
         && request.resource.data.device is string
         && request.resource.data.os is string
-        && request.resource.data.received is bool
+        && request.resource.data.received is string
         && request.resource.data.type is string
         && request.resource.data.memo is string
         && request.resource.data.memo.size() <= 2000

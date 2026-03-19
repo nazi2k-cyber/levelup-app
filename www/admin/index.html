@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEVEL UP: REBOOT — Admin Diagnostics</title>
+<link rel="stylesheet" href="css/admin-base.css">
+<link rel="stylesheet" href="css/admin-tabs.css">
+<link rel="stylesheet" href="css/admin-diag.css">
+<link rel="stylesheet" href="css/admin-log.css">
+</head>
+<body>
+<div class="container">
+    <h1>LEVEL UP: REBOOT — Admin Diagnostics</h1>
+
+    <!-- Login Section -->
+    <div id="login-section">
+        <div class="card">
+            <p>관리자 인증이 필요합니다</p>
+            <button class="btn btn-primary" id="btn-login">Google 로그인</button>
+        </div>
+    </div>
+
+    <!-- Admin Section (hidden until auth) -->
+    <div id="admin-section" class="hidden">
+        <!-- User Info Bar -->
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 20px;">
+            <div class="flex-center">
+                <span class="text-sm" id="user-info">—</span>
+                <span class="badge badge-info" id="admin-badge" style="display:none">ADMIN</span>
+            </div>
+            <button class="btn btn-outline btn-sm" id="btn-logout">로그아웃</button>
+        </div>
+
+        <!-- Tabs -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="diag">권한 진단</button>
+            <button class="tab-btn" data-tab="rules">보안 규칙</button>
+            <button class="tab-btn" data-tab="claims">Claim 관리</button>
+            <button class="tab-btn" data-tab="dashboard">대시보드</button>
+        </nav>
+
+        <!-- Tab Contents -->
+        <div id="tab-diag" class="tab-content active"></div>
+        <div id="tab-rules" class="tab-content"></div>
+        <div id="tab-claims" class="tab-content"></div>
+        <div id="tab-dashboard" class="tab-content"></div>
+    </div>
+</div>
+
+<!-- Log Panel -->
+<div id="log-panel" class="log-panel collapsed">
+    <div class="log-header" onclick="toggleLogPanel()">
+        <span>로그 <span class="log-badge" id="log-count">0</span></span>
+        <div class="log-actions">
+            <button onclick="event.stopPropagation(); copyLogs()">복사</button>
+            <button onclick="event.stopPropagation(); downloadLogs()">다운로드</button>
+            <button onclick="event.stopPropagation(); clearLogs()">지우기</button>
+        </div>
+    </div>
+    <div class="log-entries" id="log-entries"></div>
+</div>
+<div class="log-panel-spacer"></div>
+
+<script type="module">
+import { auth } from "./js/firebase-init.js";
+import { onAdminAuth, doLogin, doLogout, isAdmin } from "./js/auth.js";
+import { initLogPanel, tlog, tok } from "./js/log-panel.js";
+import { initTabs } from "./js/tab-nav.js";
+import { initDiagPermissions } from "./js/diag-permissions.js";
+import { initDiagRules } from "./js/diag-rules.js";
+import { initAdminClaims } from "./js/admin-claims.js";
+import { initDashboard, loadDashboard } from "./js/dashboard.js";
+
+// Initialize log panel and tabs
+initLogPanel();
+initTabs();
+
+tlog("Init", "Admin Diagnostics 페이지 로딩...");
+
+// Login / Logout buttons
+document.getElementById("btn-login").addEventListener("click", async () => {
+    try { await doLogin(); } catch (e) { alert("로그인 실패: " + e.message); }
+});
+document.getElementById("btn-logout").addEventListener("click", async () => {
+    await doLogout();
+});
+
+// Auth state handler
+onAdminAuth((user, admin) => {
+    const loginSec = document.getElementById("login-section");
+    const adminSec = document.getElementById("admin-section");
+    const userInfo = document.getElementById("user-info");
+    const adminBadge = document.getElementById("admin-badge");
+
+    if (user) {
+        loginSec.classList.add("hidden");
+        adminSec.classList.remove("hidden");
+        userInfo.textContent = user.email || user.uid;
+        adminBadge.style.display = admin ? "" : "none";
+
+        tok("Auth", `로그인: ${user.email} (admin: ${admin})`);
+
+        // Initialize all tab modules
+        initDiagPermissions("tab-diag");
+        initDiagRules("tab-rules");
+        initAdminClaims("tab-claims");
+        initDashboard("tab-dashboard");
+
+        if (admin) loadDashboard();
+    } else {
+        loginSec.classList.remove("hidden");
+        adminSec.classList.add("hidden");
+        userInfo.textContent = "—";
+        adminBadge.style.display = "none";
+        tlog("Auth", "로그아웃됨");
+    }
+});
+
+tok("Init", "Admin Diagnostics 준비 완료");
+</script>
+</body>
+</html>
