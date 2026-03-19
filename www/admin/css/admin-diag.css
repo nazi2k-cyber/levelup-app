@@ -48,3 +48,133 @@
     gap: 8px;
     margin-top: 20px;
 }
+
+/* ─── Log Analyzer ─── */
+.analyzer-input-area {
+    position: relative;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    transition: border-color 0.2s, background 0.2s;
+}
+.analyzer-input-area.dragover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+}
+.analyzer-input-area textarea {
+    border: none;
+    border-radius: 10px;
+    min-height: 140px;
+    resize: vertical;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+}
+.analyzer-input-area textarea:focus {
+    border: none;
+    outline: none;
+}
+.analyzer-drop-hint {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    font-size: 0.7rem;
+    color: var(--text-sub);
+    pointer-events: none;
+}
+
+.analyzer-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+/* Parsed log entries */
+.parsed-log {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    line-height: 1.5;
+}
+.parsed-log .log-ts { color: #666; }
+.parsed-log .log-lv-error { color: var(--error); font-weight: 700; }
+.parsed-log .log-lv-warn { color: var(--warning); font-weight: 700; }
+.parsed-log .log-lv-info { color: var(--accent); }
+.parsed-log .log-env { color: #888; }
+.parsed-log .log-msg { color: var(--text); }
+.parsed-log .log-stack {
+    color: #666;
+    font-size: 0.72rem;
+    margin-top: 4px;
+    white-space: pre-wrap;
+}
+
+/* Diagnosis result card */
+.diag-result {
+    background: var(--bg-card);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+}
+.diag-result.severity-critical { border-left-color: var(--error); }
+.diag-result.severity-warning { border-left-color: var(--warning); }
+.diag-result.severity-info { border-left-color: var(--accent); }
+
+.diag-result-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.diag-result-title { font-weight: 700; font-size: 0.88rem; }
+.diag-result-body { font-size: 0.82rem; color: var(--text-sub); line-height: 1.5; }
+.diag-result-body ul { margin: 6px 0 0 16px; }
+.diag-result-body li { margin-bottom: 3px; }
+
+/* Generated prompt */
+.prompt-output {
+    background: #0d0d18;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
+    position: relative;
+}
+.prompt-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+.prompt-copy-btn:hover { background: var(--accent-dim); }
+
+.log-stats-bar {
+    display: flex;
+    gap: 16px;
+    padding: 8px 0;
+    font-size: 0.78rem;
+    color: var(--text-sub);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+}
+.log-stats-bar .count-error { color: var(--error); font-weight: 700; }
+.log-stats-bar .count-warn { color: var(--warning); font-weight: 700; }
