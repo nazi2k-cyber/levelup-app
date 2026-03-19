@@ -699,12 +699,32 @@ async function _doSaveUserData() {
     if(!auth.currentUser) return;
     _saveInFlight = true;
     try {
+        const normalizedName = (typeof AppState.user.name === 'string' ? AppState.user.name.trim() : '') || '신규 헌터';
+        const rawLevel = Number(AppState.user.level);
+        const normalizedLevel = Number.isFinite(rawLevel) ? Math.max(1, Math.min(999, Math.floor(rawLevel))) : 1;
+        const rawPoints = Number(AppState.user.points);
+        const normalizedPoints = Number.isFinite(rawPoints) && rawPoints >= 0 ? rawPoints : 0;
+        const rawNameLastChanged = AppState.user.nameLastChanged;
+        const normalizedNameLastChanged =
+            (typeof rawNameLastChanged === 'number' && Number.isFinite(rawNameLastChanged))
+                ? rawNameLastChanged
+                : null;
+        const stepData = AppState.user.stepData || {};
+        const normalizedStepData = {
+            date: typeof stepData.date === 'string' ? stepData.date : '',
+            rewardedSteps: (typeof stepData.rewardedSteps === 'number' && Number.isFinite(stepData.rewardedSteps) && stepData.rewardedSteps >= 0)
+                ? stepData.rewardedSteps
+                : 0
+        };
+        const rawLastReelsPostTs = parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10);
+        const normalizedLastReelsPostTs = Number.isFinite(rawLastReelsPostTs) ? rawLastReelsPostTs : 0;
+
         const payload = {
-            name: AppState.user.name,
+            name: normalizedName,
             stats: AppState.user.stats,
             pendingStats: AppState.user.pendingStats,
-            level: AppState.user.level,
-            points: AppState.user.points,
+            level: normalizedLevel,
+            points: normalizedPoints,
             titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
             questStr: JSON.stringify(AppState.quest.completedState),
             questWeekStart: AppState.quest.weekStart,
@@ -715,13 +735,13 @@ async function _doSaveUserData() {
             gpsEnabled: AppState.user.gpsEnabled,
             pushEnabled: AppState.user.pushEnabled,
             fcmToken: AppState.user.fcmToken || null,
-            stepData: AppState.user.stepData,
+            stepData: normalizedStepData,
             instaId: AppState.user.instaId || "",
-            nameLastChanged: AppState.user.nameLastChanged || null,
+            nameLastChanged: normalizedNameLastChanged,
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
-            lastReelsPostTs: parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10),
+            lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
             questHistoryStr: JSON.stringify(AppState.questHistory)
         };
@@ -1089,7 +1109,10 @@ function loadPlayerName() {
 function changePlayerName() {
     // 1개월(30일) 쿨다운 체크
     if (AppState.user.nameLastChanged) {
-        const lastChanged = new Date(AppState.user.nameLastChanged);
+        const ts = typeof AppState.user.nameLastChanged === 'number'
+            ? AppState.user.nameLastChanged
+            : Date.parse(AppState.user.nameLastChanged);
+        const lastChanged = new Date(Number.isFinite(ts) ? ts : 0);
         const now = new Date();
         const diffDays = (now - lastChanged) / (1000 * 60 * 60 * 24);
         if (diffDays < 30) {
@@ -1100,7 +1123,7 @@ function changePlayerName() {
     const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
     if (newName && newName.trim() !== "" && newName.trim() !== AppState.user.name) {
         AppState.user.name = newName.trim();
-        AppState.user.nameLastChanged = new Date().toISOString();
+        AppState.user.nameLastChanged = Date.now();
         loadPlayerName();
         updateSocialUserData();
         saveUserData();
