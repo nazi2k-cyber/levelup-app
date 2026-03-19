@@ -88,6 +88,48 @@ function getImageExtension() {
     return _supportsWebP ? '.webp' : '.jpg';
 }
 
+// base64 데이터 URL → Blob 변환 헬퍼
+function dataURLtoBlob(dataURL) {
+    const parts = dataURL.split(',');
+    const contentType = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+    const byteString = atob(parts[1]);
+    const u8arr = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) u8arr[i] = byteString.charCodeAt(i);
+    return new Blob([u8arr], { type: contentType });
+}
+
+// 적응형 압축: 목표 크기 이하가 될 때까지 품질을 반복 조정
+async function compressToTargetSize(canvas, maxBytes, initialQuality = 0.8, minQuality = 0.1) {
+    let quality = initialQuality;
+    let currentCanvas = canvas;
+    let dataURL, blob;
+
+    while (true) {
+        dataURL = canvasToOptimalDataURL(currentCanvas, quality);
+        blob = dataURLtoBlob(dataURL);
+
+        if (blob.size <= maxBytes) {
+            return { dataURL, blob, quality, dimensions: { w: currentCanvas.width, h: currentCanvas.height } };
+        }
+
+        quality = Math.round((quality - 0.1) * 10) / 10;
+
+        if (quality < minQuality) {
+            // 품질만으로 부족 → 캔버스 크기 75%로 축소 후 재시도
+            const newW = Math.round(currentCanvas.width * 0.75);
+            const newH = Math.round(currentCanvas.height * 0.75);
+            if (newW < 50 || newH < 50) break; // 최소 크기 보호
+            const smaller = document.createElement('canvas');
+            smaller.width = newW; smaller.height = newH;
+            smaller.getContext('2d').drawImage(currentCanvas, 0, 0, newW, newH);
+            currentCanvas = smaller;
+            quality = initialQuality; // 축소 후 품질 리셋
+        }
+    }
+    // 최종 결과 반환 (최소 크기에 도달)
+    return { dataURL, blob, quality, dimensions: { w: currentCanvas.width, h: currentCanvas.height } };
+}
+
 // 업로드 진행률 토스트 UI 헬퍼
 let _uploadToastHideTimer = null;
 function showUploadProgress(pct, label) {
@@ -121,13 +163,9 @@ async function uploadImageToStorage(storagePath, base64str, onProgress) {
     _log('1-START', `path=${storagePath}, inputLen=${base64str ? base64str.length : 'null'}, startsWithData=${base64str ? base64str.startsWith('data:') : 'N/A'}`);
     let blob, contentType;
     if (base64str.startsWith('data:')) {
-        const parts = base64str.split(',');
-        contentType = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
-        _log('2-DECODE', `contentType=${contentType}, base64PartLen=${parts[1] ? parts[1].length : 0}`);
-        const byteString = atob(parts[1]);
-        const u8arr = new Uint8Array(byteString.length);
-        for (let i = 0; i < byteString.length; i++) u8arr[i] = byteString.charCodeAt(i);
-        blob = new Blob([u8arr], { type: contentType });
+        _log('2-DECODE', `base64PartLen=${base64str.length}`);
+        blob = dataURLtoBlob(base64str);
+        contentType = blob.type;
         _log('3-BLOB', `blobSize=${blob.size}, blobType=${blob.type}`);
     } else {
         _log('2-FETCH', 'Using fetch() for non-data URI');
@@ -135,6 +173,17 @@ async function uploadImageToStorage(storagePath, base64str, onProgress) {
         blob = await res.blob();
         contentType = blob.type || 'image/jpeg';
         _log('3-BLOB', `blobSize=${blob.size}, blobType=${blob.type}`);
+    }
+
+    // 업로드 전 크기 검증 — Firebase Storage 규칙 거부 방지
+    const SIZE_LIMITS = { 'profile_images': 500 * 1024, 'planner_photos': 2 * 1024 * 1024, 'reels_photos': 2 * 1024 * 1024 };
+    const pathPrefix = storagePath.split('/')[0];
+    const limit = SIZE_LIMITS[pathPrefix];
+    if (limit && blob.size > limit) {
+        const err = new Error(`Image size ${blob.size} exceeds ${limit} byte limit for ${pathPrefix}`);
+        err.code = 'client/image-too-large';
+        _log('3-SIZE-CHECK', err.message);
+        throw err;
     }
     const storageRef = ref(storage, storagePath);
 
@@ -2566,9 +2615,14 @@ async function loadProfileImage(event) {
             const canvas = document.createElement('canvas');
             canvas.width = 150; canvas.height = 150;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, 150, 150);
-            const base64 = canvasToOptimalDataURL(canvas, 0.6);
-            _plog('B', `canvas→base64: len=${base64.length}, fmt=${_supportsWebP ? 'webp' : 'jpeg'}, starts=${base64.substring(0, 30)}`);
+            // 중앙 크롭: 비정방형 이미지를 stretch 대신 center-crop
+            const side = Math.min(img.naturalWidth, img.naturalHeight);
+            const sx = (img.naturalWidth - side) / 2;
+            const sy = (img.naturalHeight - side) / 2;
+            ctx.drawImage(img, sx, sy, side, side, 0, 0, 150, 150);
+            // 적응형 압축: 450KB 이하 보장 (500KB 규칙에 안전 마진)
+            const { dataURL: base64, quality: usedQuality } = await compressToTargetSize(canvas, 450 * 1024, 0.7, 0.2);
+            _plog('B', `canvas→base64: len=${base64.length}, quality=${usedQuality}, fmt=${_supportsWebP ? 'webp' : 'jpeg'}`);
             setProfilePreview(base64);
             if (!auth.currentUser) {
                 _plog('C-FAIL', 'auth.currentUser is null after canvas');
@@ -4338,30 +4392,38 @@ async function savePlannerEntry() {
 // --- ★ 플래너 사진 기능 (타임테이블 사진 필수) ★ ---
 let plannerPhotoData = null; // base64
 
+let _plannerPhotoCompressing = false;
 function loadPlannerPhoto(e) {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || _plannerPhotoCompressing) return;
     const reader = new FileReader();
     reader.onload = function(ev) {
         const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const maxSize = 600;
-            let w = img.width, h = img.height;
-            if (w > maxSize || h > maxSize) {
-                if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-                else { w = Math.round(w * maxSize / h); h = maxSize; }
+        img.onload = async function() {
+            _plannerPhotoCompressing = true;
+            try {
+                const canvas = document.createElement('canvas');
+                const maxSize = 600;
+                let w = img.width, h = img.height;
+                if (w > maxSize || h > maxSize) {
+                    if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                    else { w = Math.round(w * maxSize / h); h = maxSize; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                // 적응형 압축: 1.8MB 이하 보장 (2MB 규칙에 안전 마진)
+                const { dataURL } = await compressToTargetSize(canvas, 1800 * 1024, 0.75, 0.3);
+                plannerPhotoData = dataURL;
+                const preview = document.getElementById('planner-photo-preview');
+                const placeholder = document.getElementById('planner-photo-placeholder');
+                const removeBtn = document.getElementById('planner-photo-remove');
+                preview.src = plannerPhotoData;
+                preview.classList.remove('d-none');
+                placeholder.classList.add('d-none');
+                removeBtn.classList.remove('d-none');
+            } finally {
+                _plannerPhotoCompressing = false;
             }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            plannerPhotoData = canvasToOptimalDataURL(canvas, 0.7);
-            const preview = document.getElementById('planner-photo-preview');
-            const placeholder = document.getElementById('planner-photo-placeholder');
-            const removeBtn = document.getElementById('planner-photo-remove');
-            preview.src = plannerPhotoData;
-            preview.classList.remove('d-none');
-            placeholder.classList.add('d-none');
-            removeBtn.classList.remove('d-none');
         };
         img.src = ev.target.result;
     };
