@@ -678,6 +678,28 @@ function getCleanDiaryStrForFirestore() {
     } catch(e) { return '{}'; }
 }
 
+const USER_STAT_KEYS = ['str', 'int', 'cha', 'vit', 'wlth', 'agi'];
+function normalizeStatsMapForFirestore(input) {
+    const source = (input && typeof input === 'object') ? input : {};
+    const normalized = {};
+    USER_STAT_KEYS.forEach((key) => {
+        const n = Number(source[key]);
+        normalized[key] = Number.isFinite(n) && n >= 0 ? n : 0;
+    });
+    return normalized;
+}
+
+function normalizeStringArrayForFirestore(input, maxLen) {
+    if (!Array.isArray(input)) return [];
+    return input
+        .filter(v => typeof v === 'string' && v.length > 0)
+        .slice(0, maxLen);
+}
+
+function normalizeBooleanForFirestore(input) {
+    return input === true;
+}
+
 let _saveDebounceTimer = null;
 let _saveInFlight = false;
 let _savePendingAfterFlight = false;
@@ -718,22 +740,25 @@ async function _doSaveUserData() {
         };
         const rawLastReelsPostTs = parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10);
         const normalizedLastReelsPostTs = Number.isFinite(rawLastReelsPostTs) ? rawLastReelsPostTs : 0;
+        const normalizedStats = normalizeStatsMapForFirestore(AppState.user.stats);
+        const normalizedPendingStats = normalizeStatsMapForFirestore(AppState.user.pendingStats);
+        const normalizedFriends = normalizeStringArrayForFirestore(AppState.user.friends, 500);
 
         const payload = {
             name: normalizedName,
-            stats: AppState.user.stats,
-            pendingStats: AppState.user.pendingStats,
+            stats: normalizedStats,
+            pendingStats: normalizedPendingStats,
             level: normalizedLevel,
             points: normalizedPoints,
             titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
             questStr: JSON.stringify(AppState.quest.completedState),
             questWeekStart: AppState.quest.weekStart,
             dungeonStr: JSON.stringify(AppState.dungeon),
-            friends: AppState.user.friends || [],
+            friends: normalizedFriends,
             photoURL: (_profileUploadInFlight || isBase64Image(AppState.user.photoURL)) ? null : (AppState.user.photoURL || null),
-            syncEnabled: AppState.user.syncEnabled,
-            gpsEnabled: AppState.user.gpsEnabled,
-            pushEnabled: AppState.user.pushEnabled,
+            syncEnabled: normalizeBooleanForFirestore(AppState.user.syncEnabled),
+            gpsEnabled: normalizeBooleanForFirestore(AppState.user.gpsEnabled),
+            pushEnabled: normalizeBooleanForFirestore(AppState.user.pushEnabled),
             fcmToken: AppState.user.fcmToken || null,
             stepData: normalizedStepData,
             instaId: AppState.user.instaId || "",
