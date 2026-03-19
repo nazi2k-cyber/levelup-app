@@ -730,7 +730,7 @@ async function _doSaveUserData() {
             questWeekStart: AppState.quest.weekStart,
             dungeonStr: JSON.stringify(AppState.dungeon),
             friends: AppState.user.friends || [],
-            ...(_profileUploadInFlight ? {} : { photoURL: AppState.user.photoURL || null }),
+            photoURL: (_profileUploadInFlight || isBase64Image(AppState.user.photoURL)) ? null : (AppState.user.photoURL || null),
             syncEnabled: AppState.user.syncEnabled,
             gpsEnabled: AppState.user.gpsEnabled,
             pushEnabled: AppState.user.pushEnabled,
@@ -878,15 +878,20 @@ async function loadUserDataFromDB(user) {
                 setProfilePreview(data.photoURL);
                 // 기존 base64 프로필 이미지를 Cloud Storage로 자동 마이그레이션
                 if (isBase64Image(data.photoURL) && auth.currentUser) {
-                    uploadImageToStorage(`profile_images/${auth.currentUser.uid}/profile.jpg`, data.photoURL)
+                    _profileUploadInFlight = true;
+                    uploadImageToStorage(`profile_images/${auth.currentUser.uid}/profile${getImageExtension()}`, data.photoURL)
                         .then(downloadURL => {
                             AppState.user.photoURL = downloadURL;
                             setProfilePreview(downloadURL);
+                            _profileUploadInFlight = false;
                             saveUserData();
                         })
                         .catch(e => {
                             console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e);
                             if (window.AppLogger) AppLogger.error('[ProfileImg:ERR] 마이그레이션 실패: ' + (e.code || '') + ' ' + (e.message || ''));
+                            AppState.user.photoURL = null;
+                            _profileUploadInFlight = false;
+                            saveUserData();
                         });
                 }
             }
