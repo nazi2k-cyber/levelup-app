@@ -249,7 +249,7 @@ function compressBase64Image(base64str, maxDim, quality) {
 
 // 파일 크기 기반 동적 타임아웃 계산 (기본 30s + MB당 60s, 최소 30s, 최대 300s)
 function _calcUploadTimeout(blobSize, networkQuality) {
-    const base = Math.min(Math.max(30000, 30000 + Math.floor(blobSize / (1024 * 1024)) * 60000), 300000);
+    const base = Math.min(Math.max(30000, 30000 + Math.ceil(blobSize / (1024 * 1024)) * 60000), 300000);
     return networkQuality === 'weak' ? base * 2 : base;
 }
 

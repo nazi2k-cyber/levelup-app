@@ -10,10 +10,6 @@ on:
       - 'firebase.json'
       - 'www/**'
       - 'push-test.html'
-      - 'cors.json'
-      - 'storage.rules'
-      - 'app.js'
-      - 'sw.js'
   workflow_dispatch:
     inputs:
       deploy_target:
@@ -54,13 +50,6 @@ jobs:
 
       - name: Firebase CLI 설치
         run: npm install -g firebase-tools
-
-      - name: Storage CORS 설정 적용
-        run: |
-          if [ -f cors.json ]; then
-            gsutil cors set cors.json gs://levelup-app-53d02.firebasestorage.app
-            echo "Storage CORS 설정 적용 완료"
-          fi
 
       - name: 변경된 파일 감지 및 배포 대상 결정
         id: detect
@@ -108,10 +97,7 @@ jobs:
           if echo "$CHANGED" | grep -qE '^functions/'; then
             DEPLOY_FUNCTIONS=true
           fi
-          if echo "$CHANGED" | grep -qE '^(www/|push-test\.html|app\.js|sw\.js)'; then
-            DEPLOY_HOSTING=true
-          fi
-          if echo "$CHANGED" | grep -qE '^storage\.rules'; then
+          if echo "$CHANGED" | grep -qE '^(www/|push-test\.html)'; then
             DEPLOY_HOSTING=true
           fi
           if echo "$CHANGED" | grep -qE '^(firestore\.rules|firestore\.indexes\.json)'; then
@@ -152,15 +138,14 @@ jobs:
         if: steps.detect.outputs.deploy_functions == 'true'
         run: firebase deploy --only functions --force
 
-      - name: root → www 파일 동기화
+      - name: push-test.html 동기화 (root → www)
         if: steps.detect.outputs.deploy_hosting == 'true'
         run: |
-          for f in push-test.html app.js sw.js; do
-            if [ -f "$f" ]; then
-              cp "$f" "www/$f"
-              echo "$f → www/$f 동기화 완료"
-            fi
-          done
+          # root push-test.html이 www보다 새로우면 복사
+          if [ -f push-test.html ]; then
+            cp push-test.html www/push-test.html
+            echo "root push-test.html → www/push-test.html 동기화 완료"
+          fi
 
       - name: Firebase Hosting 배포
         if: steps.detect.outputs.deploy_hosting == 'true'
