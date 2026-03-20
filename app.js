@@ -3497,9 +3497,16 @@ window.sharePlannerAsImage = async function() {
         try {
             photoImg = await new Promise((resolve, reject) => {
                 const img = new Image();
+                img.crossOrigin = 'anonymous';
                 img.onload = () => resolve(img);
                 img.onerror = () => resolve(null);
-                img.src = photoSrc;
+                // For cross-origin URLs, add cache-buster to avoid using non-CORS cached version
+                if (photoSrc.startsWith('http')) {
+                    const sep = photoSrc.includes('?') ? '&' : '?';
+                    img.src = photoSrc + sep + '_cors=' + Date.now();
+                } else {
+                    img.src = photoSrc;
+                }
             });
             if (photoImg) {
                 photoH = Math.round(innerW * (photoImg.height / photoImg.width));
