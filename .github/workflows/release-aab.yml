@@ -81,7 +81,7 @@ jobs:
         run: |
           mkdir -p www
           cp app.html www/index.html
-          cp app.js sw.js style.css data.js logger.js www/
+          cp app.js style.css data.js logger.js www/
           for f in ads.txt privacy.html terms.html usage-policy.html push-test.html; do
             [ -f "$f" ] && cp "$f" www/ && echo "  ✅ $f 복사됨"
           done

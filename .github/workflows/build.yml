@@ -50,20 +50,19 @@ jobs:
             -alias androiddebugkey -storepass android 2>/dev/null | grep -E "SHA[-]?1:"
 
       # 5. app.js → www/app.js 자동 동기화 (소스 기준 동기화 후 커밋)
-      - name: root → www 소스 동기화
+      - name: app.js → www/app.js 동기화
         run: |
           mkdir -p www
           cp app.js www/app.js
-          cp sw.js www/sw.js
-          if ! git diff --quiet www/app.js www/sw.js 2>/dev/null; then
+          if ! git diff --quiet www/app.js 2>/dev/null; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add www/app.js www/sw.js
-            git commit -m "chore: www/{app,sw}.js를 root 기준으로 자동 동기화"
+            git add www/app.js
+            git commit -m "chore: www/app.js를 app.js 기준으로 자동 동기화"
             git push
-            echo "✅ www/ 동기화 커밋 완료"
+            echo "✅ www/app.js 동기화 커밋 완료"
           else
-            echo "ℹ️ www/ 파일이 이미 최신 상태입니다"
+            echo "ℹ️ www/app.js가 이미 최신 상태입니다"
           fi
 
       # 6. npm 패키지 설치 (lock 파일 기준 정확한 버전 설치)
@@ -75,7 +74,7 @@ jobs:
         run: |
           mkdir -p www
           cp app.html www/index.html
-          cp app.js sw.js style.css data.js logger.js www/
+          cp app.js style.css data.js logger.js www/
           # 추가 웹 파일 복사 (존재하는 경우만)
           for f in ads.txt privacy.html terms.html usage-policy.html push-test.html; do
             [ -f "$f" ] && cp "$f" www/ && echo "  ✅ $f 복사됨"

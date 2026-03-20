@@ -2,8 +2,6 @@
   {
     "origin": [
       "https://localhost",
-      "http://localhost",
-      "capacitor://localhost",
       "https://levelup-app-53d02.web.app",
       "https://levelup-app-53d02.firebaseapp.com"
     ],
