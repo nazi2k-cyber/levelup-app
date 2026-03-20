@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork, persistentLocalCache } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -21,11 +21,20 @@ const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform &
 const db = initializeFirestore(app, {
     ...(isNativePlatform
         ? { experimentalForceLongPolling: true }
-        : { experimentalAutoDetectLongPolling: true }),
-    // FirestoreSettings.cache 방식으로 오프라인 지속성 설정 (enableIndexedDbPersistence deprecated 대체)
-    localCache: persistentLocalCache()
+        : { experimentalAutoDetectLongPolling: true })
 });
 const storage = getStorage(app);
+
+// Firestore 오프라인 지속성 활성화 — 네트워크 끊김 시에도 캐시된 데이터 사용 가능
+enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+        // 여러 탭이 열린 경우 — 첫 번째 탭만 지속성 사용 가능
+        console.warn('[Firestore] 오프라인 지속성: 다른 탭에서 이미 활성화됨');
+    } else if (err.code === 'unimplemented') {
+        // 브라우저가 IndexedDB를 지원하지 않는 경우
+        console.warn('[Firestore] 오프라인 지속성: IndexedDB 미지원 브라우저');
+    }
+});
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
@@ -330,10 +339,6 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
         }
     }
 
-    // 파일 크기 기반 동적 타임아웃: 100KB당 10초, 최소 60초, 최대 180초
-    const TIMEOUT_MS = Math.min(Math.max(60000, Math.ceil(blob.size / (100 * 1024)) * 10000), 180000);
-    _log('4-TIMEOUT', `Dynamic timeout: ${TIMEOUT_MS / 1000}s for ${blob.size}B`);
-
     // 지수 백오프 재시도 (최대 3회, 2s → 4s → 실패)
     const MAX_RETRIES = 3;
     const BASE_DELAY_MS = 2000;
@@ -345,7 +350,7 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                 _log('4-UPLOAD', `Using simple uploadBytes (${blob.size}B), attempt ${attempt}/${MAX_RETRIES}`);
                 const snapshot = await Promise.race([
                     uploadBytes(storageRef, blob, { contentType }),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error(`Upload timed out after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS))
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('Upload timed out after 60s')), 60000))
                 ]);
                 if (onProgress) onProgress(100);
                 const downloadURL = await getDownloadURL(snapshot.ref);
@@ -355,33 +360,22 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                 _log('4-UPLOAD', `Calling uploadBytesResumable... (attempt ${attempt}/${MAX_RETRIES})`);
                 const url = await new Promise((resolve, reject) => {
                     const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
-                    let lastProgress = 0;
-                    // 진행이 없을 때만 타임아웃 — 전송 중 리셋되는 활성 타임아웃
-                    let timeoutId = setTimeout(() => {
+                    const timeout = setTimeout(() => {
                         uploadTask.cancel();
-                        reject(new Error(`Upload timed out after ${TIMEOUT_MS / 1000}s`));
-                    }, TIMEOUT_MS);
+                        reject(new Error('Upload timed out after 60s'));
+                    }, 60000);
                     uploadTask.on('state_changed',
                         (snapshot) => {
                             const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                            if (pct > lastProgress) {
-                                // 진행 있으면 타임아웃 연장 (최대 30초 추가 대기)
-                                clearTimeout(timeoutId);
-                                timeoutId = setTimeout(() => {
-                                    uploadTask.cancel();
-                                    reject(new Error(`Upload stalled after ${TIMEOUT_MS / 1000}s`));
-                                }, Math.max(30000, TIMEOUT_MS));
-                                lastProgress = pct;
-                            }
                             _log('4-PROGRESS', `${pct}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
                             if (onProgress) onProgress(pct);
                         },
                         (error) => {
-                            clearTimeout(timeoutId);
+                            clearTimeout(timeout);
                             reject(error);
                         },
                         async () => {
-                            clearTimeout(timeoutId);
+                            clearTimeout(timeout);
                             try {
                                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                                 resolve(downloadURL);
@@ -5895,8 +5889,7 @@ async function syncHealthData(showMsg = false) {
     // 네이티브 SDK에서 데이터를 가져오지 못한 경우
     if (dataSource === 'none') {
         if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
-        // 네이티브 플랫폼에서만 WARN 로그 — 웹/브라우저 환경은 정상 동작이므로 스킵
-        if (isNativePlatform && window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
         return;
     }
 
