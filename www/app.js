@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -21,8 +21,19 @@ const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform &
 const db = initializeFirestore(app, {
     ...(isNativePlatform
         ? { experimentalForceLongPolling: true }
-        : { experimentalAutoDetectLongPolling: true }),
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        : { experimentalAutoDetectLongPolling: true })
+});
+const storage = getStorage(app);
+
+// Firestore 오프라인 지속성 활성화 — 네트워크 끊김 시에도 캐시된 데이터 사용 가능
+enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+        // 여러 탭이 열린 경우 — 첫 번째 탭만 지속성 사용 가능
+        console.warn('[Firestore] 오프라인 지속성: 다른 탭에서 이미 활성화됨');
+    } else if (err.code === 'unimplemented') {
+        // 브라우저가 IndexedDB를 지원하지 않는 경우
+        console.warn('[Firestore] 오프라인 지속성: IndexedDB 미지원 브라우저');
+    }
 });
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
@@ -328,31 +339,18 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
         }
     }
 
-    // 네트워크 품질 기반 동적 타임아웃: good=60s, weak=120s, offline=즉시 큐
-    const networkQuality = typeof NetworkMonitor !== 'undefined' ? NetworkMonitor.getQuality() : 'good';
-    const UPLOAD_TIMEOUT_MS = networkQuality === 'weak' ? 120000 : 60000;
-    _log('3.6-NETWORK', `quality=${networkQuality}, timeout=${UPLOAD_TIMEOUT_MS}ms`);
-
     // 지수 백오프 재시도 (최대 3회, 2s → 4s → 실패)
     const MAX_RETRIES = 3;
     const BASE_DELAY_MS = 2000;
     let lastError;
     const useSimpleUpload = blob.size < 100 * 1024; // 100KB 미만: 단일 PUT (uploadBytes)
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        // 재시도 전 네트워크 상태 재확인 — 오프라인이면 즉시 큐에 넣기
-        if (attempt > 1 && !navigator.onLine) {
-            _log('4-OFFLINE', 'Network lost during retries, queuing');
-            _addToRetryQueue(storagePath, base64str);
-            const err = new Error('Network lost during upload retries — queued');
-            err.code = 'client/offline-queued';
-            throw err;
-        }
         try {
             if (useSimpleUpload) {
                 _log('4-UPLOAD', `Using simple uploadBytes (${blob.size}B), attempt ${attempt}/${MAX_RETRIES}`);
                 const snapshot = await Promise.race([
                     uploadBytes(storageRef, blob, { contentType }),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error(`Upload timed out after ${UPLOAD_TIMEOUT_MS / 1000}s`)), UPLOAD_TIMEOUT_MS))
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('Upload timed out after 60s')), 60000))
                 ]);
                 if (onProgress) onProgress(100);
                 const downloadURL = await getDownloadURL(snapshot.ref);
@@ -362,34 +360,22 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                 _log('4-UPLOAD', `Calling uploadBytesResumable... (attempt ${attempt}/${MAX_RETRIES})`);
                 const url = await new Promise((resolve, reject) => {
                     const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
-                    let lastProgress = Date.now();
                     const timeout = setTimeout(() => {
                         uploadTask.cancel();
-                        reject(new Error(`Upload timed out after ${UPLOAD_TIMEOUT_MS / 1000}s`));
-                    }, UPLOAD_TIMEOUT_MS);
-                    // 진행 중 타임아웃 리셋: 데이터가 전송되고 있으면 타임아웃 연장
-                    const progressTimeout = setInterval(() => {
-                        if (Date.now() - lastProgress > UPLOAD_TIMEOUT_MS) {
-                            clearInterval(progressTimeout);
-                            uploadTask.cancel();
-                            reject(new Error(`Upload stalled — no progress for ${UPLOAD_TIMEOUT_MS / 1000}s`));
-                        }
-                    }, 10000);
+                        reject(new Error('Upload timed out after 60s'));
+                    }, 60000);
                     uploadTask.on('state_changed',
                         (snapshot) => {
-                            lastProgress = Date.now();
                             const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
                             _log('4-PROGRESS', `${pct}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
                             if (onProgress) onProgress(pct);
                         },
                         (error) => {
                             clearTimeout(timeout);
-                            clearInterval(progressTimeout);
                             reject(error);
                         },
                         async () => {
                             clearTimeout(timeout);
-                            clearInterval(progressTimeout);
                             try {
                                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                                 resolve(downloadURL);
@@ -630,21 +616,16 @@ function initOfflineDetection() {
     // 제1원칙: WebChannel 오류는 네이티브/웹 모두에서 발생 — 플랫폼 구분 없이 처리
     let _lastNetworkRecovery = 0;
     let _webChannelErrorCount = 0;
-    function _handleWebChannelError(source) {
-        _webChannelErrorCount++;
-        const now = Date.now();
-        // 오프라인 상태면 복구 시도하지 않음 — online 이벤트에서 처리
-        if (!navigator.onLine) {
-            if (window.AppLogger) AppLogger.info(`[Firestore] WebChannel error #${_webChannelErrorCount} while offline — skipping recovery`);
-            return;
-        }
-        // 동적 디바운스: 연속 오류 시 대기 시간 증가 (30초 → 60초 → 120초)
-        const debounceMs = Math.min(30000 * Math.pow(2, Math.min(_webChannelErrorCount - 1, 2)), 120000);
-        if (now - _lastNetworkRecovery < debounceMs) return;
-        _lastNetworkRecovery = now;
-        if (window.AppLogger) AppLogger.warn(`[Firestore] WebChannel error #${_webChannelErrorCount} (${source}), reconnecting (debounce: ${debounceMs}ms)...`);
-        // 네트워크 품질 확인 후 복구 시도
-        const doRecovery = () => {
+    window.addEventListener('unhandledrejection', (event) => {
+        const msg = String(event.reason && event.reason.message || event.reason || '');
+        if (msg.includes('transport errored') || msg.includes('WebChannel') || msg.includes('UNAVAILABLE')) {
+            _webChannelErrorCount++;
+            const now = Date.now();
+            // 동적 디바운스: 연속 오류 시 대기 시간 증가 (30초 → 60초 → 120초)
+            const debounceMs = Math.min(30000 * Math.pow(2, Math.min(_webChannelErrorCount - 1, 2)), 120000);
+            if (now - _lastNetworkRecovery < debounceMs) return;
+            _lastNetworkRecovery = now;
+            if (window.AppLogger) AppLogger.warn(`[Firestore] WebChannel error #${_webChannelErrorCount}, reconnecting (debounce: ${debounceMs}ms)...`);
             disableNetwork(db)
                 .then(() => enableNetwork(db))
                 .then(() => {
@@ -654,29 +635,8 @@ function initOfflineDetection() {
                     setTimeout(() => _flushRetryQueue(), 3000);
                 })
                 .catch((e) => { if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel 복구 실패: ' + e.message); });
-        };
-        // weak 네트워크에서는 약간 대기 후 복구 시도
-        if (typeof NetworkMonitor !== 'undefined' && NetworkMonitor.getQuality() === 'weak') {
-            setTimeout(doRecovery, 5000);
-        } else {
-            doRecovery();
-        }
-    }
-    window.addEventListener('unhandledrejection', (event) => {
-        const msg = String(event.reason && event.reason.message || event.reason || '');
-        if (msg.includes('transport errored') || msg.includes('WebChannel') || msg.includes('UNAVAILABLE')) {
-            _handleWebChannelError('unhandledrejection');
         }
     });
-    // Firebase console.warn 기반 WebChannel 오류도 감지 (warn 패치)
-    const _origConsoleWarn = console.warn;
-    console.warn = function(...args) {
-        _origConsoleWarn.apply(console, args);
-        const msg = args.map(a => String(a)).join(' ');
-        if (msg.includes('transport errored') && msg.includes('WebChannelConnection')) {
-            _handleWebChannelError('console.warn');
-        }
-    };
 
     // NetworkMonitor 연동: 품질 변화 시 UI/로직 반응
     NetworkMonitor.onQualityChange((quality, prev) => {
