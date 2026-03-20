@@ -62,15 +62,9 @@ jobs:
         continue-on-error: true
         run: |
           if [ -f cors.json ]; then
-            # Firebase Storage 버킷: 기본 버킷(.appspot.com)에 CORS 설정
-            BUCKET="levelup-app-53d02.appspot.com"
+            BUCKET="levelup-app-53d02.firebasestorage.app"
             echo "Applying CORS to gs://${BUCKET} ..."
-            gsutil cors set cors.json "gs://${BUCKET}" && echo "CORS 설정 완료: ${BUCKET}" || {
-              # fallback: .firebasestorage.app 도메인 시도
-              BUCKET2="levelup-app-53d02.firebasestorage.app"
-              echo "Retrying with gs://${BUCKET2} ..."
-              gsutil cors set cors.json "gs://${BUCKET2}" && echo "CORS 설정 완료: ${BUCKET2}" || echo "::warning::CORS 설정 실패 — Firebase Console에서 수동 확인 필요"
-            }
+            gsutil cors set cors.json "gs://${BUCKET}" && echo "CORS 설정 완료: ${BUCKET}" || echo "::warning::CORS 설정 실패 — Firebase Console에서 수동 확인 필요"
           fi
 
       - name: 변경된 파일 감지 및 배포 대상 결정
@@ -200,7 +194,7 @@ jobs:
         if: steps.detect.outputs.deploy_storage == 'true'
         run: |
           echo "Applying CORS configuration to Storage bucket..."
-          gsutil cors set cors.json gs://levelup-app-53d02.appspot.com
+          gsutil cors set cors.json gs://levelup-app-53d02.firebasestorage.app
 
 
       - name: Storage Rules 배포
