@@ -17,11 +17,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+// 플랫폼 감지: Capacitor 브릿지 + User-Agent WebView 마커 모두 확인
+const isNativePlatform = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+    || /\bwv\b/.test(navigator.userAgent);  // Android WebView 마커
+if (window.AppLogger) window.AppLogger.info(`[Platform] isNativePlatform=${isNativePlatform}, UA=${navigator.userAgent.slice(0,80)}`);
 const db = initializeFirestore(app, {
-    ...(isNativePlatform
-        ? { experimentalForceLongPolling: true }
-        : { experimentalAutoDetectLongPolling: true }),
+    // Android WebView에서 WebChannel 전송이 실패하므로 항상 Long Polling 사용
+    experimentalForceLongPolling: true,
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
 const storage = getStorage(app);
@@ -247,9 +249,9 @@ function compressBase64Image(base64str, maxDim, quality) {
     });
 }
 
-// 파일 크기 기반 동적 타임아웃 계산 (기본 30s + MB당 60s, 최소 30s, 최대 300s)
+// 파일 크기 기반 동적 타임아웃 계산 (15s + KB당 10ms, 최소 15s, 최대 300s)
 function _calcUploadTimeout(blobSize, networkQuality) {
-    const base = Math.min(Math.max(30000, 30000 + Math.ceil(blobSize / (1024 * 1024)) * 60000), 300000);
+    const base = Math.min(15000 + Math.ceil(blobSize / 100) * 10, 300000);
     return networkQuality === 'weak' ? base * 2 : base;
 }
 
@@ -379,6 +381,12 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
         }
     }
 
+    // CORS preflight 검증 (네이티브 WebView에서 CORS 미설정 시 hang 방지)
+    if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) {
+        // CapacitorHttp가 활성화되어 있으면 CORS 우회됨 — 검증 불필요
+        _log('3.8-NATIVE', 'Native platform detected (CapacitorHttp should bypass CORS)');
+    }
+
     // 네트워크 품질 기반 동적 타임아웃 계산
     const networkQuality = NetworkMonitor.getQuality();
     const uploadTimeoutMs = _calcUploadTimeout(blob.size, networkQuality);
@@ -403,7 +411,11 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                 _log('4-UPLOAD', `Using simple uploadBytes (${blob.size}B), attempt ${attempt}/${MAX_RETRIES}`);
                 const snapshot = await Promise.race([
                     uploadBytes(storageRef, blob, { contentType }),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s`)), uploadTimeoutMs))
+                    new Promise((_, rej) => setTimeout(() => {
+                        const err = new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s (${blob.size}B) — possible CORS issue`);
+                        err.code = 'client/upload-timeout';
+                        rej(err);
+                    }, uploadTimeoutMs))
                 ]);
                 if (onProgress) onProgress(100);
                 const downloadURL = await getDownloadURL(snapshot.ref);
@@ -416,7 +428,9 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                     let lastProgressTime = Date.now();
                     const timeout = setTimeout(() => {
                         uploadTask.cancel();
-                        reject(new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s`));
+                        const err = new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s (${blob.size}B) — possible CORS issue`);
+                        err.code = 'client/upload-timeout';
+                        reject(err);
                     }, uploadTimeoutMs);
                     // 진행률 감시: 30초간 진행 없으면 조기 타임아웃
                     const stallCheck = setInterval(() => {

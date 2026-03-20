@@ -20,7 +20,8 @@ const FIREBASE_CDN = [
     'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js',
     'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js',
     'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js',
-    'https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js'
+    'https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js',
+    'https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js'
 ];
 
 // --- Firebase Cloud Messaging (기존 firebase-messaging-sw.js 기능 통합) ---
