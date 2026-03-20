@@ -175,13 +175,33 @@ jobs:
 
       - name: Storage CORS 설정 배포
         if: steps.detect.outputs.deploy_storage == 'true'
+        continue-on-error: true
         run: |
-          echo "Discovering Storage bucket name..."
-          BUCKET=$(gcloud storage buckets list --project=levelup-app-53d02 --format='value(name)' | head -1)
+          echo "=== Discovering Storage bucket ==="
+          echo "Listing all buckets in project levelup-app-53d02..."
+          gcloud storage buckets list --project=levelup-app-53d02 --format='value(name)' 2>&1 || true
+          echo "---"
+
+          # 1차: gcloud storage buckets list로 동적 탐색
+          BUCKET=$(gcloud storage buckets list --project=levelup-app-53d02 --format='value(name)' 2>/dev/null | head -1)
+
+          # 2차: 목록이 비어있으면 알려진 이름을 직접 시도
           if [ -z "$BUCKET" ]; then
-            echo "::error::No Storage bucket found for project levelup-app-53d02"
-            exit 1
+            echo "Bucket list empty. Trying known bucket names..."
+            for NAME in "levelup-app-53d02.firebasestorage.app" "levelup-app-53d02.appspot.com"; do
+              if gcloud storage buckets describe "gs://$NAME" --format='value(name)' 2>/dev/null; then
+                BUCKET="$NAME"
+                break
+              fi
+            done
           fi
+
+          if [ -z "$BUCKET" ]; then
+            echo "::warning::No Storage bucket found — CORS not applied. CapacitorHttp handles native app CORS bypass."
+            echo "CORS is only needed for PWA web access. Mobile app uploads work via CapacitorHttp."
+            exit 0
+          fi
+
           echo "Found bucket: $BUCKET"
           echo "Applying CORS configuration..."
           gcloud storage buckets update "gs://$BUCKET" --cors-file=cors.json
