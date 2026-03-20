@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork, persistentLocalCache, persistentMultipleTabManager } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -21,10 +21,20 @@ const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform &
 const db = initializeFirestore(app, {
     ...(isNativePlatform
         ? { experimentalForceLongPolling: true }
-        : { experimentalAutoDetectLongPolling: true }),
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        : { experimentalAutoDetectLongPolling: true })
 });
 const storage = getStorage(app);
+
+// Firestore 오프라인 지속성 활성화 — 네트워크 끊김 시에도 캐시된 데이터 사용 가능
+enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+        // 여러 탭이 열린 경우 — 첫 번째 탭만 지속성 사용 가능
+        console.warn('[Firestore] 오프라인 지속성: 다른 탭에서 이미 활성화됨');
+    } else if (err.code === 'unimplemented') {
+        // 브라우저가 IndexedDB를 지원하지 않는 경우
+        console.warn('[Firestore] 오프라인 지속성: IndexedDB 미지원 브라우저');
+    }
+});
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
 let messaging = null;
@@ -273,12 +283,6 @@ function createUploadProgressCallback(label) {
     return (pct) => showUploadProgress(pct, label || defaultLabel);
 }
 
-// 파일 크기 기반 동적 타임아웃 계산 (기본 30s + MB당 60s, 최소 30s, 최대 300s)
-function _calcUploadTimeout(blobSize, networkQuality) {
-    const base = Math.min(Math.max(30000, 30000 + Math.ceil(blobSize / (1024 * 1024)) * 60000), 300000);
-    return networkQuality === 'weak' ? base * 2 : base;
-}
-
 async function uploadImageToStorage(storagePath, base64str, onProgress) {
     return enqueueUpload(() => _uploadImageToStorageImpl(storagePath, base64str, onProgress));
 }
@@ -335,11 +339,6 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
         }
     }
 
-    // 네트워크 품질 기반 동적 타임아웃 계산
-    const networkQuality = NetworkMonitor.getQuality();
-    const uploadTimeoutMs = _calcUploadTimeout(blob.size, networkQuality);
-    _log('3.9-TIMEOUT', `timeout=${uploadTimeoutMs}ms (blob=${blob.size}B, network=${networkQuality})`);
-
     // 지수 백오프 재시도 (최대 3회, 2s → 4s → 실패)
     const MAX_RETRIES = 3;
     const BASE_DELAY_MS = 2000;
@@ -351,7 +350,7 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                 _log('4-UPLOAD', `Using simple uploadBytes (${blob.size}B), attempt ${attempt}/${MAX_RETRIES}`);
                 const snapshot = await Promise.race([
                     uploadBytes(storageRef, blob, { contentType }),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s`)), uploadTimeoutMs))
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('Upload timed out after 60s')), 60000))
                 ]);
                 if (onProgress) onProgress(100);
                 const downloadURL = await getDownloadURL(snapshot.ref);
@@ -363,8 +362,8 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                     const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
                     const timeout = setTimeout(() => {
                         uploadTask.cancel();
-                        reject(new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s`));
-                    }, uploadTimeoutMs);
+                        reject(new Error('Upload timed out after 60s'));
+                    }, 60000);
                     uploadTask.on('state_changed',
                         (snapshot) => {
                             const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
@@ -2808,8 +2807,8 @@ async function loadProfileImage(event) {
             const sx = (img.naturalWidth - side) / 2;
             const sy = (img.naturalHeight - side) / 2;
             ctx.drawImage(img, sx, sy, side, side, 0, 0, 150, 150);
-            // 적응형 압축: 300KB 이하 보장 (500KB 규칙에 안전 마진 + 모바일 업로드 속도 고려)
-            const { dataURL: base64, quality: usedQuality } = await compressToTargetSize(canvas, 300 * 1024, 0.7, 0.2);
+            // 적응형 압축: 450KB 이하 보장 (500KB 규칙에 안전 마진)
+            const { dataURL: base64, quality: usedQuality } = await compressToTargetSize(canvas, 450 * 1024, 0.7, 0.2);
             _plog('B', `canvas→base64: len=${base64.length}, quality=${usedQuality}, fmt=${_supportsWebP ? 'webp' : 'jpeg'}`);
             setProfilePreview(base64);
             if (!auth.currentUser) {
@@ -4599,8 +4598,8 @@ function loadPlannerPhoto(e) {
                 }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                // 적응형 압축: 1.2MB 이하 보장 (2MB 규칙에 안전 마진 + 모바일 업로드 속도 고려)
-                const { dataURL } = await compressToTargetSize(canvas, 1200 * 1024, 0.7, 0.2);
+                // 적응형 압축: 1.8MB 이하 보장 (2MB 규칙에 안전 마진)
+                const { dataURL } = await compressToTargetSize(canvas, 1800 * 1024, 0.75, 0.3);
                 plannerPhotoData = dataURL;
                 const preview = document.getElementById('planner-photo-preview');
                 const placeholder = document.getElementById('planner-photo-placeholder');
