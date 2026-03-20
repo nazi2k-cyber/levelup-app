@@ -688,7 +688,7 @@ exports.cleanupExpiredReelsPhotos = onSchedule({
 
     let deletedCount = 0;
     for (const file of files) {
-        const filename = file.name.split("/").pop().replace(".jpg", "");
+        const filename = file.name.split("/").pop().replace(/\.(jpg|jpeg|webp|png)$/i, "");
         const ts = parseInt(filename, 10);
         if (!isNaN(ts) && ts < cutoff) {
             await file.delete();
