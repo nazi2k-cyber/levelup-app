@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -21,19 +21,20 @@ const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform &
 const db = initializeFirestore(app, {
     ...(isNativePlatform
         ? { experimentalForceLongPolling: true }
-        : { experimentalAutoDetectLongPolling: true })
+        : { experimentalAutoDetectLongPolling: true }),
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
 const storage = getStorage(app);
 
-// Firestore 오프라인 지속성 활성화 — 네트워크 끊김 시에도 캐시된 데이터 사용 가능
-enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-        // 여러 탭이 열린 경우 — 첫 번째 탭만 지속성 사용 가능
-        console.warn('[Firestore] 오프라인 지속성: 다른 탭에서 이미 활성화됨');
-    } else if (err.code === 'unimplemented') {
-        // 브라우저가 IndexedDB를 지원하지 않는 경우
-        console.warn('[Firestore] 오프라인 지속성: IndexedDB 미지원 브라우저');
-    }
+// --- Firestore 네트워크 복원력 ---
+// 오프라인→온라인 전환 시 Firestore 네트워크 재연결 (WebChannel 오류 복구)
+window.addEventListener('online', () => {
+    console.log('[Firestore] 네트워크 복구 감지 — enableNetwork 호출');
+    enableNetwork(db).catch(e => console.warn('[Firestore] enableNetwork 실패:', e.message));
+});
+window.addEventListener('offline', () => {
+    console.log('[Firestore] 오프라인 전환 감지 — disableNetwork 호출');
+    disableNetwork(db).catch(e => console.warn('[Firestore] disableNetwork 실패:', e.message));
 });
 
 // Firebase Cloud Messaging 초기화 (웹 환경에서만)
@@ -125,6 +126,7 @@ function isBase64Image(str) {
 
 // 업로드 실패 재전송 큐 (로컬 메모리 + localStorage 백업)
 const _uploadRetryQueue = [];
+let _retryProcessing = false;
 function _persistRetryQueue() {
     try {
         const serializable = _uploadRetryQueue.map(item => ({
@@ -135,11 +137,23 @@ function _persistRetryQueue() {
     } catch (e) { /* quota exceeded 등 무시 */ }
 }
 function _addToRetryQueue(storagePath, base64str) {
+    // 동일 경로 중복 방지
+    const exists = _uploadRetryQueue.some(item => item.storagePath === storagePath);
+    if (exists) {
+        console.warn(`[UploadRetry] 이미 큐에 존재: ${storagePath}`);
+        return;
+    }
     _uploadRetryQueue.push({ storagePath, base64str, timestamp: Date.now() });
     _persistRetryQueue();
     console.warn(`[UploadRetry] 재전송 큐에 추가: ${storagePath} (큐 크기: ${_uploadRetryQueue.length})`);
     if (window.AppLogger) AppLogger.warn(`[UploadRetry] 큐 추가: ${storagePath}`);
 }
+
+// 네트워크 복구 시 재전송 큐 자동 처리
+window.addEventListener('online', () => {
+    console.log('[Network] 온라인 복구 — 재전송 큐 처리');
+    setTimeout(_flushRetryQueue, 3000); // 3초 대기 후 처리 (네트워크 안정화)
+});
 
 // 제1원칙: 재시도 큐는 온라인 복귀 시 자동으로 비워져야 한다
 let _flushingRetryQueue = false;
@@ -211,6 +225,32 @@ function canvasToOptimalDataURL(canvas, quality) {
 
 function getImageExtension() {
     return _supportsWebP ? '.webp' : '.jpg';
+}
+
+// base64 이미지 압축 유틸리티 (maxDim: 최대 픽셀, quality: 0~1)
+function compressBase64Image(base64str, maxDim, quality) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvasToOptimalDataURL(canvas, quality));
+        };
+        img.onerror = () => resolve(base64str); // 실패 시 원본 반환
+        img.src = base64str;
+    });
+}
+
+// 파일 크기 기반 동적 타임아웃 계산 (기본 30s + MB당 60s, 최소 30s, 최대 300s)
+function _calcUploadTimeout(blobSize, networkQuality) {
+    const base = Math.min(Math.max(30000, 30000 + Math.ceil(blobSize / (1024 * 1024)) * 60000), 300000);
+    return networkQuality === 'weak' ? base * 2 : base;
 }
 
 // base64 데이터 URL → Blob 변환 헬퍼
@@ -339,18 +379,31 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
         }
     }
 
-    // 지수 백오프 재시도 (최대 3회, 2s → 4s → 실패)
+    // 네트워크 품질 기반 동적 타임아웃 계산
+    const networkQuality = NetworkMonitor.getQuality();
+    const uploadTimeoutMs = _calcUploadTimeout(blob.size, networkQuality);
+    _log('3.9-TIMEOUT', `timeout=${uploadTimeoutMs}ms (blob=${blob.size}B, network=${networkQuality})`);
+
+    // 지수 백오프 재시도 (최대 3회, 3s → 6s → 실패)
     const MAX_RETRIES = 3;
-    const BASE_DELAY_MS = 2000;
+    const BASE_DELAY_MS = 3000;
     let lastError;
     const useSimpleUpload = blob.size < 100 * 1024; // 100KB 미만: 단일 PUT (uploadBytes)
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        // 재시도 전 네트워크 상태 재확인 — 오프라인이면 즉시 큐에 넣기
+        if (attempt > 1 && !navigator.onLine) {
+            _log('4-OFFLINE', 'Network lost during retries, queuing');
+            _addToRetryQueue(storagePath, base64str);
+            const err = new Error('Network lost during upload retries — queued');
+            err.code = 'client/offline-queued';
+            throw err;
+        }
         try {
             if (useSimpleUpload) {
                 _log('4-UPLOAD', `Using simple uploadBytes (${blob.size}B), attempt ${attempt}/${MAX_RETRIES}`);
                 const snapshot = await Promise.race([
                     uploadBytes(storageRef, blob, { contentType }),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error('Upload timed out after 60s')), 60000))
+                    new Promise((_, rej) => setTimeout(() => rej(new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s`)), uploadTimeoutMs))
                 ]);
                 if (onProgress) onProgress(100);
                 const downloadURL = await getDownloadURL(snapshot.ref);
@@ -360,22 +413,35 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
                 _log('4-UPLOAD', `Calling uploadBytesResumable... (attempt ${attempt}/${MAX_RETRIES})`);
                 const url = await new Promise((resolve, reject) => {
                     const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
+                    let lastProgressTime = Date.now();
                     const timeout = setTimeout(() => {
                         uploadTask.cancel();
-                        reject(new Error('Upload timed out after 60s'));
-                    }, 60000);
+                        reject(new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s`));
+                    }, uploadTimeoutMs);
+                    // 진행률 감시: 30초간 진행 없으면 조기 타임아웃
+                    const stallCheck = setInterval(() => {
+                        if (Date.now() - lastProgressTime > 30000) {
+                            clearInterval(stallCheck);
+                            clearTimeout(timeout);
+                            uploadTask.cancel();
+                            reject(new Error('Upload stalled — no progress for 30s'));
+                        }
+                    }, 5000);
                     uploadTask.on('state_changed',
                         (snapshot) => {
+                            lastProgressTime = Date.now();
                             const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
                             _log('4-PROGRESS', `${pct}% (${snapshot.bytesTransferred}/${snapshot.totalBytes})`);
                             if (onProgress) onProgress(pct);
                         },
                         (error) => {
                             clearTimeout(timeout);
+                            clearInterval(stallCheck);
                             reject(error);
                         },
                         async () => {
                             clearTimeout(timeout);
+                            clearInterval(stallCheck);
                             try {
                                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                                 resolve(downloadURL);
@@ -616,16 +682,21 @@ function initOfflineDetection() {
     // 제1원칙: WebChannel 오류는 네이티브/웹 모두에서 발생 — 플랫폼 구분 없이 처리
     let _lastNetworkRecovery = 0;
     let _webChannelErrorCount = 0;
-    window.addEventListener('unhandledrejection', (event) => {
-        const msg = String(event.reason && event.reason.message || event.reason || '');
-        if (msg.includes('transport errored') || msg.includes('WebChannel') || msg.includes('UNAVAILABLE')) {
-            _webChannelErrorCount++;
-            const now = Date.now();
-            // 동적 디바운스: 연속 오류 시 대기 시간 증가 (30초 → 60초 → 120초)
-            const debounceMs = Math.min(30000 * Math.pow(2, Math.min(_webChannelErrorCount - 1, 2)), 120000);
-            if (now - _lastNetworkRecovery < debounceMs) return;
-            _lastNetworkRecovery = now;
-            if (window.AppLogger) AppLogger.warn(`[Firestore] WebChannel error #${_webChannelErrorCount}, reconnecting (debounce: ${debounceMs}ms)...`);
+    function _handleWebChannelError(source) {
+        _webChannelErrorCount++;
+        const now = Date.now();
+        // 오프라인 상태면 복구 시도하지 않음 — online 이벤트에서 처리
+        if (!navigator.onLine) {
+            if (window.AppLogger) AppLogger.info(`[Firestore] WebChannel error #${_webChannelErrorCount} while offline — skipping recovery`);
+            return;
+        }
+        // 동적 디바운스: 연속 오류 시 대기 시간 증가 (30초 → 60초 → 120초)
+        const debounceMs = Math.min(30000 * Math.pow(2, Math.min(_webChannelErrorCount - 1, 2)), 120000);
+        if (now - _lastNetworkRecovery < debounceMs) return;
+        _lastNetworkRecovery = now;
+        if (window.AppLogger) AppLogger.warn(`[Firestore] WebChannel error #${_webChannelErrorCount} (${source}), reconnecting (debounce: ${debounceMs}ms)...`);
+        // 네트워크 품질 확인 후 복구 시도
+        const doRecovery = () => {
             disableNetwork(db)
                 .then(() => enableNetwork(db))
                 .then(() => {
@@ -635,8 +706,29 @@ function initOfflineDetection() {
                     setTimeout(() => _flushRetryQueue(), 3000);
                 })
                 .catch((e) => { if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel 복구 실패: ' + e.message); });
+        };
+        // weak 네트워크에서는 약간 대기 후 복구 시도
+        if (typeof NetworkMonitor !== 'undefined' && NetworkMonitor.getQuality() === 'weak') {
+            setTimeout(doRecovery, 5000);
+        } else {
+            doRecovery();
+        }
+    }
+    window.addEventListener('unhandledrejection', (event) => {
+        const msg = String(event.reason && event.reason.message || event.reason || '');
+        if (msg.includes('transport errored') || msg.includes('WebChannel') || msg.includes('UNAVAILABLE')) {
+            _handleWebChannelError('unhandledrejection');
         }
     });
+    // Firebase console.warn 기반 WebChannel 오류도 감지 (warn 패치)
+    const _origConsoleWarn = console.warn;
+    console.warn = function(...args) {
+        _origConsoleWarn.apply(console, args);
+        const msg = args.map(a => String(a)).join(' ');
+        if (msg.includes('transport errored') && msg.includes('WebChannelConnection')) {
+            _handleWebChannelError('console.warn');
+        }
+    };
 
     // NetworkMonitor 연동: 품질 변화 시 UI/로직 반응
     NetworkMonitor.onQualityChange((quality, prev) => {
@@ -2807,8 +2899,8 @@ async function loadProfileImage(event) {
             const sx = (img.naturalWidth - side) / 2;
             const sy = (img.naturalHeight - side) / 2;
             ctx.drawImage(img, sx, sy, side, side, 0, 0, 150, 150);
-            // 적응형 압축: 450KB 이하 보장 (500KB 규칙에 안전 마진)
-            const { dataURL: base64, quality: usedQuality } = await compressToTargetSize(canvas, 450 * 1024, 0.7, 0.2);
+            // 적응형 압축: 300KB 이하 보장 (500KB 규칙에 안전 마진 + 모바일 업로드 속도 고려)
+            const { dataURL: base64, quality: usedQuality } = await compressToTargetSize(canvas, 300 * 1024, 0.7, 0.2);
             _plog('B', `canvas→base64: len=${base64.length}, quality=${usedQuality}, fmt=${_supportsWebP ? 'webp' : 'jpeg'}`);
             setProfilePreview(base64);
             if (!auth.currentUser) {
@@ -4590,7 +4682,7 @@ function loadPlannerPhoto(e) {
             _plannerPhotoCompressing = true;
             try {
                 const canvas = document.createElement('canvas');
-                const maxSize = 600;
+                const maxSize = 480;
                 let w = img.width, h = img.height;
                 if (w > maxSize || h > maxSize) {
                     if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
@@ -4598,8 +4690,8 @@ function loadPlannerPhoto(e) {
                 }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                // 적응형 압축: 1.8MB 이하 보장 (2MB 규칙에 안전 마진)
-                const { dataURL } = await compressToTargetSize(canvas, 1800 * 1024, 0.75, 0.3);
+                // 적응형 압축: 1.2MB 이하 보장 (2MB 규칙에 안전 마진 + 모바일 업로드 속도 고려)
+                const { dataURL } = await compressToTargetSize(canvas, 1200 * 1024, 0.7, 0.2);
                 plannerPhotoData = dataURL;
                 const preview = document.getElementById('planner-photo-preview');
                 const placeholder = document.getElementById('planner-photo-placeholder');
@@ -4972,7 +5064,7 @@ async function postToReels() {
         const caption = (entry.caption || '').trim();
         const postTimestamp = Date.now();
 
-        // 릴스 사진을 Cloud Storage에 업로드
+        // 릴스 사진을 Cloud Storage에 업로드 (압축 후)
         let finalPhotoURL = photoData;
         let uploadFailed = false;
         if (isBase64Image(photoData)) {
@@ -4980,7 +5072,9 @@ async function postToReels() {
                 const uid = auth.currentUser.uid;
                 const reelsLang = AppState.currentLang || 'ko';
                 const reelsProgressCb = createUploadProgressCallback(reelsLang === 'ko' ? '릴스 사진 업로드 중...' : 'Uploading reel photo...');
-                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}${getImageExtension()}`, photoData, reelsProgressCb);
+                // 릴스 사진 압축 (최대 480px, quality 0.6) — Storage 2MB 제한 대응
+                const compressedPhotoData = await compressBase64Image(photoData, 480, 0.6);
+                finalPhotoURL = await uploadImageToStorage(`reels_photos/${uid}/${postTimestamp}${getImageExtension()}`, compressedPhotoData, reelsProgressCb);
                 hideUploadProgress();
             } catch (e) {
                 hideUploadProgress();
