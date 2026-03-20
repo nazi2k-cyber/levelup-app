@@ -8,6 +8,8 @@ on:
       - 'firestore.rules'
       - 'firestore.indexes.json'
       - 'firebase.json'
+      - 'storage.rules'
+      - 'cors.json'
       - 'www/**'
       - 'push-test.html'
   workflow_dispatch:
@@ -22,6 +24,7 @@ on:
           - functions
           - hosting
           - firestore
+          - storage
         default: 'auto'
 
 concurrency:
@@ -60,6 +63,7 @@ jobs:
             echo "deploy_functions=true" >> "$GITHUB_OUTPUT"
             echo "deploy_hosting=true" >> "$GITHUB_OUTPUT"
             echo "deploy_firestore=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_storage=true" >> "$GITHUB_OUTPUT"
             echo "전체 배포 (수동 선택)"
             exit 0
           fi
@@ -68,6 +72,7 @@ jobs:
             echo "deploy_functions=true" >> "$GITHUB_OUTPUT"
             echo "deploy_hosting=false" >> "$GITHUB_OUTPUT"
             echo "deploy_firestore=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_storage=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -75,6 +80,7 @@ jobs:
             echo "deploy_functions=false" >> "$GITHUB_OUTPUT"
             echo "deploy_hosting=true" >> "$GITHUB_OUTPUT"
             echo "deploy_firestore=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_storage=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -82,6 +88,15 @@ jobs:
             echo "deploy_functions=false" >> "$GITHUB_OUTPUT"
             echo "deploy_hosting=false" >> "$GITHUB_OUTPUT"
             echo "deploy_firestore=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_storage=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$MANUAL_TARGET" = "storage" ]; then
+            echo "deploy_functions=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_hosting=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_firestore=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_storage=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -93,6 +108,7 @@ jobs:
           DEPLOY_FUNCTIONS=false
           DEPLOY_HOSTING=false
           DEPLOY_FIRESTORE=false
+          DEPLOY_STORAGE=false
 
           if echo "$CHANGED" | grep -qE '^functions/'; then
             DEPLOY_FUNCTIONS=true
@@ -103,10 +119,14 @@ jobs:
           if echo "$CHANGED" | grep -qE '^(firestore\.rules|firestore\.indexes\.json)'; then
             DEPLOY_FIRESTORE=true
           fi
+          if echo "$CHANGED" | grep -qE '^(storage\.rules|cors\.json)'; then
+            DEPLOY_STORAGE=true
+          fi
           if echo "$CHANGED" | grep -qE '^firebase\.json'; then
             DEPLOY_FUNCTIONS=true
             DEPLOY_HOSTING=true
             DEPLOY_FIRESTORE=true
+            DEPLOY_STORAGE=true
           fi
 
           # workflow_dispatch(auto)에서 변경 감지 실패 시 전체 배포
@@ -115,13 +135,15 @@ jobs:
               DEPLOY_FUNCTIONS=true
               DEPLOY_HOSTING=true
               DEPLOY_FIRESTORE=true
+              DEPLOY_STORAGE=true
             fi
           fi
 
           echo "deploy_functions=$DEPLOY_FUNCTIONS" >> "$GITHUB_OUTPUT"
           echo "deploy_hosting=$DEPLOY_HOSTING" >> "$GITHUB_OUTPUT"
           echo "deploy_firestore=$DEPLOY_FIRESTORE" >> "$GITHUB_OUTPUT"
-          echo "Functions=$DEPLOY_FUNCTIONS, Hosting=$DEPLOY_HOSTING, Firestore=$DEPLOY_FIRESTORE"
+          echo "deploy_storage=$DEPLOY_STORAGE" >> "$GITHUB_OUTPUT"
+          echo "Functions=$DEPLOY_FUNCTIONS, Hosting=$DEPLOY_HOSTING, Firestore=$DEPLOY_FIRESTORE, Storage=$DEPLOY_STORAGE"
 
       - name: Functions 의존성 설치
         if: steps.detect.outputs.deploy_functions == 'true'
@@ -151,6 +173,16 @@ jobs:
         if: steps.detect.outputs.deploy_hosting == 'true'
         run: firebase deploy --only hosting
 
+      - name: Storage CORS 설정 배포
+        if: steps.detect.outputs.deploy_storage == 'true'
+        run: |
+          echo "Applying CORS configuration to Storage bucket..."
+          gsutil cors set cors.json gs://levelup-app-53d02.firebasestorage.app
+
+      - name: Storage Rules 배포
+        if: steps.detect.outputs.deploy_storage == 'true'
+        run: firebase deploy --only storage
+
       - name: Firestore Rules & Indexes 배포
         if: steps.detect.outputs.deploy_firestore == 'true'
         run: firebase deploy --only firestore
@@ -179,6 +211,12 @@ jobs:
             echo "| Firestore Rules | 배포됨 |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Firestore Rules | 건너뜀 (변경 없음) |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ steps.detect.outputs.deploy_storage }}" = "true" ]; then
+            echo "| Storage (CORS + Rules) | 배포됨 |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Storage (CORS + Rules) | 건너뜀 (변경 없음) |" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY

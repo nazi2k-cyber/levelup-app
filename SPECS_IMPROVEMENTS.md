@@ -80,26 +80,20 @@
 
 ## Phase 1 (P1) — 단기 개선 (2주차)
 
-### P1-1. WebP 포맷 클라이언트 전환
+### P1-1. WebP 포맷 클라이언트 전환 ✅ 구현 완료
 
 **출처:** Codex #5 | **복잡도:** 낮 | **임팩트:** 용량 25-35%↓
 
-서버 sharp 처리(Gemini 제안) 대신 클라이언트 `canvas.toDataURL('image/webp')`로 전환. 미지원 브라우저는 JPEG fallback.
+서버 sharp 처리(Gemini 제안) 대신 클라이언트 `canvas.toDataURL('image/webp')`로 전환 완료. 미지원 브라우저는 JPEG fallback.
 
-**변경 대상:**
-| 파일 | 위치 | 변경 내용 |
-|------|------|-----------|
-| `app.js` | L2420 | 프로필: `toDataURL('image/jpeg', 0.6)` → WebP 우선 |
-| `app.js` | L4157 | 플래너: `toDataURL('image/jpeg', 0.7)` → WebP 우선 |
-| `storage.rules` | 전체 | `contentType.matches('image/.*')` — 이미 WebP 포함 |
-
-**WebP 지원 감지:**
-```js
-function supportsWebP() {
-    const c = document.createElement('canvas');
-    return c.toDataURL('image/webp').startsWith('data:image/webp');
-}
-```
+**구현 내역:**
+| 파일 | 변경 내용 | 상태 |
+|------|-----------|------|
+| `app.js` | `_supportsWebP` 감지 + `canvasToOptimalDataURL()` WebP 우선 인코딩 | ✅ |
+| `app.js` | `getImageExtension()` — Storage 경로에 `.webp`/`.jpg` 자동 적용 | ✅ |
+| `app.js` | `compressBase64Image()` / `compressToTargetSize()` — WebP 우선 압축 | ✅ |
+| `app.js` | 프로필/플래너/릴스 업로드 경로 모두 `getImageExtension()` 적용 | ✅ |
+| `storage.rules` | `contentType.matches('image/.*')` — WebP 포함 (변경 불필요) | ✅ |
 
 ### P1-2. uploadBytesResumable 전환 ✅ 구현 완료
 
