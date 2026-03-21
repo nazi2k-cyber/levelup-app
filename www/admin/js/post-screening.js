@@ -29,6 +29,12 @@ function render() {
             </div>
             <div id="ps-search-wrap" class="hidden" style="margin-top:12px;">
                 <input type="text" id="ps-search" placeholder="작성자, 캡션으로 검색...">
+                <div style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <label class="text-sm" style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                        <input type="checkbox" id="ps-filter-reported"> <span style="color:#ff5252;">신고된 글만 보기</span>
+                    </label>
+                    <input type="text" id="ps-text-screen" placeholder="텍스트 스크리닝 (캡션 내 특정 단어 필터)..." style="flex:1; min-width:200px;">
+                </div>
             </div>
             <div id="ps-post-list" style="margin-top:16px;"></div>
         </div>
@@ -57,6 +63,8 @@ function render() {
 
 let _selectedPost = null;
 
+let _reportData = {}; // { postId: { reportCount, reporters, ... } }
+
 async function loadPosts() {
     const listEl = document.getElementById("ps-post-list");
     const countEl = document.getElementById("ps-post-count");
@@ -67,6 +75,21 @@ async function loadPosts() {
     try {
         const result = await callAdmin("screeningListPosts");
         _posts = result.posts || [];
+
+        // 신고 데이터 로드
+        try {
+            const reportResult = await callAdmin("screeningListReports");
+            _reportData = {};
+            for (const r of (reportResult.reports || [])) {
+                _reportData[r.postId] = r;
+            }
+            // 포스트에 신고 수 첨부
+            for (const p of _posts) {
+                const pid = `${p.ownerUid}_${p.timestamp}`;
+                p._reportCount = _reportData[pid]?.reportCount || 0;
+            }
+        } catch(e) { /* reports load fail - continue without */ }
+
         tok("Screening", `${_posts.length}개 활성 포스트 조회 완료`);
         countEl.textContent = `총 ${_posts.length}개`;
 
@@ -80,15 +103,35 @@ async function loadPosts() {
         listEl.innerHTML = renderPostTable(_posts);
         bindPostClicks();
 
-        document.getElementById("ps-search").addEventListener("input", (e) => {
-            const q = e.target.value.toLowerCase();
-            const filtered = _posts.filter(p =>
-                (p.ownerName || "").toLowerCase().includes(q) ||
-                (p.caption || "").toLowerCase().includes(q)
-            );
+        // 통합 필터 함수
+        function applyFilters() {
+            const q = (document.getElementById("ps-search").value || "").toLowerCase();
+            const reportedOnly = document.getElementById("ps-filter-reported").checked;
+            const textScreen = (document.getElementById("ps-text-screen").value || "").toLowerCase();
+            let filtered = _posts;
+            if (q) {
+                filtered = filtered.filter(p =>
+                    (p.ownerName || "").toLowerCase().includes(q) ||
+                    (p.caption || "").toLowerCase().includes(q)
+                );
+            }
+            if (reportedOnly) {
+                filtered = filtered.filter(p => (p._reportCount || 0) > 0);
+            }
+            if (textScreen) {
+                const keywords = textScreen.split(/[,\s]+/).filter(Boolean);
+                filtered = filtered.filter(p =>
+                    keywords.some(kw => (p.caption || "").toLowerCase().includes(kw))
+                );
+            }
             listEl.innerHTML = renderPostTable(filtered);
+            countEl.textContent = `총 ${_posts.length}개 / 필터: ${filtered.length}개`;
             bindPostClicks();
-        });
+        }
+
+        document.getElementById("ps-search").addEventListener("input", applyFilters);
+        document.getElementById("ps-filter-reported").addEventListener("change", applyFilters);
+        document.getElementById("ps-text-screen").addEventListener("input", applyFilters);
     } catch (e) {
         terror("Screening", "포스트 목록 로드 실패: " + e.message);
         listEl.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
@@ -102,6 +145,7 @@ function renderPostTable(posts) {
             <th>캡션</th>
             <th>작성일시</th>
             <th>남은 시간</th>
+            <th>신고</th>
             <th>사진</th>
         </tr></thead>
         <tbody>`;
@@ -113,12 +157,17 @@ function renderPostTable(posts) {
             ? `<img src="${escHtml(p.photo)}" class="ps-thumb" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display=''">`
               + `<span class="text-sub" style="display:none">—</span>`
             : '<span class="text-sub">—</span>';
+        const reportCount = p._reportCount || 0;
+        const reportBadge = reportCount > 0
+            ? `<span class="badge badge-fail">${reportCount}건</span>`
+            : '<span class="text-sub">—</span>';
 
-        html += `<tr class="ps-row" data-owner="${p.ownerUid}" data-ts="${p.timestamp}" style="cursor:pointer;">
+        html += `<tr class="ps-row${reportCount > 0 ? ' ps-reported' : ''}" data-owner="${p.ownerUid}" data-ts="${p.timestamp}" style="cursor:pointer;">
             <td>${escHtml(p.ownerName)}</td>
             <td class="text-sm">${captionPreview || '<span class="text-sub">—</span>'}</td>
             <td class="text-sub text-sm">${dt}</td>
             <td class="text-sm">${remaining}</td>
+            <td>${reportBadge}</td>
             <td>${thumbHtml}</td>
         </tr>`;
     }

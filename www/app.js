@@ -5374,6 +5374,7 @@ function renderReelsCards(posts, lang) {
 
     const heartOutline = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
     const commentIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+    const reportIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
 
     const html = posts.map(post => {
         const postId = getPostId(post);
@@ -5418,6 +5419,11 @@ function renderReelsCards(posts, lang) {
             <div class="reels-actions">
                 <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count"></span>
                 <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button><span class="reels-comment-count"></span>
+                ${!isMe ? `<button class="reels-report-btn" onclick="toggleReportPost('${postId}')" title="${i18n[lang].reels_report || '신고'}">${reportIcon}</button>` : ''}
+            </div>
+            <div class="reels-report-warning" data-report-warning="${postId}" style="display:none;">
+                <span class="reels-report-warning-icon">&#9888;</span>
+                <span class="reels-report-warning-text">${i18n[lang].reels_report_warning || '이 게시물은 신고가 접수되었습니다. 관리자가 검토 중입니다.'}</span>
             </div>
             <div class="reels-comments-panel">
                 <div class="reels-comments-list">
@@ -5431,7 +5437,7 @@ function renderReelsCards(posts, lang) {
         </div>`;
     }).join('');
 
-    // 렌더 후 각 포스트의 리액션 데이터 로드
+    // 렌더 후 각 포스트의 리액션 데이터 및 신고 상태 로드
     setTimeout(() => {
         posts.forEach(post => {
             const postId = getPostId(post);
@@ -5439,6 +5445,7 @@ function renderReelsCards(posts, lang) {
                 if (data.likes && data.likes.length > 0) updateLikeUI(postId, data.likes);
                 if (data.comments && data.comments.length > 0) renderCommentsSection(postId, data.comments);
             });
+            loadReportStatus(postId);
         });
     }, 100);
 
@@ -5724,6 +5731,93 @@ function toggleCommentsPanel(postId) {
     }
 }
 
+// 신고 토글
+async function toggleReportPost(postId) {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    const lang = AppState.currentLang;
+
+    // 이미 신고했는지 확인
+    const reportRef = doc(db, "post_reports", postId);
+    try {
+        const docSnap = await getDoc(reportRef);
+        let reporters = [];
+        if (docSnap.exists()) {
+            reporters = docSnap.data().reporters || [];
+        }
+        const alreadyReported = reporters.some(r => r.uid === uid);
+
+        if (alreadyReported) {
+            showToast(i18n[lang].reels_already_reported || '이미 신고한 게시물입니다.');
+            return;
+        }
+
+        // 신고 확인
+        const confirmMsg = i18n[lang].reels_report_confirm || '이 게시물을 신고하시겠습니까?\n\n부적절한 콘텐츠, 스팸, 혐오 표현 등을 신고할 수 있습니다.';
+        if (!confirm(confirmMsg)) return;
+
+        // 신고 사유 선택
+        const reason = prompt(i18n[lang].reels_report_reason_prompt || '신고 사유를 입력해주세요 (선택사항):') || '';
+
+        reporters.push({
+            uid: uid,
+            name: AppState.user.name || '헌터',
+            reason: reason.substring(0, 200),
+            timestamp: Date.now()
+        });
+
+        await setDoc(reportRef, {
+            postId: postId,
+            reporters: reporters,
+            reportCount: reporters.length,
+            lastReportedAt: Date.now()
+        }, { merge: true });
+
+        showToast(i18n[lang].reels_reported || '신고가 접수되었습니다.');
+
+        // 신고 경고문구 표시
+        const warningEl = document.querySelector(`[data-report-warning="${postId}"]`);
+        if (warningEl) warningEl.style.display = 'flex';
+
+        // 신고 버튼 비활성화
+        const reportBtn = document.querySelector(`[data-post-id="${postId}"] .reels-report-btn`);
+        if (reportBtn) {
+            reportBtn.classList.add('reported');
+            reportBtn.disabled = true;
+        }
+    } catch(e) {
+        AppLogger.error('[Reels] 신고 실패: ' + (e.message || e));
+        showToast(i18n[lang].reels_report_fail || '신고 처리에 실패했습니다.');
+    }
+}
+
+// 신고 상태 로드 (피드 렌더 후 호출)
+async function loadReportStatus(postId) {
+    try {
+        const docSnap = await getDoc(doc(db, "post_reports", postId));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const uid = auth.currentUser?.uid;
+            const reporters = data.reporters || [];
+
+            // 신고가 1건 이상이면 경고문구 표시
+            if (reporters.length > 0) {
+                const warningEl = document.querySelector(`[data-report-warning="${postId}"]`);
+                if (warningEl) warningEl.style.display = 'flex';
+            }
+
+            // 내가 이미 신고했으면 버튼 비활성화
+            if (reporters.some(r => r.uid === uid)) {
+                const reportBtn = document.querySelector(`[data-post-id="${postId}"] .reels-report-btn`);
+                if (reportBtn) {
+                    reportBtn.classList.add('reported');
+                    reportBtn.disabled = true;
+                }
+            }
+        }
+    } catch(e) { /* skip */ }
+}
+
 // 시간표 폴딩/언폴딩 토글
 function toggleScheduleFold(postId) {
     const extra = document.querySelector(`[data-fold-extra="${postId}"]`);
@@ -5748,6 +5842,7 @@ window.toggleReelsLike = toggleReelsLike;
 window.addReelsComment = addReelsComment;
 window.toggleCommentsPanel = toggleCommentsPanel;
 window.toggleScheduleFold = toggleScheduleFold;
+window.toggleReportPost = toggleReportPost;
 
 function changeTheme() {
     const light = document.getElementById('theme-toggle').checked;

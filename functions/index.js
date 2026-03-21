@@ -798,6 +798,10 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleScreeningListPosts(request);
                 case "screeningDeletePost":
                     return await handleScreeningDeletePost(request);
+                case "screeningListReports":
+                    return await handleScreeningListReports(request);
+                case "screeningDismissReport":
+                    return await handleScreeningDismissReport(request);
                 case "migrateUsernames":
                     return await handleMigrateUsernames(request);
                 case "listAdminOperators":
@@ -1288,6 +1292,70 @@ async function handleScreeningDeletePost(request) {
     console.log(`[screeningDeletePost] Admin ${adminEmail} deleted post ${postId} from user ${ownerUid}`);
 
     return { success: true, deletedPostId: postId, remainingPosts: posts.length };
+}
+
+// ─── 신고 목록 조회 (관리자 전용) ───
+
+async function handleScreeningListReports(request) {
+    await assertAdmin(request);
+
+    const reportsSnap = await db.collection("post_reports").orderBy("lastReportedAt", "desc").get();
+    const reports = [];
+
+    for (const doc of reportsSnap.docs) {
+        const data = doc.data();
+        const postId = data.postId || doc.id;
+
+        // postId에서 ownerUid와 timestamp 추출하여 캡션 가져오기
+        const parts = postId.split("_");
+        const ownerUid = parts.slice(0, -1).join("_");
+        let caption = "";
+        let ownerName = "";
+
+        try {
+            const userDoc = await db.collection("users").doc(ownerUid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                ownerName = userData.name || "";
+                if (userData.reelsStr) {
+                    const posts = JSON.parse(userData.reelsStr);
+                    const ts = parseInt(parts[parts.length - 1], 10);
+                    const post = posts.find(p => p.timestamp === ts);
+                    if (post) caption = post.caption || "";
+                }
+            }
+        } catch (e) { /* skip */ }
+
+        reports.push({
+            postId: postId,
+            ownerName: ownerName,
+            caption: caption,
+            reporters: data.reporters || [],
+            reportCount: data.reportCount || 0,
+            lastReportedAt: data.lastReportedAt || 0,
+        });
+    }
+
+    console.log(`[screeningListReports] ${reports.length} reports found`);
+    return { reports };
+}
+
+// ─── 신고 기각 (관리자 전용) ───
+
+async function handleScreeningDismissReport(request) {
+    await assertAdmin(request);
+
+    const { postId } = request.data || {};
+    if (!postId) {
+        throw new HttpsError("invalid-argument", "postId는 필수입니다.");
+    }
+
+    await db.collection("post_reports").doc(postId).delete();
+
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    console.log(`[screeningDismissReport] Admin ${adminEmail} dismissed report for ${postId}`);
+
+    return { success: true, dismissedPostId: postId };
 }
 
 // --- 만료 릴스 사진 정리 (매일 04:00 KST) ---

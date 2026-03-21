@@ -148,6 +148,10 @@ td { padding: 8px; border-bottom: 1px solid var(--border); }
 .gap-8 { gap: 8px; }
 .hidden { display: none !important; }
 
+/* ─── Reported Post Row Highlight ─── */
+.ps-reported { background: rgba(255, 82, 82, 0.08); }
+.ps-reported:hover { background: rgba(255, 82, 82, 0.15); }
+
 /* ─── Post Screening Thumbnails ─── */
 .ps-thumb {
     width: 48px;
