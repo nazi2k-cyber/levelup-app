@@ -467,6 +467,22 @@ async function handleAdminListUsers(request) {
         } catch (_) { /* ignore */ }
     }
 
+    // 유저별 신고 누적 횟수 집계 (기각 제외 = post_reports에 남아있는 것만)
+    try {
+        const reportsSnap = await db.collection("post_reports").get();
+        const reportCountByUid = {};
+        for (const rdoc of reportsSnap.docs) {
+            const rdata = rdoc.data();
+            const pid = rdata.postId || rdoc.id;
+            const rparts = pid.split("_");
+            const rOwnerUid = rparts.slice(0, -1).join("_");
+            reportCountByUid[rOwnerUid] = (reportCountByUid[rOwnerUid] || 0) + (rdata.reportCount || 0);
+        }
+        for (const u of users) {
+            u.reportCount = reportCountByUid[u.uid] || 0;
+        }
+    } catch(_) { /* reports count fail - continue */ }
+
     return { users };
 }
 
@@ -1306,10 +1322,11 @@ async function handleScreeningListReports(request) {
         const data = doc.data();
         const postId = data.postId || doc.id;
 
-        // postId에서 ownerUid와 timestamp 추출하여 캡션 가져오기
+        // postId에서 ownerUid와 timestamp 추출하여 캡션/사진 가져오기
         const parts = postId.split("_");
         const ownerUid = parts.slice(0, -1).join("_");
         let caption = "";
+        let photo = "";
         let ownerName = "";
 
         try {
@@ -1321,7 +1338,10 @@ async function handleScreeningListReports(request) {
                     const posts = JSON.parse(userData.reelsStr);
                     const ts = parseInt(parts[parts.length - 1], 10);
                     const post = posts.find(p => p.timestamp === ts);
-                    if (post) caption = post.caption || "";
+                    if (post) {
+                        caption = post.caption || "";
+                        photo = post.photo || "";
+                    }
                 }
             }
         } catch (e) { /* skip */ }
@@ -1330,6 +1350,7 @@ async function handleScreeningListReports(request) {
             postId: postId,
             ownerName: ownerName,
             caption: caption,
+            photo: photo,
             reporters: data.reporters || [],
             reportCount: data.reportCount || 0,
             lastReportedAt: data.lastReportedAt || 0,

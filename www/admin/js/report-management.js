@@ -116,7 +116,7 @@ async function loadReports() {
 function renderReportTable(reports) {
     let html = `<table>
         <thead><tr>
-            <th>포스트 ID</th>
+            <th>사진</th>
             <th>작성자</th>
             <th>캡션</th>
             <th>신고 횟수</th>
@@ -129,9 +129,13 @@ function renderReportTable(reports) {
         const countBadge = r.reportCount >= 3
             ? `<span class="badge badge-fail">${r.reportCount}건</span>`
             : `<span class="badge badge-warn">${r.reportCount}건</span>`;
+        const thumbHtml = r.photo
+            ? `<img src="${escHtml(r.photo)}" class="ps-thumb" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display=''">`
+              + `<span class="text-sub" style="display:none">—</span>`
+            : '<span class="text-sub">—</span>';
 
         html += `<tr class="rpt-row" data-post-id="${escHtml(r.postId)}" style="cursor:pointer;">
-            <td class="text-sm">${escHtml(r.postId).substring(0, 20)}...</td>
+            <td>${thumbHtml}</td>
             <td>${escHtml(r.ownerName || "—")}</td>
             <td class="text-sm">${captionPreview || '<span class="text-sub">—</span>'}</td>
             <td>${countBadge}</td>
@@ -175,6 +179,11 @@ function selectReport(postId) {
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(_selectedReport.ownerName || "—")}</div><div class="stat-label">작성자</div></div>
         </div>
         <p class="text-sub text-sm">Post ID: ${escHtml(_selectedReport.postId)}</p>
+        ${_selectedReport.photo ? `<div style="margin-top:12px;">
+            <img src="${escHtml(_selectedReport.photo)}" alt="post photo"
+                 style="max-width:100%; max-height:300px; border-radius:8px; border:1px solid var(--border);"
+                 onerror="this.style.display='none'">
+        </div>` : ''}
         ${_selectedReport.caption ? `<div style="margin-top:12px; padding:12px; background:var(--bg-input); border-radius:8px;">
             <p class="text-sm" style="white-space:pre-wrap;">${escHtml(_selectedReport.caption)}</p>
         </div>` : ''}

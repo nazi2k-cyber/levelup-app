@@ -96,23 +96,54 @@ async function loadUsers() {
             return;
         }
 
-        // Search filter
-        let html = `<input type="text" id="um-search" placeholder="이름, 이메일, UID로 검색..." style="margin-bottom:12px;">`;
+        // Search filter + report filter
+        let html = `<input type="text" id="um-search" placeholder="이름, 이메일, UID로 검색..." style="margin-bottom:8px;">`;
+        html += `<div style="margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <label class="text-sm" style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="checkbox" id="um-filter-reported"> <span style="color:#ff5252;">신고 유저만 보기</span>
+            </label>
+            <select id="um-sort" style="padding:4px 8px; font-size:0.8rem;">
+                <option value="name">이름순</option>
+                <option value="level-desc">레벨 내림차순</option>
+                <option value="report-desc">신고 내림차순</option>
+            </select>
+        </div>`;
         html += '<div id="um-table-wrap">';
         html += renderUserTable(_users);
         html += '</div>';
         listEl.innerHTML = html;
 
-        document.getElementById("um-search").addEventListener("input", (e) => {
-            const q = e.target.value.toLowerCase();
-            const filtered = _users.filter(u =>
-                u.displayName.toLowerCase().includes(q) ||
-                (u.email || "").toLowerCase().includes(q) ||
-                u.uid.toLowerCase().includes(q)
-            );
+        function applyUserFilters() {
+            const q = (document.getElementById("um-search").value || "").toLowerCase();
+            const reportedOnly = document.getElementById("um-filter-reported").checked;
+            const sortBy = document.getElementById("um-sort").value;
+            let filtered = _users;
+            if (q) {
+                filtered = filtered.filter(u =>
+                    u.displayName.toLowerCase().includes(q) ||
+                    (u.email || "").toLowerCase().includes(q) ||
+                    u.uid.toLowerCase().includes(q)
+                );
+            }
+            if (reportedOnly) {
+                filtered = filtered.filter(u => (u.reportCount || 0) > 0);
+            }
+            // 정렬
+            filtered = [...filtered];
+            if (sortBy === "level-desc") {
+                filtered.sort((a, b) => (b.level || 0) - (a.level || 0));
+            } else if (sortBy === "report-desc") {
+                filtered.sort((a, b) => (b.reportCount || 0) - (a.reportCount || 0));
+            } else {
+                filtered.sort((a, b) => a.displayName.localeCompare(b.displayName));
+            }
             document.getElementById("um-table-wrap").innerHTML = renderUserTable(filtered);
             bindRowClicks();
-        });
+        }
+
+        document.getElementById("um-search").addEventListener("input", applyUserFilters);
+        document.getElementById("um-filter-reported").addEventListener("change", applyUserFilters);
+        document.getElementById("um-sort").addEventListener("change", applyUserFilters);
 
         bindRowClicks();
     } catch (e) {
@@ -123,16 +154,21 @@ async function loadUsers() {
 
 function renderUserTable(users) {
     let html = `<table>
-        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>상태</th><th>UID</th></tr></thead>
+        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>신고</th><th>상태</th><th>UID</th></tr></thead>
         <tbody>`;
     for (const u of users) {
         const statusBadge = u.disabled
             ? '<span class="badge badge-fail">중지됨</span>'
             : '<span class="badge badge-ok">활성</span>';
-        html += `<tr class="um-row" data-uid="${u.uid}" style="cursor:pointer;">
+        const rc = u.reportCount || 0;
+        const reportBadge = rc > 0
+            ? (rc >= 3 ? `<span class="badge badge-fail">${rc}건</span>` : `<span class="badge badge-warn">${rc}건</span>`)
+            : '<span class="text-sub">—</span>';
+        html += `<tr class="um-row${rc > 0 ? ' ps-reported' : ''}" data-uid="${u.uid}" style="cursor:pointer;">
             <td>${escHtml(u.displayName)}</td>
             <td class="text-sub">${escHtml(u.email || "—")}</td>
             <td>Lv.${u.level}</td>
+            <td>${reportBadge}</td>
             <td>${statusBadge}</td>
             <td class="text-sub text-sm">${u.uid.substring(0, 12)}...</td>
         </tr>`;
@@ -154,11 +190,14 @@ function selectUser(uid) {
 
     document.getElementById("um-detail-panel").classList.remove("hidden");
     document.getElementById("um-detail-title").textContent = `${user.displayName} 상세`;
+    const rc = user.reportCount || 0;
+    const rcColor = rc >= 3 ? 'text-error' : rc > 0 ? 'text-warning' : 'text-success';
     document.getElementById("um-detail-info").innerHTML = `
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(user.displayName)}</div><div class="stat-label">이름</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(user.email || "—")}</div><div class="stat-label">이메일</div></div>
             <div class="stat-card"><div class="stat-value">Lv.${user.level}</div><div class="stat-label">레벨</div></div>
+            <div class="stat-card"><div class="stat-value text-sm ${rcColor}">${rc}건</div><div class="stat-label">신고 누적</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${user.disabled ? '<span class="text-error">중지됨</span>' : '<span class="text-success">활성</span>'}</div><div class="stat-label">상태</div></div>
         </div>
         <p class="text-sub text-sm">UID: ${uid}</p>
