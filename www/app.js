@@ -5418,11 +5418,6 @@ function renderReelsCards(posts, lang) {
             <div class="reels-actions">
                 <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count"></span>
                 <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button><span class="reels-comment-count"></span>
-                ${!isMe ? `<button class="reels-report-btn" onclick="toggleReportPost('${postId}')" title="${i18n[lang].reels_report || '신고'}">${reportIcon}<span class="reels-report-label">${i18n[lang].reels_report || '신고'}</span></button>` : ''}
-            </div>
-            <div class="reels-report-warning" data-report-warning="${postId}" style="display:none;">
-                <span class="reels-report-warning-icon">&#9888;</span>
-                <span class="reels-report-warning-text">${i18n[lang].reels_report_warning || '이 게시물은 신고가 접수되었습니다. 관리자가 검토 중입니다.'}</span>
             </div>
             <div class="reels-comments-panel">
                 <div class="reels-comments-list">
