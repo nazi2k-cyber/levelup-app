@@ -694,14 +694,16 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 
 /* ===== 신고 버튼 & 경고 ===== */
 .reels-report-btn {
-    background: none; border: none; color: var(--text-sub); cursor: pointer;
-    padding: 4px; display: inline-flex; align-items: center; transition: color 0.2s;
-    margin-left: auto;
-    font-size: 0.7rem;
-    opacity: 0.6;
+    background: rgba(255, 82, 82, 0.08); border: 1px solid rgba(255, 82, 82, 0.2);
+    color: #ff8a80; cursor: pointer;
+    padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;
+    transition: all 0.2s; margin-left: auto;
+    border-radius: 12px; font-size: 0.72rem;
 }
-.reels-report-btn:hover { color: #ff5252; opacity: 1; }
-.reels-report-btn.reported { color: #ff5252; opacity: 0.5; cursor: not-allowed; }
+.reels-report-btn:hover { background: rgba(255, 82, 82, 0.15); color: #ff5252; border-color: rgba(255, 82, 82, 0.4); }
+.reels-report-btn:active { transform: scale(0.95); }
+.reels-report-btn.reported { color: #ff5252; opacity: 0.4; cursor: not-allowed; background: rgba(255, 82, 82, 0.05); }
+.reels-report-label { font-size: 0.7rem; font-weight: 500; }
 .reels-report-warning {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255, 82, 82, 0.1); border: 1px solid rgba(255, 82, 82, 0.3);
