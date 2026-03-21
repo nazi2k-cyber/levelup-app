@@ -503,7 +503,7 @@ function getInitialAppState() {
             gpsEnabled: false,
             pushEnabled: false,
             fcmToken: null,
-            stepData: { date: "", rewardedSteps: 0 },
+            stepData: { date: "", rewardedSteps: 0, totalSteps: 0 },
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
             nameLastChanged: null
@@ -1064,6 +1064,9 @@ async function _doSaveUserData() {
             date: typeof stepData.date === 'string' ? stepData.date : '',
             rewardedSteps: (typeof stepData.rewardedSteps === 'number' && Number.isFinite(stepData.rewardedSteps) && stepData.rewardedSteps >= 0)
                 ? stepData.rewardedSteps
+                : 0,
+            totalSteps: (typeof stepData.totalSteps === 'number' && Number.isFinite(stepData.totalSteps) && stepData.totalSteps >= 0)
+                ? stepData.totalSteps
                 : 0
         };
         const rawLastReelsPostTs = parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10);
@@ -2669,6 +2672,32 @@ function updatePointUI() {
     const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title;
     const titleText = typeof titleObj === 'object' ? titleObj[AppState.currentLang] || titleObj.ko : titleObj;
     document.getElementById('prof-title-badge').innerHTML = `${sanitizeText(titleText)} ℹ️`;
+    updateStepCountUI();
+}
+
+function updateStepCountUI() {
+    const stepCard = document.getElementById('step-count-card');
+    if (!stepCard) return;
+    const lang = i18n[AppState.currentLang];
+    if (!AppState.user.syncEnabled) {
+        stepCard.style.display = 'none';
+        return;
+    }
+    stepCard.style.display = 'block';
+    const sd = AppState.user.stepData || {};
+    const todayStr = new Date().toDateString();
+    const totalSteps = (sd.date === todayStr) ? (sd.totalSteps || 0) : 0;
+    const rewardedSteps = (sd.date === todayStr) ? (sd.rewardedSteps || 0) : 0;
+    const unrewarded = totalSteps - rewardedSteps;
+    const nextRewardRemain = unrewarded >= 0 ? (1000 - (unrewarded % 1000)) % 1000 : 1000;
+
+    document.getElementById('step-count-value').innerText = totalSteps.toLocaleString();
+    const infoEl = document.getElementById('step-count-info');
+    if (nextRewardRemain === 0 || totalSteps === 0) {
+        infoEl.innerText = lang.step_next_reward ? lang.step_next_reward.replace('{n}', '1,000') : `다음 보상까지 1,000보 남음`;
+    } else {
+        infoEl.innerText = lang.step_next_reward ? lang.step_next_reward.replace('{n}', nextRewardRemain.toLocaleString()) : `다음 보상까지 ${nextRewardRemain.toLocaleString()}보 남음`;
+    }
 }
 
 function processLevelUp() {
@@ -2783,7 +2812,10 @@ async function fetchSocialData() {
                     title = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last;
                 } catch(e) {}
             }
-            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
+            const sd = data.stepData || {};
+            const todayStr = new Date().toDateString();
+            const todaySteps = (sd.date === todayStr) ? (sd.totalSteps || 0) : 0;
+            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, todaySteps, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
         });
         renderUsers(AppState.social.sortCriteria);
     } catch(e) {
@@ -2806,7 +2838,7 @@ function renderUsers(criteria, btn = null) {
     let list = AppState.social.users.map(u => {
         const s = u.stats;
         const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
-        return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0 };
+        return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0, steps: u.todaySteps || 0 };
     });
 
     if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
@@ -2826,7 +2858,7 @@ function renderUsers(criteria, btn = null) {
                     </div>
                 </div>
             </div>
-            <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${u[criteria]}</div>
+            <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${criteria === 'steps' ? u.steps.toLocaleString() + '보' : u[criteria]}</div>
             ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? '친구✓' : '추가'}</button>` : ''}
         </div>
     `).join('');
@@ -2844,6 +2876,9 @@ function updateSocialUserData() {
         AppState.social.users[idx].photoURL = AppState.user.photoURL;
         AppState.social.users[idx].instaId = AppState.user.instaId || '';
         AppState.social.users[idx].stats = { ...AppState.user.stats };
+        const sd = AppState.user.stepData || {};
+        const todayStr = new Date().toDateString();
+        AppState.social.users[idx].todaySteps = (sd.date === todayStr) ? (sd.totalSteps || 0) : 0;
         renderUsers(AppState.social.sortCriteria);
     }
 }
@@ -6237,6 +6272,9 @@ async function syncHealthData(showMsg = false) {
         return;
     }
 
+    // totalSteps 저장
+    AppState.user.stepData.totalSteps = totalStepsToday;
+
     // 보상 계산
     const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
 
@@ -6265,6 +6303,7 @@ async function syncHealthData(showMsg = false) {
             }
         }
     }
+    updateStepCountUI();
     saveUserData();
 }
 
