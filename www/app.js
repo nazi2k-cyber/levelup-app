@@ -6602,7 +6602,7 @@ function handleNotificationAction(data) {
             'raid_end': 'dungeon',
             'raid_alert': 'dungeon',
             'quest_reminder': 'quests',
-            'daily_reminder': 'quests',
+            'daily_reminder': 'diary',
             'social_update': 'social',
             'announcement': 'status'
         };
