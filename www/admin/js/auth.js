@@ -1,6 +1,6 @@
 // ─── Auth Module ───
 import {
-    auth, provider, signInWithPopup, signOut, onAuthStateChanged, getIdTokenResult
+    auth, functions, provider, signInWithPopup, signOut, onAuthStateChanged, getIdTokenResult, httpsCallable
 } from "./firebase-init.js";
 
 let _currentUser = null;
@@ -70,6 +70,20 @@ export async function doLogout() {
     await signOut(auth);
 }
 
+/** Sync claims from server (MASTER_EMAILS/ADMIN_EMAILS → custom claims) */
+async function syncClaimsFromServer(user) {
+    try {
+        const syncClaims = httpsCallable(functions, "syncClaims");
+        const result = await syncClaims();
+        if (result.data.updated) {
+            console.log("[syncClaims] Claims updated, refreshing token...");
+            await user.getIdToken(true); // Force refresh to pick up new claims
+        }
+    } catch (e) {
+        console.warn("[syncClaims] Sync failed:", e.message);
+    }
+}
+
 // Listen for auth state changes
 onAuthStateChanged(auth, async (user) => {
     _currentUser = user;
@@ -77,6 +91,9 @@ onAuthStateChanged(auth, async (user) => {
     _isMaster = false;
     _isAdminOperator = false;
     if (user) {
+        // Sync claims from server first (repairs missing master/admin claims)
+        await syncClaimsFromServer(user);
+
         _isAdmin = await checkAdminClaim(user);
         _isMaster = await checkMasterClaim(user);
         _isAdminOperator = await checkAdminOperatorClaim(user);

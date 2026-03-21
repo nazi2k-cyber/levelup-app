@@ -88,6 +88,41 @@ async function assertMaster(request) {
     throw new HttpsError("permission-denied", "마스터 계정만 사용할 수 있습니다.");
 }
 
+// ─── syncClaims: 로그인 시 이메일 기반 claim 자동 동기화 ───
+
+exports.syncClaims = onCall(callableOpts, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "인증이 필요합니다.");
+    }
+
+    const email = request.auth.token.email;
+    const uid = request.auth.uid;
+    if (!email) return { updated: false, reason: "no email" };
+
+    const user = await getAuth().getUser(uid);
+    const existing = user.customClaims || {};
+    let updated = false;
+
+    // 마스터 이메일 확인 → master + admin claim 설정
+    if (MASTER_EMAILS.includes(email)) {
+        if (!existing.master || !existing.admin) {
+            await getAuth().setCustomUserClaims(uid, { ...existing, master: true, admin: true });
+            console.log("[syncClaims] Master claims set for", email);
+            updated = true;
+        }
+    }
+    // 관리자 이메일 확인 → admin claim 설정
+    else if (ADMIN_EMAILS.includes(email)) {
+        if (!existing.admin) {
+            await getAuth().setCustomUserClaims(uid, { ...existing, admin: true });
+            console.log("[syncClaims] Admin claim set for", email);
+            updated = true;
+        }
+    }
+
+    return { updated, master: MASTER_EMAILS.includes(email), admin: ADMIN_EMAILS.includes(email) || MASTER_EMAILS.includes(email) };
+});
+
 // ─── setAdminClaim: 관리자 Custom Claims 설정 (마스터 계정만 호출 가능) ───
 
 exports.setAdminClaim = onCall(callableOpts, async (request) => {
