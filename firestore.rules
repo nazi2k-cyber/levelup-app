@@ -128,6 +128,29 @@ service cloud.firestore {
     }
 
     // ──────────────────────────────────────────────
+    // usernames: 닉네임 유일성 보장 (usernames/{normalizedName})
+    // 문서 ID = 소문자 정규화된 닉네임, 데이터 = { uid, name, claimedAt }
+    // ──────────────────────────────────────────────
+    match /usernames/{nameId} {
+      allow read: if request.auth != null;
+      // 생성: 인증된 유저, 본인 uid만 기록 가능
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'claimedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 50
+        && request.resource.data.claimedAt is number;
+      // 수정: 기존 소유자만 가능 (닉네임 이전 시)
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      // 삭제: 기존 소유자만 가능 (닉네임 변경 시 이전 닉네임 해제)
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // ──────────────────────────────────────────────
     // push_logs: 관리자만 읽기 (Cloud Functions Admin SDK에서만 쓰기)
     // ──────────────────────────────────────────────
     match /push_logs/{logId} {
