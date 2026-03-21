@@ -550,6 +550,73 @@ async function handleDeleteAccount(request) {
     return { success: true };
 }
 
+// 닉네임 일괄 마이그레이션: 모든 기존 유저의 name을 usernames 컬렉션에 등록
+// 중복 닉네임은 선착순(레벨 높은 순) → 나머지는 #2, #3 등 접미사 부여
+async function handleMigrateUsernames(request) {
+    await assertAdmin(request);
+    const usersSnap = await db.collection("users").get();
+
+    // name → [{ uid, level }] 그룹핑
+    const nameMap = {};
+    usersSnap.docs.forEach(d => {
+        const data = d.data();
+        const name = (data.name || "").trim();
+        if (!name) return;
+        if (!nameMap[name]) nameMap[name] = [];
+        nameMap[name].push({ uid: d.id, level: data.level || 1 });
+    });
+
+    // 기존 usernames 컬렉션 초기화
+    const oldSnap = await db.collection("usernames").get();
+    if (!oldSnap.empty) {
+        const delBatch = db.batch();
+        oldSnap.docs.forEach(d => delBatch.delete(d.ref));
+        await delBatch.commit();
+    }
+
+    let claimed = 0;
+    let renamed = 0;
+    const renamedList = [];
+
+    for (const [name, users] of Object.entries(nameMap)) {
+        // 레벨 높은 순 정렬 → 1등이 원본 이름 선점
+        users.sort((a, b) => b.level - a.level);
+
+        for (let i = 0; i < users.length; i++) {
+            const { uid } = users[i];
+            if (i === 0) {
+                // 원본 이름 선점
+                const key = name.toLowerCase().replace(/\s+/g, ' ');
+                await db.collection("usernames").doc(key).set({
+                    uid, name, claimedAt: Date.now()
+                });
+                claimed++;
+            } else {
+                // 중복 → 접미사 부여
+                let suffix = i + 1;
+                let newName = `${name}#${suffix}`;
+                let key = newName.toLowerCase().replace(/\s+/g, ' ');
+                // 혹시 이미 존재하면 번호 올림
+                while ((await db.collection("usernames").doc(key).get()).exists) {
+                    suffix++;
+                    newName = `${name}#${suffix}`;
+                    key = newName.toLowerCase().replace(/\s+/g, ' ');
+                }
+                await db.collection("usernames").doc(key).set({
+                    uid, name: newName, claimedAt: Date.now()
+                });
+                // users/{uid} 문서도 업데이트
+                await db.collection("users").doc(uid).update({ name: newName });
+                renamed++;
+                renamedList.push({ uid: uid.substring(0, 8), from: name, to: newName });
+            }
+        }
+    }
+
+    console.log(`[migrateUsernames] claimed=${claimed}, renamed=${renamed}`, renamedList);
+    return { success: true, claimed, renamed, renamedList };
+}
+
 // ─── 0. Ping + Admin API Router (Callable) ───
 // Routes admin actions through the working ping function to bypass
 // per-function Cloud Run deployment/IAM issues in Gen 2.
@@ -590,6 +657,8 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleScreeningListPosts(request);
                 case "screeningDeletePost":
                     return await handleScreeningDeletePost(request);
+                case "migrateUsernames":
+                    return await handleMigrateUsernames(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }

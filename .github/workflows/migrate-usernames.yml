@@ -1,0 +1,125 @@
+name: 닉네임 일괄 마이그레이션
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: migrate-usernames
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Google 서비스 계정 인증
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 마이그레이션 스크립트 실행
+        run: |
+          npm init -y > /dev/null 2>&1
+          npm install firebase-admin > /dev/null 2>&1
+
+          node -e "
+          const admin = require('firebase-admin');
+          admin.initializeApp({ projectId: 'levelup-app-53d02' });
+          const db = admin.firestore();
+
+          (async () => {
+            console.log('=== 닉네임 일괄 마이그레이션 시작 ===');
+
+            const usersSnap = await db.collection('users').get();
+            console.log('총 유저 수:', usersSnap.size);
+
+            // name → [{ uid, level }] 그룹핑
+            const nameMap = {};
+            usersSnap.docs.forEach(d => {
+              const data = d.data();
+              const name = (data.name || '').trim();
+              if (!name) return;
+              if (!nameMap[name]) nameMap[name] = [];
+              nameMap[name].push({ uid: d.id, level: data.level || 1 });
+            });
+
+            // 중복 현황 출력
+            const dupes = Object.entries(nameMap).filter(([, v]) => v.length > 1);
+            console.log('중복 닉네임 수:', dupes.length);
+            dupes.forEach(([name, users]) => {
+              console.log('  \"' + name + '\" (' + users.length + '명):', users.map(u => u.uid.substring(0, 8) + '(Lv.' + u.level + ')').join(', '));
+            });
+
+            // 기존 usernames 컬렉션 초기화
+            const oldSnap = await db.collection('usernames').get();
+            if (!oldSnap.empty) {
+              const batchSize = 400;
+              for (let i = 0; i < oldSnap.docs.length; i += batchSize) {
+                const batch = db.batch();
+                oldSnap.docs.slice(i, i + batchSize).forEach(d => batch.delete(d.ref));
+                await batch.commit();
+              }
+              console.log('기존 usernames 문서 삭제:', oldSnap.size);
+            }
+
+            let claimed = 0;
+            let renamed = 0;
+            const renamedList = [];
+
+            for (const [name, users] of Object.entries(nameMap)) {
+              // 레벨 높은 순 정렬
+              users.sort((a, b) => b.level - a.level);
+
+              for (let i = 0; i < users.length; i++) {
+                const { uid } = users[i];
+                const key = (i === 0 ? name : '').toLowerCase().replace(/\\s+/g, ' ');
+
+                if (i === 0) {
+                  // 원본 이름 선점
+                  const k = name.toLowerCase().replace(/\\s+/g, ' ');
+                  await db.collection('usernames').doc(k).set({
+                    uid, name, claimedAt: Date.now()
+                  });
+                  claimed++;
+                } else {
+                  // 중복 → 접미사 부여
+                  let suffix = i + 1;
+                  let newName = name + '#' + suffix;
+                  let k = newName.toLowerCase().replace(/\\s+/g, ' ');
+                  while ((await db.collection('usernames').doc(k).get()).exists) {
+                    suffix++;
+                    newName = name + '#' + suffix;
+                    k = newName.toLowerCase().replace(/\\s+/g, ' ');
+                  }
+                  await db.collection('usernames').doc(k).set({
+                    uid, name: newName, claimedAt: Date.now()
+                  });
+                  await db.collection('users').doc(uid).update({ name: newName });
+                  renamed++;
+                  renamedList.push({ uid: uid.substring(0, 8), from: name, to: newName });
+                  console.log('  변경: ' + uid.substring(0, 8) + '... \"' + name + '\" → \"' + newName + '\"');
+                }
+              }
+            }
+
+            console.log('');
+            console.log('=== 마이그레이션 완료 ===');
+            console.log('선점:', claimed, '| 변경:', renamed);
+
+            // 최종 usernames 컬렉션 확인
+            const finalSnap = await db.collection('usernames').get();
+            console.log('usernames 컬렉션 문서 수:', finalSnap.size);
+          })().catch(e => { console.error('마이그레이션 실패:', e); process.exit(1); });
+          "
+
+      - name: 결과 요약
+        if: always()
+        run: |
+          echo "## 닉네임 마이그레이션 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "실행자: \`${{ github.actor }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "실행 시각: \`$(date -u '+%Y-%m-%d %H:%M:%S UTC')\`" >> $GITHUB_STEP_SUMMARY
