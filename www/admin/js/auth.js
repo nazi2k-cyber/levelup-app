@@ -5,19 +5,37 @@ import {
 
 let _currentUser = null;
 let _isAdmin = false;
+let _isMaster = false;
+let _isAdminOperator = false;
 let _onAuthCallbacks = [];
 
 export function getCurrentUser() { return _currentUser; }
 export function isAdmin() { return _isAdmin; }
+export function isMaster() { return _isMaster; }
+export function isAdminOperator() { return _isAdminOperator; }
 
-/** Register callback for auth state changes: cb(user, isAdmin) */
+/** Register callback for auth state changes: cb(user, isAdmin, isMaster, isAdminOperator) */
 export function onAdminAuth(cb) { _onAuthCallbacks.push(cb); }
 
-/** Check if user has admin custom claim */
+/** Check if user has admin or adminOperator custom claim */
 export async function checkAdminClaim(user) {
     if (!user) return false;
     const tokenResult = await getIdTokenResult(user);
-    return tokenResult.claims.admin === true;
+    return tokenResult.claims.admin === true || tokenResult.claims.adminOperator === true;
+}
+
+/** Check if user has master custom claim */
+export async function checkMasterClaim(user) {
+    if (!user) return false;
+    const tokenResult = await getIdTokenResult(user);
+    return tokenResult.claims.master === true;
+}
+
+/** Check if user has adminOperator custom claim */
+export async function checkAdminOperatorClaim(user) {
+    if (!user) return false;
+    const tokenResult = await getIdTokenResult(user);
+    return tokenResult.claims.adminOperator === true;
 }
 
 /** Get full token claims for diagnostic display */
@@ -56,10 +74,14 @@ export async function doLogout() {
 onAuthStateChanged(auth, async (user) => {
     _currentUser = user;
     _isAdmin = false;
+    _isMaster = false;
+    _isAdminOperator = false;
     if (user) {
         _isAdmin = await checkAdminClaim(user);
+        _isMaster = await checkMasterClaim(user);
+        _isAdminOperator = await checkAdminOperatorClaim(user);
     }
     _onAuthCallbacks.forEach(cb => {
-        try { cb(user, _isAdmin); } catch (e) { console.error("[onAdminAuth]", e); }
+        try { cb(user, _isAdmin, _isMaster, _isAdminOperator); } catch (e) { console.error("[onAdminAuth]", e); }
     });
 });

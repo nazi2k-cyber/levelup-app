@@ -71,7 +71,7 @@
 
 <script type="module">
 import { auth } from "./js/firebase-init.js";
-import { onAdminAuth, doLogin, doLogout, isAdmin } from "./js/auth.js";
+import { onAdminAuth, doLogin, doLogout, isAdmin, isMaster } from "./js/auth.js";
 import { initLogPanel, tlog, tok } from "./js/log-panel.js";
 import { initTabs } from "./js/tab-nav.js";
 import { initDiagPermissions } from "./js/diag-permissions.js";
@@ -96,7 +96,7 @@ document.getElementById("btn-logout").addEventListener("click", async () => {
 });
 
 // Auth state handler
-onAdminAuth((user, admin) => {
+onAdminAuth((user, admin, master, operator) => {
     const loginSec = document.getElementById("login-section");
     const adminSec = document.getElementById("admin-section");
     const userInfo = document.getElementById("user-info");
@@ -106,9 +106,22 @@ onAdminAuth((user, admin) => {
         loginSec.classList.add("hidden");
         adminSec.classList.remove("hidden");
         userInfo.textContent = user.email || user.uid;
-        adminBadge.style.display = admin ? "" : "none";
 
-        tok("Auth", `로그인: ${user.email} (admin: ${admin})`);
+        // Show role badge
+        if (master) {
+            adminBadge.textContent = "MASTER";
+            adminBadge.style.display = "";
+        } else if (admin && !operator) {
+            adminBadge.textContent = "ADMIN";
+            adminBadge.style.display = "";
+        } else if (operator) {
+            adminBadge.textContent = "OPERATOR";
+            adminBadge.style.display = "";
+        } else {
+            adminBadge.style.display = "none";
+        }
+
+        tok("Auth", `로그인: ${user.email} (admin: ${admin}, master: ${master}, operator: ${operator})`);
 
         // Initialize all tab modules
         initDiagPermissions("tab-diag");

@@ -125,7 +125,9 @@ jobs:
 
       - name: Functions 환경변수 생성 (.env)
         if: steps.detect.outputs.deploy_functions == 'true'
-        run: echo "ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" > functions/.env
+        run: |
+          echo "ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" > functions/.env
+          echo "MASTER_EMAILS=${{ secrets.MASTER_EMAILS }}" >> functions/.env
 
       - name: Functions 의존성 설치
         if: steps.detect.outputs.deploy_functions == 'true'
