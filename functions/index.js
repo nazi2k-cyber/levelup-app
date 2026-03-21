@@ -413,7 +413,12 @@ async function handleResetUserData(request) {
             });
             count++;
         }
-        console.log(`[resetUserData] All ${count} users reset`);
+        // 전체 초기화 시 usernames 컬렉션도 초기화 (재로그인 시 재등록됨)
+        const usernamesSnap = await db.collection("usernames").get();
+        const batch = db.batch();
+        usernamesSnap.docs.forEach(d => batch.delete(d.ref));
+        if (!usernamesSnap.empty) await batch.commit();
+        console.log(`[resetUserData] All ${count} users reset, ${usernamesSnap.size} usernames cleared`);
         return { success: true, resetCount: count };
     }
 
@@ -504,6 +509,21 @@ async function handleDisableAccount(request) {
 }
 
 // 계정 삭제
+// 유저의 닉네임 예약 해제 (usernames 컬렉션에서 해당 uid의 문서 삭제)
+async function releaseUsernameByUid(uid) {
+    try {
+        const snap = await db.collection("usernames").where("uid", "==", uid).get();
+        const batch = db.batch();
+        snap.docs.forEach(d => batch.delete(d.ref));
+        if (!snap.empty) {
+            await batch.commit();
+            console.log(`[releaseUsername] ${snap.size}개 닉네임 예약 해제 (uid: ${uid})`);
+        }
+    } catch (e) {
+        console.warn(`[releaseUsername] 닉네임 해제 실패 (uid: ${uid}):`, e.message);
+    }
+}
+
 async function handleDeleteAccount(request) {
     await assertAdmin(request);
     const { uid } = request.data || {};
@@ -521,6 +541,9 @@ async function handleDeleteAccount(request) {
         });
         await db.collection("users").doc(uid).delete();
     }
+
+    // 닉네임 예약 해제
+    await releaseUsernameByUid(uid);
 
     await getAuth().deleteUser(uid);
     console.log(`[deleteAccount] User ${uid} deleted`);
