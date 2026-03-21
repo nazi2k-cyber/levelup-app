@@ -17,48 +17,154 @@ const callableOpts = {
     invoker: "public"
 };
 
-// ─── Admin claim helper ───
+// ─── Admin / Master claim helper ───
 
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS
     ? process.env.ADMIN_EMAILS.split(",").map(e => e.trim()).filter(Boolean)
     : [];
 
+const MASTER_EMAILS = process.env.MASTER_EMAILS
+    ? process.env.MASTER_EMAILS.split(",").map(e => e.trim()).filter(Boolean)
+    : [];
+
 async function assertAdmin(request) {
     if (request.auth?.token?.admin) return;
+    if (request.auth?.token?.adminOperator) return;
 
     // Fallback: check admin email list + verify/repair custom claim
     const email = request.auth?.token?.email;
-    if (email && ADMIN_EMAILS.includes(email)) {
-        // Token custom claim missing — re-verify from Auth server
+
+    // Master email → auto-repair with both master + admin claims
+    if (email && MASTER_EMAILS.includes(email)) {
         try {
             const user = await getAuth().getUser(request.auth.uid);
-            if (user.customClaims?.admin) return; // claim exists server-side, token was stale
-            // Claim not set yet — set it now for future requests
-            await getAuth().setCustomUserClaims(request.auth.uid, { admin: true });
+            const existing = user.customClaims || {};
+            if (existing.admin && existing.master) return;
+            await getAuth().setCustomUserClaims(request.auth.uid, { ...existing, admin: true, master: true });
+            console.log("[assertAdmin] Auto-repaired master+admin claim for", email);
+        } catch (e) {
+            console.error("[assertAdmin] Claim repair failed:", e.message);
+        }
+        return;
+    }
+
+    if (email && ADMIN_EMAILS.includes(email)) {
+        try {
+            const user = await getAuth().getUser(request.auth.uid);
+            if (user.customClaims?.admin) return;
+            await getAuth().setCustomUserClaims(request.auth.uid, { ...(user.customClaims || {}), admin: true });
             console.log("[assertAdmin] Auto-repaired admin claim for", email);
         } catch (e) {
             console.error("[assertAdmin] Claim repair failed:", e.message);
         }
-        return; // Allow through since email is in admin list
+        return;
     }
 
     throw new HttpsError("permission-denied", "권한이 없습니다.");
 }
 
-// ─── setAdminClaim: 관리자 Custom Claims 설정 (기존 관리자만 호출 가능) ───
+/** Master 계정만 호출 가능 */
+async function assertMaster(request) {
+    const email = request.auth?.token?.email;
+
+    // Check master claim first
+    if (request.auth?.token?.master) return;
+
+    // Fallback: check master email list
+    if (email && MASTER_EMAILS.includes(email)) {
+        try {
+            const user = await getAuth().getUser(request.auth.uid);
+            const existing = user.customClaims || {};
+            if (!existing.master) {
+                await getAuth().setCustomUserClaims(request.auth.uid, { ...existing, admin: true, master: true });
+                console.log("[assertMaster] Auto-repaired master claim for", email);
+            }
+        } catch (e) {
+            console.error("[assertMaster] Claim repair failed:", e.message);
+        }
+        return;
+    }
+
+    throw new HttpsError("permission-denied", "마스터 계정만 사용할 수 있습니다.");
+}
+
+// ─── setAdminClaim: 관리자 Custom Claims 설정 (마스터 계정만 호출 가능) ───
 
 exports.setAdminClaim = onCall(callableOpts, async (request) => {
-    await assertAdmin(request);
+    await assertMaster(request);
 
     const { uid } = request.data || {};
     if (!uid || typeof uid !== "string") {
         throw new HttpsError("invalid-argument", "uid는 필수 문자열입니다.");
     }
 
-    await getAuth().setCustomUserClaims(uid, { admin: true });
-    console.log(`[setAdminClaim] admin claim set for uid: ${uid}`);
+    const user = await getAuth().getUser(uid);
+    const existing = user.customClaims || {};
+    await getAuth().setCustomUserClaims(uid, { ...existing, admin: true });
+    console.log(`[setAdminClaim] admin claim set for uid: ${uid} by master: ${request.auth.token.email}`);
     return { success: true, uid };
 });
+
+// ─── setAdminOperator: 관리자 페이지 운영 권한 부여 (마스터 계정만 호출 가능) ───
+
+exports.setAdminOperator = onCall(callableOpts, async (request) => {
+    await assertMaster(request);
+
+    const { uid } = request.data || {};
+    if (!uid || typeof uid !== "string") {
+        throw new HttpsError("invalid-argument", "uid는 필수 문자열입니다.");
+    }
+
+    const user = await getAuth().getUser(uid);
+    const existing = user.customClaims || {};
+    await getAuth().setCustomUserClaims(uid, { ...existing, adminOperator: true });
+    console.log(`[setAdminOperator] adminOperator claim set for uid: ${uid} by master: ${request.auth.token.email}`);
+    return { success: true, uid };
+});
+
+// ─── removeAdminOperator: 관리자 페이지 운영 권한 회수 (마스터 계정만 호출 가능) ───
+
+exports.removeAdminOperator = onCall(callableOpts, async (request) => {
+    await assertMaster(request);
+
+    const { uid } = request.data || {};
+    if (!uid || typeof uid !== "string") {
+        throw new HttpsError("invalid-argument", "uid는 필수 문자열입니다.");
+    }
+
+    const user = await getAuth().getUser(uid);
+    const existing = user.customClaims || {};
+    delete existing.adminOperator;
+    await getAuth().setCustomUserClaims(uid, existing);
+    console.log(`[removeAdminOperator] adminOperator claim removed for uid: ${uid} by master: ${request.auth.token.email}`);
+    return { success: true, uid };
+});
+
+// ─── listAdminOperators: 운영 권한 보유자 목록 조회 (마스터 계정만 호출 가능) ───
+
+async function handleListAdminOperators(request) {
+    await assertMaster(request);
+
+    const listResult = await getAuth().listUsers(1000);
+    const operators = [];
+
+    for (const user of listResult.users) {
+        const claims = user.customClaims || {};
+        if (claims.adminOperator || claims.admin || claims.master) {
+            operators.push({
+                uid: user.uid,
+                email: user.email || null,
+                displayName: user.displayName || null,
+                master: !!claims.master,
+                admin: !!claims.admin,
+                adminOperator: !!claims.adminOperator,
+                disabled: user.disabled
+            });
+        }
+    }
+
+    return { operators };
+}
 
 // ─── Admin action handlers (shared between ping router and individual exports) ───
 
@@ -659,6 +765,8 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleScreeningDeletePost(request);
                 case "migrateUsernames":
                     return await handleMigrateUsernames(request);
+                case "listAdminOperators":
+                    return await handleListAdminOperators(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }
