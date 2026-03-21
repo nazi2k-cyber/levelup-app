@@ -2,572 +2,448 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LEVEL UP: REBOOT</title>
-    <meta name="google-site-verification" content="F-GCFsin3A6JKiAqstN1j7Zw9KhKIJbJSSnB9GVeL8o" />
-    <meta name="google-adsense-account" content="ca-pub-6654057059754695">
-    <link rel="stylesheet" href="style.css">
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6654057059754695" crossorigin="anonymous"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEVEL UP: REBOOT - 현실을 게임처럼 레벨업하세요</title>
+    <meta name="description" content="RPG 게임의 성장 시스템을 현실 생활에 접목한 자기계발 앱. 매일 퀘스트를 완료하고, 스탯을 올리고, 던전에 도전하세요.">
+    <link rel="canonical" href="https://bravecat.studio/">
+    <meta property="og:url" content="https://bravecat.studio/">
+    <meta property="og:title" content="LEVEL UP: REBOOT - 현실을 게임처럼 레벨업하세요">
+    <meta property="og:description" content="RPG 게임의 성장 시스템을 현실 생활에 접목한 자기계발 앱. 매일 퀘스트를 완료하고, 스탯을 올리고, 던전에 도전하세요.">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/png" href="play_store_512.png">
+    <link rel="stylesheet" href="intro-style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <div id="login-screen">
-        <!-- 상단 로고 -->
-        <div class="login-top-logo">
-            <span class="login-logo-icon">⚔️</span><span class="login-logo-text">LEVEL UP</span><span class="login-logo-sub">: REBOOT</span>
-        </div>
-
-        <!-- 중앙 콘텐츠 -->
-        <div class="login-center">
-            <div class="login-brand-badge">BRAVECAT STUDIOS</div>
-            <h1 class="login-hero-title" id="login-desc" data-i18n="login_desc">레벨업과 함께<br>최고의 자신을 만들어보세요</h1>
-
-            <button class="login-google-btn" id="btn-google-login">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.16v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.16C1.43 8.55 1 10.22 1 12s.43 3.45 1.16 4.93l3.68-2.84z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.16 7.07l3.68 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                <span data-i18n="btn_google_login">Google로 계속하기</span>
-            </button>
-
-            <div class="login-divider"><span>또는</span></div>
-
-            <input type="email" class="login-input" id="login-email" placeholder="이메일을 입력하세요" data-i18n-placeholder="ph_email">
-            <input type="password" class="login-input d-none" id="login-pw" data-i18n-placeholder="ph_pw">
-            <div id="pw-hint" class="hint-text d-none" data-i18n="pw_req_hint">※ 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함</div>
-            <input type="password" class="login-input d-none" id="login-pw-confirm" data-i18n-placeholder="ph_pw_conf">
-            <div id="pw-mismatch-hint" class="hint-text d-none">※ 비밀번호가 일치하지 않습니다</div>
-            <button class="btn-primary d-none" id="btn-login-submit" data-i18n="btn_login_submit">시스템 접속</button>
-
-            <div id="disclaimer-box" class="disclaimer-text d-none" data-i18n="disclaimer_txt">
-                ※ 가입 시 이용약관 및 면책사항에 동의하는 것으로 간주됩니다. 본 앱은 건강 보조 목적이며, 퀘스트 수행 중 발생하는 신체적 부상이나 손해에 대해 일절 책임지지 않습니다.
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <div class="nav-logo">
+                <span class="nav-logo-icon">&#x2694;&#xFE0F;</span>
+                <span class="nav-logo-text">LEVEL UP</span>
+                <span class="nav-logo-sub">: REBOOT</span>
             </div>
-
-            <div class="login-terms">
-                계속하면 BRAVECAT의 <a href="#" onclick="event.preventDefault();openLegalModal('terms')">소비자 약관</a> 및 <a href="#" onclick="event.preventDefault();openLegalModal('usage-policy')">이용 정책</a>에
-                동의하고, <a href="#" onclick="event.preventDefault();openLegalModal('privacy')">개인정보 처리방침</a>을 확인하는 것으로
-                간주됩니다.
+            <div class="nav-links">
+                <a href="#features">기능</a>
+                <a href="#stats">스탯</a>
+                <a href="#download">다운로드</a>
+                <a href="app.html" class="nav-cta">웹에서 시작</a>
             </div>
-
-            <div class="login-toggle" id="auth-toggle-btn" data-i18n="auth_toggle_signup">계정이 없으신가요? 회원가입</div>
-        </div>
-
-        <!-- 하단 사명 -->
-        <div class="login-bottom-brand">
-            <div class="login-bottom-brand-name">BRAVECAT</div>
-            <div class="login-bottom-brand-tagline">LEVEL UP YOUR LIFE</div>
-        </div>
-    </div>
-
-    <!-- 권한 요청 온보딩 오버레이 (최초 설치 시 1회 표시) -->
-    <div id="permission-onboarding" class="d-none">
-        <div class="perm-overlay-bg"></div>
-        <div class="perm-card">
-            <div class="perm-logo">⚔️ LEVEL UP</div>
-            <div class="perm-title" id="perm-title" data-i18n="perm_title">앱 권한 설정</div>
-            <div class="perm-desc" id="perm-desc" data-i18n="perm_desc">최고의 경험을 위해 아래 권한을 허용해주세요.</div>
-
-            <!-- Step 1: GPS -->
-            <div class="perm-item" id="perm-step-gps">
-                <div class="perm-item-icon">📍</div>
-                <div class="perm-item-info">
-                    <div class="perm-item-name" data-i18n="perm_gps_title">위치 권한 (GPS)</div>
-                    <div class="perm-item-desc" data-i18n="perm_gps_desc">던전 레이드 근접 보너스 및 위치 기반 기능에 사용됩니다.</div>
-                </div>
-                <div class="perm-item-status" id="perm-gps-status"></div>
-            </div>
-
-            <!-- Step 2: Fitness -->
-            <div class="perm-item" id="perm-step-fitness">
-                <div class="perm-item-icon">🏃</div>
-                <div class="perm-item-info">
-                    <div class="perm-item-name" data-i18n="perm_fitness_title">피트니스 데이터</div>
-                    <div class="perm-item-desc" data-i18n="perm_fitness_desc">걸음 수를 동기화하여 포인트와 STR 스탯을 획득합니다.</div>
-                </div>
-                <div class="perm-item-status" id="perm-fitness-status"></div>
-            </div>
-
-            <button class="perm-btn" id="perm-allow-btn" onclick="handlePermissionStep()">
-                <span data-i18n="perm_allow_btn">권한 허용하기</span>
-            </button>
-            <button class="perm-skip-btn" id="perm-skip-btn" onclick="skipPermissionOnboarding()">
-                <span data-i18n="perm_skip_btn">나중에 설정</span>
+            <button class="nav-mobile-toggle" aria-label="메뉴 열기">
+                <span></span><span></span><span></span>
             </button>
         </div>
-    </div>
+    </nav>
 
-    <!-- 로그인 전 화면 하단 오류 로그 패널 (body 직속 자식 → position:fixed 정상 동작 보장) -->
-    <div id="login-log-panel" style="position:fixed;bottom:0;left:0;right:0;padding:8px 12px;display:flex;gap:8px;align-items:center;justify-content:center;background:rgba(5,5,8,0.92);border-top:1px solid #1a1a2a;z-index:9999;">
-        <span style="font-size:0.7rem;color:#555;">오류 로그</span>
-        <span id="login-log-badge" style="font-size:0.72rem;color:#00d9ff;font-weight:bold;">0개</span>
-        <button onclick="AppLogger.openViewer()" style="background:rgba(0,217,255,0.08);border:1px solid #00d9ff;color:#00d9ff;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.72rem;">로그 보기</button>
-        <button onclick="AppLogger.export()" style="background:rgba(255,204,0,0.08);border:1px solid #ffcc00;color:#ffcc00;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.72rem;">파일 저장</button>
-    </div>
-
-    <div id="app-container" class="d-none">
-        <header>
-            <div id="sys-title">LEVEL UP: REBOOT</div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <div class="streak-badge d-none" id="streak-badge" title="Streak">
-                    <span class="streak-icon">&#x1F525;</span><span id="streak-count">0</span><span id="streak-day-label">일</span>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg-effects">
+            <div class="hero-glow hero-glow-1"></div>
+            <div class="hero-glow hero-glow-2"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <div class="hero-badge">BRAVECAT STUDIOS</div>
+                <h1 class="hero-title">
+                    현실을 게임처럼,<br>
+                    <span class="hero-highlight">당신의 삶을 레벨업</span>하세요
+                </h1>
+                <p class="hero-desc">
+                    RPG 게임의 성장 시스템을 현실 생활에 접목한 자기계발 앱.<br>
+                    매일 퀘스트를 완료하고, 스탯을 올리고, 던전에 도전하며<br>
+                    실제 자신을 성장시켜보세요.
+                </p>
+                <div class="hero-actions">
+                    <a href="app.html" class="btn-primary-hero">
+                        <span>웹에서 시작하기</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </a>
+                    <a href="https://play.google.com/store/apps/details?id=com.levelup.reboot" class="btn-secondary-hero" target="_blank" rel="noopener">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.302 2.302a1 1 0 0 1 0 1.38l-2.302 2.302L15.396 13l2.302-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302L5.864 2.658z"/></svg>
+                        <span>Google Play</span>
+                    </a>
                 </div>
-                <div class="level-badge" id="sys-level">Lv. 1</div>
+                <div class="hero-stats-preview">
+                    <div class="hero-stat-chip"><span class="stat-dot str"></span>STR 근력</div>
+                    <div class="hero-stat-chip"><span class="stat-dot int"></span>INT 지력</div>
+                    <div class="hero-stat-chip"><span class="stat-dot cha"></span>CHA 매력</div>
+                    <div class="hero-stat-chip"><span class="stat-dot vit"></span>VIT 체력</div>
+                    <div class="hero-stat-chip"><span class="stat-dot wlt"></span>WLT 재력</div>
+                    <div class="hero-stat-chip"><span class="stat-dot agi"></span>AGI 민첩</div>
+                </div>
             </div>
-        </header>
+            <div class="hero-phone">
+                <div class="hero-phone-frame">
+                    <img src="store-listing/Screenshot_20260321_104158_LEVEL%20UP%20REBOOT.jpg" alt="LEVEL UP: REBOOT 상태창" loading="eager">
+                </div>
+            </div>
+        </div>
+    </section>
 
-        <main>
-            <section id="status" class="view-section active">
-                <div class="system-card">
-                    <div class="profile-compact-header">
-                        <div class="profile-box">
-                            <div class="profile-image-container">
-                                <img id="profilePreview" class="profile-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Profile">
-                                <label for="imageUpload" class="upload-overlay">📷</label>
-                                <input type="file" id="imageUpload" accept="image/*" class="d-none">
-                            </div>
-                            <div>
-                                <div class="title-badge" id="prof-title-badge" style="cursor:pointer;">신규 각성자 ℹ️</div>
-                                <div class="name-container">
-                                    <div style="font-size: 1rem; font-weight: bold;" id="prof-name" data-i18n="prof_name">플레이어 (나)</div>
-                                    <button class="btn-edit-name" id="btn-edit-name">✏️</button>
-                                    <button class="btn-insta-link" id="btn-edit-insta" style="background:none; border:none; padding:0; cursor:pointer; margin-left:5px; display: flex; align-items: center;">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-instagram" viewBox="0 0 16 16" style="color: #ff3c3c;">
-                                            <path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="compact-score-box">
-                            <div style="font-size: 0.65rem; color: var(--text-sub);" data-i18n="tot_score">종합 스코어</div>
-                            <div class="compact-score-val" id="totalScore">0</div>
-                        </div>
+    <!-- Features Overview -->
+    <section class="features-overview" id="features">
+        <div class="section-inner">
+            <div class="section-header">
+                <span class="section-badge">CORE FEATURES</span>
+                <h2 class="section-title">게임처럼 재미있게, 현실에서 진짜로 성장하세요</h2>
+                <p class="section-desc">6가지 핵심 시스템으로 당신의 일상을 RPG 모험으로 바꿉니다</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 1: Stats System -->
+    <section class="showcase showcase--right">
+        <div class="section-inner">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <span class="showcase-badge">STAT SYSTEM</span>
+                    <h2 class="showcase-title">나만의 헌터 스탯 시스템</h2>
+                    <p class="showcase-desc">STR(근력), INT(지력), CHA(매력), VIT(체력), WLT(재력), AGI(민첩) 6가지 스탯으로 나만의 캐릭터를 성장시키세요.</p>
+                    <ul class="showcase-list">
+                        <li>퀘스트 완료 시 해당 스탯이 실시간으로 성장</li>
+                        <li>레벨업 시 칭호 획득 &mdash; 신규 각성자에서 전설의 헌터까지</li>
+                        <li>레이더 차트로 나의 성장 현황을 한눈에</li>
+                    </ul>
+                </div>
+                <div class="showcase-phones showcase-phones--single">
+                    <div class="phone-frame">
+                        <img src="store-listing/Screenshot_20260321_104158_LEVEL%20UP%20REBOOT.jpg" alt="헌터 스탯 레이더 차트" loading="lazy">
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-                    <div class="levelup-panel-compact">
+    <!-- Feature 2: Weekly Quests -->
+    <section class="showcase showcase--left">
+        <div class="section-inner">
+            <div class="showcase-content">
+                <div class="showcase-phones showcase-phones--triple">
+                    <div class="phone-frame phone-frame--back-left">
+                        <img src="store-listing/Screenshot_20260321_104349_LEVEL%20UP%20REBOOT.jpg" alt="DIY 퀘스트 수정" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--front">
+                        <img src="store-listing/Screenshot_20260321_104333_LEVEL%20UP%20REBOOT.jpg" alt="주간 퀘스트 목록" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--back-right">
+                        <img src="store-listing/Screenshot_20260321_104423_LEVEL%20UP%20REBOOT.jpg" alt="주간 도전과제 & 보너스 룰렛" loading="lazy">
+                    </div>
+                </div>
+                <div class="showcase-text">
+                    <span class="showcase-badge">WEEKLY QUESTS</span>
+                    <h2 class="showcase-title">매일 갱신되는 주간 퀘스트</h2>
+                    <p class="showcase-desc">요일별 맞춤 퀘스트가 매일 갱신됩니다. 운동, 공부, 식습관, 재정 등 12가지 카테고리의 퀘스트를 완료하고 성장하세요.</p>
+                    <ul class="showcase-list">
+                        <li>DIY 퀘스트로 나만의 목표를 직접 설정</li>
+                        <li>퀘스트 완료 시 포인트 & 스탯 즉시 반영</li>
+                        <li>주간 도전과제 달성으로 추가 보상 획득</li>
+                        <li>일일 보너스 룰렛으로 포인트 잭팟</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 3: Quest Statistics -->
+    <section class="showcase showcase--right">
+        <div class="section-inner">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <span class="showcase-badge">GROWTH TRACKING</span>
+                    <h2 class="showcase-title">성장 통계 & 다이어리</h2>
+                    <p class="showcase-desc">월간 퀘스트 달성률, 연간 성장 추이를 한눈에 확인하세요. 캘린더 히트맵으로 나의 꾸준함을 시각화합니다.</p>
+                    <ul class="showcase-list">
+                        <li>월간 캘린더 히트맵으로 활동일 시각화</li>
+                        <li>평균 달성률 & 올클리어 횟수 추적</li>
+                        <li>연간 그래프로 장기 성장 추이 확인</li>
+                    </ul>
+                </div>
+                <div class="showcase-phones showcase-phones--single">
+                    <div class="phone-frame">
+                        <img src="store-listing/Screenshot_20260321_104436_LEVEL%20UP%20REBOOT.jpg" alt="월간·연간 퀘스트 통계" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 4: Dungeon Raids -->
+    <section class="showcase showcase--left">
+        <div class="section-inner">
+            <div class="showcase-content">
+                <div class="showcase-phones showcase-phones--triple">
+                    <div class="phone-frame phone-frame--back-left">
+                        <img src="store-listing/Screenshot_20260321_104503_LEVEL%20UP%20REBOOT.jpg" alt="이상 현상 목록" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--front">
+                        <img src="store-listing/Screenshot_20260321_124055_LEVEL%20UP%20REBOOT.jpg" alt="로컬 레이드 지도" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--back-right">
+                        <img src="store-listing/Screenshot_20260321_124110_LEVEL%20UP%20REBOOT.jpg" alt="레이드 보스 상세" loading="lazy">
+                    </div>
+                </div>
+                <div class="showcase-text">
+                    <span class="showcase-badge">DUNGEON RAID</span>
+                    <h2 class="showcase-title">글로벌 & 로컬 던전 레이드</h2>
+                    <p class="showcase-desc">전 세계 헌터들과 함께 주간 던전을 공략하세요. GPS 기반 로컬 레이드로 실제 위치에서 보스와 맞서세요.</p>
+                    <ul class="showcase-list">
+                        <li>개인 기여도가 글로벌 진행도에 실시간 반영</li>
+                        <li>GPS 기반 로컬 레이드 &mdash; 실제 위치에서 보스 공략</li>
+                        <li>주말 보스 러시 이벤트로 2배 보상</li>
+                        <li>던전 클리어 시 특별 보상 획득</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 5: Planner & Day1 -->
+    <section class="showcase showcase--right">
+        <div class="section-inner">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <span class="showcase-badge">PLANNER & DAY1</span>
+                    <h2 class="showcase-title">일일 플래너 & Day1 포스팅</h2>
+                    <p class="showcase-desc">우선순위 태스크와 시간표로 하루를 계획하고, 사진과 함께 Day1 피드에 공유하세요. 당신의 하루가 콘텐츠가 됩니다.</p>
+                    <ul class="showcase-list">
+                        <li>우선순위 태스크 & 시간표로 하루 계획</li>
+                        <li>사진 첨부 후 Day1 피드에 포스팅</li>
+                        <li>플래너 이미지 저장 & 링크 공유</li>
+                        <li>주간 플래너로 일주일을 한눈에</li>
+                    </ul>
+                </div>
+                <div class="showcase-phones showcase-phones--triple">
+                    <div class="phone-frame phone-frame--back-left">
+                        <img src="store-listing/Screenshot_20260321_104610_LEVEL%20UP%20REBOOT.jpg" alt="일일 플래너" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--front">
+                        <img src="store-listing/Screenshot_20260321_104950_LEVEL%20UP%20REBOOT.jpg" alt="Day1 소셜 피드" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--back-right">
+                        <img src="store-listing/Screenshot_20260321_104905_LEVEL%20UP%20REBOOT.jpg" alt="플래너 사진 포스팅" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature 6: Social Ranking -->
+    <section class="showcase showcase--left">
+        <div class="section-inner">
+            <div class="showcase-content">
+                <div class="showcase-phones showcase-phones--double">
+                    <div class="phone-frame phone-frame--duo-back">
+                        <img src="store-listing/Screenshot_20260321_105138_LEVEL%20UP%20REBOOT.jpg" alt="친구 랭킹" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--duo-front">
+                        <img src="store-listing/Screenshot_20260321_105119_LEVEL%20UP%20REBOOT.jpg" alt="글로벌 랭킹" loading="lazy">
+                    </div>
+                </div>
+                <div class="showcase-text">
+                    <span class="showcase-badge">SOCIAL RANKING</span>
+                    <h2 class="showcase-title">소셜 랭킹 & 친구 시스템</h2>
+                    <p class="showcase-desc">글로벌 및 친구 랭킹으로 건전한 경쟁을 즐기세요. 함께 성장하는 재미가 동기부여의 핵심입니다.</p>
+                    <ul class="showcase-list">
+                        <li>스탯별 글로벌 랭킹 & 친구 랭킹</li>
+                        <li>친구 추가로 스탯 비교 & 응원</li>
+                        <li>주간 1위 헌터 명예의 전당 등재</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Multi-language -->
+    <section class="showcase showcase--right showcase--compact">
+        <div class="section-inner">
+            <div class="showcase-content">
+                <div class="showcase-text">
+                    <span class="showcase-badge">MULTILINGUAL</span>
+                    <h2 class="showcase-title">다국어 지원</h2>
+                    <p class="showcase-desc">한국어, English, 日本語를 지원합니다. 언제든 앱 내에서 언어를 전환할 수 있습니다.</p>
+                </div>
+                <div class="showcase-phones showcase-phones--double">
+                    <div class="phone-frame phone-frame--duo-back">
+                        <img src="store-listing/Screenshot_20260321_112406_LEVEL%20UP%20REBOOT.jpg" alt="Settings in English" loading="lazy">
+                    </div>
+                    <div class="phone-frame phone-frame--duo-front">
+                        <img src="store-listing/Screenshot_20260321_111404_LEVEL%20UP%20REBOOT.jpg" alt="설정 화면 한국어" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section" id="stats">
+        <div class="section-inner">
+            <div class="section-header">
+                <span class="section-badge">STAT SYSTEM</span>
+                <h2 class="section-title">6가지 스탯으로 성장하세요</h2>
+                <p class="section-desc">현실의 모든 노력이 수치로 보입니다</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card stat-str">
+                    <div class="stat-card-icon">&#x1F4AA;</div>
+                    <div class="stat-card-name">STR</div>
+                    <div class="stat-card-label">근력</div>
+                    <div class="stat-card-bar"><div class="stat-card-fill" style="width:75%"></div></div>
+                </div>
+                <div class="stat-card stat-int">
+                    <div class="stat-card-icon">&#x1F9E0;</div>
+                    <div class="stat-card-name">INT</div>
+                    <div class="stat-card-label">지력</div>
+                    <div class="stat-card-bar"><div class="stat-card-fill" style="width:60%"></div></div>
+                </div>
+                <div class="stat-card stat-cha">
+                    <div class="stat-card-icon">&#x2728;</div>
+                    <div class="stat-card-name">CHA</div>
+                    <div class="stat-card-label">매력</div>
+                    <div class="stat-card-bar"><div class="stat-card-fill" style="width:45%"></div></div>
+                </div>
+                <div class="stat-card stat-vit">
+                    <div class="stat-card-icon">&#x2764;&#xFE0F;</div>
+                    <div class="stat-card-name">VIT</div>
+                    <div class="stat-card-label">체력</div>
+                    <div class="stat-card-bar"><div class="stat-card-fill" style="width:80%"></div></div>
+                </div>
+                <div class="stat-card stat-wlt">
+                    <div class="stat-card-icon">&#x1F4B0;</div>
+                    <div class="stat-card-name">WLT</div>
+                    <div class="stat-card-label">재력</div>
+                    <div class="stat-card-bar"><div class="stat-card-fill" style="width:55%"></div></div>
+                </div>
+                <div class="stat-card stat-agi">
+                    <div class="stat-card-icon">&#x26A1;</div>
+                    <div class="stat-card-name">AGI</div>
+                    <div class="stat-card-label">민첩</div>
+                    <div class="stat-card-bar"><div class="stat-card-fill" style="width:65%"></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recommend Section -->
+    <section class="recommend-section">
+        <div class="section-inner">
+            <div class="section-header">
+                <span class="section-badge">WHO IS IT FOR</span>
+                <h2 class="section-title">이런 분께 추천합니다</h2>
+            </div>
+            <div class="recommend-grid">
+                <div class="recommend-card">
+                    <div class="recommend-icon">&#x1F525;</div>
+                    <p>작심삼일을 극복하고<br><strong>습관을 형성</strong>하고 싶은 분</p>
+                </div>
+                <div class="recommend-card">
+                    <div class="recommend-icon">&#x1F3AE;</div>
+                    <p>게임처럼 재미있게<br><strong>자기계발</strong>을 하고 싶은 분</p>
+                </div>
+                <div class="recommend-card">
+                    <div class="recommend-icon">&#x1F3AF;</div>
+                    <p>운동, 공부, 재테크 등<br><strong>다양한 목표</strong>를 관리하고 싶은 분</p>
+                </div>
+                <div class="recommend-card">
+                    <div class="recommend-icon">&#x1F30D;</div>
+                    <p>글로벌 커뮤니티와 함께<br><strong>동기부여</strong>를 받고 싶은 분</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download CTA Section -->
+    <section class="download-section" id="download">
+        <div class="section-inner">
+            <div class="download-content">
+                <img src="play_store_512.png" alt="LEVEL UP: REBOOT" class="download-icon">
+                <h2 class="download-title">지금 바로 각성하세요</h2>
+                <p class="download-desc">현실 속 최강 헌터가 되어보세요!</p>
+                <div class="download-buttons">
+                    <a href="app.html" class="btn-download btn-download--web">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                         <div>
-                            <div style="font-size: 0.65rem; color: var(--text-sub);" data-i18n="avail_pts">보유 포인트</div>
-                            <div style="font-size: 1.3rem; font-weight: 900; color: var(--neon-gold);"><span id="display-pts">0</span><span style="font-size: 0.8rem;"> P</span></div>
+                            <small>OPEN IN</small>
+                            <strong>Web Browser</strong>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="font-size: 0.6rem; color: var(--text-sub); text-align: right;">
-                                <span data-i18n="req_pts">요구량:</span><br><span id="display-req-pts">100</span> P
-                            </div>
-                            <button id="btn-levelup" class="btn-primary btn-levelup-sm" data-i18n="btn_lvlup">레벨 업</button>
+                    </a>
+                    <a href="https://play.google.com/store/apps/details?id=com.levelup.reboot" class="btn-download" target="_blank" rel="noopener">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.302 2.302a1 1 0 0 1 0 1.38l-2.302 2.302L15.396 13l2.302-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302L5.864 2.658z"/></svg>
+                        <div>
+                            <small>GET IT ON</small>
+                            <strong>Google Play</strong>
                         </div>
-                    </div>
+                    </a>
                 </div>
-
-                <div class="system-card" style="margin-bottom: 0;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <h2 data-i18n="radar_title" style="margin:0;">STAT RADAR</h2>
-                            <button class="btn-info-sm" id="btn-status-info">ℹ️ <span data-i18n="btn_status_info">가이드</span></button>
-                        </div>
-                        </div>
-                    
-                    <div class="radar-chart-container" style="margin-bottom: 5px;">
-                        <svg class="radar-chart" viewBox="0 0 100 100" id="radarSvg">
-                            <g id="radarGrid"></g><g id="radarAxes"></g>
-                            <polygon id="playerPolygon" class="radar-polygon" points="" />
-                            <g id="radarPoints"></g><g id="radarLabels"></g>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="system-card" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 10px;">
-                    <div style="font-size: 1.2rem; color: var(--neon-blue); margin-bottom: 8px;">❝</div>
-                    <div id="daily-quote" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; line-height: 1.5; word-break: keep-all; font-style: italic;"></div>
-                    <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
-                </div>
-
-                <button class="btn-myinfo" id="btn-myinfo" data-i18n="btn_myinfo">&#9881; 내 정보</button>
-
-            </section>
-
-            <section id="quests" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
-                        <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
-                    </div>
-                </div>
-                <div class="system-card" style="padding:10px;">
-                    <div class="quest-list-wrapper" id="quest-list-container"></div>
-                </div>
-                <div class="system-card calendar-wrapper">
-                    <div class="cal-header">
-                        <span data-i18n="cal_title">주간 진척도</span>
-                        <span style="font-size:0.75rem; color:var(--text-sub);" id="cal-month"></span>
-                    </div>
-                    <div class="cal-grid" id="calendar-grid"></div>
-                </div>
-
-                <!-- P3: 주간 도전과제 -->
-                <div class="system-card" style="padding:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="challenge_title">주간 도전과제</h3>
-                        <span style="font-size:0.6rem; color:var(--text-sub);" data-i18n="challenge_reset_info">매주 일요일 자동 초기화</span>
-                    </div>
-                    <div id="challenge-list"></div>
-                </div>
-
-                <!-- P4: 일일 보너스 룰렛 -->
-                <div class="system-card" style="padding:15px; text-align:center;">
-                    <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</h3>
-                    <div id="roulette-container" style="position:relative; display:inline-block;">
-                        <div class="roulette-arrow"></div>
-                        <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
-                    </div>
-                    <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
-                    <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
-                </div>
-            </section>
-
-            <section id="dungeon" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="raid_title" style="margin:0;">Local Raid</h2>
-                        <button class="btn-info-sm" id="btn-dungeon-info">ℹ️ <span data-i18n="btn_dungeon_info">가이드</span></button>
-                    </div>
-                    <span class="dungeon-timer d-none" id="raid-timer">01:59:59</span>
-                </div>
-                
-                <div class="system-card dungeon-banner" id="dungeon-banner"></div>
-                <div class="system-card dungeon-active d-none" id="dungeon-active-board" style="display: block;">
-                    <div class="active-header">
-                        <span class="blink-text text-red">⚠️ ANOMALY DETECTED</span>
-                        <span id="active-stat-badge" class="quest-stat-tag">STR</span>
-                    </div>
-                    <h3 id="active-raid-title" style="margin: 10px 0; font-size: 1.1rem; color: var(--text-main); word-break: keep-all; line-height: 1.3;">이상 현상 발생</h3>
-                    <p id="active-raid-desc" style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px; word-break: keep-all; line-height: 1.4;">목표를 달성하여 시스템 붕괴를 막으십시오.</p>
-
-                    <div class="raid-reward-box" id="raid-reward-box">
-                        <div class="raid-reward-header">
-                            <span class="raid-reward-icon">🏆</span>
-                            <span id="raid-reward-label">클리어 보상</span>
-                        </div>
-                        <div class="raid-reward-items">
-                            <div class="raid-reward-item">
-                                <span class="raid-reward-key" id="raid-reward-points-label">결속 포인트</span>
-                                <span class="raid-reward-val text-gold">+200 P</span>
-                            </div>
-                            <div class="raid-reward-item">
-                                <span class="raid-reward-key" id="raid-reward-stat-label">성장 데이터</span>
-                                <span class="raid-reward-val" id="raid-reward-stat-val" style="color:var(--neon-blue);">STR +2.0</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="raid-progress-box">
-                        <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:5px;">
-                            <span style="color:var(--neon-red); font-weight:bold;">BOSS HP</span>
-                            <span id="raid-progress-text" style="color:var(--neon-red); font-weight:bold;">5 / 5</span>
-                        </div>
-                        <div class="boss-hp-bar-bg" style="height: 14px;"><div class="boss-hp-bar-fill" id="raid-progress-bar" style="width: 100%;"></div></div>
-                        <div style="font-size:0.7rem; color:var(--text-sub); margin-top:4px; text-align:right;">
-                            <span id="raid-part-count" style="color:var(--neon-gold);">0</span> 명 참여 중
-                        </div>
-                    </div>
-
-                    <button id="btn-raid-action" class="btn-primary" style="margin-top: 15px; border: 1px solid var(--neon-blue); background: rgba(0, 217, 255, 0.1); color: var(--neon-blue);">
-                        데이터 동기화 (기여하기)
-                    </button>
-                    <button id="btn-raid-complete" class="btn-primary d-none" style="margin-top: 15px; background: var(--neon-gold); color: black;">
-                        전리품 획득
-                    </button>
-                </div>
-            </section>
-
-            <section id="social" class="view-section">
-                <div class="social-header">
-                    <button class="social-tab-btn active" data-mode="global" data-i18n="soc_global">🏆 글로벌 랭킹</button>
-                    <button class="social-tab-btn" data-mode="friends" data-i18n="soc_friend">👥 내 친구</button>
-                </div>
-                <div id="ranking-controls" class="rank-tabs">
-                    <button class="rank-tab-btn active" data-sort="total" data-i18n="sort_tot">종합스코어</button>
-                    <button class="rank-tab-btn" data-sort="str" data-i18n="sort_str">근력</button>
-                    <button class="rank-tab-btn" data-sort="int" data-i18n="sort_int">지능</button>
-                    <button class="rank-tab-btn" data-sort="cha" data-i18n="sort_cha">매력</button>
-                    <button class="rank-tab-btn" data-sort="vit" data-i18n="sort_vit">체력</button>
-                    <button class="rank-tab-btn" data-sort="wlth" data-i18n="sort_wlth">재력</button>
-                    <button class="rank-tab-btn" data-sort="agi" data-i18n="sort_agi">민첩</button>
-                </div>
-                <div class="user-list" id="user-list-container"></div>
-            </section>
-
-            <section id="diary" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="diary_tab_title" style="margin:0;">🗓️ 플래너</h2>
-                        <button class="btn-info-sm" id="btn-planner-info">ℹ️ <span data-i18n="btn_planner_info">가이드</span></button>
-                    </div>
-                    <span id="planner-week-label" style="font-size:0.7rem; color:var(--neon-gold);"></span>
-                </div>
-
-                <!-- 타임박스 플래너 (일론 머스크 스타일) -->
-                <div class="system-card" id="planner-write-card">
-                    <!-- 날짜 + 무드 헤더 -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <div id="planner-selected-date" style="font-size:0.9rem; font-weight:bold; color:var(--neon-gold);"></div>
-                        <div id="planner-mood-selector" style="display:flex; gap:6px;">
-                            <button class="diary-mood-btn" data-mood="great" title="최고">😄</button>
-                            <button class="diary-mood-btn" data-mood="good" title="좋음">🙂</button>
-                            <button class="diary-mood-btn" data-mood="neutral" title="보통">😐</button>
-                            <button class="diary-mood-btn" data-mood="bad" title="나쁨">😞</button>
-                            <button class="diary-mood-btn" data-mood="terrible" title="최악">😫</button>
-                        </div>
-                    </div>
-
-                    <!-- 플래너 탭 버튼 -->
-                    <div class="planner-tab-bar">
-                        <button class="planner-tab-btn active" data-planner-tab="priority" data-i18n="planner_tab_priority">⭐ 우선순위 태스크</button>
-                        <button class="planner-tab-btn" data-planner-tab="schedule" data-i18n="planner_tab_schedule">🕐 시간표</button>
-                    </div>
-
-                    <!-- 우선순위 태스크 탭 -->
-                    <div class="planner-tab-content active" id="planner-tab-priority">
-                        <div class="planner-unified-box">
-                            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:6px;">
-                                <button class="btn-add-task" id="btn-add-task">+ 추가</button>
-                            </div>
-                            <div id="planner-tasks-list"></div>
-                        </div>
-                    </div>
-
-                    <!-- 시간표 탭 -->
-                    <div class="planner-tab-content" id="planner-tab-schedule">
-                        <!-- 타임박스 그리드 헤더 -->
-                        <div class="timebox-grid-header">
-                            <span class="timebox-hour-col"></span>
-                            <span class="timebox-col-header">:00</span>
-                            <span class="timebox-col-header">:30</span>
-                        </div>
-
-                        <!-- 타임박스 그리드 -->
-                        <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
-
-                        <!-- 사진 첨부 -->
-                        <div class="planner-photo-box" id="planner-photo-box">
-                            <label for="plannerPhotoUpload" class="planner-photo-label" id="planner-photo-label">
-                                <div class="planner-photo-placeholder" id="planner-photo-placeholder">
-                                    <span style="font-size:1.5rem;">📷</span>
-                                    <span style="font-size:0.7rem; color:var(--text-sub);" data-i18n="planner_photo_required">사진 추가</span>
-                                </div>
-                                <img id="planner-photo-preview" class="planner-photo-preview d-none" alt="Timetable Photo">
-                            </label>
-                            <input type="file" id="plannerPhotoUpload" accept="image/*" class="d-none">
-                            <button class="planner-photo-remove d-none" id="planner-photo-remove" onclick="window.removePlannerPhoto()">✕</button>
-                        </div>
-
-                        <!-- 사진 캡션 텍스트 -->
-                        <div class="planner-caption-box">
-                            <textarea id="planner-caption" class="planner-caption-input" maxlength="280"
-                                      placeholder="오늘의 한마디를 남겨보세요..."
-                                      oninput="window.updateCaptionCounter()"></textarea>
-                            <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
-                        </div>
-
-                        <!-- 저장 버튼 + Day1 포스팅 버튼 (시간표 탭 전용) -->
-                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px;">
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <button class="btn-primary" id="btn-planner-save" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
-                                <button class="btn-primary" id="btn-reels-post" style="width:auto; padding:8px 20px; background:var(--neon-gold); color:#000;" data-i18n="reels_post_btn">Day1 포스팅</button>
-                                <button class="btn-planner-share" id="btn-planner-share" title="공유">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div style="font-size:0.65rem; color:var(--neon-gold); margin-top:4px; text-align:right;" id="reels-reset-timer"></div>
-                    </div>
-
-                    <!-- 우선순위 탭 저장 버튼 -->
-                    <div id="priority-save-area" style="display:block;">
-                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px;">
-                            <button class="btn-primary" id="btn-planner-save-priority" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 주간 플래너 캘린더 (퀘스트 탭 주간 진척도 형태) -->
-                <div class="system-card calendar-wrapper">
-                    <div class="cal-header">
-                        <span data-i18n="planner_weekly">주간 플래너</span>
-                        <span style="font-size:0.75rem; color:var(--text-sub);" id="planner-cal-month"></span>
-                    </div>
-                    <div class="cal-grid" id="planner-calendar-grid"></div>
-                </div>
-            </section>
-
-            <section id="reels" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="reels_title" style="margin:0;">🎬 Day1</h2>
-                </div>
-
-                <!-- Day1 피드 -->
-                <div id="reels-feed" class="reels-feed-container"></div>
-            </section>
-
-            <section id="settings" class="view-section">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <button class="btn-back-status" id="btn-back-status" data-i18n="btn_back">&#8592; 돌아가기</button>
-                    <h2 data-i18n="set_title" style="margin:0;">System Settings</h2>
-                </div>
-                <div class="system-card">
-                    <div class="setting-row">
-                        <span data-i18n="set_lang">언어 (Language)</span>
-                        <select class="custom-select" id="lang-select">
-                            <option value="ko" selected>한국어</option>
-                            <option value="en">English</option>
-                            <option value="ja">日本語</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <span data-i18n="set_theme">라이트 모드</span>
-                        <label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider"></span></label>
-                    </div>
-                </div>
-                <div class="system-card">
-                    <div class="setting-row">
-                        <span data-i18n="set_push">푸시 알림 수신</span>
-                        <label class="switch"><input type="checkbox" id="push-toggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-row" id="push-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
-                </div>
-                <div class="system-card">
-                    <div class="setting-row">
-                        <span data-i18n="set_gps">앱 실행 시 현위치 탐색</span>
-                        <label class="switch"><input type="checkbox" id="gps-toggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-row" id="gps-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
-                    
-                    <div class="setting-row">
-                        <span data-i18n="set_sync">구글 피트니스 앱 동기화</span>
-                        <label class="switch"><input type="checkbox" id="sync-toggle"><span class="slider"></span></label>
-                    </div>
-                    <div class="setting-row" id="sync-status" style="font-size:0.7rem; color:var(--neon-blue); display:none; justify-content:flex-end; padding-top:0; text-align:right;"></div>
-                </div>
-                <button class="btn-primary" style="background: #222; border: 1px solid var(--border-color); color: var(--neon-red);" id="btn-logout" data-i18n="set_logout">로그아웃</button>
-
-                <div class="system-card" style="margin-top: 12px; display:none;" id="settings-log-card">
-                    <h2 style="margin-bottom: 10px;">오류 로그</h2>
-                    <div class="setting-row">
-                        <span style="font-size:0.85rem;">수집된 로그</span>
-                        <span id="log-count-badge" style="font-size:0.8rem; color:var(--neon-blue); font-weight:bold;">0개</span>
-                    </div>
-                    <div style="display:flex; gap:8px; margin-top:10px;">
-                        <button class="btn-primary" style="background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); flex:1;" onclick="AppLogger.openViewer()">로그 보기</button>
-                        <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold); flex:1;" onclick="AppLogger.export()">파일 저장</button>
-                        <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red); flex:1;" onclick="if(confirm('로그를 모두 삭제하시겠습니까?')) AppLogger.clear()">초기화</button>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <nav>
-            <div class="nav-item active" data-tab="status"><span class="nav-icon">👤</span><span data-i18n="nav_status">상태창</span></div>
-            <div class="nav-item" data-tab="diary"><span class="nav-icon">🗓️</span><span data-i18n="nav_diary">플래너</span></div>
-            <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
-            <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
-            <div class="nav-item" data-tab="reels"><span class="nav-icon">🎬</span><span data-i18n="nav_reels">Day1</span></div>
-            <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
-            <div class="nav-item" data-tab="settings" style="display:none;"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
-        </nav>
-    </div>
-
-    <div class="modal-overlay d-none" id="titleModal" onclick="if(event.target===this){document.getElementById('titleModal').classList.add('d-none');document.getElementById('titleModal').classList.remove('d-flex');}">
-        <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
-            <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
-                <span id="title-modal-title" style="font-weight: bold; color: var(--neon-blue);">호칭 시스템 가이드</span>
-                <button class="modal-close" id="btn-history-close">×</button>
-            </div>
-            <div class="modal-body" id="title-guide-container" style="overflow-y: auto; max-height: 60vh;"></div>
-        </div>
-    </div>
-
-    <div class="modal-overlay d-none" id="logViewerModal" onclick="if(event.target===this){this.classList.add('d-none');this.style.display='none';}">
-        <div class="modal-content" style="max-width: 95%; width: 420px; padding: 15px; max-height: 80vh;">
-            <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
-                <span style="font-weight:bold; color:var(--neon-blue);">오류 로그 뷰어</span>
-                <button class="modal-close" onclick="document.getElementById('logViewerModal').classList.add('d-none');document.getElementById('logViewerModal').style.display='none';">×</button>
-            </div>
-            <div id="log-viewer-content" style="overflow-y:auto; flex-grow:1; max-height:55vh; font-family:monospace; font-size:0.72rem;"></div>
-            <div style="display:flex; gap:8px; margin-top:10px; flex-shrink:0;">
-                <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold);" onclick="AppLogger.export()">파일 저장</button>
-                <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red);" onclick="if(confirm('로그를 모두 삭제하시겠습니까?')){AppLogger.clear();AppLogger.openViewer();}">초기화</button>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="modal-overlay d-none" id="infoModal" onclick="if(event.target===this){document.getElementById('infoModal').classList.add('d-none');document.getElementById('infoModal').classList.remove('d-flex');}">
-        <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
-            <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
-                <span id="info-modal-title">정보</span>
-                <button class="modal-close" id="btn-info-close">×</button>
-            </div>
-            <div class="modal-body" id="info-modal-body" style="overflow-y: auto; max-height: 60vh;"></div>
-        </div>
-    </div>
-
-
-    <div class="modal-overlay d-none" id="legalModal" onclick="if(event.target===this){document.getElementById('legalModal').classList.add('d-none');document.getElementById('legalModal').classList.remove('d-flex');}">
-        <div class="modal-content" style="max-width: 95%; width: 420px; padding: 15px; max-height: 80vh;">
-            <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
-                <span id="legal-modal-title" style="font-weight:bold; color:var(--neon-blue);">약관</span>
-                <button class="modal-close" onclick="document.getElementById('legalModal').classList.add('d-none');document.getElementById('legalModal').classList.remove('d-flex');">×</button>
-            </div>
-            <div id="legal-modal-body" style="overflow-y:auto; flex-grow:1; max-height:60vh; font-size:0.8rem; color:var(--text-main); line-height:1.7;"></div>
-        </div>
-    </div>
-
-    <!-- 크리티컬 히트 플래시 -->
-    <div id="critical-flash" class="critical-flash d-none"></div>
-
-    <!-- 루트 드롭 모달 -->
-    <div class="modal-overlay d-none" id="lootModal" onclick="if(event.target===this){document.getElementById('lootModal').classList.add('d-none');document.getElementById('lootModal').classList.remove('d-flex');}">
-        <div class="modal-content loot-modal-content" style="max-width: 320px; text-align: center; padding: 25px;">
-            <div id="loot-tier-label" class="loot-tier-label">COMMON</div>
-            <div id="loot-icon" class="loot-icon">&#x1F381;</div>
-            <div id="loot-name" class="loot-name">아이템 이름</div>
-            <div id="loot-desc" class="loot-desc">보상 설명</div>
-            <button class="btn-primary" style="margin-top:15px; max-width:200px; margin-left:auto; margin-right:auto;" onclick="document.getElementById('lootModal').classList.add('d-none');document.getElementById('lootModal').classList.remove('d-flex');">
-                확인
-            </button>
-        </div>
-    </div>
-
-    <!-- 플래너 공유 모달 -->
-    <div class="modal-overlay d-none" id="shareModal" onclick="if(event.target===this){document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');}">
-        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px; text-align:center;">
-            <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 8px;">
-                <span id="share-modal-title" style="font-weight:bold; color:var(--neon-blue);">플래너 공유</span>
-                <button class="modal-close" onclick="document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');">×</button>
-            </div>
-            <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
-                <button class="btn-share-option" id="btn-share-save-image" onclick="window.sharePlannerAsImage()">
-                    <span class="share-option-icon">📥</span>
-                    <div class="share-option-text">
-                        <span class="share-option-label" data-i18n="share_save_local">이미지 로컬 저장</span>
-                        <span class="share-option-desc" data-i18n="share_save_local_desc">플래너를 이미지로 저장합니다</span>
-                    </div>
-                </button>
-                <button class="btn-share-option" id="btn-share-link" onclick="window.sharePlannerLink()">
-                    <span class="share-option-icon">🔗</span>
-                    <div class="share-option-text">
-                        <span class="share-option-label" data-i18n="share_link">링크 공유</span>
-                        <span class="share-option-desc" data-i18n="share_link_desc">플래너 요약을 클립보드에 복사합니다</span>
-                    </div>
-                </button>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="section-inner">
+            <div class="footer-inner">
+                <div class="footer-brand">
+                    <span class="footer-logo">&#x2694;&#xFE0F; LEVEL UP: REBOOT</span>
+                    <span class="footer-studio">BRAVECAT STUDIOS</span>
+                </div>
+                <div class="footer-links">
+                    <a href="privacy.html">개인정보 처리방침</a>
+                    <a href="terms.html">이용약관</a>
+                    <a href="usage-policy.html">이용 정책</a>
+                </div>
+                <div class="footer-copy">&copy; 2026 BRAVECAT STUDIOS. All rights reserved.</div>
             </div>
         </div>
-    </div>
+    </footer>
 
-    <script src="logger.js"></script>
-    <script src="data.js"></script>
-    <script type="module" src="app.js"></script>
+    <!-- Scroll animations -->
+    <script>
+    (function() {
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.showcase-content, .stat-card, .recommend-card, .section-header, .hero-text, .hero-phone').forEach(function(el) {
+                observer.observe(el);
+            });
+
+            // Mobile nav toggle
+            var toggle = document.querySelector('.nav-mobile-toggle');
+            var links = document.querySelector('.nav-links');
+            if (toggle && links) {
+                toggle.addEventListener('click', function() {
+                    links.classList.toggle('nav-links--open');
+                    toggle.classList.toggle('active');
+                });
+                links.querySelectorAll('a').forEach(function(a) {
+                    a.addEventListener('click', function() {
+                        links.classList.remove('nav-links--open');
+                        toggle.classList.remove('active');
+                    });
+                });
+            }
+        });
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                var target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    })();
+    </script>
+
 </body>
 </html>
