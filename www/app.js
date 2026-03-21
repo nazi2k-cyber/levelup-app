@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
@@ -1229,7 +1229,37 @@ async function loadUserDataFromDB(user) {
             }
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
-            AppState.user.name = data.name || user.displayName || "신규 헌터";
+            const loadedName = data.name || user.displayName || "신규 헌터";
+            // ── 기존 유저 닉네임 마이그레이션: usernames 컬렉션에 예약 ──
+            if (window.AppLogger) AppLogger.info(`[NameMigration] 시작: "${loadedName}" (uid: ${user.uid.substring(0, 8)}...)`);
+            try {
+                const nameKey = normalizeNameKey(loadedName);
+                const existingClaim = await getDoc(doc(db, "usernames", nameKey));
+                if (!existingClaim.exists()) {
+                    // 아직 아무도 예약하지 않음 → 선점
+                    await claimUsername(loadedName, user.uid);
+                    AppState.user.name = loadedName;
+                    if (window.AppLogger) AppLogger.info(`[NameMigration] 선점 성공: "${loadedName}"`);
+                } else if (existingClaim.data().uid === user.uid) {
+                    // 본인이 이미 예약함 → 그대로 사용
+                    AppState.user.name = loadedName;
+                    if (window.AppLogger) AppLogger.info(`[NameMigration] 이미 본인 예약됨: "${loadedName}"`);
+                } else {
+                    // 다른 유저가 이미 점유 → 고유 닉네임 생성
+                    const occupiedBy = existingClaim.data().uid.substring(0, 8);
+                    if (window.AppLogger) AppLogger.warn(`[NameMigration] 충돌! "${loadedName}" → 점유자: ${occupiedBy}...`);
+                    const uniqueName = await generateUniqueName(loadedName, user.uid);
+                    await claimUsername(uniqueName, user.uid);
+                    AppState.user.name = uniqueName;
+                    if (window.AppLogger) AppLogger.info(`[NameMigration] 변경 완료: "${loadedName}" → "${uniqueName}"`);
+                    // Firestore users/{uid}에도 즉시 반영
+                    await setDoc(doc(db, "users", user.uid), { name: uniqueName }, { merge: true });
+                }
+            } catch (e) {
+                console.warn('[NameMigration] 실패 (무시):', e.message);
+                if (window.AppLogger) AppLogger.error(`[NameMigration] 실패: ${e.code || ''} ${e.message || ''}`, e.stack || '');
+                AppState.user.name = loadedName;
+            }
             console.log(`[LoadData] photoURL in Firestore: ${data.photoURL ? (data.photoURL.startsWith('http') ? 'url' : data.photoURL.startsWith('data:') ? 'base64' : 'other') + '(' + data.photoURL.length + ')' : 'MISSING'}`);
             if (window.AppLogger) AppLogger.info(`[LoadData] photoURL=${data.photoURL ? (data.photoURL.substring(0, 60) + '...') : 'null'}`);
             if(data.photoURL) {
@@ -1256,7 +1286,12 @@ async function loadUserDataFromDB(user) {
             }
         } else {
             // 신규 유저: Auth 프로필에서 이름/사진 가져오고 Firestore 문서 생성
-            AppState.user.name = user.displayName || "신규 헌터";
+            const baseName = user.displayName || "신규 헌터";
+            if (window.AppLogger) AppLogger.info(`[NewUser] 신규 가입: baseName="${baseName}" (uid: ${user.uid.substring(0, 8)}...)`);
+            const uniqueName = await generateUniqueName(baseName, user.uid);
+            await claimUsername(uniqueName, user.uid);
+            AppState.user.name = uniqueName;
+            if (window.AppLogger) AppLogger.info(`[NewUser] 닉네임 확정: "${uniqueName}"`);
             if (user.photoURL) {
                 AppState.user.photoURL = user.photoURL;
                 setProfilePreview(user.photoURL);
@@ -1465,12 +1500,78 @@ function checkDailyAllClear() {
 function loadPlayerName() {
     const nameEl = document.getElementById('prof-name');
     if(nameEl) {
-        nameEl.textContent = AppState.user.name; 
-        nameEl.removeAttribute('data-i18n'); 
+        nameEl.textContent = AppState.user.name;
+        nameEl.removeAttribute('data-i18n');
     }
 }
 
-function changePlayerName() {
+// --- 닉네임 중복 방지 시스템 (usernames 컬렉션) ---
+// usernames/{normalizedName} → { uid, name, claimedAt }
+// Firestore 보안 규칙으로 원자적 유일성 보장
+
+function normalizeNameKey(name) {
+    return name.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+async function claimUsername(name, uid) {
+    const key = normalizeNameKey(name);
+    if (!key) return false;
+    if (window.AppLogger) AppLogger.info(`[ClaimName] 시도: "${name}" (key: "${key}", uid: ${uid.substring(0, 8)}...)`);
+    try {
+        await setDoc(doc(db, "usernames", key), {
+            uid: uid,
+            name: name.trim(),
+            claimedAt: Date.now()
+        });
+        if (window.AppLogger) AppLogger.info(`[ClaimName] 성공: "${name}"`);
+        return true;
+    } catch (e) {
+        if (e.code === 'permission-denied') {
+            if (window.AppLogger) AppLogger.warn(`[ClaimName] 거부 (이미 점유됨): "${name}" — ${e.code}`);
+            return false;
+        }
+        console.error("[ClaimName] 닉네임 예약 실패:", e);
+        if (window.AppLogger) AppLogger.error(`[ClaimName] 예약 실패: ${e.code || ''} ${e.message || ''}`, e.stack || '');
+        throw e;
+    }
+}
+
+async function releaseUsername(name) {
+    const key = normalizeNameKey(name);
+    if (!key) return;
+    if (window.AppLogger) AppLogger.info(`[ReleaseName] 해제 시도: "${name}" (key: "${key}")`);
+    try {
+        await deleteDoc(doc(db, "usernames", key));
+        if (window.AppLogger) AppLogger.info(`[ReleaseName] 해제 성공: "${name}"`);
+    } catch (e) {
+        console.warn("[ReleaseName] 닉네임 해제 실패 (무시):", e.message);
+        if (window.AppLogger) AppLogger.warn(`[ReleaseName] 해제 실패: "${name}" — ${e.code || ''} ${e.message || ''}`);
+    }
+}
+
+async function isUsernameAvailable(name, currentUid) {
+    const key = normalizeNameKey(name);
+    if (!key) return false;
+    try {
+        const snap = await getDoc(doc(db, "usernames", key));
+        if (!snap.exists()) return true;
+        return snap.data().uid === currentUid;
+    } catch (e) {
+        console.error("[NameCheck] 닉네임 확인 실패:", e);
+        return false;
+    }
+}
+
+async function generateUniqueName(baseName, uid) {
+    if (await isUsernameAvailable(baseName, uid)) return baseName;
+    for (let i = 2; i <= 99; i++) {
+        const candidate = `${baseName}#${i}`;
+        if (await isUsernameAvailable(candidate, uid)) return candidate;
+    }
+    return `${baseName}#${uid.substring(0, 6)}`;
+}
+
+async function changePlayerName() {
     // 1개월(30일) 쿨다운 체크
     if (AppState.user.nameLastChanged) {
         const ts = typeof AppState.user.nameLastChanged === 'number'
@@ -1486,11 +1587,32 @@ function changePlayerName() {
     }
     const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
     if (newName && newName.trim() !== "" && newName.trim() !== AppState.user.name) {
-        AppState.user.name = newName.trim();
-        AppState.user.nameLastChanged = Date.now();
-        loadPlayerName();
-        updateSocialUserData();
-        saveUserData();
+        const trimmed = newName.trim();
+        if (trimmed.length > 50) {
+            alert("닉네임은 50자 이내로 입력해주세요.");
+            return;
+        }
+        try {
+            const oldName = AppState.user.name;
+            if (window.AppLogger) AppLogger.info(`[NameChange] 변경 시도: "${oldName}" → "${trimmed}"`);
+            const claimed = await claimUsername(trimmed, auth.currentUser.uid);
+            if (!claimed) {
+                if (window.AppLogger) AppLogger.warn(`[NameChange] 중복 차단: "${trimmed}"`);
+                alert(i18n[AppState.currentLang].name_dup || "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.");
+                return;
+            }
+            await releaseUsername(oldName);
+            AppState.user.name = trimmed;
+            AppState.user.nameLastChanged = Date.now();
+            loadPlayerName();
+            updateSocialUserData();
+            saveUserData();
+            if (window.AppLogger) AppLogger.info(`[NameChange] 변경 완료: "${oldName}" → "${trimmed}"`);
+        } catch (e) {
+            console.error("[NameChange] 닉네임 변경 실패:", e);
+            if (window.AppLogger) AppLogger.error(`[NameChange] 실패: ${e.code || ''} ${e.message || ''}`, e.stack || '');
+            alert("닉네임 변경 중 오류가 발생했습니다. 다시 시도해주세요.");
+        }
     }
 }
 
