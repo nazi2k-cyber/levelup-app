@@ -3490,22 +3490,45 @@ window.sharePlannerAsImage = async function() {
     const pad = 20;
     const innerW = W - pad * 2;
 
+    // cross-origin 이미지를 fetch→blob→objectURL로 로드 (canvas taint 방지)
+    async function loadImageSafe(src) {
+        if (!src) return null;
+        try {
+            // data: URL이나 blob: URL은 직접 로드 (taint 없음)
+            if (src.startsWith('data:') || src.startsWith('blob:')) {
+                return await new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => resolve(null);
+                    img.src = src;
+                });
+            }
+            // HTTP URL: fetch로 blob 변환 후 objectURL 사용
+            const resp = await fetch(src);
+            const blob = await resp.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const img = await new Promise(resolve => {
+                const el = new Image();
+                el.onload = () => resolve(el);
+                el.onerror = () => resolve(null);
+                el.src = objectUrl;
+            });
+            URL.revokeObjectURL(objectUrl);
+            return img;
+        } catch(e) {
+            return null;
+        }
+    }
+
     // 사진 로드 (있을 경우)
     let photoImg = null;
     let photoH = 0;
     if (photoSrc) {
-        try {
-            photoImg = await new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = () => resolve(null);
-                img.src = photoSrc;
-            });
-            if (photoImg) {
-                photoH = Math.round(innerW * (photoImg.height / photoImg.width));
-                if (photoH > 400) photoH = 400;
-            }
-        } catch(e) { photoImg = null; }
+        photoImg = await loadImageSafe(photoSrc);
+        if (photoImg) {
+            photoH = Math.round(innerW * (photoImg.height / photoImg.width));
+            if (photoH > 400) photoH = 400;
+        }
     }
 
     // 시간표 블록 (연속 동일 업무 합치기, 최대 8개 표시)
@@ -3578,13 +3601,7 @@ window.sharePlannerAsImage = async function() {
     // 프로필 이미지 로드 시도
     if (AppState.user.photoURL) {
         try {
-            const profImg = await new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => resolve(img);
-                img.onerror = () => resolve(null);
-                img.src = AppState.user.photoURL;
-            });
+            const profImg = await loadImageSafe(AppState.user.photoURL);
             if (profImg) {
                 ctx.save();
                 ctx.beginPath();
