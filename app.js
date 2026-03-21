@@ -503,7 +503,7 @@ function getInitialAppState() {
             gpsEnabled: false,
             pushEnabled: false,
             fcmToken: null,
-            stepData: { date: "", rewardedSteps: 0 },
+            stepData: { date: "", rewardedSteps: 0, totalSteps: 0 },
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
             nameLastChanged: null
@@ -1065,6 +1065,9 @@ async function _doSaveUserData() {
             date: typeof stepData.date === 'string' ? stepData.date : '',
             rewardedSteps: (typeof stepData.rewardedSteps === 'number' && Number.isFinite(stepData.rewardedSteps) && stepData.rewardedSteps >= 0)
                 ? stepData.rewardedSteps
+                : 0,
+            totalSteps: (typeof stepData.totalSteps === 'number' && Number.isFinite(stepData.totalSteps) && stepData.totalSteps >= 0)
+                ? stepData.totalSteps
                 : 0
         };
         const rawLastReelsPostTs = parseInt(localStorage.getItem('reels_last_post_ts') || '0', 10);
@@ -2784,7 +2787,7 @@ async function fetchSocialData() {
                     title = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last;
                 } catch(e) {}
             }
-            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
+            return { id: d.id, ...data, title, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
         });
         renderUsers(AppState.social.sortCriteria);
     } catch(e) {
@@ -2807,7 +2810,7 @@ function renderUsers(criteria, btn = null) {
     let list = AppState.social.users.map(u => {
         const s = u.stats;
         const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
-        const steps = Number(u.stepData?.rewardedSteps) || 0;
+        const steps = Number(u.stepData?.totalSteps) || 0;
         return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0, steps };
     });
 
@@ -6211,7 +6214,7 @@ async function syncHealthData(showMsg = false) {
     const todayStr = now.toDateString();
 
     if (!AppState.user.stepData || AppState.user.stepData.date !== todayStr) {
-        AppState.user.stepData = { date: todayStr, rewardedSteps: 0 };
+        AppState.user.stepData = { date: todayStr, rewardedSteps: 0, totalSteps: 0 };
     }
 
     let totalStepsToday = 0;
@@ -6239,6 +6242,9 @@ async function syncHealthData(showMsg = false) {
         if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
         return;
     }
+
+    // 실제 총 걸음수 저장
+    AppState.user.stepData.totalSteps = totalStepsToday;
 
     // 보상 계산
     const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
@@ -6291,10 +6297,10 @@ function updateStepCountUI() {
         return;
     }
 
-    // 동기화 활성 → 걸음수 표시
-    const steps = AppState.user.stepData?.rewardedSteps || 0;
-    valueEl.textContent = steps.toLocaleString();
-    const remaining = 1000 - (steps % 1000);
+    // 동기화 활성 → 걸음수 표시 (실제 총 걸음수)
+    const totalSteps = AppState.user.stepData?.totalSteps || 0;
+    valueEl.textContent = totalSteps.toLocaleString();
+    const remaining = 1000 - (totalSteps % 1000);
     infoEl.textContent = (lang.step_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', remaining);
     infoEl.style.color = 'var(--neon-gold)';
 }
