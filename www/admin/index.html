@@ -42,6 +42,7 @@
             <button class="tab-btn" data-tab="claims">Claim 관리</button>
             <button class="tab-btn" data-tab="dashboard">대시보드</button>
             <button class="tab-btn" data-tab="usermgmt">유저 관리</button>
+            <button class="tab-btn" data-tab="screening">포스팅 스크리닝</button>
         </nav>
 
         <!-- Tab Contents -->
@@ -50,6 +51,7 @@
         <div id="tab-claims" class="tab-content"></div>
         <div id="tab-dashboard" class="tab-content"></div>
         <div id="tab-usermgmt" class="tab-content"></div>
+        <div id="tab-screening" class="tab-content"></div>
     </div>
 </div>
 
@@ -77,6 +79,7 @@ import { initDiagRules } from "./js/diag-rules.js";
 import { initAdminClaims } from "./js/admin-claims.js";
 import { initDashboard, loadDashboard } from "./js/dashboard.js";
 import { initUserManagement } from "./js/user-management.js";
+import { initPostScreening } from "./js/post-screening.js";
 
 // Initialize log panel and tabs
 initLogPanel();
@@ -113,6 +116,7 @@ onAdminAuth((user, admin) => {
         initAdminClaims("tab-claims");
         initDashboard("tab-dashboard");
         initUserManagement("tab-usermgmt");
+        initPostScreening("tab-screening");
 
         if (admin) loadDashboard();
     } else {

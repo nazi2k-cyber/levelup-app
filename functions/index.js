@@ -561,6 +561,10 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleDisableAccount(request);
                 case "deleteAccount":
                     return await handleDeleteAccount(request);
+                case "screeningListPosts":
+                    return await handleScreeningListPosts(request);
+                case "screeningDeletePost":
+                    return await handleScreeningDeletePost(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }
@@ -943,6 +947,111 @@ exports.getPushLogs = onCall(callableOpts, async (request) => {
         throw new HttpsError("internal", "getPushLogs failed: " + String(e.message || e).substring(0, 500));
     }
 });
+
+// ─── 포스팅 스크리닝: 전체 Day1 포스트 목록 조회 (관리자 전용) ───
+
+async function handleScreeningListPosts(request) {
+    await assertAdmin(request);
+
+    const usersSnap = await db.collection("users").where("hasActiveReels", "==", true).get();
+    const now = Date.now();
+    const allPosts = [];
+
+    for (const userDoc of usersSnap.docs) {
+        const data = userDoc.data();
+        if (!data.reelsStr) continue;
+        try {
+            const posts = JSON.parse(data.reelsStr);
+            for (const post of posts) {
+                const age = now - (post.timestamp || 0);
+                if (age < 24 * 60 * 60 * 1000) {
+                    allPosts.push({
+                        ownerUid: userDoc.id,
+                        ownerName: data.name || post.userName || "—",
+                        ownerEmail: null, // filled below if needed
+                        timestamp: post.timestamp,
+                        dateKST: post.dateKST || "",
+                        caption: post.caption || "",
+                        photo: post.photo || "",
+                        mood: post.mood || "",
+                        remainingMs: (24 * 60 * 60 * 1000) - age,
+                    });
+                }
+            }
+        } catch (e) { /* skip malformed reelsStr */ }
+    }
+
+    // Sort newest first
+    allPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    console.log(`[screeningListPosts] ${allPosts.length} active posts found`);
+    return { posts: allPosts };
+}
+
+// ─── 포스팅 스크리닝: 강제 삭제 (관리자 전용) ───
+
+async function handleScreeningDeletePost(request) {
+    await assertAdmin(request);
+
+    const { ownerUid, timestamp } = request.data || {};
+    if (!ownerUid || !timestamp) {
+        throw new HttpsError("invalid-argument", "ownerUid와 timestamp는 필수입니다.");
+    }
+
+    const userRef = db.collection("users").doc(ownerUid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+        throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+    }
+
+    const data = userDoc.data();
+    let posts = [];
+    if (data.reelsStr) {
+        try { posts = JSON.parse(data.reelsStr); } catch (e) { posts = []; }
+    }
+
+    const before = posts.length;
+    posts = posts.filter(p => p.timestamp !== timestamp);
+    const after = posts.length;
+
+    if (before === after) {
+        throw new HttpsError("not-found", "해당 포스트를 찾을 수 없습니다.");
+    }
+
+    // Update user document
+    const hasActive = posts.some(p => (Date.now() - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
+    await userRef.update({
+        reelsStr: JSON.stringify(posts),
+        hasActiveReels: hasActive,
+    });
+
+    // Delete associated reactions
+    const postId = `${ownerUid}_${timestamp}`;
+    try {
+        await db.collection("reels_reactions").doc(postId).delete();
+    } catch (e) { /* reactions doc may not exist */ }
+
+    // Delete photo from Storage if it's a storage URL
+    const deletedPost = data.reelsStr ? JSON.parse(data.reelsStr).find(p => p.timestamp === timestamp) : null;
+    if (deletedPost?.photo && deletedPost.photo.includes("firebasestorage")) {
+        try {
+            const bucket = getStorage().bucket();
+            const fileName = `reels_photos/${timestamp}.webp`;
+            await bucket.file(fileName).delete();
+        } catch (e) {
+            // Try jpg fallback
+            try {
+                const bucket = getStorage().bucket();
+                await bucket.file(`reels_photos/${timestamp}.jpg`).delete();
+            } catch (e2) { /* photo may not exist or different name */ }
+        }
+    }
+
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    console.log(`[screeningDeletePost] Admin ${adminEmail} deleted post ${postId} from user ${ownerUid}`);
+
+    return { success: true, deletedPostId: postId, remainingPosts: posts.length };
+}
 
 // --- 만료 릴스 사진 정리 (매일 04:00 KST) ---
 exports.cleanupExpiredReelsPhotos = onSchedule({
