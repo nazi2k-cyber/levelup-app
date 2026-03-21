@@ -1470,7 +1470,7 @@ function loadPlayerName() {
     }
 }
 
-async function changePlayerName() {
+function changePlayerName() {
     // 1개월(30일) 쿨다운 체크
     if (AppState.user.nameLastChanged) {
         const ts = typeof AppState.user.nameLastChanged === 'number'
@@ -1486,22 +1486,7 @@ async function changePlayerName() {
     }
     const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
     if (newName && newName.trim() !== "" && newName.trim() !== AppState.user.name) {
-        const trimmed = newName.trim();
-        // 닉네임 중복 체크
-        try {
-            const q = query(collection(db, "users"), where("name", "==", trimmed));
-            const snapshot = await getDocs(q);
-            const isDuplicate = snapshot.docs.some(d => d.id !== auth.currentUser.uid);
-            if (isDuplicate) {
-                alert(i18n[AppState.currentLang].name_dup || "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.");
-                return;
-            }
-        } catch (e) {
-            console.error("[NameCheck] 닉네임 중복 확인 실패:", e);
-            if (window.AppLogger) AppLogger.error('[NameCheck] 중복 확인 실패: ' + (e.message || ''), e.stack || '');
-            return;
-        }
-        AppState.user.name = trimmed;
+        AppState.user.name = newName.trim();
         AppState.user.nameLastChanged = Date.now();
         loadPlayerName();
         updateSocialUserData();
