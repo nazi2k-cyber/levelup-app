@@ -3479,7 +3479,7 @@ window.sharePlannerAsImage = async function() {
 
     const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
     const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
-    const photoSrc = plannerPhotoData || (entry && entry.photo) || null;
+    const photoSrc = _plannerPhotoBase64 || plannerPhotoData || (entry && entry.photo) || null;
     const mood = (entry && entry.mood) ? entry.mood : '';
     const moodMap = { great: '😄', good: '🙂', neutral: '😐', bad: '😞', terrible: '😫' };
     const moodEmoji = moodMap[mood] || '';
@@ -4529,12 +4529,23 @@ function loadPlannerForDate(dateStr) {
     // 사진 복원
     if (saved && saved.photo) {
         plannerPhotoData = saved.photo;
+        // base64 원본 보존 (URL이면 null → loadImageSafe 폴백)
+        _plannerPhotoBase64 = isBase64Image(saved.photo) ? saved.photo : null;
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
         if (preview) { preview.src = saved.photo; preview.classList.remove('d-none'); }
         if (placeholder) placeholder.classList.add('d-none');
         if (removeBtn) removeBtn.classList.remove('d-none');
+
+        // URL 사진 → base64 캐시 (canvas export용, 백그라운드)
+        if (!isBase64Image(saved.photo) && saved.photo.startsWith('http')) {
+            fetch(saved.photo).then(r => r.blob()).then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => { _plannerPhotoBase64 = reader.result; };
+                reader.readAsDataURL(blob);
+            }).catch(() => { /* 캐시 실패 무시 — sharePlannerAsImage에서 loadImageSafe 폴백 */ });
+        }
 
         // 기존 base64 사진 → Storage 자동 마이그레이션 (백그라운드)
         if (isBase64Image(saved.photo) && auth.currentUser) {
@@ -4555,6 +4566,7 @@ function loadPlannerForDate(dateStr) {
         }
     } else {
         plannerPhotoData = null;
+        _plannerPhotoBase64 = null;
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
@@ -4686,7 +4698,8 @@ async function savePlannerEntry() {
 }
 
 // --- ★ 플래너 사진 기능 (타임테이블 사진 필수) ★ ---
-let plannerPhotoData = null; // base64
+let plannerPhotoData = null; // base64 or URL
+let _plannerPhotoBase64 = null; // canvas export용 base64 원본 보존 (URL 교체 후에도 유지)
 
 let _plannerPhotoCompressing = false;
 function loadPlannerPhoto(e) {
@@ -4710,6 +4723,7 @@ function loadPlannerPhoto(e) {
                 // 적응형 압축: 1.2MB 이하 보장 (2MB 규칙에 안전 마진 + 모바일 업로드 속도 고려)
                 const { dataURL } = await compressToTargetSize(canvas, 1200 * 1024, 0.7, 0.2);
                 plannerPhotoData = dataURL;
+                _plannerPhotoBase64 = dataURL; // canvas export용 base64 보존
                 const preview = document.getElementById('planner-photo-preview');
                 const placeholder = document.getElementById('planner-photo-placeholder');
                 const removeBtn = document.getElementById('planner-photo-remove');
@@ -4728,6 +4742,7 @@ function loadPlannerPhoto(e) {
 
 window.removePlannerPhoto = function() {
     plannerPhotoData = null;
+    _plannerPhotoBase64 = null;
     const preview = document.getElementById('planner-photo-preview');
     const placeholder = document.getElementById('planner-photo-placeholder');
     const removeBtn = document.getElementById('planner-photo-remove');
