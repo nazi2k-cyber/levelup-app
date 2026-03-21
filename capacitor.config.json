@@ -41,6 +41,26 @@
         {
           "scheme": "levelup",
           "host": "tab"
+        },
+        {
+          "scheme": "levelup",
+          "host": "dungeon"
+        },
+        {
+          "scheme": "levelup",
+          "host": "quests"
+        },
+        {
+          "scheme": "levelup",
+          "host": "diary"
+        },
+        {
+          "scheme": "levelup",
+          "host": "social"
+        },
+        {
+          "scheme": "levelup",
+          "host": "status"
         }
       ]
     }

@@ -203,13 +203,16 @@ async function handleSendTestNotification(request) {
         notification,
         data: {
             tab: targetTab,
-            type: "test_" + (type || "raid_start")
+            target: targetTab,
+            type: "test_" + (type || "raid_start"),
+            link: "levelup://tab/" + (targetTab || "status")
         },
         android: {
             priority: "high",
             notification: {
                 channelId: "test",
-                sound: "default"
+                sound: "default",
+                clickAction: "OPEN_APP_TAB"
             }
         }
     };
@@ -260,18 +263,22 @@ async function handleSendAnnouncement(request) {
         throw new HttpsError("invalid-argument", "title과 body는 필수입니다.");
     }
 
+    const announcementTab = targetTab || "status";
     const message = {
         topic: "announcements",
         notification: { title, body },
         data: {
-            tab: targetTab || "",
-            type: "announcement"
+            tab: announcementTab,
+            target: announcementTab,
+            type: "announcement",
+            link: "levelup://tab/" + announcementTab
         },
         android: {
             priority: "high",
             notification: {
                 channelId: "announcements",
-                sound: "default"
+                sound: "default",
+                clickAction: "OPEN_APP_TAB"
             }
         }
     };
@@ -435,15 +442,17 @@ async function handleRaidAlert() {
         },
         data: {
             tab: "dungeon",
+            target: "dungeon",
             type: "raid_alert",
-            slot: slotLabel
+            slot: slotLabel,
+            link: "levelup://tab/dungeon"
         },
         android: {
             priority: "high",
             notification: {
                 channelId: "raid_alerts",
                 sound: "default",
-                clickAction: "FLUTTER_NOTIFICATION_CLICK"
+                clickAction: "OPEN_APP_TAB"
             }
         }
     };
@@ -477,13 +486,16 @@ exports.sendDailyReminder = onSchedule({
         },
         data: {
             tab: "quests",
-            type: "daily_reminder"
+            target: "quests",
+            type: "daily_reminder",
+            link: "levelup://tab/quests"
         },
         android: {
             priority: "high",
             notification: {
                 channelId: "daily_reminder",
-                sound: "default"
+                sound: "default",
+                clickAction: "OPEN_APP_TAB"
             }
         }
     };
@@ -548,14 +560,17 @@ exports.sendStreakWarnings = onSchedule({
             },
             data: {
                 tab: "status",
+                target: "status",
                 type: msgType,
-                daysAway: String(diffDays)
+                daysAway: String(diffDays),
+                link: "levelup://tab/status"
             },
             android: {
                 priority: "high",
                 notification: {
                     channelId: "streak_warning",
-                    sound: "default"
+                    sound: "default",
+                    clickAction: "OPEN_APP_TAB"
                 }
             }
         };

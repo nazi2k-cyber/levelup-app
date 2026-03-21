@@ -6400,9 +6400,16 @@ async function setupNativePushListeners() {
             showInAppNotification(notification.title, notification.body, notification.data);
         });
 
-        // 알림 탭(클릭) 처리 — 앱이 백그라운드 상태일 때
+        // 알림 탭(클릭) 처리 — 앱이 백그라운드/포그라운드 상태일 때
+        // ※ 콜드 스타트 클릭은 registerEarlyPushListeners()의 얼리 리스너가 처리
+        //   _earlyActionHandled 플래그로 중복 처리 방지
         PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
             if (window.AppLogger) AppLogger.info('[FCM] 알림 탭: ' + JSON.stringify(action));
+            if (_earlyActionHandled) {
+                _earlyActionHandled = false; // 얼리 리스너에서 이미 처리된 이벤트 — 스킵
+                if (window.AppLogger) AppLogger.info('[FCM] 얼리 리스너에서 이미 처리됨, 중복 스킵');
+                return;
+            }
             handleNotificationAction(action.notification.data);
         });
 
@@ -6421,6 +6428,7 @@ async function setupNativePushListeners() {
  */
 let _pendingNotificationData = null;
 let _appNavigationReady = false;
+let _earlyActionHandled = false; // 얼리 리스너에서 이미 처리된 이벤트 중복 방지 플래그
 
 function registerEarlyPushListeners() {
     const cap = window.Capacitor;
@@ -6434,6 +6442,17 @@ function registerEarlyPushListeners() {
         console.log('[FCM] 얼리 리스너 — 알림 클릭 감지:', JSON.stringify(action));
         const data = action.notification?.data;
         if (!data) return;
+
+        // data.link 딥링크가 있으면 tab 정보 추출
+        if (!data.tab && data.link) {
+            try {
+                const linkUrl = new URL(data.link);
+                const linkParts = linkUrl.pathname.replace(/^\/+/, '').split('/');
+                data.tab = linkUrl.hostname === 'tab' ? linkParts[0] : linkUrl.hostname;
+            } catch (e) { /* 파싱 실패 시 무시 */ }
+        }
+
+        _earlyActionHandled = true; // 중복 처리 방지 플래그
 
         if (_appNavigationReady) {
             // 앱이 이미 준비된 경우 바로 네비게이션
@@ -6490,7 +6509,52 @@ function registerEarlyPushListeners() {
         }).catch(() => {});
     }
 
+    // 콜드 스타트: 이미 전달된 알림 중 클릭된 것 확인
+    // (앱이 완전히 종료된 상태에서 알림 클릭 → 앱 실행 시 리스너보다 먼저 이벤트가 발생할 수 있음)
+    checkDeliveredNotifications(PushNotifications);
+
     console.log('[FCM] 얼리 푸시 리스너 등록 완료');
+}
+
+/**
+ * 앱 실행 시 이미 전달된 알림 확인 (콜드 스타트 보조)
+ * - pushNotificationActionPerformed 리스너가 이벤트를 놓칠 경우 대비
+ * - 앱이 완전히 종료된 상태에서 알림 클릭으로 앱이 실행될 때
+ *   전달된 알림 목록에서 네비게이션 데이터를 추출
+ */
+async function checkDeliveredNotifications(PushNotifications) {
+    try {
+        const result = await PushNotifications.getDeliveredNotifications();
+        if (result && result.notifications && result.notifications.length > 0) {
+            console.log('[FCM] 전달된 알림 ' + result.notifications.length + '개 발견');
+            if (window.AppLogger) AppLogger.info('[FCM] 전달된 알림: ' + JSON.stringify(result.notifications.length));
+
+            // 가장 최근 알림의 데이터를 사용 (아직 대기 데이터가 없는 경우에만)
+            if (!_pendingNotificationData) {
+                const latest = result.notifications[result.notifications.length - 1];
+                const data = latest.data || {};
+
+                // data.link 딥링크에서 tab 추출
+                if (!data.tab && data.link) {
+                    try {
+                        const linkUrl = new URL(data.link);
+                        const linkParts = linkUrl.pathname.replace(/^\/+/, '').split('/');
+                        data.tab = linkUrl.hostname === 'tab' ? linkParts[0] : linkUrl.hostname;
+                    } catch (e) { /* 파싱 실패 시 무시 */ }
+                }
+
+                if (data.tab) {
+                    _pendingNotificationData = data;
+                    if (window.AppLogger) AppLogger.info('[FCM] 전달된 알림에서 대기 데이터 설정: ' + JSON.stringify(data));
+                }
+            }
+
+            // 확인한 알림은 제거하여 다음 실행 시 중복 처리 방지
+            await PushNotifications.removeAllDeliveredNotifications();
+        }
+    } catch (e) {
+        console.warn('[FCM] 전달된 알림 확인 실패:', e.message || e);
+    }
 }
 
 /** 앱 초기화 완료 후 대기 중인 알림 데이터 처리 */
@@ -6498,11 +6562,23 @@ function processPendingNotification() {
     _appNavigationReady = true;
     if (_pendingNotificationData) {
         if (window.AppLogger) AppLogger.info('[FCM] 대기 중인 알림 처리: ' + JSON.stringify(_pendingNotificationData));
-        // 약간의 지연으로 DOM 렌더링 완료 후 탭 전환
+        const pendingData = _pendingNotificationData;
+        _pendingNotificationData = null;
+        // DOM 렌더링 완료 후 탭 전환 — 콜드 스타트 시 UI 준비에 시간이 필요할 수 있음
         setTimeout(() => {
-            handleNotificationAction(_pendingNotificationData);
-            _pendingNotificationData = null;
-        }, 500);
+            handleNotificationAction(pendingData);
+        }, 800);
+    } else {
+        // 대기 데이터가 없는 경우에도, 약간의 딜레이 후 한번 더 확인
+        // (비동기 checkDeliveredNotifications가 아직 완료되지 않았을 수 있음)
+        setTimeout(() => {
+            if (_pendingNotificationData) {
+                if (window.AppLogger) AppLogger.info('[FCM] 지연 대기 알림 처리: ' + JSON.stringify(_pendingNotificationData));
+                const delayedData = _pendingNotificationData;
+                _pendingNotificationData = null;
+                handleNotificationAction(delayedData);
+            }
+        }, 1500);
     }
 }
 
@@ -6596,6 +6672,16 @@ function handleNotificationAction(data) {
 
     // 알림 타입에 따른 탭 자동 매핑
     let tab = data.tab || data.target;
+
+    // tab이 없으면 딥링크 URL에서 추출 시도
+    if (!tab && data.link) {
+        try {
+            const linkUrl = new URL(data.link);
+            const linkParts = linkUrl.pathname.replace(/^\/+/, '').split('/');
+            tab = linkUrl.hostname === 'tab' ? linkParts[0] : linkUrl.hostname;
+        } catch (e) { /* 파싱 실패 시 무시 */ }
+    }
+
     if (!tab && data.type) {
         const typeTabMap = {
             'raid_start': 'dungeon',
@@ -6614,6 +6700,16 @@ function handleNotificationAction(data) {
         if (tabEl) {
             switchTab(tab, tabEl);
             if (window.AppLogger) AppLogger.info('[Navigate] 탭 이동 완료: ' + tab);
+        } else {
+            // DOM이 아직 준비되지 않은 경우 재시도
+            if (window.AppLogger) AppLogger.warn('[Navigate] 탭 요소 미발견, 1초 후 재시도: ' + tab);
+            setTimeout(() => {
+                const retryEl = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+                if (retryEl) {
+                    switchTab(tab, retryEl);
+                    if (window.AppLogger) AppLogger.info('[Navigate] 재시도 탭 이동 완료: ' + tab);
+                }
+            }, 1000);
         }
     }
 }
