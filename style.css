@@ -692,6 +692,31 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 [data-theme="light"] .reels-comment-input-wrap { border-top-color: rgba(0,0,0,0.06); }
 
+/* ===== 신고 버튼 & 경고 ===== */
+.reels-report-btn {
+    background: none; border: none;
+    color: #ff5252; cursor: pointer;
+    padding: 4px; display: inline-flex; align-items: center;
+    transition: all 0.2s; margin-left: auto;
+    opacity: 0.7;
+}
+.reels-report-btn:hover { opacity: 1; transform: scale(1.15); }
+.reels-report-btn:active { transform: scale(0.9); }
+.reels-report-btn.reported { opacity: 0.3; cursor: not-allowed; }
+.reels-report-label { display: none; }
+.reels-report-warning {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255, 82, 82, 0.1); border: 1px solid rgba(255, 82, 82, 0.3);
+    border-radius: 8px; padding: 8px 12px; margin-top: 8px;
+    font-size: 0.72rem; color: #ff8a80;
+}
+.reels-report-warning-icon { font-size: 1rem; color: #ff5252; flex-shrink: 0; }
+.reels-report-warning-text { line-height: 1.4; }
+[data-theme="light"] .reels-report-warning {
+    background: rgba(255, 82, 82, 0.08); border-color: rgba(255, 82, 82, 0.2);
+    color: #c62828;
+}
+
 /* ===== 플래너 공유 버튼 ===== */
 .btn-planner-share {
     background: rgba(0, 217, 255, 0.1); border: 1px solid var(--neon-blue); color: var(--neon-blue);

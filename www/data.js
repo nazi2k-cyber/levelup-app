@@ -18,7 +18,7 @@ const i18n = {
         btn_myinfo: "&#9881; 내 정보", btn_back: "&#8592; 돌아가기",
         set_title: "System Settings", set_lang: "언어 (Language)", set_theme: "라이트 모드", set_push: "푸시 알림 수신", set_gps: "앱 실행 시 현위치 탐색", set_sync: "구글 피트니스 앱 동기화", set_logout: "로그아웃",
         no_friend: "등록된 친구가 없습니다.", btn_add: "친구 추가", btn_added: "친구 ✓", gps_on: "위치 권한 활성화됨", gps_off: "위치 탐색 중지됨", gps_err: "위치 정보 오류", gps_denied: "위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.", gps_denied_confirm: "위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?", gps_unavailable: "위치 정보를 사용할 수 없습니다. GPS 신호를 확인해주세요.", gps_timeout: "위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.", gps_no_support: "위치 서비스를 지원하지 않는 기기입니다.", gps_searching: "위치 탐색 중...", gps_retrying: "위치 재탐색 중...", modal_title: "칭호 이력 조회",
-        name_prompt: "새로운 닉네임을 입력하세요.\n(※ 1개월에 1회만 변경 가능합니다.)", name_err: "명칭 변경은 1개월에 한 번만 가능합니다.", name_dup: "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.", name_checking: "닉네임 중복 확인 중...", sync_req: "동기화 요청 중...", sync_done: "동기화 완료 (포인트 지급)", sync_off: "동기화 해제됨",
+        name_prompt: "새로운 닉네임을 입력하세요.\n(※ 1개월에 1회만 변경 가능합니다.)", name_err: "명칭 변경은 1개월에 한 번만 가능합니다.", sync_req: "동기화 요청 중...", sync_done: "동기화 완료 (포인트 지급)", sync_off: "동기화 해제됨",
         push_on: "푸시 알림 활성화됨", push_off: "푸시 알림 중지됨", push_denied: "알림 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.", push_requesting: "알림 권한 요청 중...", push_err: "푸시 알림 설정 실패",
 
         btn_quest_info: "가이드", btn_dungeon_info: "가이드",
@@ -87,6 +87,8 @@ const i18n = {
         reels_reported: "신고가 접수되었습니다.", reels_already_reported: "이미 신고한 게시물입니다.",
         reels_report_fail: "신고 처리에 실패했습니다.",
         reels_report_warning: "이 게시물은 신고가 접수되었습니다. 관리자가 검토 중입니다.",
+        location_add: "위치 추가", location_search_title: "위치 검색", location_search_placeholder: "장소를 검색하세요...",
+        location_use_current: "📍 현재 위치 사용", location_searching: "검색 중...", location_no_results: "검색 결과가 없습니다.", location_error: "위치를 가져올 수 없습니다.",
         planner_photo_required: "사진 추가",
         planner_photo_warning: "⚠️ 로그아웃 시 사진이 삭제됩니다. 중요한 사진은 미리 저장하세요.",
         planner_caption_placeholder: "오늘의 한마디를 남겨보세요...",
@@ -132,7 +134,8 @@ const i18n = {
         // 이메일 인증
         verify_title: "이메일 인증이 필요합니다", verify_desc: "받은편지함에서 인증 링크를 클릭한 후 로그인해주세요.",
         verify_sent: "인증 메일이 발송되었습니다.", verify_resend: "인증 메일 재발송", verify_back: "로그인으로 돌아가기",
-        verify_login_blocked: "이메일 인증을 완료해주세요. 받은편지함을 확인하세요.", verify_resent: "인증 메일이 재발송되었습니다."
+        verify_login_blocked: "이메일 인증을 완료해주세요. 받은편지함을 확인하세요.", verify_resent: "인증 메일이 재발송되었습니다.",
+        img_compressing: "이미지 최적화 중...", img_too_large: "이미지가 너무 큽니다. 다른 사진을 선택해주세요."
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -153,7 +156,7 @@ const i18n = {
         btn_myinfo: "&#9881; My Info", btn_back: "&#8592; Back",
         set_title: "System Settings", set_lang: "Language", set_theme: "Light Theme", set_push: "Push Notifications", set_gps: "Auto Location Tracking", set_sync: "Google Fit Sync", set_logout: "Logout",
         no_friend: "No friends registered.", btn_add: "Add Friend", btn_added: "Friend ✓", gps_on: "Location tracking on", gps_off: "Location tracking off", gps_err: "Location Error", gps_denied: "Location permission denied. Please enable it in settings.", gps_denied_confirm: "Location permission is denied.\nWould you like to open app settings to allow it?", gps_unavailable: "Location unavailable. Please check GPS signal.", gps_timeout: "Location search timed out. Please try again.", gps_no_support: "This device does not support location services.", gps_searching: "Searching location...", gps_retrying: "Retrying location...", modal_title: "Title History",
-        name_prompt: "Enter new player name.\n(Can be changed once a month)", name_err: "Name can only be changed once a month.", name_dup: "This nickname is already taken. Please choose a different one.", name_checking: "Checking nickname availability...", sync_req: "Requesting sync...", sync_done: "Sync complete", sync_off: "Sync disabled",
+        name_prompt: "Enter new player name.\n(Can be changed once a month)", name_err: "Name can only be changed once a month.", sync_req: "Requesting sync...", sync_done: "Sync complete", sync_off: "Sync disabled",
         push_on: "Push notifications enabled", push_off: "Push notifications disabled", push_denied: "Notification permission denied. Please enable in settings.", push_requesting: "Requesting notification permission...", push_err: "Failed to set up push notifications",
 
         btn_quest_info: "Guide", btn_dungeon_info: "Guide",
@@ -218,6 +221,8 @@ const i18n = {
         reels_reported: "Report has been submitted.", reels_already_reported: "You have already reported this post.",
         reels_report_fail: "Failed to submit report.",
         reels_report_warning: "This post has been reported. An administrator is reviewing it.",
+        location_add: "Add location", location_search_title: "Search location", location_search_placeholder: "Search for a place...",
+        location_use_current: "📍 Use current location", location_searching: "Searching...", location_no_results: "No results found.", location_error: "Unable to get location.",
         planner_photo_required: "Add Photo (Required)",
         planner_photo_warning: "⚠️ Photos will be deleted on logout. Save important photos beforehand.",
         planner_caption_placeholder: "Write a short caption...",
@@ -263,7 +268,8 @@ const i18n = {
         // Email Verification
         verify_title: "Email Verification Required", verify_desc: "Please click the verification link in your inbox, then log in.",
         verify_sent: "Verification email sent.", verify_resend: "Resend Verification Email", verify_back: "Back to Login",
-        verify_login_blocked: "Please verify your email first. Check your inbox.", verify_resent: "Verification email resent."
+        verify_login_blocked: "Please verify your email first. Check your inbox.", verify_resent: "Verification email resent.",
+        img_compressing: "Optimizing image...", img_too_large: "Image is too large. Please select a different photo."
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -284,7 +290,7 @@ const i18n = {
         btn_myinfo: "&#9881; マイ情報", btn_back: "&#8592; 戻る",
         set_title: "システム設定", set_lang: "言語 (Language)", set_theme: "ライトモード", set_push: "プッシュ通知受信", set_gps: "起動時の位置情報取得", set_sync: "Google Fit 同期", set_logout: "ログアウト",
         no_friend: "友達がいません。", btn_add: "友達追加", btn_added: "友達 ✓", gps_on: "位置情報有効", gps_off: "位置情報停止", gps_err: "位置情報エラー", gps_denied: "位置情報の権限が拒否されました。設定で許可してください。", gps_denied_confirm: "位置情報の権限が拒否されています。\nアプリ設定で位置情報を許可しますか？", gps_unavailable: "位置情報が利用できません。GPS信号を確認してください。", gps_timeout: "位置情報の取得がタイムアウトしました。再試行してください。", gps_no_support: "この端末は位置情報サービスに対応していません。", gps_searching: "位置情報を検索中...", gps_retrying: "位置情報を再検索中...", modal_title: "称号履歴",
-        name_prompt: "新しいプレイヤー名を入力してください。\n(月に1回のみ変更可能)", name_err: "名前の変更は月に1回のみ可能です。", name_dup: "このニックネームはすでに使用されています。別のニックネームを入力してください。", name_checking: "ニックネームの重複確認中...", sync_req: "同期を要求中...", sync_done: "同期完了", sync_off: "同期解除",
+        name_prompt: "新しいプレイヤー名を入力してください。\n(月に1回のみ変更可能)", name_err: "名前の変更は月に1回のみ可能です。", sync_req: "同期を要求中...", sync_done: "同期完了", sync_off: "同期解除",
         push_on: "プッシュ通知が有効です", push_off: "プッシュ通知が無効です", push_denied: "通知の権限が拒否されました。設定から権限を許可してください。", push_requesting: "通知権限を要求中...", push_err: "プッシュ通知の設定に失敗しました",
 
         btn_quest_info: "ガイド", btn_dungeon_info: "ガイド",
@@ -349,6 +355,8 @@ const i18n = {
         reels_reported: "通報が受理されました。", reels_already_reported: "すでに通報済みの投稿です。",
         reels_report_fail: "通報処理に失敗しました。",
         reels_report_warning: "この投稿は通報されました。管理者が確認中です。",
+        location_add: "位置を追加", location_search_title: "位置検索", location_search_placeholder: "場所を検索...",
+        location_use_current: "📍 現在地を使用", location_searching: "検索中...", location_no_results: "検索結果がありません。", location_error: "位置を取得できません。",
         planner_photo_required: "写真追加（必須）",
         planner_photo_warning: "⚠️ ログアウト時に写真は削除されます。大切な写真は事前に保存してください。",
         planner_caption_placeholder: "今日の一言を残しましょう...",
