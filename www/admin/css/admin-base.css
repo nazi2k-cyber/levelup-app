@@ -147,3 +147,21 @@ td { padding: 8px; border-bottom: 1px solid var(--border); }
 .flex-center { display: flex; align-items: center; gap: 8px; }
 .gap-8 { gap: 8px; }
 .hidden { display: none !important; }
+
+/* ─── Post Screening Thumbnails ─── */
+.ps-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    vertical-align: middle;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+.ps-thumb:hover {
+    transform: scale(3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    z-index: 10;
+    position: relative;
+}

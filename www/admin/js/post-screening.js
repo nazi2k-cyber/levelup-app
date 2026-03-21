@@ -109,14 +109,17 @@ function renderPostTable(posts) {
         const dt = p.timestamp ? new Date(p.timestamp).toLocaleString("ko-KR") : "—";
         const remaining = formatRemaining(p.remainingMs);
         const captionPreview = escHtml((p.caption || "").substring(0, 40)) + (p.caption && p.caption.length > 40 ? "..." : "");
-        const hasPhoto = p.photo ? '<span class="badge badge-info">사진</span>' : '<span class="text-sub">—</span>';
+        const thumbHtml = p.photo
+            ? `<img src="${escHtml(p.photo)}" class="ps-thumb" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display=''">`
+              + `<span class="text-sub" style="display:none">—</span>`
+            : '<span class="text-sub">—</span>';
 
         html += `<tr class="ps-row" data-owner="${p.ownerUid}" data-ts="${p.timestamp}" style="cursor:pointer;">
             <td>${escHtml(p.ownerName)}</td>
             <td class="text-sm">${captionPreview || '<span class="text-sub">—</span>'}</td>
             <td class="text-sub text-sm">${dt}</td>
             <td class="text-sm">${remaining}</td>
-            <td>${hasPhoto}</td>
+            <td>${thumbHtml}</td>
         </tr>`;
     }
     html += '</tbody></table>';
