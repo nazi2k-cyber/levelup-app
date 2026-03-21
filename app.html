@@ -144,6 +144,19 @@
                     </div>
                 </div>
 
+                <div class="system-card" id="step-count-card" style="display:none; margin-bottom: 10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.2rem;">🚶</span>
+                            <span style="font-size:0.85rem; color:var(--text-sub);" data-i18n="step_title">오늘의 걸음수</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:1.3rem; font-weight:900; color:var(--neon-blue);"><span id="step-count-value">0</span><span style="font-size:0.7rem; color:var(--text-sub);"> 보</span></div>
+                            <div id="step-count-info" style="font-size:0.65rem; color:var(--neon-gold);"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="system-card" style="margin-bottom: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -340,6 +353,7 @@
                     <button class="rank-tab-btn" data-sort="vit" data-i18n="sort_vit">체력</button>
                     <button class="rank-tab-btn" data-sort="wlth" data-i18n="sort_wlth">재력</button>
                     <button class="rank-tab-btn" data-sort="agi" data-i18n="sort_agi">민첩</button>
+                    <button class="rank-tab-btn" data-sort="steps" data-i18n="sort_steps">🚶 걸음수</button>
                 </div>
                 <div class="user-list" id="user-list-container"></div>
             </section>
@@ -547,9 +561,9 @@
 
         <nav>
             <div class="nav-item active" data-tab="status"><span class="nav-icon">👤</span><span data-i18n="nav_status">상태창</span></div>
+            <div class="nav-item" data-tab="diary"><span class="nav-icon">🗓️</span><span data-i18n="nav_diary">플래너</span></div>
             <div class="nav-item" data-tab="quests"><span class="nav-icon">📜</span><span data-i18n="nav_quest">퀘스트</span></div>
             <div class="nav-item" data-tab="dungeon"><span class="nav-icon">⚔️</span><span data-i18n="nav_dungeon">던전</span></div>
-            <div class="nav-item" data-tab="diary"><span class="nav-icon">🗓️</span><span data-i18n="nav_diary">플래너</span></div>
             <div class="nav-item" data-tab="reels"><span class="nav-icon">🎬</span><span data-i18n="nav_reels">Day1</span></div>
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
             <div class="nav-item" data-tab="settings" style="display:none;"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>

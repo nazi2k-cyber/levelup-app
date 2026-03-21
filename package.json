@@ -4,9 +4,10 @@
   "description": "LEVEL UP: REBOOT - 게임처럼 현실을 레벨업하는 앱",
   "main": "app.html",
   "scripts": {
-    "sync": "cap sync android",
+    "sync-www": "bash sync-www.sh",
+    "sync": "bash sync-www.sh && cap sync android",
     "add-android": "cap add android",
-    "build-apk": "cd android && chmod +x ./gradlew && ./gradlew assembleDebug"
+    "build-apk": "bash sync-www.sh && cd android && chmod +x ./gradlew && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",
