@@ -288,6 +288,243 @@ async function handleSendAnnouncement(request) {
     return { success: true, messageId: response };
 }
 
+// ─── Admin: 유저 관리 핸들러 ───
+
+// 전체 유저 목록 조회 (관리자용)
+async function handleAdminListUsers(request) {
+    await assertAdmin(request);
+
+    const usersSnap = await db.collection("users").get();
+    const users = [];
+
+    for (const doc of usersSnap.docs) {
+        const data = doc.data();
+        let displayName = data.name || data.displayName || doc.id.substring(0, 8);
+        let email = null;
+        try {
+            const authUser = await getAuth().getUser(doc.id);
+            email = authUser.email || null;
+        } catch (_) { /* user may not exist in Auth */ }
+
+        users.push({
+            uid: doc.id,
+            displayName: String(displayName),
+            email,
+            level: data.level || 1,
+            disabled: false
+        });
+    }
+
+    // Auth에서 disabled 상태도 확인
+    for (const u of users) {
+        try {
+            const authUser = await getAuth().getUser(u.uid);
+            u.disabled = authUser.disabled || false;
+            u.email = authUser.email || u.email;
+        } catch (_) { /* ignore */ }
+    }
+
+    return { users };
+}
+
+// 유저 데이터 백업 생성
+async function handleBackupUserData(request) {
+    await assertAdmin(request);
+    const { uid, memo } = request.data || {};
+    if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
+
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (!userDoc.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+    const backupRef = await db.collection("user_backups").add({
+        uid: String(uid),
+        data: userDoc.data(),
+        memo: String(memo || "수동 백업"),
+        createdAt: new Date(),
+        createdBy: request.auth.token.email || request.auth.uid
+    });
+
+    console.log(`[backupUserData] Backup created for ${uid}: ${backupRef.id}`);
+    return { success: true, backupId: backupRef.id };
+}
+
+// 유저 백업 목록 조회
+async function handleListBackups(request) {
+    await assertAdmin(request);
+    const { uid } = request.data || {};
+    if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
+
+    const backupsSnap = await db.collection("user_backups")
+        .where("uid", "==", uid)
+        .orderBy("createdAt", "desc")
+        .limit(20)
+        .get();
+
+    const backups = backupsSnap.docs.map(d => {
+        const data = d.data();
+        let ts;
+        try {
+            ts = data.createdAt && typeof data.createdAt.toDate === "function"
+                ? data.createdAt.toDate().toISOString()
+                : String(data.createdAt || "");
+        } catch (_) { ts = ""; }
+        return {
+            id: d.id,
+            memo: String(data.memo || ""),
+            createdAt: ts,
+            createdBy: String(data.createdBy || "")
+        };
+    });
+
+    return { backups };
+}
+
+// 특정 유저 데이터 초기화
+async function handleResetUserData(request) {
+    await assertAdmin(request);
+    const { uid, resetAll } = request.data || {};
+
+    if (resetAll) {
+        // 전체 유저 데이터 초기화
+        const usersSnap = await db.collection("users").get();
+        let count = 0;
+        for (const userDoc of usersSnap.docs) {
+            // 초기화 전 자동 백업
+            await db.collection("user_backups").add({
+                uid: userDoc.id,
+                data: userDoc.data(),
+                memo: "전체 초기화 전 자동 백업",
+                createdAt: new Date(),
+                createdBy: request.auth.token.email || request.auth.uid
+            });
+            await db.collection("users").doc(userDoc.id).set({
+                name: userDoc.data().name || "헌터",
+                level: 1,
+                points: 0,
+                stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+                pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+                friends: [],
+                pushEnabled: userDoc.data().pushEnabled || false,
+                fcmToken: userDoc.data().fcmToken || null,
+                syncEnabled: false,
+                gpsEnabled: false
+            });
+            count++;
+        }
+        console.log(`[resetUserData] All ${count} users reset`);
+        return { success: true, resetCount: count };
+    }
+
+    if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
+
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (!userDoc.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+    // 초기화 전 자동 백업
+    await db.collection("user_backups").add({
+        uid: String(uid),
+        data: userDoc.data(),
+        memo: "데이터 초기화 전 자동 백업",
+        createdAt: new Date(),
+        createdBy: request.auth.token.email || request.auth.uid
+    });
+
+    const existingData = userDoc.data();
+    await db.collection("users").doc(uid).set({
+        name: existingData.name || "헌터",
+        level: 1,
+        points: 0,
+        stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+        pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
+        friends: [],
+        pushEnabled: existingData.pushEnabled || false,
+        fcmToken: existingData.fcmToken || null,
+        syncEnabled: false,
+        gpsEnabled: false
+    });
+
+    console.log(`[resetUserData] User ${uid} data reset`);
+    return { success: true };
+}
+
+// 특정 시점으로 롤백
+async function handleRollbackUserData(request) {
+    await assertAdmin(request);
+    const { uid, backupId } = request.data || {};
+    if (!uid || !backupId) throw new HttpsError("invalid-argument", "uid와 backupId는 필수입니다.");
+
+    const backupDoc = await db.collection("user_backups").doc(backupId).get();
+    if (!backupDoc.exists) throw new HttpsError("not-found", "백업을 찾을 수 없습니다.");
+
+    const backupData = backupDoc.data();
+    if (backupData.uid !== uid) throw new HttpsError("invalid-argument", "백업의 uid가 일치하지 않습니다.");
+
+    // 롤백 전 현재 상태 백업
+    const currentDoc = await db.collection("users").doc(uid).get();
+    if (currentDoc.exists) {
+        await db.collection("user_backups").add({
+            uid: String(uid),
+            data: currentDoc.data(),
+            memo: `롤백 전 자동 백업 (→ ${backupId})`,
+            createdAt: new Date(),
+            createdBy: request.auth.token.email || request.auth.uid
+        });
+    }
+
+    await db.collection("users").doc(uid).set(backupData.data);
+    console.log(`[rollbackUserData] User ${uid} rolled back to backup ${backupId}`);
+    return { success: true };
+}
+
+// 비밀번호 재설정 링크 생성
+async function handleResetPassword(request) {
+    await assertAdmin(request);
+    const { uid } = request.data || {};
+    if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
+
+    const user = await getAuth().getUser(uid);
+    if (!user.email) throw new HttpsError("failed-precondition", "이메일이 없는 계정입니다.");
+
+    const link = await getAuth().generatePasswordResetLink(user.email);
+    console.log(`[resetPassword] Password reset link generated for ${user.email}`);
+    return { success: true, email: user.email, link };
+}
+
+// 계정 사용 중지/활성화
+async function handleDisableAccount(request) {
+    await assertAdmin(request);
+    const { uid, disabled } = request.data || {};
+    if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
+
+    await getAuth().updateUser(uid, { disabled: !!disabled });
+    console.log(`[disableAccount] User ${uid} disabled: ${!!disabled}`);
+    return { success: true, disabled: !!disabled };
+}
+
+// 계정 삭제
+async function handleDeleteAccount(request) {
+    await assertAdmin(request);
+    const { uid } = request.data || {};
+    if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
+
+    // 삭제 전 백업
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (userDoc.exists) {
+        await db.collection("user_backups").add({
+            uid: String(uid),
+            data: userDoc.data(),
+            memo: "계정 삭제 전 자동 백업",
+            createdAt: new Date(),
+            createdBy: request.auth.token.email || request.auth.uid
+        });
+        await db.collection("users").doc(uid).delete();
+    }
+
+    await getAuth().deleteUser(uid);
+    console.log(`[deleteAccount] User ${uid} deleted`);
+    return { success: true };
+}
+
 // ─── 0. Ping + Admin API Router (Callable) ───
 // Routes admin actions through the working ping function to bypass
 // per-function Cloud Run deployment/IAM issues in Gen 2.
@@ -308,6 +545,22 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleSendAnnouncement(request);
                 case "getClientErrorLogs":
                     return await handleGetClientErrorLogs(request);
+                case "adminListUsers":
+                    return await handleAdminListUsers(request);
+                case "backupUserData":
+                    return await handleBackupUserData(request);
+                case "listBackups":
+                    return await handleListBackups(request);
+                case "resetUserData":
+                    return await handleResetUserData(request);
+                case "rollbackUserData":
+                    return await handleRollbackUserData(request);
+                case "resetPassword":
+                    return await handleResetPassword(request);
+                case "disableAccount":
+                    return await handleDisableAccount(request);
+                case "deleteAccount":
+                    return await handleDeleteAccount(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }
