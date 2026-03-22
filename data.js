@@ -55,8 +55,8 @@ const i18n = {
         rare_title_unlocked: "희귀 호칭 획득!", rare_title_rank_label: "랭킹 호칭", rare_title_streak_label: "스트릭 호칭",
         rare_title_equipped: "장착됨", rare_title_equip: "장착", rare_title_unequip: "해제",
         rare_title_guide: "희귀 호칭 가이드", rare_title_guide_desc: "스트릭 달성 및 랭킹 상위권 진입 시 특별한 희귀 호칭이 부여됩니다.",
-        rare_title_streak_section: "스트릭 달성 호칭", rare_title_rank_section: "랭킹 호칭",
-        rare_title_global_rank: "종합 순위", rare_title_stat_rank: "스탯별 1위",
+        rare_title_streak_section: "스트릭 달성 호칭", rare_title_rank_section: "랭킹 호칭", rare_title_step_section: "걸음수 달성 호칭",
+        rare_title_global_rank: "종합 순위", rare_title_stat_rank: "스탯별 1위", rare_title_step_unit: "보",
 
         // 던전 보스 HP
         boss_hp: "보스 HP", boss_rush: "주말 보스 러시", boss_rush_desc: "보스 HP 2배, 보상 2배!", proximity_bonus: "근접 보너스 +50P",
@@ -198,8 +198,8 @@ const i18n = {
         rare_title_unlocked: "Rare Title Unlocked!", rare_title_rank_label: "Rank Title", rare_title_streak_label: "Streak Title",
         rare_title_equipped: "Equipped", rare_title_equip: "Equip", rare_title_unequip: "Unequip",
         rare_title_guide: "Rare Title Guide", rare_title_guide_desc: "Special rare titles are awarded for streak milestones and top rankings.",
-        rare_title_streak_section: "Streak Titles", rare_title_rank_section: "Ranking Titles",
-        rare_title_global_rank: "Global Rank", rare_title_stat_rank: "Stat #1",
+        rare_title_streak_section: "Streak Titles", rare_title_rank_section: "Ranking Titles", rare_title_step_section: "Step Titles",
+        rare_title_global_rank: "Global Rank", rare_title_stat_rank: "Stat #1", rare_title_step_unit: "steps",
         streak_multiplier: "Reward Multiplier",
 
         boss_hp: "Boss HP", boss_rush: "Weekend Boss Rush", boss_rush_desc: "Boss HP x2, Rewards x2!", proximity_bonus: "Proximity Bonus +50P",
@@ -341,8 +341,8 @@ const i18n = {
         rare_title_unlocked: "希少称号獲得！", rare_title_rank_label: "ランキング称号", rare_title_streak_label: "ストリーク称号",
         rare_title_equipped: "装着中", rare_title_equip: "装着", rare_title_unequip: "解除",
         rare_title_guide: "希少称号ガイド", rare_title_guide_desc: "ストリーク達成やランキング上位に入ると特別な希少称号が付与されます。",
-        rare_title_streak_section: "ストリーク称号", rare_title_rank_section: "ランキング称号",
-        rare_title_global_rank: "総合順位", rare_title_stat_rank: "ステータス1位",
+        rare_title_streak_section: "ストリーク称号", rare_title_rank_section: "ランキング称号", rare_title_step_section: "歩数称号",
+        rare_title_global_rank: "総合順位", rare_title_stat_rank: "ステータス1位", rare_title_step_unit: "歩",
 
         boss_hp: "ボスHP", boss_rush: "週末ボスラッシュ", boss_rush_desc: "ボスHP2倍、報酬2倍！", proximity_bonus: "近接ボーナス +50P",
         boss_defeated: "ボス撃破完了！", boss_damage: "ダメージ",
@@ -500,6 +500,14 @@ const rareRankTitles = {
         agi:  { rarity: 'epic', icon: '⚡', title: { ko: 'AGI의 제왕', en: 'King of AGI', ja: 'AGIの帝王' } }
     }
 };
+
+// 걸음수 마일스톤 기반 희귀 호칭
+const rareStepTitles = [
+    { steps: 5000,   rarity: 'uncommon',  icon: '🚶', title: { ko: '산책러', en: 'Stroller', ja: '散歩者' } },
+    { steps: 10000,  rarity: 'rare',      icon: '🏃', title: { ko: '만보 달성자', en: '10K Walker', ja: '万歩達成者' } },
+    { steps: 30000,  rarity: 'epic',      icon: '🦶', title: { ko: '철각 행자', en: 'Iron Strider', ja: '鉄脚行者' } },
+    { steps: 50000,  rarity: 'legendary', icon: '👟', title: { ko: '대지의 정복자', en: 'Earth Conqueror', ja: '大地の征服者' } }
+];
 
 // 희귀도별 CSS 클래스 매핑
 const rarityConfig = {

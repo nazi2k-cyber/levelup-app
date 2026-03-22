@@ -137,8 +137,8 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 .title-badge { display: inline-block; padding: 2px 6px; font-size: 0.65rem; font-weight: bold; background: linear-gradient(45deg, rgba(181, 60, 255, 0.2), transparent); border: 1px solid var(--neon-purple); color: var(--neon-purple); border-radius: 4px; margin-bottom: 3px; cursor: pointer;}
 
 /* 기존 호칭 + 희귀 호칭 병렬 표시 */
-.title-badge-combined { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 3px; cursor: pointer; }
-.title-badge-combined .title-badge { font-size: inherit; }
+.title-badge-combined { display: inline-flex; align-items: center; gap: 3px; flex-wrap: wrap; margin-bottom: 3px; cursor: pointer; }
+.title-badge-combined .title-badge { font-size: 0.55rem; padding: 1px 4px; margin-bottom: 0; }
 
 /* ===== 희귀 호칭 등급별 스타일 ===== */
 .title-badge.rarity-uncommon { background: linear-gradient(45deg, rgba(0,180,0,0.2), transparent); border-color: #00cc66; color: #00cc66; }

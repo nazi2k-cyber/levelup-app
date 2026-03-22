@@ -507,7 +507,7 @@ function getInitialAppState() {
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
             nameLastChanged: null,
-            rareTitle: { unlocked: [], equipped: null }
+            rareTitle: { unlocked: [] }
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -1183,7 +1183,7 @@ async function loadUserDataFromDB(user) {
                 try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
             }
             if(data.rareTitleStr) {
-                try { AppState.user.rareTitle = JSON.parse(data.rareTitleStr); } catch(e) { AppState.user.rareTitle = { unlocked: [], equipped: null }; }
+                try { const parsed = JSON.parse(data.rareTitleStr); AppState.user.rareTitle = { unlocked: parsed.unlocked || [] }; } catch(e) { AppState.user.rareTitle = { unlocked: [] }; }
             }
             // 스트릭 계산 및 스탯 감소
             applyStreakAndDecay();
@@ -1415,6 +1415,21 @@ function renderStreakBadge() {
 
 // --- ★ 희귀 호칭 시스템 ★ ---
 
+// 우선순위: rank_global > rank_stat > streak > steps (높을수록 우선)
+const _rarePriority = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10 };
+
+// 우선순위에 따라 자동으로 가장 높은 희귀 호칭 반환
+function getBestRareTitle() {
+    const unlocked = AppState.user.rareTitle.unlocked;
+    if (unlocked.length === 0) return null;
+    const rarityOrder = ['uncommon', 'rare', 'epic', 'legendary'];
+    return [...unlocked].sort((a, b) => {
+        const pDiff = (_rarePriority[b.type] || 0) - (_rarePriority[a.type] || 0);
+        if (pDiff !== 0) return pDiff;
+        return rarityOrder.indexOf(b.rarity) - rarityOrder.indexOf(a.rarity);
+    })[0] || null;
+}
+
 // 스트릭 마일스톤 달성 시 희귀 호칭 해금 체크
 function checkStreakRareTitles() {
     const streak = AppState.user.streak.currentStreak;
@@ -1431,17 +1446,33 @@ function checkStreakRareTitles() {
         }
     });
     if (newUnlock) {
-        // 가장 높은 등급의 새 호칭을 자동 장착
-        const rarityOrder = ['uncommon', 'rare', 'epic', 'legendary'];
-        const best = AppState.user.rareTitle.unlocked
-            .filter(u => u.type === 'streak')
-            .sort((a, b) => rarityOrder.indexOf(b.rarity) - rarityOrder.indexOf(a.rarity))[0];
-        if (best && (!AppState.user.rareTitle.equipped || rarityOrder.indexOf(best.rarity) >= rarityOrder.indexOf(AppState.user.rareTitle.equipped.rarity))) {
-            AppState.user.rareTitle.equipped = best;
-        }
         saveUserData();
         updatePointUI();
-        showRareTitleNotification(best || AppState.user.rareTitle.unlocked[AppState.user.rareTitle.unlocked.length - 1]);
+        const newest = AppState.user.rareTitle.unlocked[AppState.user.rareTitle.unlocked.length - 1];
+        showRareTitleNotification(newest);
+    }
+}
+
+// 걸음수 마일스톤 달성 시 희귀 호칭 해금 체크
+function checkStepRareTitles() {
+    const steps = Number(AppState.user.stepData?.totalSteps) || 0;
+    let newUnlock = false;
+    rareStepTitles.forEach(rt => {
+        const titleId = `steps_${rt.steps}`;
+        if (steps >= rt.steps && !AppState.user.rareTitle.unlocked.find(u => u.id === titleId)) {
+            AppState.user.rareTitle.unlocked.push({
+                id: titleId, type: 'steps', rarity: rt.rarity, icon: rt.icon,
+                title: rt.title, unlockedAt: new Date().toISOString()
+            });
+            newUnlock = true;
+            AppLogger.info(`[RareTitle] 걸음수 희귀 호칭 해금: ${rt.title.ko} (${rt.steps}보)`);
+        }
+    });
+    if (newUnlock) {
+        saveUserData();
+        updatePointUI();
+        const newest = AppState.user.rareTitle.unlocked[AppState.user.rareTitle.unlocked.length - 1];
+        showRareTitleNotification(newest);
     }
 }
 
@@ -1456,99 +1487,62 @@ function checkRankRareTitles() {
     });
     if (users.length === 0) return;
 
-    let newUnlock = false;
+    let changed = false;
 
     // 글로벌 종합 순위 체크
     const globalSorted = [...users].sort((a, b) => b.total - a.total);
     const myGlobalRank = globalSorted.findIndex(u => u.id === uid) + 1;
-    rareRankTitles.global.forEach(rt => {
-        const titleId = `global_rank_${rt.rank}`;
-        if (myGlobalRank === rt.rank && !AppState.user.rareTitle.unlocked.find(u => u.id === titleId)) {
-            // 기존 다른 글로벌 랭크 호칭 제거 (순위 변동 시)
-            AppState.user.rareTitle.unlocked = AppState.user.rareTitle.unlocked.filter(u => !u.id.startsWith('global_rank_'));
-            AppState.user.rareTitle.unlocked.push({
-                id: titleId, type: 'rank_global', rarity: rt.rarity, icon: rt.icon,
-                title: rt.title, unlockedAt: new Date().toISOString()
-            });
-            newUnlock = true;
-            AppLogger.info(`[RareTitle] 글로벌 랭킹 호칭 해금: ${rt.title.ko} (${rt.rank}위)`);
-        }
-    });
+
+    // 기존 글로벌 호칭 제거 후 해당 순위면 다시 추가
+    const hadGlobal = AppState.user.rareTitle.unlocked.filter(u => u.type === 'rank_global');
+    AppState.user.rareTitle.unlocked = AppState.user.rareTitle.unlocked.filter(u => u.type !== 'rank_global');
+    const myGlobalEntry = rareRankTitles.global.find(rt => rt.rank === myGlobalRank);
+    if (myGlobalEntry) {
+        AppState.user.rareTitle.unlocked.push({
+            id: `global_rank_${myGlobalEntry.rank}`, type: 'rank_global', rarity: myGlobalEntry.rarity, icon: myGlobalEntry.icon,
+            title: myGlobalEntry.title, unlockedAt: new Date().toISOString()
+        });
+        if (!hadGlobal.find(h => h.id === `global_rank_${myGlobalEntry.rank}`)) changed = true;
+    } else if (hadGlobal.length > 0) { changed = true; }
 
     // 스탯별 1위 체크
     statKeys.forEach(stat => {
         const sorted = [...users].sort((a, b) => b[stat] - a[stat]);
         const myRank = sorted.findIndex(u => u.id === uid) + 1;
         const titleId = `stat_rank_${stat}`;
+        const had = AppState.user.rareTitle.unlocked.find(u => u.id === titleId);
+
         if (myRank === 1 && sorted[0][stat] > 0) {
-            if (!AppState.user.rareTitle.unlocked.find(u => u.id === titleId)) {
+            if (!had) {
                 AppState.user.rareTitle.unlocked.push({
                     id: titleId, type: 'rank_stat', rarity: rareRankTitles.stat[stat].rarity,
                     icon: rareRankTitles.stat[stat].icon, title: rareRankTitles.stat[stat].title,
                     stat: stat, unlockedAt: new Date().toISOString()
                 });
-                newUnlock = true;
-                AppLogger.info(`[RareTitle] 스탯 1위 호칭 해금: ${stat}`);
+                changed = true;
             }
-        } else {
-            // 1위가 아니게 되면 해당 스탯 랭킹 호칭 제거
-            const hadTitle = AppState.user.rareTitle.unlocked.find(u => u.id === titleId);
-            if (hadTitle) {
-                AppState.user.rareTitle.unlocked = AppState.user.rareTitle.unlocked.filter(u => u.id !== titleId);
-                if (AppState.user.rareTitle.equipped?.id === titleId) {
-                    AppState.user.rareTitle.equipped = null;
-                }
-                AppLogger.info(`[RareTitle] 스탯 1위 호칭 상실: ${stat}`);
-                newUnlock = true; // trigger save
-            }
+        } else if (had) {
+            AppState.user.rareTitle.unlocked = AppState.user.rareTitle.unlocked.filter(u => u.id !== titleId);
+            changed = true;
         }
     });
 
-    // 글로벌 순위 이탈 시 랭킹 호칭 제거
-    if (myGlobalRank > 3) {
-        const hadGlobal = AppState.user.rareTitle.unlocked.find(u => u.id.startsWith('global_rank_'));
-        if (hadGlobal) {
-            if (AppState.user.rareTitle.equipped?.id?.startsWith('global_rank_')) {
-                AppState.user.rareTitle.equipped = null;
-            }
-            AppState.user.rareTitle.unlocked = AppState.user.rareTitle.unlocked.filter(u => !u.id.startsWith('global_rank_'));
-            newUnlock = true;
-        }
-    }
-
-    if (newUnlock) {
+    if (changed) {
         saveUserData();
         updatePointUI();
     }
 }
 
-// 희귀 호칭 장착/해제 토글
-function equipRareTitle(titleId) {
-    if (titleId === null) {
-        AppState.user.rareTitle.equipped = null;
-    } else {
-        const found = AppState.user.rareTitle.unlocked.find(u => u.id === titleId);
-        if (found) AppState.user.rareTitle.equipped = found;
-    }
-    saveUserData();
-    updatePointUI();
-    updateSocialUserData();
-}
-
-// 현재 표시할 호칭 텍스트와 아이콘 반환 (기존 호칭 + 희귀 호칭 병렬)
+// 현재 표시할 호칭 텍스트와 아이콘 반환 (기존 호칭 + 최고 우선순위 희귀 호칭 자동 병렬)
 function getDisplayTitle() {
     const lang = AppState.currentLang;
     const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1]?.title;
     const baseText = titleObj ? (typeof titleObj === 'object' ? titleObj[lang] || titleObj.ko : titleObj) : '각성자';
     const baseIcon = getTitleIcon(baseText);
-    const equipped = AppState.user.rareTitle.equipped;
-    if (equipped) {
-        const rareText = equipped.title[lang] || equipped.title.ko;
-        return {
-            baseText, baseIcon,
-            rareText, rareIcon: equipped.icon, rarity: equipped.rarity,
-            isRare: true
-        };
+    const best = getBestRareTitle();
+    if (best) {
+        const rareText = best.title[lang] || best.title.ko;
+        return { baseText, baseIcon, rareText, rareIcon: best.icon, rarity: best.rarity, isRare: true };
     }
     return { baseText, baseIcon, rareText: null, rareIcon: null, rarity: null, isRare: false };
 }
@@ -2464,7 +2458,15 @@ window.syncGlobalDungeon = async () => {
                         const stats = data.stats || {};
                         let rareTitle = null;
                         if (data.rareTitleStr) {
-                            try { const rt = JSON.parse(data.rareTitleStr); if (rt.equipped) rareTitle = rt.equipped; } catch(e) {}
+                            try {
+                                const rt = JSON.parse(data.rareTitleStr);
+                                const ul = rt.unlocked || [];
+                                if (ul.length > 0) {
+                                    const ro = ['uncommon','rare','epic','legendary'];
+                                    const pp = { rank_global:40, rank_stat:30, streak:20, steps:10 };
+                                    rareTitle = [...ul].sort((a,b) => { const pd=(pp[b.type]||0)-(pp[a.type]||0); return pd!==0?pd:ro.indexOf(b.rarity)-ro.indexOf(a.rarity); })[0];
+                                }
+                            } catch(e) {}
                         }
                         participants.push({
                             id: doc.id,
@@ -2956,12 +2958,17 @@ async function fetchSocialData() {
                     title = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last;
                 } catch(e) {}
             }
-            // 희귀 호칭 파싱
+            // 희귀 호칭 파싱 (우선순위 기반 자동 선택)
             let rareTitle = null;
             if (data.rareTitleStr) {
                 try {
                     const rt = JSON.parse(data.rareTitleStr);
-                    if (rt.equipped) rareTitle = rt.equipped;
+                    const ul = rt.unlocked || [];
+                    if (ul.length > 0) {
+                        const ro = ['uncommon', 'rare', 'epic', 'legendary'];
+                        const pp = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10 };
+                        rareTitle = [...ul].sort((a, b) => { const pd = (pp[b.type]||0) - (pp[a.type]||0); return pd !== 0 ? pd : ro.indexOf(b.rarity) - ro.indexOf(a.rarity); })[0];
+                    }
                 } catch(e) {}
             }
             return { id: d.id, ...data, title, rareTitle, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
@@ -3019,7 +3026,6 @@ function renderUsers(criteria, btn = null) {
 }
 
 window.fetchSocialData = fetchSocialData;
-window.equipRareTitle = equipRareTitle;
 
 // 현재 유저의 프로필 변경사항을 소셜 탭에 즉시 반영
 function updateSocialUserData() {
@@ -3283,25 +3289,25 @@ function getTitleIcon(titleText) {
     return titleIconMap[suffix] || '🏅';
 }
 
-// 유저 카드에 표시할 호칭 배지 HTML 생성 (기존 호칭 + 희귀 호칭 병렬)
+// 유저 카드에 표시할 호칭 배지 HTML 생성 (기존 호칭 + 희귀 호칭 자동 병렬)
 function buildUserTitleBadgeHTML(u, fontSize) {
     const lang = AppState.currentLang;
     const baseIcon = getTitleIcon(u.title);
     const baseText = u.title;
     let rareInfo = null;
 
-    if (u.isMe && AppState.user.rareTitle.equipped) {
-        const eq = AppState.user.rareTitle.equipped;
-        rareInfo = { icon: eq.icon, text: eq.title[lang] || eq.title.ko, rarity: eq.rarity };
-    } else if (!u.isMe && u.rareTitle) {
+    if (u.isMe) {
+        const best = getBestRareTitle();
+        if (best) rareInfo = { icon: best.icon, text: best.title[lang] || best.title.ko, rarity: best.rarity };
+    } else if (u.rareTitle) {
         rareInfo = { icon: u.rareTitle.icon, text: u.rareTitle.title[lang] || u.rareTitle.title.ko, rarity: u.rareTitle.rarity };
     }
 
     if (rareInfo) {
         const rarityClass = rarityConfig[rareInfo.rarity]?.class || '';
-        return `<div class="title-badge-combined" style="font-size:${fontSize};"><span class="title-badge" style="margin-bottom:0; font-size:inherit;">${baseIcon} ${sanitizeText(baseText)}</span><span class="title-badge ${rarityClass}" style="margin-bottom:0; font-size:inherit;">${rareInfo.icon} ${sanitizeText(rareInfo.text)}</span></div>`;
+        return `<div class="title-badge-combined"><span class="title-badge" style="margin-bottom:0;">${baseIcon} ${sanitizeText(baseText)}</span><span class="title-badge ${rarityClass}" style="margin-bottom:0;">${rareInfo.icon} ${sanitizeText(rareInfo.text)}</span></div>`;
     }
-    return `<div class="title-badge" style="font-size:${fontSize};">${baseIcon} ${sanitizeText(baseText)}</div>`;
+    return `<div class="title-badge">${baseIcon} ${sanitizeText(baseText)}</div>`;
 }
 
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
@@ -3317,116 +3323,55 @@ function closeTitleModal() {
     m.classList.remove('d-flex');
 }
 
-// 희귀 호칭 컬렉션 HTML 빌더
+// 희귀 호칭 컬렉션 HTML 빌더 (장착/해제 없이 자동 우선순위)
 function buildRareTitleCollectionHTML(lang) {
     const unlocked = AppState.user.rareTitle.unlocked;
-    const equipped = AppState.user.rareTitle.equipped;
+    const best = getBestRareTitle();
     const li18n = i18n[lang] || i18n.ko;
 
-    // 희귀 호칭 해제 버튼 (기존 호칭만 표시로 전환)
-    const unequipBtnLabel = { ko: '희귀 호칭 해제 (기존 호칭만 표시)', en: 'Unequip Rare Title (show base title only)', ja: '希少称号解除（基本称号のみ表示）' };
-    const unequipBtn = equipped
-        ? `<div style="text-align:right; margin-bottom:8px;">
-            <button onclick="window.equipRareTitle(null); openTitleModal();" style="padding:3px 10px; font-size:0.7rem; border:1px solid var(--text-sub); background:transparent; color:var(--text-sub); border-radius:4px; cursor:pointer;">${unequipBtnLabel[lang] || unequipBtnLabel.ko}</button>
-           </div>`
-        : '';
-
-    // 스트릭 호칭 목록 (잠금 포함)
-    const streakHTML = rareStreakTitles.map(rt => {
-        const titleId = `streak_${rt.days}`;
+    // 공통 아이템 렌더링 헬퍼
+    function renderItem(rt, titleId, conditionLabel) {
         const isUnlocked = unlocked.find(u => u.id === titleId);
-        const isEquipped = equipped?.id === titleId;
+        const isBest = best?.id === titleId;
         const rarityLabel = rarityConfig[rt.rarity]?.label[lang] || rt.rarity;
         const titleText = rt.title[lang] || rt.title.ko;
-
         if (isUnlocked) {
-            return `<div class="rare-title-item ${isEquipped ? 'equipped' : ''}">
+            return `<div class="rare-title-item ${isBest ? 'equipped' : ''}">
                 <span class="rt-icon">${rt.icon}</span>
                 <div class="rt-info">
                     <span class="rt-name">${titleText}</span>
                     <span class="rt-rarity ${rt.rarity}">${rarityLabel}</span>
-                    <div style="font-size:0.6rem; color:var(--text-sub);">${rt.days}${li18n.streak_day || '일'} ${li18n.streak_label || '연속'}</div>
-                </div>
-                <button class="rt-btn ${isEquipped ? 'equipped-btn' : ''}" onclick="window.equipRareTitle(${isEquipped ? 'null' : `'${titleId}'`}); openTitleModal();">
-                    ${isEquipped ? (li18n.rare_title_equipped || '장착됨') : (li18n.rare_title_equip || '장착')}
-                </button>
-            </div>`;
-        } else {
-            return `<div class="rare-title-item" style="opacity:0.4;">
-                <span class="rt-icon">🔒</span>
-                <div class="rt-info">
-                    <span class="rt-name" style="color:var(--text-sub);">???</span>
-                    <span class="rt-rarity ${rt.rarity}">${rarityLabel}</span>
-                    <div style="font-size:0.6rem; color:var(--text-sub);">${rt.days}${li18n.streak_day || '일'} ${li18n.streak_label || '연속'}</div>
+                    ${isBest ? '<span class="rt-rarity legendary" style="margin-left:3px;">★</span>' : ''}
+                    <div style="font-size:0.6rem; color:var(--text-sub);">${conditionLabel}</div>
                 </div>
             </div>`;
         }
-    }).join('');
+        return `<div class="rare-title-item" style="opacity:0.4;">
+            <span class="rt-icon">🔒</span>
+            <div class="rt-info">
+                <span class="rt-name" style="color:var(--text-sub);">???</span>
+                <span class="rt-rarity ${rt.rarity}">${rarityLabel}</span>
+                <div style="font-size:0.6rem; color:var(--text-sub);">${conditionLabel}</div>
+            </div>
+        </div>`;
+    }
 
-    // 랭킹 호칭 목록
-    const rankGlobalHTML = rareRankTitles.global.map(rt => {
-        const titleId = `global_rank_${rt.rank}`;
-        const isUnlocked = unlocked.find(u => u.id === titleId);
-        const isEquipped = equipped?.id === titleId;
-        const rarityLabel = rarityConfig[rt.rarity]?.label[lang] || rt.rarity;
-        const titleText = rt.title[lang] || rt.title.ko;
-        const rankLabel = `#${rt.rank} ${li18n.rare_title_global_rank || '종합 순위'}`;
+    // 순서: 종합순위 > 스탯별1위 > 스트릭 > 걸음수
+    const rankGlobalHTML = rareRankTitles.global.map(rt =>
+        renderItem(rt, `global_rank_${rt.rank}`, `#${rt.rank} ${li18n.rare_title_global_rank || '종합 순위'}`)
+    ).join('');
 
-        if (isUnlocked) {
-            return `<div class="rare-title-item ${isEquipped ? 'equipped' : ''}">
-                <span class="rt-icon">${rt.icon}</span>
-                <div class="rt-info">
-                    <span class="rt-name">${titleText}</span>
-                    <span class="rt-rarity ${rt.rarity}">${rarityLabel}</span>
-                    <div style="font-size:0.6rem; color:var(--text-sub);">${rankLabel}</div>
-                </div>
-                <button class="rt-btn ${isEquipped ? 'equipped-btn' : ''}" onclick="window.equipRareTitle(${isEquipped ? 'null' : `'${titleId}'`}); openTitleModal();">
-                    ${isEquipped ? (li18n.rare_title_equipped || '장착됨') : (li18n.rare_title_equip || '장착')}
-                </button>
-            </div>`;
-        } else {
-            return `<div class="rare-title-item" style="opacity:0.4;">
-                <span class="rt-icon">🔒</span>
-                <div class="rt-info">
-                    <span class="rt-name" style="color:var(--text-sub);">???</span>
-                    <span class="rt-rarity ${rt.rarity}">${rarityLabel}</span>
-                    <div style="font-size:0.6rem; color:var(--text-sub);">${rankLabel}</div>
-                </div>
-            </div>`;
-        }
-    }).join('');
+    const rankStatHTML = statKeys.map(stat =>
+        renderItem(rareRankTitles.stat[stat], `stat_rank_${stat}`, `${stat.toUpperCase()} #1`)
+    ).join('');
 
-    const rankStatHTML = statKeys.map(stat => {
-        const rt = rareRankTitles.stat[stat];
-        const titleId = `stat_rank_${stat}`;
-        const isUnlocked = unlocked.find(u => u.id === titleId);
-        const isEquipped = equipped?.id === titleId;
-        const rarityLabel = rarityConfig[rt.rarity]?.label[lang] || rt.rarity;
-        const titleText = rt.title[lang] || rt.title.ko;
+    const streakHTML = rareStreakTitles.map(rt =>
+        renderItem(rt, `streak_${rt.days}`, `${rt.days}${li18n.streak_day || '일'} ${li18n.streak_label || '연속'}`)
+    ).join('');
 
-        if (isUnlocked) {
-            return `<div class="rare-title-item ${isEquipped ? 'equipped' : ''}">
-                <span class="rt-icon">${rt.icon}</span>
-                <div class="rt-info">
-                    <span class="rt-name">${titleText}</span>
-                    <span class="rt-rarity ${rt.rarity}">${rarityLabel}</span>
-                    <div style="font-size:0.6rem; color:var(--text-sub);">${stat.toUpperCase()} #1</div>
-                </div>
-                <button class="rt-btn ${isEquipped ? 'equipped-btn' : ''}" onclick="window.equipRareTitle(${isEquipped ? 'null' : `'${titleId}'`}); openTitleModal();">
-                    ${isEquipped ? (li18n.rare_title_equipped || '장착됨') : (li18n.rare_title_equip || '장착')}
-                </button>
-            </div>`;
-        } else {
-            return `<div class="rare-title-item" style="opacity:0.4;">
-                <span class="rt-icon">🔒</span>
-                <div class="rt-info">
-                    <span class="rt-name" style="color:var(--text-sub);">???</span>
-                    <span class="rt-rarity ${rt.rarity}">${rarityLabel}</span>
-                    <div style="font-size:0.6rem; color:var(--text-sub);">${stat.toUpperCase()} #1</div>
-                </div>
-            </div>`;
-        }
-    }).join('');
+    const stepHTML = rareStepTitles.map(rt =>
+        renderItem(rt, `steps_${rt.steps}`, `${rt.steps.toLocaleString()}${li18n.rare_title_step_unit || '보'}`)
+    ).join('');
 
     return `
         <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
@@ -3436,12 +3381,7 @@ function buildRareTitleCollectionHTML(lang) {
             <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:12px; line-height:1.4;">
                 ${li18n.rare_title_guide_desc || '스트릭 달성 및 랭킹 상위권 진입 시 특별한 희귀 호칭이 부여됩니다.'}
             </div>
-            ${unequipBtn}
             <div style="font-size:0.8rem; font-weight:bold; color:var(--neon-blue); margin:10px 0 6px;">
-                🔥 ${li18n.rare_title_streak_section || '스트릭 달성 호칭'}
-            </div>
-            ${streakHTML}
-            <div style="font-size:0.8rem; font-weight:bold; color:var(--neon-blue); margin:15px 0 6px;">
                 👑 ${li18n.rare_title_rank_section || '랭킹 호칭'} — ${li18n.rare_title_global_rank || '종합 순위'}
             </div>
             ${rankGlobalHTML}
@@ -3449,6 +3389,14 @@ function buildRareTitleCollectionHTML(lang) {
                 🏆 ${li18n.rare_title_rank_section || '랭킹 호칭'} — ${li18n.rare_title_stat_rank || '스탯별 1위'}
             </div>
             ${rankStatHTML}
+            <div style="font-size:0.8rem; font-weight:bold; color:var(--neon-blue); margin:15px 0 6px;">
+                🔥 ${li18n.rare_title_streak_section || '스트릭 달성 호칭'}
+            </div>
+            ${streakHTML}
+            <div style="font-size:0.8rem; font-weight:bold; color:var(--neon-blue); margin:15px 0 6px;">
+                🚶 ${li18n.rare_title_step_section || '걸음수 달성 호칭'}
+            </div>
+            ${stepHTML}
         </div>
     `;
 }
@@ -6594,6 +6542,9 @@ async function syncHealthData(showMsg = false) {
 
     // 실제 총 걸음수 저장
     AppState.user.stepData.totalSteps = totalStepsToday;
+
+    // 걸음수 기반 희귀 호칭 체크
+    checkStepRareTitles();
 
     // 보상 계산
     const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
