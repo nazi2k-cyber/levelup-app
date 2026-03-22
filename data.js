@@ -51,6 +51,13 @@ const i18n = {
         streak_label: "연속", streak_day: "일", streak_bonus: "스트릭 보너스", streak_lost: "스트릭이 초기화되었습니다!", stat_decay_warning: "미접속으로 스탯이 감소했습니다.",
         streak_multiplier: "보상 배율",
 
+        // 희귀 호칭 시스템
+        rare_title_unlocked: "희귀 호칭 획득!", rare_title_rank_label: "랭킹 호칭", rare_title_streak_label: "스트릭 호칭",
+        rare_title_equipped: "장착됨", rare_title_equip: "장착", rare_title_unequip: "해제",
+        rare_title_guide: "희귀 호칭 가이드", rare_title_guide_desc: "스트릭 달성 및 랭킹 상위권 진입 시 특별한 희귀 호칭이 부여됩니다.",
+        rare_title_streak_section: "스트릭 달성 호칭", rare_title_rank_section: "랭킹 호칭",
+        rare_title_global_rank: "종합 순위", rare_title_stat_rank: "스탯별 1위",
+
         // 던전 보스 HP
         boss_hp: "보스 HP", boss_rush: "주말 보스 러시", boss_rush_desc: "보스 HP 2배, 보상 2배!", proximity_bonus: "근접 보너스 +50P",
         boss_defeated: "보스 처치 완료!", boss_damage: "데미지",
@@ -186,6 +193,13 @@ const i18n = {
         raid_participants_title: "Participants", raid_contributed: "Contributed", raid_waiting_contribute: "Waiting",
 
         streak_label: "Streak", streak_day: "days", streak_bonus: "Streak Bonus", streak_lost: "Streak has been reset!", stat_decay_warning: "Stats decreased due to inactivity.",
+
+        // Rare Title System
+        rare_title_unlocked: "Rare Title Unlocked!", rare_title_rank_label: "Rank Title", rare_title_streak_label: "Streak Title",
+        rare_title_equipped: "Equipped", rare_title_equip: "Equip", rare_title_unequip: "Unequip",
+        rare_title_guide: "Rare Title Guide", rare_title_guide_desc: "Special rare titles are awarded for streak milestones and top rankings.",
+        rare_title_streak_section: "Streak Titles", rare_title_rank_section: "Ranking Titles",
+        rare_title_global_rank: "Global Rank", rare_title_stat_rank: "Stat #1",
         streak_multiplier: "Reward Multiplier",
 
         boss_hp: "Boss HP", boss_rush: "Weekend Boss Rush", boss_rush_desc: "Boss HP x2, Rewards x2!", proximity_bonus: "Proximity Bonus +50P",
@@ -323,6 +337,13 @@ const i18n = {
         streak_label: "連続", streak_day: "日", streak_bonus: "ストリークボーナス", streak_lost: "ストリークがリセットされました！", stat_decay_warning: "未接続によりステータスが減少しました。",
         streak_multiplier: "報酬倍率",
 
+        // 希少称号システム
+        rare_title_unlocked: "希少称号獲得！", rare_title_rank_label: "ランキング称号", rare_title_streak_label: "ストリーク称号",
+        rare_title_equipped: "装着中", rare_title_equip: "装着", rare_title_unequip: "解除",
+        rare_title_guide: "希少称号ガイド", rare_title_guide_desc: "ストリーク達成やランキング上位に入ると特別な希少称号が付与されます。",
+        rare_title_streak_section: "ストリーク称号", rare_title_rank_section: "ランキング称号",
+        rare_title_global_rank: "総合順位", rare_title_stat_rank: "ステータス1位",
+
         boss_hp: "ボスHP", boss_rush: "週末ボスラッシュ", boss_rush_desc: "ボスHP2倍、報酬2倍！", proximity_bonus: "近接ボーナス +50P",
         boss_defeated: "ボス撃破完了！", boss_damage: "ダメージ",
 
@@ -451,6 +472,41 @@ const titleIconMap = {
 // 스탯별 대표 아이콘 (가이드 모달용)
 const statTitleIcons = {
     str: '🐻', int: '🦉', cha: '🦊', vit: '🐢', wlth: '🐸', agi: '🐆'
+};
+
+// ===== 희귀 호칭 시스템 =====
+// 스트릭 마일스톤 기반 희귀 호칭
+const rareStreakTitles = [
+    { days: 7,   rarity: 'uncommon',  icon: '🔥', title: { ko: '주간 전사', en: 'Weekly Warrior', ja: '週間戦士' } },
+    { days: 14,  rarity: 'rare',      icon: '⚡', title: { ko: '불굴의 투사', en: 'Indomitable Fighter', ja: '不屈の闘士' } },
+    { days: 30,  rarity: 'rare',      icon: '💫', title: { ko: '월간 수호자', en: 'Monthly Guardian', ja: '月間守護者' } },
+    { days: 60,  rarity: 'epic',      icon: '🌟', title: { ko: '강철 의지', en: 'Iron Will', ja: '鋼鉄の意志' } },
+    { days: 100, rarity: 'legendary', icon: '🏆', title: { ko: '전설의 불꽃', en: 'Legendary Flame', ja: '伝説の炎' } }
+];
+
+// 소셜 랭킹 기반 희귀 호칭 (글로벌 순위)
+const rareRankTitles = {
+    global: [
+        { rank: 1, rarity: 'legendary', icon: '👑', title: { ko: '절대 강자', en: 'Supreme Champion', ja: '絶対強者' } },
+        { rank: 2, rarity: 'epic',      icon: '🥈', title: { ko: '초월한 도전자', en: 'Transcendent Challenger', ja: '超越した挑戦者' } },
+        { rank: 3, rarity: 'epic',      icon: '🥉', title: { ko: '영광의 선봉장', en: 'Glorious Vanguard', ja: '栄光の先鋒' } }
+    ],
+    stat: {
+        str:  { rarity: 'epic', icon: '🦁', title: { ko: 'STR의 제왕', en: 'King of STR', ja: 'STRの帝王' } },
+        int:  { rarity: 'epic', icon: '🧠', title: { ko: 'INT의 제왕', en: 'King of INT', ja: 'INTの帝王' } },
+        cha:  { rarity: 'epic', icon: '💎', title: { ko: 'CHA의 제왕', en: 'King of CHA', ja: 'CHAの帝王' } },
+        vit:  { rarity: 'epic', icon: '🛡️', title: { ko: 'VIT의 제왕', en: 'King of VIT', ja: 'VITの帝王' } },
+        wlth: { rarity: 'epic', icon: '💰', title: { ko: 'WLTH의 제왕', en: 'King of WLTH', ja: 'WLTHの帝王' } },
+        agi:  { rarity: 'epic', icon: '⚡', title: { ko: 'AGI의 제왕', en: 'King of AGI', ja: 'AGIの帝王' } }
+    }
+};
+
+// 희귀도별 CSS 클래스 매핑
+const rarityConfig = {
+    uncommon: { class: 'rarity-uncommon', label: { ko: '고급', en: 'Uncommon', ja: 'アンコモン' } },
+    rare:     { class: 'rarity-rare',     label: { ko: '희귀', en: 'Rare', ja: 'レア' } },
+    epic:     { class: 'rarity-epic',     label: { ko: '영웅', en: 'Epic', ja: 'エピック' } },
+    legendary:{ class: 'rarity-legendary',label: { ko: '전설', en: 'Legendary', ja: 'レジェンダリー' } }
 };
 
 const weeklyQuestData = [

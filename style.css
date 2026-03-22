@@ -135,6 +135,41 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 .upload-overlay { position: absolute; bottom: -5px; right: -5px; background: var(--neon-blue); width: 20px; height: 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 12px; cursor: pointer; border: 2px solid var(--bg-dark); z-index: 5; }
 
 .title-badge { display: inline-block; padding: 2px 6px; font-size: 0.65rem; font-weight: bold; background: linear-gradient(45deg, rgba(181, 60, 255, 0.2), transparent); border: 1px solid var(--neon-purple); color: var(--neon-purple); border-radius: 4px; margin-bottom: 3px; cursor: pointer;}
+
+/* ===== 희귀 호칭 등급별 스타일 ===== */
+.title-badge.rarity-uncommon { background: linear-gradient(45deg, rgba(0,180,0,0.2), transparent); border-color: #00cc66; color: #00cc66; }
+.title-badge.rarity-rare { background: linear-gradient(45deg, rgba(0,140,255,0.25), transparent); border-color: #0099ff; color: #0099ff; animation: rareTitleGlow 2s infinite; }
+.title-badge.rarity-epic { background: linear-gradient(45deg, rgba(160,0,255,0.3), rgba(255,0,200,0.1)); border-color: #a855f7; color: #c084fc; animation: epicTitleGlow 1.8s infinite; }
+.title-badge.rarity-legendary { background: linear-gradient(45deg, rgba(255,204,0,0.3), rgba(255,100,0,0.15)); border-color: var(--neon-gold); color: var(--neon-gold); animation: legendaryTitleGlow 1.5s infinite; }
+
+@keyframes rareTitleGlow {
+    0%, 100% { box-shadow: 0 0 3px rgba(0,153,255,0.3); }
+    50% { box-shadow: 0 0 8px rgba(0,153,255,0.6); }
+}
+@keyframes epicTitleGlow {
+    0%, 100% { box-shadow: 0 0 4px rgba(168,85,247,0.3); }
+    50% { box-shadow: 0 0 12px rgba(168,85,247,0.7); }
+}
+@keyframes legendaryTitleGlow {
+    0%, 100% { box-shadow: 0 0 5px rgba(255,204,0,0.3); }
+    50% { box-shadow: 0 0 16px rgba(255,204,0,0.8); }
+}
+
+/* 희귀 호칭 컬렉션 모달 */
+.rare-title-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
+.rare-title-item.equipped { border-color: var(--neon-gold); background: rgba(255,204,0,0.08); }
+.rare-title-item .rt-icon { font-size: 1.2rem; margin-right: 8px; }
+.rare-title-item .rt-info { flex-grow: 1; }
+.rare-title-item .rt-name { font-size: 0.8rem; font-weight: bold; }
+.rare-title-item .rt-rarity { font-size: 0.6rem; font-weight: 900; letter-spacing: 1px; padding: 1px 5px; border-radius: 3px; display: inline-block; margin-left: 5px; }
+.rt-rarity.uncommon { background: rgba(0,180,0,0.15); color: #00cc66; }
+.rt-rarity.rare { background: rgba(0,140,255,0.15); color: #0099ff; }
+.rt-rarity.epic { background: rgba(160,0,255,0.15); color: #c084fc; }
+.rt-rarity.legendary { background: rgba(255,204,0,0.2); color: var(--neon-gold); }
+.rare-title-item .rt-btn { padding: 3px 10px; font-size: 0.7rem; font-weight: bold; border: 1px solid var(--neon-blue); background: rgba(0,217,255,0.1); color: var(--neon-blue); border-radius: 4px; cursor: pointer; }
+.rare-title-item .rt-btn:hover { background: rgba(0,217,255,0.25); }
+.rare-title-item .rt-btn.equipped-btn { border-color: var(--neon-gold); color: var(--neon-gold); background: rgba(255,204,0,0.15); }
+
 .name-container { display: flex; align-items: center; gap: 5px; }
 .btn-edit-name { background: none; border: none; font-size: 0.8rem; cursor: pointer; padding: 0; color: var(--text-sub); }
 .compact-score-box { text-align: right; }
