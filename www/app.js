@@ -1,6 +1,6 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, sendPasswordResetEmail, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
@@ -867,6 +867,7 @@ function initTheme() {
 function showEmailLoginFields() {
     document.getElementById('login-pw').classList.remove('d-none');
     document.getElementById('btn-login-submit').classList.remove('d-none');
+    if (AppState.isLoginMode) document.getElementById('forgot-pw-link').classList.remove('d-none');
 }
 
 function bindEvents() {
@@ -876,6 +877,7 @@ function bindEvents() {
     document.getElementById('login-email').addEventListener('focus', showEmailLoginFields);
     document.getElementById('btn-resend-verify').addEventListener('click', resendVerificationEmail);
     document.getElementById('btn-back-login').addEventListener('click', hideEmailVerificationNotice);
+    document.getElementById('forgot-pw-link').addEventListener('click', handleForgotPassword);
     document.getElementById('login-pw').addEventListener('input', function() {
         const hint = document.getElementById('pw-hint');
         if (!hint.classList.contains('d-none')) {
@@ -3087,6 +3089,27 @@ async function simulateLogin() {
     finally { btn.innerText = AppState.isLoginMode ? "시스템 접속" : "회원가입"; btn.disabled = false; }
 }
 
+async function handleForgotPassword() {
+    const email = document.getElementById('login-email').value;
+    const lang = AppState.currentLang || 'ko';
+    if (!email) {
+        alert(i18n[lang]?.forgot_pw_no_email || "비밀번호를 초기화할 이메일 주소를 입력해주세요.");
+        document.getElementById('login-email').focus();
+        return;
+    }
+    if (!validateEmail(email)) {
+        alert(i18n[lang]?.login_err_email || "유효한 이메일 주소를 입력해주세요.");
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert(i18n[lang]?.forgot_pw_sent || "비밀번호 재설정 메일이 발송되었습니다. 받은편지함을 확인해주세요.");
+    } catch (e) {
+        AppLogger.error('[Auth] 비밀번호 재설정 실패: ' + e.message);
+        alert(i18n[lang]?.forgot_pw_error || "비밀번호 재설정 메일 발송에 실패했습니다: " + e.message);
+    }
+}
+
 async function simulateGoogleLogin() {
     // Capacitor 네이티브 앱(Android/iOS) 환경인지 확인
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
@@ -3153,6 +3176,7 @@ function toggleAuthMode() {
     document.getElementById('login-pw-confirm').classList.toggle('d-none', AppState.isLoginMode);
     document.getElementById('pw-hint').classList.toggle('d-none', AppState.isLoginMode);
     document.getElementById('disclaimer-box').classList.toggle('d-none', AppState.isLoginMode);
+    document.getElementById('forgot-pw-link').classList.toggle('d-none', !AppState.isLoginMode);
     btnSubmit.innerText = AppState.isLoginMode ? "시스템 접속" : "플레이어 등록";
     toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
 }

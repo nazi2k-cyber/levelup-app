@@ -143,6 +143,10 @@ const i18n = {
         verify_title: "이메일 인증이 필요합니다", verify_desc: "받은편지함에서 인증 링크를 클릭한 후 로그인해주세요.",
         verify_sent: "인증 메일이 발송되었습니다.", verify_resend: "인증 메일 재발송", verify_back: "로그인으로 돌아가기",
         verify_login_blocked: "이메일 인증을 완료해주세요. 받은편지함을 확인하세요.", verify_resent: "인증 메일이 재발송되었습니다.",
+        // 비밀번호 재설정
+        forgot_pw: "비밀번호를 잊으셨나요?", forgot_pw_no_email: "비밀번호를 초기화할 이메일 주소를 입력해주세요.",
+        forgot_pw_sent: "비밀번호 재설정 메일이 발송되었습니다. 받은편지함을 확인해주세요.",
+        forgot_pw_error: "비밀번호 재설정 메일 발송에 실패했습니다.",
         img_compressing: "이미지 최적화 중...", img_too_large: "이미지가 너무 큽니다. 다른 사진을 선택해주세요."
     },
     en: {
@@ -285,6 +289,10 @@ const i18n = {
         verify_title: "Email Verification Required", verify_desc: "Please click the verification link in your inbox, then log in.",
         verify_sent: "Verification email sent.", verify_resend: "Resend Verification Email", verify_back: "Back to Login",
         verify_login_blocked: "Please verify your email first. Check your inbox.", verify_resent: "Verification email resent.",
+        // Password Reset
+        forgot_pw: "Forgot your password?", forgot_pw_no_email: "Please enter your email address to reset your password.",
+        forgot_pw_sent: "Password reset email has been sent. Please check your inbox.",
+        forgot_pw_error: "Failed to send password reset email.",
         img_compressing: "Optimizing image...", img_too_large: "Image is too large. Please select a different photo."
     },
     ja: {
@@ -426,7 +434,11 @@ const i18n = {
         // メール認証
         verify_title: "メール認証が必要です", verify_desc: "受信トレイの認証リンクをクリックしてからログインしてください。",
         verify_sent: "認証メールを送信しました。", verify_resend: "認証メール再送信", verify_back: "ログインに戻る",
-        verify_login_blocked: "メール認証を完了してください。受信トレイを確認してください。", verify_resent: "認証メールを再送信しました。"
+        verify_login_blocked: "メール認証を完了してください。受信トレイを確認してください。", verify_resent: "認証メールを再送信しました。",
+        // パスワードリセット
+        forgot_pw: "パスワードをお忘れですか？", forgot_pw_no_email: "パスワードをリセットするメールアドレスを入力してください。",
+        forgot_pw_sent: "パスワードリセットメールを送信しました。受信トレイを確認してください。",
+        forgot_pw_error: "パスワードリセットメールの送信に失敗しました。"
     }
 };
 

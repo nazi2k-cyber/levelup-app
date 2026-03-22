@@ -95,6 +95,8 @@ body {
 }
 .login-terms a { color: rgba(255,255,255,0.6); text-decoration: underline; }
 
+.forgot-pw-link { font-size: 0.75rem; color: rgba(255,255,255,0.35); margin-top: 8px; cursor: pointer; text-align: right; }
+.forgot-pw-link:hover { color: var(--neon-blue); }
 .login-toggle { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 16px; cursor: pointer; text-decoration: underline; }
 
 /* 이메일 인증 안내 */
