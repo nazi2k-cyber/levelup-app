@@ -1,8 +1,7 @@
 const i18n = {
     ko: {
         login_desc: "레벨업과 함께<br>최고의 자신을 만들어보세요", btn_login_submit: "시스템 접속", btn_signup_submit: "플레이어 등록",
-        btn_google_login: "Google로 계속하기", google_login_hint: "가장 빠른 시작 방법", login_or: "또는",
-        auth_toggle_signup: "계정이 없으신가요? 회원가입", auth_toggle_login: "이미 계정이 있으신가요? 로그인",
+        btn_google_login: "Google로 계속하기", auth_toggle_signup: "계정이 없으신가요? 회원가입", auth_toggle_login: "이미 계정이 있으신가요? 로그인",
         ph_email: "이메일 (Email)", ph_pw: "비밀번호 (Password)", ph_pw_conf: "비밀번호 확인 (Confirm Password)",
         pw_req_hint: "※ 비밀번호: 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함",
         disclaimer_txt: "※ 가입 시 이용약관 및 면책사항에 동의하는 것으로 간주됩니다. 본 앱은 건강 보조 목적이며, 퀘스트 수행 중 발생하는 신체적 부상이나 손해에 대해 일절 책임지지 않습니다.",
@@ -163,8 +162,7 @@ const i18n = {
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
-        btn_google_login: "Continue with Google", google_login_hint: "Fastest way to start", login_or: "or",
-        auth_toggle_signup: "No account? Sign Up", auth_toggle_login: "Already have an account? Login",
+        btn_google_login: "Continue with Google", auth_toggle_signup: "No account? Sign Up", auth_toggle_login: "Already have an account? Login",
         ph_email: "Email Address", ph_pw: "Password", ph_pw_conf: "Confirm Password",
         pw_req_hint: "※ Password: 8+ chars, 1+ uppercase, 2+ special chars",
         disclaimer_txt: "※ By signing up, you agree to our Terms. This app does not provide medical advice and is not liable for injuries.",
@@ -321,8 +319,7 @@ const i18n = {
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
-        btn_google_login: "Googleで続ける", google_login_hint: "最も早い開始方法", login_or: "または",
-        auth_toggle_signup: "アカウントをお持ちでない方はこちら", auth_toggle_login: "アカウントをお持ちの方はこちら",
+        btn_google_login: "Googleで続ける", auth_toggle_signup: "계정이 없으신가요? 회원가입", auth_toggle_login: "이미 계정이 있으신가요? 로그인",
         ph_email: "이메일 (Email)", ph_pw: "비밀번호 (Password)", ph_pw_conf: "비밀번호 확인 (Confirm Password)",
         pw_req_hint: "※ 비밀번호: 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함",
         disclaimer_txt: "※ 가입 시 이용약관 및 면책사항에 동의하는 것으로 간주됩니다. 본 앱은 건강 보조 목적이며, 퀘스트 수행 중 발생하는 신체적 부상이나 손해에 대해 일절 책임지지 않습니다.",
