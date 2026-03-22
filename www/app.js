@@ -2609,11 +2609,27 @@ window.syncGlobalDungeon = async () => {
         // 보스 HP: 기본 5, 참여자 3명 추가될 때마다 +1 필요
         const baseHP = isBossRush() ? 10 : 5;
         const scaledHP = baseHP + Math.floor(Math.max(0, realParticipants - 5) / 3);
+
+        // 로컬 기여가 서버에 아직 반영 안 된 경우 보정
+        const localContributed = AppState.dungeon.hasContributed;
+        const myUid = auth.currentUser?.uid;
+        const myDataInServer = participants.find(p => p.id === myUid);
+        if (localContributed && myDataInServer && !myDataInServer.hasContributed) {
+            totalDamage++;
+            myDataInServer.hasContributed = true;
+        }
+
+        const prevDmg = AppState.dungeon.bossDamageDealt || 0;
         AppState.dungeon.bossMaxHP = scaledHP;
         AppState.dungeon.bossDamageDealt = totalDamage;
         AppState.dungeon.globalParticipants = realParticipants;
         AppState.dungeon.globalProgress = Math.min(100, (totalDamage / scaledHP) * 100);
         AppState.dungeon.raidParticipants = participants.sort((a, b) => (b.hasContributed - a.hasContributed) || (b.statValue - a.statValue));
+
+        // HP 감소 시 애니메이션 트리거
+        if (totalDamage > prevDmg && document.getElementById('dungeon').classList.contains('active')) {
+            triggerHPHitEffect();
+        }
 
         if (document.getElementById('dungeon').classList.contains('active')) {
             renderDungeon();
@@ -2736,7 +2752,13 @@ function renderDungeon() {
 
             banner.innerHTML = `
                 <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
-                <h3 class="raid-boss-title" style="color:${m.color}; margin: 0 0 10px 0; font-size:1.1rem;">📍 ${st.name[AppState.currentLang]} - ${m.title[AppState.currentLang]}</h3>
+                <div class="raid-title-row">
+                    <div class="anomaly-boss-icon ${AppState.dungeon.targetStat}">${raidAnomalyIcons[AppState.dungeon.targetStat] || ''}</div>
+                    <div class="raid-title-text" style="text-align:left;">
+                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:2px;">📍 ${st.name[AppState.currentLang]}</div>
+                        <h3 class="raid-boss-title" style="color:${m.color}; font-size:1.1rem; margin:0;">${m.title[AppState.currentLang]}</h3>
+                    </div>
+                </div>
                 <div class="map-container" style="width:100%; height:180px; border-radius:6px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border-color);">
                     <iframe src="${mapUrl}" style="width:100%; height:100%; border:none;" allowfullscreen="" loading="lazy"></iframe>
                 </div>
@@ -2784,7 +2806,15 @@ function renderDungeon() {
             document.getElementById('active-stat-badge').innerText = m.stat;
             document.getElementById('active-stat-badge').style.borderColor = m.color;
             document.getElementById('active-stat-badge').style.color = m.color;
+            const stationEl = document.getElementById('active-raid-station');
+            if (stationEl) stationEl.innerText = `📍 ${st.name[AppState.currentLang]}`;
             document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
+            document.getElementById('active-raid-title').style.color = m.color;
+            const iconEl = document.getElementById('active-anomaly-icon');
+            if (iconEl) {
+                iconEl.className = `anomaly-boss-icon ${AppState.dungeon.targetStat}`;
+                iconEl.innerHTML = raidAnomalyIcons[AppState.dungeon.targetStat] || '';
+            }
             document.getElementById('active-raid-desc').innerText = m.desc2[AppState.currentLang];
 
             const lang = AppState.currentLang;
@@ -2899,11 +2929,41 @@ window.simulateRaidAction = async () => {
     AppState.dungeon.bossDamageDealt = (AppState.dungeon.bossDamageDealt || 0) + 1;
     const bossMaxHP = AppState.dungeon.bossMaxHP || 5;
     AppState.dungeon.globalProgress = Math.min(100, (AppState.dungeon.bossDamageDealt / bossMaxHP) * 100);
+
+    // HP 바 즉시 업데이트 (renderDungeon 전에 직접 DOM 조작)
+    updateBossHPBar();
+    triggerHPHitEffect();
     renderDungeon();
 
     await saveUserData();
     await window.syncGlobalDungeon();
 };
+
+function updateBossHPBar() {
+    const bar = document.getElementById('raid-progress-bar');
+    const text = document.getElementById('raid-progress-text');
+    if (!bar || !text) return;
+    const bossMaxHP = AppState.dungeon.bossMaxHP || 5;
+    const bossDmg = AppState.dungeon.bossDamageDealt || 0;
+    const hpPercent = Math.max(0, ((bossMaxHP - bossDmg) / bossMaxHP) * 100);
+    bar.style.width = `${hpPercent}%`;
+    text.innerText = `${Math.max(0, bossMaxHP - bossDmg)} / ${bossMaxHP}`;
+}
+
+function triggerHPHitEffect() {
+    const hpBox = document.querySelector('.raid-progress-box');
+    if (!hpBox) return;
+    hpBox.classList.add('hp-hit-shake');
+    // 데미지 숫자 팝업
+    const popup = document.createElement('span');
+    popup.className = 'hp-damage-popup';
+    popup.innerText = '-1';
+    hpBox.appendChild(popup);
+    setTimeout(() => {
+        hpBox.classList.remove('hp-hit-shake');
+        popup.remove();
+    }, 800);
+}
 
 window.completeDungeon = () => {
     if(AppState.dungeon.isCleared) return;
