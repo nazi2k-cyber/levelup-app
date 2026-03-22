@@ -2407,7 +2407,7 @@ function renderRaidParticipants(participants) {
             <div style="display:flex; align-items:center; flex-grow:1;">
                 ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display=''" style="width:28px; height:28px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:28px; height:28px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:28px; height:28px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
                 <div>
-                    <div class="title-badge" style="font-size:0.55rem;">${getTitleIcon(u.title)} ${sanitizeText(u.title)}</div>
+                    <div class="title-badge" style="font-size:0.55rem;">${sanitizeText(u.title)}</div>
                     <div style="font-size:0.8rem; display:flex; align-items:center;">
                         ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
                     </div>
@@ -2672,7 +2672,7 @@ function updatePointUI() {
     
     const titleObj = AppState.user.titleHistory[AppState.user.titleHistory.length - 1].title;
     const titleText = typeof titleObj === 'object' ? titleObj[AppState.currentLang] || titleObj.ko : titleObj;
-    document.getElementById('prof-title-badge').innerHTML = `${getTitleIcon(titleText)} ${sanitizeText(titleText)} ℹ️`;
+    document.getElementById('prof-title-badge').innerHTML = `${sanitizeText(titleText)} ℹ️`;
 }
 
 function processLevelUp() {
@@ -2825,7 +2825,7 @@ function renderUsers(criteria, btn = null) {
             <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
                 ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display=''" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
                 <div class="user-info" style="margin-left:0;">
-                    <div class="title-badge" style="font-size:0.6rem;">${getTitleIcon(u.title)} ${sanitizeText(u.title)}</div>
+                    <div class="title-badge" style="font-size:0.6rem;">${sanitizeText(u.title)}</div>
                     <div style="font-size:0.9rem; display:flex; align-items:center;">
                         ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
                     </div>
@@ -3093,14 +3093,6 @@ async function loadProfileImage(event) {
     reader.readAsDataURL(file);
 }
 
-// --- ★ 호칭 캐릭터 아이콘 함수 ★ ---
-function getTitleIcon(titleText) {
-    if (!titleText) return '🏅';
-    const words = titleText.trim().split(/\s+/);
-    const suffix = words[words.length - 1];
-    return titleIconMap[suffix] || '🏅';
-}
-
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
 function closeInfoModal() { 
     const m = document.getElementById('infoModal'); 
@@ -3180,12 +3172,12 @@ function openTitleModal() {
                 </tr>
             </thead>
             <tbody>
-                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">STR</span></td><td>${l.str_1}</td><td>${statTitleIcons.str} ${l.str_2}</td></tr>
-                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">INT</span></td><td>${l.int_1}</td><td>${statTitleIcons.int} ${l.int_2}</td></tr>
-                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">CHA</span></td><td>${l.cha_1}</td><td>${statTitleIcons.cha} ${l.cha_2}</td></tr>
-                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">VIT</span></td><td>${l.vit_1}</td><td>${statTitleIcons.vit} ${l.vit_2}</td></tr>
-                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">WLTH</span></td><td>${l.wlth_1}</td><td>${statTitleIcons.wlth} ${l.wlth_2}</td></tr>
-                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">AGI</span></td><td>${l.agi_1}</td><td>${statTitleIcons.agi} ${l.agi_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">STR</span></td><td>${l.str_1}</td><td>${l.str_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">INT</span></td><td>${l.int_1}</td><td>${l.int_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">CHA</span></td><td>${l.cha_1}</td><td>${l.cha_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">VIT</span></td><td>${l.vit_1}</td><td>${l.vit_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">WLTH</span></td><td>${l.wlth_1}</td><td>${l.wlth_2}</td></tr>
+                <tr><td style="text-align:center;"><span class="quest-stat-tag" style="border-color:var(--neon-blue); color:var(--neon-blue);">AGI</span></td><td>${l.agi_1}</td><td>${l.agi_2}</td></tr>
             </tbody>
         </table>
         <div style="font-size:0.7rem; color:var(--text-sub); margin-top:10px; text-align:right;">${l.footer}</div>
