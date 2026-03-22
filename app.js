@@ -5132,7 +5132,7 @@ function loadPlannerForDate(dateStr) {
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) { preview.src = saved.photo; preview.classList.remove('d-none'); }
+        if (preview) { preview.referrerPolicy = 'no-referrer'; preview.src = saved.photo; preview.classList.remove('d-none'); }
         if (placeholder) placeholder.classList.add('d-none');
         if (removeBtn) removeBtn.classList.remove('d-none');
 
@@ -5190,7 +5190,13 @@ function loadPlannerForDate(dateStr) {
     if (addBtn) addBtn.disabled = isFuture;
 }
 
+let _savePlannerLock = false;
 async function savePlannerEntry() {
+    if (_savePlannerLock) return;
+    _savePlannerLock = true;
+    try { await _savePlannerEntryInner(); } finally { _savePlannerLock = false; }
+}
+async function _savePlannerEntryInner() {
     const dateStr = diarySelectedDate;
 
     // 타임박스 드롭다운 블록 수집
@@ -5901,7 +5907,7 @@ function renderReelsCards(posts, lang) {
                 </div>
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
-            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(post.photo)}" alt="Timetable"></div>` : ''}
+            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(post.photo)}" referrerpolicy="no-referrer" crossorigin="anonymous" onerror="this.onerror=null;this.style.display='none'" alt="Timetable"></div>` : ''}
             ${post.caption ? `<div class="reels-caption">${sanitizeText(post.caption).replace(/\n/g,'<br>')}</div>` : ''}
             <div class="reels-timetable">
                 <div class="reels-timetable-title" ${moreCount > 0 ? `onclick="toggleScheduleFold('${postId}')" style="cursor:pointer;"` : ''}>
