@@ -36,9 +36,10 @@ service cloud.firestore {
     // stepData 맵 검증
     function isValidStepData(s) {
       return s is map
-        && s.keys().hasOnly(['date', 'rewardedSteps'])
+        && s.keys().hasOnly(['date', 'rewardedSteps', 'totalSteps'])
         && (!('date' in s) || s.date is string)
-        && (!('rewardedSteps' in s) || (s.rewardedSteps is number && s.rewardedSteps >= 0));
+        && (!('rewardedSteps' in s) || (s.rewardedSteps is number && s.rewardedSteps >= 0))
+        && (!('totalSteps' in s) || (s.totalSteps is number && s.totalSteps >= 0));
     }
 
     // users 문서 허용 필드 목록
