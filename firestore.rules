@@ -74,8 +74,8 @@ service cloud.firestore {
         areWrittenFieldsAllowed()
 
         // ── 핵심 필드 ──
-        // name: 문자열, 1~50자
-        && (!('name' in d) || (d.name is string && d.name.size() >= 1 && d.name.size() <= 50))
+        // name: 문자열, 1~30자 (보안 강화: 50→30)
+        && (!('name' in d) || (d.name is string && d.name.size() >= 1 && d.name.size() <= 30))
         // level: 정수, 1~999 (JavaScript에서는 int/float 구분 없으므로 number로 허용)
         && (!('level' in d) || (d.level is number && d.level >= 1 && d.level <= 999))
         // points: 숫자, >= 0
@@ -101,7 +101,8 @@ service cloud.firestore {
         && (!('_profileUploadFailed' in d) || d._profileUploadFailed is bool)
 
         // ── 문자열 필드 (짧은) ──
-        && (!('instaId' in d) || (d.instaId is string && d.instaId.size() <= 50))
+        // instaId: 인스타그램 ID, 최대 30자 (실제 IG 제한=30)
+        && (!('instaId' in d) || (d.instaId is string && d.instaId.size() <= 30))
         && (!('fcmToken' in d) || d.fcmToken == null || (d.fcmToken is string && d.fcmToken.size() <= 500))
         && (!('questWeekStart' in d) || (d.questWeekStart is string && d.questWeekStart.size() <= 10))
         && (!('lastRouletteDate' in d) || (d.lastRouletteDate is string && d.lastRouletteDate.size() <= 10))

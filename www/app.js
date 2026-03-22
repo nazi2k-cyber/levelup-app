@@ -5740,10 +5740,10 @@ function renderReelsCards(posts, lang) {
         const mergedBlocks = mergeConsecutiveBlocks(post.blocks);
         const FOLD_LIMIT = 6;
         const blockSummary = mergedBlocks.slice(0, FOLD_LIMIT).map(({time, task}) =>
-            `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${task.replace(/</g,'&lt;')}</span></div>`
+            `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${sanitizeText(task)}</span></div>`
         ).join('');
         const blockExtra = mergedBlocks.slice(FOLD_LIMIT).map(({time, task}) =>
-            `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${task.replace(/</g,'&lt;')}</span></div>`
+            `<div class="reels-block-item"><span class="reels-block-time">${time}</span><span class="reels-block-task">${sanitizeText(task)}</span></div>`
         ).join('');
         const moreCount = mergedBlocks.length > FOLD_LIMIT ? mergedBlocks.length - FOLD_LIMIT : 0;
 
@@ -5751,14 +5751,14 @@ function renderReelsCards(posts, lang) {
             <div class="reels-header">
                 <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
                 <div class="reels-user-info">
-                    <div class="reels-username">${(post.userName || '헌터').replace(/</g,'&lt;')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
+                    <div class="reels-username">${sanitizeText(post.userName || '헌터')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
-                    ${post.location ? `<div class="reels-location">📍 ${post.location.name.replace(/</g,'&lt;')}</div>` : ''}
+                    ${post.location ? `<div class="reels-location">📍 ${sanitizeText(post.location.name)}</div>` : ''}
                 </div>
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
             ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(post.photo)}" alt="Timetable"></div>` : ''}
-            ${post.caption ? `<div class="reels-caption">${post.caption.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>` : ''}
+            ${post.caption ? `<div class="reels-caption">${sanitizeText(post.caption).replace(/\n/g,'<br>')}</div>` : ''}
             <div class="reels-timetable">
                 <div class="reels-timetable-title" ${moreCount > 0 ? `onclick="toggleScheduleFold('${postId}')" style="cursor:pointer;"` : ''}>
                     📋 ${i18n[lang]?.planner_tab_schedule || '시간표'}
@@ -6054,10 +6054,10 @@ function renderCommentsSection(postId, comments) {
                 <img class="reels-comment-avatar" src="${cPhoto}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
                 <div class="reels-comment-body">
                     <div class="reels-comment-meta">
-                        <span class="reels-comment-name">${(c.name || '헌터').replace(/</g,'&lt;')}</span>${instaBtn}
+                        <span class="reels-comment-name">${sanitizeText(c.name || '헌터')}</span>${instaBtn}
                         <span class="reels-comment-time">${timeAgo}</span>
                     </div>
-                    <div class="reels-comment-text">${c.text.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+                    <div class="reels-comment-text">${sanitizeText(c.text).replace(/\n/g,'<br>')}</div>
                 </div>
             </div>`;
         }).join('');
