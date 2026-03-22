@@ -1484,8 +1484,8 @@ function checkRankRareTitles() {
     const uid = auth.currentUser.uid;
     const users = AppState.social.users.map(u => {
         const s = u.stats;
-        const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
-        return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0 };
+        const total = Math.round(Number(s.str)||0) + Math.round(Number(s.int)||0) + Math.round(Number(s.cha)||0) + Math.round(Number(s.vit)||0) + Math.round(Number(s.wlth)||0) + Math.round(Number(s.agi)||0);
+        return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0) };
     });
     if (users.length === 0) return;
 
@@ -1807,7 +1807,7 @@ function drawRadarChart() {
     
     for (let i = 0; i < 6; i++) {
         const key = statKeys[i]; 
-        const val = Number(AppState.user.stats[key]) || 0; 
+        const val = Math.round(Number(AppState.user.stats[key]) || 0);
         totalSum += val;
         
         const r = radius * (val / 100); 
@@ -2999,7 +2999,7 @@ function renderUsers(criteria, btn = null) {
         const s = u.stats;
         const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
         const steps = Number(u.stepData?.totalSteps) || 0;
-        return { ...u, total, str:Number(s.str)||0, int:Number(s.int)||0, cha:Number(s.cha)||0, vit:Number(s.vit)||0, wlth:Number(s.wlth)||0, agi:Number(s.agi)||0, steps };
+        return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps };
     });
 
     if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
