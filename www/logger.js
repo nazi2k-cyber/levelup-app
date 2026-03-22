@@ -11,6 +11,12 @@
     const MSG_MAX_LEN = 800;       // 메시지 최대 길이
     const STACK_MAX_LEN = 1500;    // 스택 트레이스 최대 길이
 
+    // HTML 이스케이프 (XSS 방지)
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
     // ── 내부 헬퍼 ──────────────────────────────────────────
     function timestamp() {
         return new Date().toISOString();
@@ -237,11 +243,11 @@
                     const colorMap = { ERROR: 'var(--neon-red)', WARN: 'var(--neon-gold)', INFO: 'var(--neon-blue)', DEBUG: 'var(--text-sub)' };
                     const color    = colorMap[l.level] || 'var(--text-main)';
                     const time     = l.ts.replace('T', ' ').substring(0, 19);
-                    const stack    = l.stack ? '<div style="font-size:0.6rem; color:var(--text-sub); margin-top:2px; word-break:break-all;">' + l.stack.substring(0, 200) + '</div>' : '';
+                    const stack    = l.stack ? '<div style="font-size:0.6rem; color:var(--text-sub); margin-top:2px; word-break:break-all;">' + escapeHtml(l.stack.substring(0, 200)) + '</div>' : '';
                     return '<div class="log-entry">' +
                                '<span class="log-level" style="color:' + color + ';">[' + l.level + ']</span> ' +
                                '<span class="log-time">' + time + '</span>' +
-                               '<div class="log-msg">' + l.msg + '</div>' +
+                               '<div class="log-msg">' + escapeHtml(l.msg) + '</div>' +
                                stack +
                            '</div>';
                 }).join('');
