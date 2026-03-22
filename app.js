@@ -5605,17 +5605,34 @@ async function postToReels() {
 }
 
 // 릴스 피드 렌더링
+// _reelsFeedRendering: 중복 호출 방지 플래그
+// _reelsFeedLastKey: 마지막 렌더링 데이터 키 (불필요한 DOM 교체 방지)
 async function renderReelsFeed() {
     const container = document.getElementById('reels-feed');
     if (!container) return;
+
+    // 이미 렌더링 중이면 중복 호출 방지
+    if (window._reelsFeedRendering) return;
+    window._reelsFeedRendering = true;
+
     const lang = AppState.currentLang;
 
-    // 로컬 캐시 먼저 표시
+    // 포스트 데이터 키 생성 (uid_timestamp 목록으로 변경 감지)
+    function postsKey(posts) {
+        return posts.map(p => `${p.uid}_${p.timestamp}`).join(',');
+    }
+
+    // 로컬 캐시 먼저 표시 (단, 이전 렌더와 동일하면 스킵)
     const localData = getReelsData();
     const localPosts = (localData.posts || []).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const localKey = postsKey(localPosts);
+
     if (localPosts.length > 0) {
-        container.innerHTML = renderReelsCards(localPosts, lang);
-    } else {
+        if (window._reelsFeedLastKey !== localKey) {
+            container.innerHTML = renderReelsCards(localPosts, lang);
+            window._reelsFeedLastKey = localKey;
+        }
+    } else if (!window._reelsFeedLastKey) {
         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);">로딩 중...</div>';
     }
 
@@ -5626,21 +5643,32 @@ async function renderReelsFeed() {
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
         ]);
         if (posts.length === 0) {
-            container.innerHTML = `<div class="system-card" style="text-align:center; padding:30px; color:var(--text-sub);">
-                <div style="font-size:2rem; margin-bottom:10px;">🎬</div>
-                <div>${i18n[lang].reels_empty}</div>
-            </div>`;
+            if (window._reelsFeedLastKey !== '') {
+                container.innerHTML = `<div class="system-card" style="text-align:center; padding:30px; color:var(--text-sub);">
+                    <div style="font-size:2rem; margin-bottom:10px;">🎬</div>
+                    <div>${i18n[lang].reels_empty}</div>
+                </div>`;
+                window._reelsFeedLastKey = '';
+            }
             return;
         }
-        container.innerHTML = renderReelsCards(posts, lang);
+        const serverKey = postsKey(posts);
+        // Firestore 데이터가 로컬과 동일하면 DOM 교체 스킵 (깜빡임 방지)
+        if (window._reelsFeedLastKey !== serverKey) {
+            container.innerHTML = renderReelsCards(posts, lang);
+            window._reelsFeedLastKey = serverKey;
+        }
     } catch(e) {
         // 타임아웃 또는 네트워크 오류 시 로컬 데이터 유지
-        if (localPosts.length === 0) {
+        if (localPosts.length === 0 && !window._reelsFeedLastKey) {
             container.innerHTML = `<div class="system-card" style="text-align:center; padding:30px; color:var(--text-sub);">
                 <div style="font-size:2rem; margin-bottom:10px;">🎬</div>
                 <div>${i18n[lang].reels_empty}</div>
             </div>`;
+            window._reelsFeedLastKey = '';
         }
+    } finally {
+        window._reelsFeedRendering = false;
     }
 }
 
@@ -5841,13 +5869,16 @@ function updateReelsResetTimer() {
 }
 
 // 24시간 경과 포스트 자동 삭제 체크 (getReelsData에서 필터링됨)
+// _reelsLastMyPostState: 이전 내 포스트 존재 여부 (변경 시에만 피드 갱신)
 function checkReelsReset() {
     const reelsData = getReelsData(); // 24h 지난 포스트 자동 필터링
     const myPost = reelsData.posts.find(p => p.uid === (auth.currentUser?.uid));
-    if (!myPost) {
-        // 내 포스트가 삭제됐으면 피드 갱신
+    const hasMyPost = !!myPost;
+    // 내 포스트 상태가 변경된 경우에만 피드 갱신 (매초 호출 방지)
+    if (window._reelsLastMyPostState !== undefined && window._reelsLastMyPostState !== hasMyPost) {
         renderReelsFeed();
     }
+    window._reelsLastMyPostState = hasMyPost;
 }
 
 // ===== 좋아요 / 댓글 기능 =====
