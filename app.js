@@ -2754,7 +2754,10 @@ function renderDungeon() {
                 <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
                 <div class="raid-title-row">
                     <div class="anomaly-boss-icon ${AppState.dungeon.targetStat}">${raidAnomalyIcons[AppState.dungeon.targetStat] || ''}</div>
-                    <h3 class="raid-boss-title" style="color:${m.color}; font-size:1.1rem;">📍 ${st.name[AppState.currentLang]} - ${m.title[AppState.currentLang]}</h3>
+                    <div class="raid-title-text" style="text-align:left;">
+                        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom:2px;">📍 ${st.name[AppState.currentLang]}</div>
+                        <h3 class="raid-boss-title" style="color:${m.color}; font-size:1.1rem; margin:0;">${m.title[AppState.currentLang]}</h3>
+                    </div>
                 </div>
                 <div class="map-container" style="width:100%; height:180px; border-radius:6px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border-color);">
                     <iframe src="${mapUrl}" style="width:100%; height:100%; border:none;" allowfullscreen="" loading="lazy"></iframe>
@@ -2803,7 +2806,10 @@ function renderDungeon() {
             document.getElementById('active-stat-badge').innerText = m.stat;
             document.getElementById('active-stat-badge').style.borderColor = m.color;
             document.getElementById('active-stat-badge').style.color = m.color;
+            const stationEl = document.getElementById('active-raid-station');
+            if (stationEl) stationEl.innerText = `📍 ${st.name[AppState.currentLang]}`;
             document.getElementById('active-raid-title').innerText = m.title[AppState.currentLang];
+            document.getElementById('active-raid-title').style.color = m.color;
             const iconEl = document.getElementById('active-anomaly-icon');
             if (iconEl) {
                 iconEl.className = `anomaly-boss-icon ${AppState.dungeon.targetStat}`;
