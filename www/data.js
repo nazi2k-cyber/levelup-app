@@ -420,6 +420,39 @@ const titleVocab = {
 
 const statKeys = ['str', 'int', 'cha', 'vit', 'wlth', 'agi'];
 
+// 호칭 접미사(캐릭터)에 대응하는 아이콘 매핑
+const titleIconMap = {
+    // STR suffixes
+    '곰': '🐻', 'Bear': '🐻', '熊': '🐻',
+    '바위': '🪨', 'Rock': '🪨', '岩': '🪨',
+    '거인': '🗿', 'Giant': '🗿', '巨人': '🗿',
+    // INT suffixes
+    '올빼미': '🦉', 'Owl': '🦉', 'フクロウ': '🦉',
+    '호수': '🌊', 'Lake': '🌊', '湖': '🌊',
+    '현자': '🧙', 'Sage': '🧙', '賢者': '🧙',
+    // CHA suffixes
+    '여우': '🦊', 'Fox': '🦊', 'キツネ': '🦊',
+    '불꽃': '🔥', 'Flame': '🔥', '炎': '🔥',
+    '별': '⭐', 'Star': '⭐', '星': '⭐',
+    // VIT suffixes
+    '거북이': '🐢', 'Turtle': '🐢', '亀': '🐢',
+    '대지': '🌍', 'Earth': '🌍', '大地': '🌍',
+    '뿌리': '🌿', 'Root': '🌿', '根': '🌿',
+    // WLTH suffixes
+    '두꺼비': '🐸', 'Toad': '🐸', 'ヒキガエル': '🐸',
+    '태양': '☀️', 'Sun': '☀️', '太陽': '☀️',
+    '보석': '💎', 'Gem': '💎', '宝石': '💎',
+    // AGI suffixes
+    '표범': '🐆', 'Panther': '🐆', 'ヒョウ': '🐆',
+    '화살': '🏹', 'Arrow': '🏹', '矢': '🏹',
+    '매': '🦅', 'Hawk': '🦅', '鷹': '🦅'
+};
+
+// 스탯별 대표 아이콘 (가이드 모달용)
+const statTitleIcons = {
+    str: '🐻', int: '🦉', cha: '🦊', vit: '🐢', wlth: '🐸', agi: '🐆'
+};
+
 const weeklyQuestData = [
     [ { stat: "STR", title: {ko:"휴식과 산책", en:"Rest & Walk", ja:"休息と散歩"}, desc: {ko:"30분 걷기", en:"30 min walk", ja:"30분歩行"} }, { stat: "STR", title: {ko:"코어 강화", en:"Core Strength", ja:"コア強化"}, desc: {ko:"플랭크 3세트", en:"3 plank sets", ja:"プランク3回"} }, { stat: "INT", title: {ko:"주간 계획", en:"Weekly Plan", ja:"週間計画"}, desc: {ko:"일정 정리", en:"Plan schedule", ja:"予定整理"} }, { stat: "INT", title: {ko:"독서 타임", en:"Reading", ja:"読書"}, desc: {ko:"비문학 1챕터", en:"Read 1 chapter", ja:"1章読む"} }, { stat: "CHA", title: {ko:"자기 반성", en:"Reflection", ja:"自己反省"}, desc: {ko:"일기 작성", en:"Write journal", ja:"日記作成"} }, { stat: "CHA", title: {ko:"외적 정돈", en:"Grooming", ja:"身だし나み"}, desc: {ko:"옷 다림질", en:"Iron clothes", ja:"服の準備"} }, { stat: "VIT", title: {ko:"반신욕", en:"Bath", ja:"半身浴"}, desc: {ko:"피로 풀기", en:"Relieve fatigue", ja:"疲労回復"} }, { stat: "VIT", title: {ko:"영양 균형", en:"Diet", ja:"栄養"}, desc: {ko:"채소 위주 식단", en:"Veg-heavy meal", ja:"野菜中心食事"} }, { stat: "WLTH", title: {ko:"월간 목표", en:"Monthly Goal", ja:"月間目標"}, desc: {ko:"저축 목표", en:"Set saving goal", ja:"貯蓄目標"} }, { stat: "WLTH", title: {ko:"자산 리뷰", en:"Net Worth", ja:"資産確認"}, desc: {ko:"자산 점검", en:"Check net worth", ja:"資産点検"} }, { stat: "AGI", title: {ko:"디지털 정리", en:"Declutter", ja:"デジタル整理"}, desc: {ko:"앱 삭제", en:"Delete apps", ja:"アプリ削除"} }, { stat: "AGI", title: {ko:"루틴 세팅", en:"Alarms", ja:"アラーム"}, desc: {ko:"알람 세팅", en:"Set alarm", ja:"準備"} } ],
     [ { stat: "STR", title: {ko:"1만보 달성", en:"10k Steps", ja:"1万歩"}, desc: {ko:"걷기 늘리기", en:"Walk more", ja:"歩行追加"} }, { stat: "STR", title: {ko:"푸쉬업", en:"Pushups", ja:"腕立て伏せ"}, desc: {ko:"푸쉬업 3세트", en:"3 sets", ja:"3セット"} }, { stat: "INT", title: {ko:"독서 습관", en:"Reading", ja:"読書習慣"}, desc: {ko:"10페이지 읽기", en:"Read 10 pages", ja:"10ページ"} }, { stat: "INT", title: {ko:"지식 청취", en:"Podcast", ja:"ポッドキャスト"}, desc: {ko:"경제 팟캐스트", en:"Eco podcast", ja:"経済聴取"} }, { stat: "CHA", title: {ko:"감사 표현", en:"Gratitude", ja:"感謝"}, desc: {ko:"동료에게 감사", en:"Thank a colleague", ja:"同僚に感謝"} }, { stat: "CHA", title: {ko:"스킨케어", en:"Skincare", ja:"スキンケア"}, desc: {ko:"보습제 바르기", en:"Apply lotion", ja:"保湿"} }, { stat: "VIT", title: {ko:"수분 충전", en:"Hydration", ja:"水分補給"}, desc: {ko:"물 2리터", en:"Drink 2L water", ja:"水2L"} }, { stat: "VIT", title: {ko:"멘탈 케어", en:"Meditation", ja:"瞑想"}, desc: {ko:"10분 명상", en:"10 mins med", ja:"10分瞑想"} }, { stat: "WLTH", title: {ko:"무지출", en:"No Spend", ja:"無支出"}, desc: {ko:"소비 참기", en:"Avoid spending", ja:"消費我慢"} }, { stat: "WLTH", title: {ko:"시황 체크", en:"Market", ja:"市況"}, desc: {ko:"기사 스크랩", en:"Finance article", ja:"金融記事"} }, { stat: "AGI", title: {ko:"우선순위", en:"Prioritize", ja:"優先順位"}, desc: {ko:"Top 3 업무", en:"Top 3 tasks", ja:"上位3業務"} }, { stat: "AGI", title: {ko:"뽀모도로", en:"Pomodoro", ja:"ポモドーロ"}, desc: {ko:"30분 집중", en:"30 min focus", ja:"30分集中"} } ],
