@@ -335,16 +335,16 @@
                         </div>
                         <div class="boss-hp-bar-bg" style="height: 14px;"><div class="boss-hp-bar-fill" id="raid-progress-bar" style="width: 100%;"></div></div>
                         <div style="font-size:0.7rem; color:var(--text-sub); margin-top:4px; text-align:right;">
-                            <span id="raid-part-count" style="color:var(--neon-gold);">0</span> 명 참여 중
+                            <span id="raid-part-count" style="color:var(--neon-gold);">0</span> <span data-i18n="raid_participants_count_suffix">명 참여 중</span>
                         </div>
                     </div>
 
                     <div id="raid-participants-list" class="raid-participants-list"></div>
 
-                    <button id="btn-raid-action" class="btn-primary" style="margin-top: 15px; border: 1px solid var(--neon-blue); background: rgba(0, 217, 255, 0.1); color: var(--neon-blue);">
+                    <button id="btn-raid-action" class="btn-primary" data-i18n="raid_contribute_btn" style="margin-top: 15px; border: 1px solid var(--neon-blue); background: rgba(0, 217, 255, 0.1); color: var(--neon-blue);">
                         데이터 동기화 (기여하기)
                     </button>
-                    <button id="btn-raid-complete" class="btn-primary d-none" style="margin-top: 15px; background: var(--neon-gold); color: black;">
+                    <button id="btn-raid-complete" class="btn-primary d-none" data-i18n="raid_loot_claim" style="margin-top: 15px; background: var(--neon-gold); color: black;">
                         전리품 획득
                     </button>
                 </div>
@@ -403,7 +403,7 @@
                     <div class="planner-tab-content active" id="planner-tab-priority">
                         <div class="planner-unified-box">
                             <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:6px;">
-                                <button class="btn-add-task" id="btn-add-task">+ 추가</button>
+                                <button class="btn-add-task" id="btn-add-task" data-i18n="planner_add_btn">+ 추가</button>
                             </div>
                             <div id="planner-tasks-list"></div>
                         </div>
