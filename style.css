@@ -646,6 +646,16 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     color: var(--neon-red); font-size: 0.9rem; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
 }
+/* 전일 플랜 복사 체크박스 */
+.copy-prev-plan-label {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    font-size: 0.75rem; color: var(--text-sub); user-select: none;
+}
+.copy-prev-plan-label input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: var(--neon-blue); cursor: pointer;
+}
+.copy-prev-plan-label:hover { color: var(--neon-blue); }
+
 .planner-caption-box { margin-bottom: 12px; position: relative; }
 .planner-caption-input {
     width: 100%; min-height: 56px; max-height: 100px; padding: 10px; box-sizing: border-box;

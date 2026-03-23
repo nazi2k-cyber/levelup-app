@@ -5132,6 +5132,90 @@ window.removeTask = function(idx) {
     renderPlannerTasks();
 };
 
+// 전일 날짜 문자열 계산
+function getPrevDateStr(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 전일 플랜 복사 - 우선순위 태스크
+window.copyPrevDayTasks = function(checked) {
+    if (!checked) {
+        // 체크 해제 시 현재 날짜 데이터로 복원
+        loadPlannerForDate(diarySelectedDate);
+        return;
+    }
+    const prevDate = getPrevDateStr(diarySelectedDate);
+    const prevEntry = getDiaryEntry(prevDate);
+    if (!prevEntry || !prevEntry.tasks || !Array.isArray(prevEntry.tasks)) {
+        alert('전일 플랜 데이터가 없습니다.');
+        document.getElementById('chk-copy-prev-tasks').checked = false;
+        return;
+    }
+    plannerTasks = prevEntry.tasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+    while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    renderPlannerTasks();
+};
+
+// 전일 플랜 복사 - 시간표
+window.copyPrevDaySchedule = function(checked) {
+    if (!checked) {
+        // 체크 해제 시 현재 날짜 데이터로 복원
+        renderTimeboxGrid(diarySelectedDate);
+        return;
+    }
+    const prevDate = getPrevDateStr(diarySelectedDate);
+    const prevEntry = getDiaryEntry(prevDate);
+    if (!prevEntry || !prevEntry.blocks || Object.keys(prevEntry.blocks).length === 0) {
+        alert('전일 시간표 데이터가 없습니다.');
+        document.getElementById('chk-copy-prev-schedule').checked = false;
+        return;
+    }
+    // 전일 블록 데이터로 타임박스 그리드 렌더링
+    const grid = document.getElementById('planner-timebox-grid');
+    if (!grid) return;
+    const blocks = prevEntry.blocks;
+    const options = getTaskOptions();
+    const isFuture = isSelectedDateFuture();
+    // 전일 블록에서 사용된 값 중 현재 옵션에 없는 값 추가
+    const optTexts = new Set(options.map(o => o.text));
+    const extraVals = [...new Set(Object.values(blocks))].filter(v => v && !optTexts.has(v));
+
+    const makeOpts = (currentVal) => {
+        const opts = ['<option value="">-- 없음 --</option>',
+            ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`),
+            ...extraVals.map(v => `<option value="${v.replace(/"/g,'&quot;')}"${v === currentVal ? ' selected' : ''}>${v}</option>`)
+        ].join('');
+        return opts;
+    };
+
+    const rows = [];
+    for (let h = 5; h < 24; h++) rows.push(h);
+
+    grid.innerHTML = rows.map(h => {
+        const t00 = `${String(h).padStart(2,'0')}:00`;
+        const t30 = `${String(h).padStart(2,'0')}:30`;
+        const val00 = blocks[t00] || '';
+        const val30 = blocks[t30] || '';
+        return `<div class="timebox-row">
+            <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
+            <select class="timebox-select${val00 ? ' has-content' : ''}"
+                    data-time="${t00}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val00)}
+            </select>
+            <select class="timebox-select${val30 ? ' has-content' : ''}"
+                    data-time="${t30}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val30)}
+            </select>
+        </div>`;
+    }).join('');
+};
+
 // 타임박스 그리드 렌더링 - 드롭다운 방식 (05:00~23:30)
 function renderTimeboxGrid(dateStr) {
     const grid = document.getElementById('planner-timebox-grid');
@@ -5184,6 +5268,12 @@ window.selectPlannerDate = function(dateStr) {
 function loadPlannerForDate(dateStr) {
     const dateDisplay = document.getElementById('planner-selected-date');
     if (dateDisplay) dateDisplay.innerText = dateStr;
+
+    // 전일 복사 체크박스 리셋
+    const chkTasks = document.getElementById('chk-copy-prev-tasks');
+    if (chkTasks) chkTasks.checked = false;
+    const chkSchedule = document.getElementById('chk-copy-prev-schedule');
+    if (chkSchedule) chkSchedule.checked = false;
 
     // 무드 버튼 리셋
     document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => btn.classList.remove('selected'));

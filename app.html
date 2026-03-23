@@ -421,6 +421,14 @@
                         <!-- 타임박스 그리드 -->
                         <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
 
+                        <!-- 전일 시간표 복사 체크박스 -->
+                        <div style="display:flex; justify-content:flex-start; align-items:center; margin:10px 0 6px 0;">
+                            <label class="copy-prev-plan-label" id="copy-prev-schedule-label">
+                                <input type="checkbox" id="chk-copy-prev-schedule" onchange="window.copyPrevDaySchedule(this.checked)">
+                                <span data-i18n="copy_prev_schedule">전일 시간표 복사</span>
+                            </label>
+                        </div>
+
                         <!-- 사진 캡션 텍스트 -->
                         <div class="planner-caption-box">
                             <textarea id="planner-caption" class="planner-caption-input" maxlength="280"
@@ -471,7 +479,11 @@
 
                     <!-- 우선순위 탭 저장 버튼 -->
                     <div id="priority-save-area" style="display:block;">
-                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px;">
+                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px; gap:12px;">
+                            <label class="copy-prev-plan-label" id="copy-prev-tasks-label">
+                                <input type="checkbox" id="chk-copy-prev-tasks" onchange="window.copyPrevDayTasks(this.checked)">
+                                <span data-i18n="copy_prev_plan">전일 플랜 복사</span>
+                            </label>
                             <button class="btn-primary" id="btn-planner-save-priority" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
                         </div>
                     </div>
