@@ -354,8 +354,7 @@ async function handleSendTestNotification(request) {
             priority: "high",
             notification: {
                 channelId: "test",
-                sound: "default",
-                clickAction: "OPEN_APP_TAB"
+                sound: "default"
             }
         }
     };
@@ -420,8 +419,7 @@ async function handleSendAnnouncement(request) {
             priority: "high",
             notification: {
                 channelId: "announcements",
-                sound: "default",
-                clickAction: "OPEN_APP_TAB"
+                sound: "default"
             }
         }
     };
@@ -965,8 +963,7 @@ async function handleRaidAlert() {
             priority: "high",
             notification: {
                 channelId: "raid_alerts",
-                sound: "default",
-                clickAction: "OPEN_APP_TAB"
+                sound: "default"
             }
         }
     };
@@ -1008,8 +1005,7 @@ exports.sendDailyReminder = onSchedule({
             priority: "high",
             notification: {
                 channelId: "daily_reminder",
-                sound: "default",
-                clickAction: "OPEN_APP_TAB"
+                sound: "default"
             }
         }
     };
@@ -1083,8 +1079,7 @@ exports.sendStreakWarnings = onSchedule({
                 priority: "high",
                 notification: {
                     channelId: "streak_warning",
-                    sound: "default",
-                    clickAction: "OPEN_APP_TAB"
+                    sound: "default"
                 }
             }
         };
