@@ -176,7 +176,8 @@ const i18n = {
         timebox_empty: "-- 없음 --",
         // 피트니스 동기화
         sync_complete_msg: "동기화 완료 ({source}): 총 {steps}보", sync_reward_msg: "추가 보상: +{points}P, STR +{str}",
-        sync_no_steps: "걸음 수 기록이 없습니다. (0보)", sync_next_reward: "다음 보상까지 {n}보 남음"
+        sync_no_steps: "걸음 수 기록이 없습니다. (0보)", sync_next_reward: "다음 보상까지 {n}보 남음",
+        login_terms_html: '계속하면 BRAVECAT의 <a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">소비자 약관</a> 및 <a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">이용 정책</a>에 동의하고, <a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">개인정보 처리방침</a>을 확인하는 것으로 간주됩니다.'
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -351,14 +352,15 @@ const i18n = {
         timebox_empty: "-- None --",
         // Fitness Sync
         sync_complete_msg: "Sync complete ({source}): {steps} steps total", sync_reward_msg: "Bonus: +{points}P, STR +{str}",
-        sync_no_steps: "No step data recorded. (0 steps)", sync_next_reward: "{n} steps to next reward"
+        sync_no_steps: "No step data recorded. (0 steps)", sync_next_reward: "{n} steps to next reward",
+        login_terms_html: 'By continuing, you agree to BRAVECAT\'s <a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">Terms of Service</a> and <a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">Usage Policy</a>, and acknowledge the <a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">Privacy Policy</a>.'
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
         btn_google_login: "Googleで続ける", google_login_hint: "最も早い開始方法", login_or: "または",
         auth_toggle_signup: "アカウントをお持ちでない方はこちら", auth_toggle_login: "アカウントをお持ちの方はこちら",
-        ph_email: "メールアドレス (Email)", ph_pw: "パスワード (Password)", ph_pw_conf: "パスワード確認 (Confirm Password)",
-        pw_req_hint: "※ パスワード: 8文字以上、大文字1つ以上、特殊文字2つ以上含む",
+        ph_email: "メールアドレス", ph_pw: "パスワード", ph_pw_conf: "パスワード確認",
+        pw_req_hint: "※ パスワード：8文字以上、大文字1つ以上、特殊文字2つ以上を含む",
         disclaimer_txt: "※ 登録により利用規約および免責事項に同意したものとみなされます。本アプリは健康補助目的であり、クエスト実行中に発生した身体的傷害や損害について一切責任を負いません。",
         login_err_empty: "メールアドレスとパスワードを入力してください。", login_err_email: "有効なメールアドレスを入力してください。",
         login_err_pw_req: "パスワード条件（8文字以上、大文字1つ以上、特殊文字2つ以上）を満たしてください。", pw_mismatch: "パスワードが一致しません。",
@@ -526,7 +528,8 @@ const i18n = {
         timebox_empty: "-- なし --",
         // フィットネス同期
         sync_complete_msg: "同期完了 ({source}): 合計 {steps}歩", sync_reward_msg: "追加報酬: +{points}P, STR +{str}",
-        sync_no_steps: "歩数記録がありません。(0歩)", sync_next_reward: "次の報酬まで {n}歩"
+        sync_no_steps: "歩数記録がありません。(0歩)", sync_next_reward: "次の報酬まで {n}歩",
+        login_terms_html: '続行すると、BRAVECATの<a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">利用規約</a>および<a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">利用ポリシー</a>に同意し、<a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">プライバシーポリシー</a>を確認したものとみなされます。'
     }
 };
 

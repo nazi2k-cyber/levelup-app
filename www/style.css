@@ -111,7 +111,22 @@ body {
 
 .forgot-pw-link { font-size: 0.75rem; color: rgba(255,255,255,0.35); margin-top: 8px; cursor: pointer; text-align: right; }
 .forgot-pw-link:hover { color: var(--neon-blue); }
-.login-toggle { font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 16px; cursor: pointer; text-decoration: underline; }
+.login-toggle { font-size: 0.8rem; color: rgba(255,255,255,0.4); cursor: pointer; text-decoration: underline; }
+
+.login-bottom-row {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    margin-top: 16px; flex-wrap: wrap;
+}
+.login-lang-selector {
+    display: flex; align-items: center; gap: 6px;
+}
+.login-lang-btn {
+    background: none; border: none; color: rgba(255,255,255,0.35);
+    font-size: 0.75rem; cursor: pointer; padding: 2px 4px; transition: color 0.2s;
+}
+.login-lang-btn:hover { color: rgba(255,255,255,0.7); }
+.login-lang-btn.active { color: var(--neon-blue, #00d9ff); font-weight: 700; }
+.login-lang-sep { color: rgba(255,255,255,0.15); font-size: 0.7rem; }
 
 /* 이메일 인증 안내 */
 .verify-icon { font-size: 3rem; margin-bottom: 16px; }

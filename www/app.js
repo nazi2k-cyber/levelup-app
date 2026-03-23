@@ -601,7 +601,7 @@ let AppState = getInitialAppState();
 function getInitialAppState() {
     return {
         isLoginMode: true,
-        currentLang: 'ko',
+        currentLang: (function(){ try { return localStorage.getItem('lang') || 'ko'; } catch(e) { return 'ko'; } })(),
         user: {
             name: "신규 헌터",
             level: 1,
@@ -861,6 +861,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadNavOrder();
     initTheme();
     bindEvents();
+    // 로그인 화면 언어 적용 (저장된 언어 설정 기반)
+    changeLanguage(AppState.currentLang);
     registerServiceWorker();
     initOfflineDetection();
     initRemoteConfig(); // Phase 2: A/B 테스트 Remote Config
@@ -1035,6 +1037,17 @@ function bindEvents() {
     document.querySelectorAll('.rank-tab-btn').forEach(btn => { btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn)); });
 
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
+
+    // 로그인 화면 언어 선택 버튼
+    document.querySelectorAll('#login-lang-selector .login-lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const lang = btn.dataset.lang;
+            changeLanguage(lang);
+            updateLoginLangButtons(lang);
+            document.getElementById('lang-select').value = lang;
+        });
+    });
+    updateLoginLangButtons(AppState.currentLang);
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
     document.getElementById('push-toggle').addEventListener('change', togglePushNotifications);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
@@ -3054,13 +3067,26 @@ function processLevelUp() {
     // 호칭 가이드 모달창 자동 표시(openTitleModal()) 삭제 완료
 }
 
+function updateLoginLangButtons(langCode) {
+    document.querySelectorAll('#login-lang-selector .login-lang-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.lang === langCode);
+    });
+}
+
 function changeLanguage(langCode) {
     AppState.currentLang = langCode;
+    try { localStorage.setItem('lang', langCode); } catch(e) {}
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (i18n[langCode][key]) el.innerHTML = i18n[langCode][key];
     });
-    
+    // placeholder 번역
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (i18n[langCode][key]) el.placeholder = i18n[langCode][key];
+    });
+    updateLoginLangButtons(langCode);
+
     if(document.getElementById('app-container').classList.contains('d-flex')){
         drawRadarChart();
         renderUsers(AppState.social.sortCriteria);

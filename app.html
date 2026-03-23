@@ -55,13 +55,22 @@
             </div>
 
             <!-- STEP 3: 약관 (항상 표시 — 별도 단계 불필요) -->
-            <div class="login-terms">
+            <div class="login-terms" data-i18n="login_terms_html">
                 계속하면 BRAVECAT의 <a href="#" onclick="event.preventDefault();openLegalModal('terms')">소비자 약관</a> 및 <a href="#" onclick="event.preventDefault();openLegalModal('usage-policy')">이용 정책</a>에
                 동의하고, <a href="#" onclick="event.preventDefault();openLegalModal('privacy')">개인정보 처리방침</a>을 확인하는 것으로
                 간주됩니다.
             </div>
 
-            <div class="login-toggle" id="auth-toggle-btn" data-i18n="auth_toggle_signup">계정이 없으신가요? 회원가입</div>
+            <div class="login-bottom-row">
+                <div class="login-toggle" id="auth-toggle-btn" data-i18n="auth_toggle_signup">계정이 없으신가요? 회원가입</div>
+                <div class="login-lang-selector" id="login-lang-selector">
+                    <button class="login-lang-btn" data-lang="ko">한국어</button>
+                    <span class="login-lang-sep">|</span>
+                    <button class="login-lang-btn" data-lang="en">EN</button>
+                    <span class="login-lang-sep">|</span>
+                    <button class="login-lang-btn" data-lang="ja">JP</button>
+                </div>
+            </div>
         </div>
 
         <!-- 이메일 인증 안내 화면 -->
