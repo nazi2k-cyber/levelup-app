@@ -705,6 +705,47 @@ async function handleDeleteAccount(request) {
     return { success: true };
 }
 
+// 사용자 본인 계정 삭제 (Google 정책 준수: 사용자가 직접 계정 삭제 가능)
+async function handleDeleteMyAccount(request) {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "인증이 필요합니다.");
+    }
+    const uid = request.auth.uid;
+
+    // 삭제 전 백업
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (userDoc.exists) {
+        await db.collection("user_backups").add({
+            uid: String(uid),
+            data: userDoc.data(),
+            memo: "사용자 직접 계정 삭제 (Google 정책)",
+            createdAt: new Date(),
+            createdBy: request.auth.token.email || uid
+        });
+        await db.collection("users").doc(uid).delete();
+    }
+
+    // 프로필 이미지 삭제
+    try {
+        const bucket = getStorage().bucket();
+        const [files] = await bucket.getFiles({ prefix: `profile_images/${uid}` });
+        for (const file of files) {
+            await file.delete();
+        }
+        console.log(`[deleteMyAccount] Profile images deleted for ${uid}`);
+    } catch (e) {
+        console.warn(`[deleteMyAccount] 프로필 이미지 삭제 실패 (uid: ${uid}):`, e.message);
+    }
+
+    // 닉네임 예약 해제
+    await releaseUsernameByUid(uid);
+
+    // Firebase Auth 계정 삭제
+    await getAuth().deleteUser(uid);
+    console.log(`[deleteMyAccount] User ${uid} self-deleted`);
+    return { success: true };
+}
+
 // 닉네임 일괄 마이그레이션: 모든 기존 유저의 name을 usernames 컬렉션에 등록
 // 중복 닉네임은 선착순(레벨 높은 순) → 나머지는 #2, #3 등 접미사 부여
 async function handleMigrateUsernames(request) {
@@ -808,6 +849,8 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleDisableAccount(request);
                 case "deleteAccount":
                     return await handleDeleteAccount(request);
+                case "deleteMyAccount":
+                    return await handleDeleteMyAccount(request);
                 case "screeningListPosts":
                     return await handleScreeningListPosts(request);
                 case "screeningDeletePost":

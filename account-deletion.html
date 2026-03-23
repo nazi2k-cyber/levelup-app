@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>계정 삭제 - BRAVECAT LevelUp</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #1a1a1a; color: #e0e0e0; line-height: 1.7; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 520px; width: 100%; margin: 40px auto; }
+        .logo { text-align: center; margin-bottom: 32px; }
+        .logo h1 { font-size: 1.5rem; font-weight: 800; color: #ffffff; }
+        .logo p { font-size: 0.8rem; color: #888; margin-top: 4px; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+        .card h2 { font-size: 1rem; font-weight: 700; color: #ff3c3c; margin-bottom: 16px; }
+        .card h3 { font-size: 0.9rem; font-weight: 600; color: #ffffff; margin: 16px 0 8px 0; }
+        .card p, .card li { font-size: 0.85rem; color: #ccc; margin-bottom: 8px; }
+        .card ul { padding-left: 20px; margin-bottom: 12px; }
+        .warning-box { background: rgba(255,60,60,0.08); border: 1px solid rgba(255,60,60,0.3); border-radius: 8px; padding: 16px; margin: 16px 0; }
+        .warning-box p { color: #ff8a8a; font-size: 0.82rem; font-weight: 500; margin: 0; }
+        .login-section { text-align: center; }
+        .btn-google { display: inline-flex; align-items: center; gap: 10px; background: #ffffff; color: #333; border: none; border-radius: 8px; padding: 12px 24px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-google:hover { background: #f0f0f0; }
+        .btn-google svg { width: 20px; height: 20px; }
+        .btn-delete { display: block; width: 100%; background: rgba(255,60,60,0.15); border: 1px solid #ff3c3c; color: #ff3c3c; border-radius: 8px; padding: 14px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 16px; }
+        .btn-delete:hover { background: rgba(255,60,60,0.3); }
+        .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status-msg { text-align: center; margin-top: 16px; font-size: 0.85rem; padding: 12px; border-radius: 8px; }
+        .status-msg.success { background: rgba(0,217,255,0.1); color: #00d9ff; }
+        .status-msg.error { background: rgba(255,60,60,0.1); color: #ff3c3c; }
+        .status-msg.info { background: rgba(255,255,255,0.05); color: #aaa; }
+        .user-info { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+        .user-info .email { font-size: 0.85rem; color: #ccc; }
+        .user-info .uid { font-size: 0.7rem; color: #666; }
+        .btn-logout-sm { background: none; border: 1px solid rgba(255,255,255,0.2); color: #aaa; border-radius: 6px; padding: 4px 12px; font-size: 0.75rem; cursor: pointer; margin-left: auto; }
+        .hidden { display: none !important; }
+        a { color: #00d9ff; }
+        .footer { margin-top: 40px; text-align: center; font-size: 0.75rem; color: #555; }
+        .lang-switch { text-align: center; margin-bottom: 20px; }
+        .lang-switch button { background: none; border: 1px solid rgba(255,255,255,0.15); color: #888; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; margin: 0 2px; }
+        .lang-switch button.active { border-color: #00d9ff; color: #00d9ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="lang-switch">
+            <button onclick="setLang('ko')" id="lang-ko" class="active">한국어</button>
+            <button onclick="setLang('en')" id="lang-en">English</button>
+            <button onclick="setLang('ja')" id="lang-ja">日本語</button>
+        </div>
+
+        <div class="logo">
+            <h1>BRAVECAT LevelUp</h1>
+            <p data-i18n="subtitle">계정 삭제 요청</p>
+        </div>
+
+        <!-- 안내 카드 -->
+        <div class="card">
+            <h2 data-i18n="title">계정 삭제 안내</h2>
+            <p data-i18n="desc1">Google Play 정책에 따라, 사용자는 언제든지 본인의 계정과 관련 데이터를 삭제할 수 있습니다.</p>
+
+            <h3 data-i18n="what_deleted">삭제되는 데이터</h3>
+            <ul>
+                <li data-i18n="del_item1">Firebase 인증 계정 (이메일, Google 로그인 정보)</li>
+                <li data-i18n="del_item2">게임 데이터 (레벨, 포인트, 스탯, 퀘스트 기록)</li>
+                <li data-i18n="del_item3">프로필 정보 (닉네임, 프로필 사진)</li>
+                <li data-i18n="del_item4">소셜 데이터 (친구 목록, Day1 게시물)</li>
+                <li data-i18n="del_item5">플래너 및 일기 데이터</li>
+            </ul>
+
+            <h3 data-i18n="what_retained">보관되는 데이터</h3>
+            <p data-i18n="retained_desc">삭제 요청 후에도 아래 데이터는 최대 30일간 백업으로 보관될 수 있으며, 이후 영구 삭제됩니다:</p>
+            <ul>
+                <li data-i18n="ret_item1">계정 복구를 위한 익명화된 백업 데이터</li>
+            </ul>
+
+            <div class="warning-box">
+                <p data-i18n="warning">계정 삭제는 되돌릴 수 없습니다. 삭제 후 동일한 계정으로 재가입하더라도 이전 데이터는 복구되지 않습니다.</p>
+            </div>
+        </div>
+
+        <!-- 로그인 전 -->
+        <div class="card login-section" id="section-login">
+            <p data-i18n="login_desc">계정 삭제를 진행하려면 먼저 본인 확인을 위해 로그인해주세요.</p>
+            <br>
+            <button class="btn-google" id="btn-google-login" onclick="googleLogin()">
+                <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                <span data-i18n="btn_login">Google 계정으로 로그인</span>
+            </button>
+        </div>
+
+        <!-- 로그인 후 -->
+        <div class="card hidden" id="section-delete">
+            <div class="user-info">
+                <div>
+                    <div class="email" id="user-email"></div>
+                    <div class="uid" id="user-uid"></div>
+                </div>
+                <button class="btn-logout-sm" onclick="doLogout()" data-i18n="btn_logout">로그아웃</button>
+            </div>
+            <p data-i18n="delete_desc">아래 버튼을 클릭하면 위에 표시된 계정과 모든 관련 데이터가 영구적으로 삭제됩니다.</p>
+            <button class="btn-delete" id="btn-delete" onclick="deleteAccount()" data-i18n="btn_delete">계정 영구 삭제</button>
+        </div>
+
+        <!-- 상태 메시지 -->
+        <div class="hidden" id="status-msg"></div>
+
+        <div class="footer">
+            <p>BRAVECAT &copy; 2025</p>
+            <p><a href="/privacy.html" data-i18n="privacy_link">개인정보 처리방침</a></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
+            authDomain: "levelup-app-53d02.firebaseapp.com",
+            projectId: "levelup-app-53d02",
+            storageBucket: "levelup-app-53d02.firebasestorage.app",
+            messagingSenderId: "233040099152",
+            appId: "1:233040099152:web:82310514d26c8c6d52de55"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const functions = getFunctions(app, "asia-northeast3");
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('section-login').classList.add('hidden');
+                document.getElementById('section-delete').classList.remove('hidden');
+                document.getElementById('user-email').textContent = user.email || user.displayName || 'Unknown';
+                document.getElementById('user-uid').textContent = 'UID: ' + user.uid;
+            } else {
+                document.getElementById('section-login').classList.remove('hidden');
+                document.getElementById('section-delete').classList.add('hidden');
+            }
+        });
+
+        window.googleLogin = async function() {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (e) {
+                showStatus('error', e.message);
+            }
+        };
+
+        window.doLogout = async function() {
+            await signOut(auth);
+            document.getElementById('status-msg').classList.add('hidden');
+        };
+
+        window.deleteAccount = async function() {
+            const t = window._i18n || {};
+            const msg1 = t.confirm1 || "정말로 계정을 삭제하시겠습니까?\n\n삭제된 계정은 복구할 수 없으며, 모든 게임 데이터가 영구적으로 삭제됩니다.";
+            const msg2 = t.confirm2 || "마지막 확인입니다.\n계정을 삭제하면 되돌릴 수 없습니다.\n\n정말 삭제하시겠습니까?";
+
+            if (!confirm(msg1)) return;
+            if (!confirm(msg2)) return;
+
+            const btn = document.getElementById('btn-delete');
+            btn.disabled = true;
+            btn.textContent = t.processing || '삭제 처리 중...';
+
+            try {
+                const ping = httpsCallable(functions, 'ping');
+                const result = await ping({ action: 'deleteMyAccount' });
+                if (result.data && result.data.success) {
+                    document.getElementById('section-delete').classList.add('hidden');
+                    showStatus('success', t.done || '계정이 성공적으로 삭제되었습니다. 이용해 주셔서 감사합니다.');
+                }
+            } catch (e) {
+                showStatus('error', (t.fail || '계정 삭제에 실패했습니다: ') + e.message);
+                btn.disabled = false;
+                btn.textContent = t.btn_delete || '계정 영구 삭제';
+            }
+        };
+
+        function showStatus(type, msg) {
+            const el = document.getElementById('status-msg');
+            el.className = 'status-msg ' + type;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+
+        // i18n
+        const LANG = {
+            ko: {
+                subtitle: "계정 삭제 요청", title: "계정 삭제 안내",
+                desc1: "Google Play 정책에 따라, 사용자는 언제든지 본인의 계정과 관련 데이터를 삭제할 수 있습니다.",
+                what_deleted: "삭제되는 데이터", del_item1: "Firebase 인증 계정 (이메일, Google 로그인 정보)",
+                del_item2: "게임 데이터 (레벨, 포인트, 스탯, 퀘스트 기록)", del_item3: "프로필 정보 (닉네임, 프로필 사진)",
+                del_item4: "소셜 데이터 (친구 목록, Day1 게시물)", del_item5: "플래너 및 일기 데이터",
+                what_retained: "보관되는 데이터", retained_desc: "삭제 요청 후에도 아래 데이터는 최대 30일간 백업으로 보관될 수 있으며, 이후 영구 삭제됩니다:",
+                ret_item1: "계정 복구를 위한 익명화된 백업 데이터",
+                warning: "계정 삭제는 되돌릴 수 없습니다. 삭제 후 동일한 계정으로 재가입하더라도 이전 데이터는 복구되지 않습니다.",
+                login_desc: "계정 삭제를 진행하려면 먼저 본인 확인을 위해 로그인해주세요.",
+                btn_login: "Google 계정으로 로그인", btn_logout: "로그아웃",
+                delete_desc: "아래 버튼을 클릭하면 위에 표시된 계정과 모든 관련 데이터가 영구적으로 삭제됩니다.",
+                btn_delete: "계정 영구 삭제", privacy_link: "개인정보 처리방침",
+                confirm1: "정말로 계정을 삭제하시겠습니까?\n\n삭제된 계정은 복구할 수 없으며, 모든 게임 데이터가 영구적으로 삭제됩니다.",
+                confirm2: "마지막 확인입니다.\n계정을 삭제하면 되돌릴 수 없습니다.\n\n정말 삭제하시겠습니까?",
+                processing: "삭제 처리 중...", done: "계정이 성공적으로 삭제되었습니다. 이용해 주셔서 감사합니다.", fail: "계정 삭제에 실패했습니다: "
+            },
+            en: {
+                subtitle: "Account Deletion Request", title: "Account Deletion",
+                desc1: "In accordance with Google Play policy, users may delete their account and associated data at any time.",
+                what_deleted: "Data to be deleted", del_item1: "Firebase authentication account (email, Google login)",
+                del_item2: "Game data (level, points, stats, quest history)", del_item3: "Profile info (nickname, profile photo)",
+                del_item4: "Social data (friends list, Day1 posts)", del_item5: "Planner and diary data",
+                what_retained: "Data retained temporarily", retained_desc: "The following data may be retained as a backup for up to 30 days after deletion, after which it will be permanently deleted:",
+                ret_item1: "Anonymized backup data for account recovery",
+                warning: "Account deletion is irreversible. Even if you sign up again with the same account, your previous data cannot be recovered.",
+                login_desc: "Please log in to verify your identity before proceeding with account deletion.",
+                btn_login: "Sign in with Google", btn_logout: "Sign out",
+                delete_desc: "Clicking the button below will permanently delete the account shown above and all associated data.",
+                btn_delete: "Permanently Delete Account", privacy_link: "Privacy Policy",
+                confirm1: "Are you sure you want to delete your account?\n\nThis action cannot be undone and all game data will be permanently deleted.",
+                confirm2: "Final confirmation.\nDeleting your account is irreversible.\n\nAre you sure you want to proceed?",
+                processing: "Deleting account...", done: "Your account has been successfully deleted. Thank you for using our service.", fail: "Failed to delete account: "
+            },
+            ja: {
+                subtitle: "アカウント削除リクエスト", title: "アカウント削除について",
+                desc1: "Google Playポリシーに従い、ユーザーはいつでもアカウントおよび関連データを削除できます。",
+                what_deleted: "削除されるデータ", del_item1: "Firebase認証アカウント（メール、Googleログイン情報）",
+                del_item2: "ゲームデータ（レベル、ポイント、ステータス、クエスト履歴）", del_item3: "プロフィール情報（ニックネーム、プロフィール写真）",
+                del_item4: "ソーシャルデータ（フレンドリスト、Day1投稿）", del_item5: "プランナーおよび日記データ",
+                what_retained: "一時保管されるデータ", retained_desc: "以下のデータは削除後最大30日間バックアップとして保管され、その後完全に削除されます：",
+                ret_item1: "アカウント復旧のための匿名化されたバックアップデータ",
+                warning: "アカウント削除は取り消せません。同じアカウントで再登録しても、以前のデータは復元されません。",
+                login_desc: "アカウント削除を進めるには、本人確認のためログインしてください。",
+                btn_login: "Googleアカウントでログイン", btn_logout: "ログアウト",
+                delete_desc: "以下のボタンをクリックすると、上記のアカウントおよびすべての関連データが完全に削除されます。",
+                btn_delete: "アカウントを完全に削除", privacy_link: "プライバシーポリシー",
+                confirm1: "本当にアカウントを削除しますか？\n\n削除されたアカウントは復元できず、すべてのゲームデータが完全に削除されます。",
+                confirm2: "最終確認です。\nアカウントを削除すると元に戻せません。\n\n本当に削除しますか？",
+                processing: "削除処理中...", done: "アカウントが正常に削除されました。ご利用ありがとうございました。", fail: "アカウントの削除に失敗しました: "
+            }
+        };
+
+        window.setLang = function(lang) {
+            window._i18n = LANG[lang] || LANG.ko;
+            document.querySelectorAll('.lang-switch button').forEach(b => b.classList.remove('active'));
+            document.getElementById('lang-' + lang)?.classList.add('active');
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (window._i18n[key]) el.textContent = window._i18n[key];
+            });
+            document.documentElement.lang = lang;
+        };
+
+        // detect browser language
+        const browserLang = (navigator.language || 'ko').substring(0, 2);
+        if (['ko', 'en', 'ja'].includes(browserLang)) {
+            window.setLang(browserLang);
+        }
+    </script>
+</body>
+</html>

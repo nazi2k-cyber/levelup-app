@@ -6,6 +6,7 @@ import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/fireb
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 import { getRemoteConfig, fetchAndActivate, getValue, getString } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-remote-config.js";
 import { getAnalytics, logEvent as fbLogEvent } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
@@ -27,6 +28,7 @@ const db = initializeFirestore(app, {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
 const storage = getStorage(app);
+const functions = getFunctions(app, "asia-northeast3");
 
 // --- Firebase Analytics ---
 let analytics = null;
@@ -1037,6 +1039,7 @@ function bindEvents() {
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('btn-logout').addEventListener('click', logout);
+    document.getElementById('btn-delete-account').addEventListener('click', deleteMyAccount);
 
     // 관리자 로그 공개 토글
     document.getElementById('admin-logger-toggle').addEventListener('change', async function() {
@@ -3358,6 +3361,43 @@ async function simulateGoogleLogin() {
 }
 
 async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+
+// 계정 삭제 (Google 정책 준수)
+async function deleteMyAccount() {
+    const t = AppState.i18n[AppState.lang] || AppState.i18n.ko;
+    const confirmMsg = t.del_confirm || "정말로 계정을 삭제하시겠습니까?\n\n삭제된 계정은 복구할 수 없으며, 모든 게임 데이터가 영구적으로 삭제됩니다.";
+    const secondConfirmMsg = t.del_confirm2 || "마지막 확인입니다.\n계정을 삭제하면 되돌릴 수 없습니다.\n\n정말 삭제하시겠습니까?";
+
+    if (!confirm(confirmMsg)) return;
+    if (!confirm(secondConfirmMsg)) return;
+
+    try {
+        const btnDelete = document.getElementById('btn-delete-account');
+        if (btnDelete) {
+            btnDelete.disabled = true;
+            btnDelete.textContent = t.del_processing || "삭제 처리 중...";
+        }
+
+        AppLogger.info('[Auth] 계정 삭제 요청');
+        const ping = httpsCallable(functions, 'ping');
+        const result = await ping({ action: 'deleteMyAccount' });
+
+        if (result.data && result.data.success) {
+            AppLogger.info('[Auth] 계정 삭제 완료');
+            localStorage.clear();
+            alert(t.del_done || "계정이 삭제되었습니다. 이용해 주셔서 감사합니다.");
+            window.location.reload();
+        }
+    } catch (e) {
+        AppLogger.error('[Auth] 계정 삭제 실패: ' + e.message);
+        alert((t.del_fail || "계정 삭제에 실패했습니다.") + "\n" + e.message);
+        const btnDelete = document.getElementById('btn-delete-account');
+        if (btnDelete) {
+            btnDelete.disabled = false;
+            btnDelete.textContent = t.set_delete_account || "계정 삭제";
+        }
+    }
+}
 
 function toggleAuthMode() {
     AppState.isLoginMode = !AppState.isLoginMode;
