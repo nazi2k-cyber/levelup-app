@@ -7277,10 +7277,8 @@ async function setupNativePushListeners() {
         });
 
         // 알림 탭(클릭) 처리 — 앱이 백그라운드 상태일 때
-        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-            if (window.AppLogger) AppLogger.info('[FCM] 알림 탭: ' + JSON.stringify(action));
-            handleNotificationAction(action.notification.data);
-        });
+        // 주의: 콜드 스타트용 얼리 리스너(registerEarlyPushListeners)가 이미 등록되어 있으므로
+        // 중복 등록하지 않음 (이중 네비게이션 방지)
 
         // 기본 토픽 구독
         await subscribeNativeTopics();
@@ -7301,7 +7299,13 @@ let _appNavigationReady = false;
 function registerEarlyPushListeners() {
     const cap = window.Capacitor;
     if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
-    if (!cap.Plugins || !cap.Plugins.PushNotifications) return;
+
+    // 콜드 스타트 시 플러그인이 아직 로드되지 않았을 수 있으므로 지연 재시도
+    if (!cap.Plugins || !cap.Plugins.PushNotifications) {
+        console.log('[FCM] 플러그인 미로드, 300ms 후 재시도');
+        setTimeout(() => registerEarlyPushListeners(), 300);
+        return;
+    }
 
     const { PushNotifications } = cap.Plugins;
 
@@ -7356,8 +7360,13 @@ function registerEarlyPushListeners() {
                     const pathParts = url.pathname.replace(/^\/+/, '').split('/');
                     const tab = url.hostname === 'tab' ? pathParts[0] : url.hostname;
 
-                    if (tab && !_appNavigationReady) {
-                        _pendingNotificationData = { tab: tab };
+                    if (tab) {
+                        if (_appNavigationReady) {
+                            // 이미 앱 준비 완료 — 바로 네비게이션
+                            handleNotificationAction({ tab: tab });
+                        } else {
+                            _pendingNotificationData = { tab: tab };
+                        }
                     }
                 } catch (e) {
                     console.warn('[DeepLink] 런치 URL 파싱 실패:', e.message);
@@ -7466,7 +7475,7 @@ function showInAppNotification(title, body, data) {
 }
 
 /** 알림 데이터에 따라 해당 탭으로 이동 */
-function handleNotificationAction(data) {
+function handleNotificationAction(data, _retryCount) {
     if (!data) return;
     if (window.AppLogger) AppLogger.info('[Navigate] 알림 액션 처리: ' + JSON.stringify(data));
 
@@ -7490,6 +7499,15 @@ function handleNotificationAction(data) {
         if (tabEl) {
             switchTab(tab, tabEl);
             if (window.AppLogger) AppLogger.info('[Navigate] 탭 이동 완료: ' + tab);
+        } else {
+            // 콜드 스타트 시 DOM이 아직 렌더링되지 않은 경우 재시도 (최대 3회)
+            const retry = _retryCount || 0;
+            if (retry < 3) {
+                if (window.AppLogger) AppLogger.warn('[Navigate] DOM 미준비, 재시도 ' + (retry + 1) + '/3: ' + tab);
+                setTimeout(() => handleNotificationAction(data, retry + 1), 500);
+            } else {
+                if (window.AppLogger) AppLogger.error('[Navigate] DOM 탭 요소를 찾을 수 없음: ' + tab);
+            }
         }
     }
 }
