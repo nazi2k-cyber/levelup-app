@@ -1027,6 +1027,7 @@ function bindEvents() {
     document.getElementById('btn-settings-push-guide').addEventListener('click', () => openSettingsGuideModal('push'));
     document.getElementById('btn-settings-gps-guide').addEventListener('click', () => openSettingsGuideModal('gps'));
     document.getElementById('btn-settings-fitness-guide').addEventListener('click', () => openSettingsGuideModal('fitness'));
+    document.getElementById('btn-settings-delete-guide').addEventListener('click', () => openSettingsGuideModal('delete'));
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
@@ -4057,8 +4058,8 @@ function openSettingsGuideModal(type) {
     const title = l[titleKey] || titleKey;
     const desc = l[descKey] || descKey;
 
-    const colors = { push: 'var(--neon-gold)', gps: 'var(--neon-blue)', fitness: 'var(--neon-purple, #b388ff)' };
-    const icons = { push: '🔔', gps: '📍', fitness: '🏃' };
+    const colors = { push: 'var(--neon-gold)', gps: 'var(--neon-blue)', fitness: 'var(--neon-purple, #b388ff)', delete: 'var(--neon-red)' };
+    const icons = { push: '🔔', gps: '📍', fitness: '🏃', delete: '⚠️' };
     const color = colors[type] || 'var(--neon-blue)';
     const icon = icons[type] || 'ℹ️';
 
