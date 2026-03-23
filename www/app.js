@@ -2551,7 +2551,7 @@ function startRaidTimer() {
             const remainMin = activeSlot.end - kstMinutes;
             const h = Math.floor(remainMin / 60);
             const m = remainMin % 60;
-            timerEl.innerText = `마감까지 ${h}시간 ${m}분`;
+            timerEl.innerText = (i18n[AppState.currentLang]?.raid_deadline || '마감까지 {h}시간 {m}분').replace('{h}', h).replace('{m}', m);
         } else {
             let nextStart = null;
             for (const s of slots) {
@@ -2561,7 +2561,7 @@ function startRaidTimer() {
             const remainMin = nextStart - kstMinutes;
             const h = Math.floor(remainMin / 60);
             const m = remainMin % 60;
-            timerEl.innerText = `다음 레이드까지 ${h}시간 ${m}분`;
+            timerEl.innerText = (i18n[AppState.currentLang]?.raid_next || '다음 레이드까지 {h}시간 {m}분').replace('{h}', h).replace('{m}', m);
         }
     }
 
@@ -2765,10 +2765,10 @@ function renderDungeon() {
             
             const mapUrl = `https://maps.google.com/maps?q=${st.lat},${st.lng}&hl=${AppState.currentLang}&z=15&output=embed`;
             
-            const joinBtnHtml = `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">작전 합류 (입장)</button>`;
+            const joinBtnHtml = `<button onclick="window.joinDungeon()" class="btn-primary" style="background:${m.color}; border-color:${m.color}; margin-top:10px; color:black; font-weight:bold;">${i18n[AppState.currentLang]?.raid_join_btn || '작전 합류 (입장)'}</button>`;
 
             banner.innerHTML = `
-                <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${m.stat} 요구됨</div>
+                <div style="display:inline-block; padding:2px 6px; font-size:0.6rem; font-weight:bold; color:${m.color}; border:1px solid ${m.color}; border-radius:3px; margin-bottom:5px;">${(i18n[AppState.currentLang]?.raid_stat_required || '{stat} 요구됨').replace('{stat}', m.stat)}</div>
                 <div class="raid-title-row">
                     <div class="anomaly-boss-icon ${AppState.dungeon.targetStat}">${raidAnomalyIcons[AppState.dungeon.targetStat] || ''}</div>
                     <div class="raid-title-text" style="text-align:left;">
@@ -2810,7 +2810,7 @@ function renderDungeon() {
                 </div>
                 <div style="font-size: 0.8rem; margin: 12px 0; font-weight:bold;">
                     ${i18n[AppState.currentLang].raid_part}
-                    <span class="text-blue">${AppState.dungeon.globalParticipants}</span> 명
+                    <span class="text-blue">${AppState.dungeon.globalParticipants}</span> ${i18n[AppState.currentLang]?.raid_people_unit || '명'}
                 </div>
                 <div class="raid-participants-list">${renderRaidParticipants(AppState.dungeon.raidParticipants)}</div>
                 ${joinBtnHtml}
@@ -2865,12 +2865,12 @@ function renderDungeon() {
                 btnComplete.classList.remove('d-none');
                 
                 if(AppState.dungeon.isCleared) {
-                    btnComplete.innerText = "정산 완료";
+                    btnComplete.innerText = i18n[AppState.currentLang]?.raid_settle_done || "정산 완료";
                     btnComplete.disabled = true;
                     btnComplete.style.background = "#444";
                     btnComplete.style.color = "#888";
                 } else {
-                    btnComplete.innerText = "전리품 획득";
+                    btnComplete.innerText = i18n[AppState.currentLang]?.raid_loot_claim || "전리품 획득";
                     btnComplete.disabled = false;
                     btnComplete.style.background = "var(--neon-gold)";
                     btnComplete.style.color = "black";
@@ -2880,7 +2880,7 @@ function renderDungeon() {
                 btnComplete.classList.add('d-none');
                 
                 if (AppState.dungeon.hasContributed) {
-                    btnAction.innerText = "데이터 전송 완료";
+                    btnAction.innerText = i18n[AppState.currentLang]?.raid_data_sent || "데이터 전송 완료";
                     btnAction.disabled = true;
                     btnAction.style.opacity = "0.5";
                 } else {
@@ -3233,7 +3233,7 @@ function renderUsers(criteria, btn = null) {
                 </div>
             </div>
             <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria]}</div>
-            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? '친구✓' : '추가'}</button>` : ''}
+            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? (i18n[AppState.currentLang]?.btn_added || '친구✓') : (i18n[AppState.currentLang]?.btn_add || '추가')}</button>` : ''}
         </div>
     `}).join('');
 }
@@ -5084,7 +5084,8 @@ function getTaskOptions() {
 // 이미 렌더링된 타임박스 드롭다운의 옵션 목록만 갱신
 function updateTimeboxDropdownOptions() {
     const options = getTaskOptions();
-    const optHTML = ['<option value="">-- 없음 --</option>',
+    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
+    const optHTML = [`<option value="">${emptyLabel}</option>`,
         ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}">${o.label}</option>`)
     ].join('');
     document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => {
@@ -5119,7 +5120,7 @@ function renderPlannerTasks() {
                     ${isFuture ? 'disabled' : ''}>${rankLabel}</button>
             <input class="planner-task-input" type="text"
                    value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
-                   placeholder="할 일 입력..."
+                   placeholder="${i18n[AppState.currentLang]?.planner_task_placeholder || '할 일 입력...'}"
                    maxlength="50"
                    oninput="window.updateTaskText(${idx}, this.value)"
                    ${isFuture ? 'disabled' : ''}>
@@ -5208,8 +5209,9 @@ window.copyPrevDaySchedule = function(checked) {
     const optTexts = new Set(options.map(o => o.text));
     const extraVals = [...new Set(Object.values(blocks))].filter(v => v && !optTexts.has(v));
 
+    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
     const makeOpts = (currentVal) => {
-        const opts = ['<option value="">-- 없음 --</option>',
+        const opts = [`<option value="">${emptyLabel}</option>`,
             ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`),
             ...extraVals.map(v => `<option value="${v.replace(/"/g,'&quot;')}"${v === currentVal ? ' selected' : ''}>${v}</option>`)
         ].join('');
@@ -5252,8 +5254,9 @@ function renderTimeboxGrid(dateStr) {
     const isFuture = isSelectedDateFuture();
     const options = getTaskOptions();
 
+    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
     const makeOpts = (currentVal) => {
-        const opts = ['<option value="">-- 없음 --</option>',
+        const opts = [`<option value="">${emptyLabel}</option>`,
             ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`)
         ].join('');
         return opts;
@@ -7044,17 +7047,23 @@ async function syncHealthData(showMsg = false) {
 
         if (showMsg) {
             const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
-            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료 (${sourceLabel}): 총 ${totalStepsToday.toLocaleString()}보<br>추가 보상: +${earnedPoints}P, STR +${earnedStr}</span>`;
+            const _l = i18n[AppState.currentLang] || {};
+            const _syncMsg = (_l.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
+            const _rewMsg = (_l.sync_reward_msg || '추가 보상: +{points}P, STR +{str}').replace('{points}', earnedPoints).replace('{str}', earnedStr);
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${_syncMsg}<br>${_rewMsg}</span>`;
         }
         updatePointUI();
         drawRadarChart();
     } else {
         if (showMsg) {
             if(totalStepsToday === 0) {
-                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">걸음 수 기록이 없습니다. (0보)</span>`;
+                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${i18n[AppState.currentLang]?.sync_no_steps || '걸음 수 기록이 없습니다. (0보)'}</span>`;
             } else {
                 const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">동기화 완료 (${sourceLabel}): 총 ${totalStepsToday.toLocaleString()}보<br>(다음 보상까지 ${1000 - unrewardedSteps}보 남음)</span>`;
+                const _l2 = i18n[AppState.currentLang] || {};
+                const _syncMsg2 = (_l2.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
+                const _nextMsg = (_l2.sync_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', 1000 - unrewardedSteps);
+                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${_syncMsg2}<br>(${_nextMsg})</span>`;
             }
         }
     }

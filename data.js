@@ -164,6 +164,19 @@ const i18n = {
         forgot_pw_sent: "비밀번호 재설정 메일이 발송되었습니다. 받은편지함을 확인해주세요.",
         forgot_pw_error: "비밀번호 재설정 메일 발송에 실패했습니다.",
         img_compressing: "이미지 최적화 중...", img_too_large: "이미지가 너무 큽니다. 다른 사진을 선택해주세요.",
+
+        // 던전 UI
+        raid_deadline: "마감까지 {h}시간 {m}분", raid_next: "다음 레이드까지 {h}시간 {m}분",
+        raid_join_btn: "작전 합류 (입장)", raid_stat_required: "{stat} 요구됨",
+        raid_participants_count: "{n} 명 참여 중", raid_people_unit: "명", raid_participants_count_suffix: "명 참여 중",
+        raid_settle_done: "정산 완료", raid_loot_claim: "전리품 획득",
+        raid_data_sent: "데이터 전송 완료", raid_contribute_btn: "데이터 동기화 (기여하기)",
+        // 플래너 UI
+        planner_add_btn: "+ 추가", planner_task_placeholder: "할 일 입력...",
+        timebox_empty: "-- 없음 --",
+        // 피트니스 동기화
+        sync_complete_msg: "동기화 완료 ({source}): 총 {steps}보", sync_reward_msg: "추가 보상: +{points}P, STR +{str}",
+        sync_no_steps: "걸음 수 기록이 없습니다. (0보)", sync_next_reward: "다음 보상까지 {n}보 남음",
         login_terms_html: '계속하면 BRAVECAT의 <a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">소비자 약관</a> 및 <a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">이용 정책</a>에 동의하고, <a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">개인정보 처리방침</a>을 확인하는 것으로 간주됩니다.'
     },
     en: {
@@ -327,6 +340,19 @@ const i18n = {
         forgot_pw_sent: "Password reset email has been sent. Please check your inbox.",
         forgot_pw_error: "Failed to send password reset email.",
         img_compressing: "Optimizing image...", img_too_large: "Image is too large. Please select a different photo.",
+
+        // Dungeon UI
+        raid_deadline: "{h}h {m}m remaining", raid_next: "Next raid in {h}h {m}m",
+        raid_join_btn: "Join Operation (Enter)", raid_stat_required: "{stat} Required",
+        raid_participants_count: "{n} Participating", raid_people_unit: "", raid_participants_count_suffix: "Participating",
+        raid_settle_done: "Settlement Complete", raid_loot_claim: "Claim Loot",
+        raid_data_sent: "Data Sent", raid_contribute_btn: "Sync Data (Contribute)",
+        // Planner UI
+        planner_add_btn: "+ Add", planner_task_placeholder: "Enter task...",
+        timebox_empty: "-- None --",
+        // Fitness Sync
+        sync_complete_msg: "Sync complete ({source}): {steps} steps total", sync_reward_msg: "Bonus: +{points}P, STR +{str}",
+        sync_no_steps: "No step data recorded. (0 steps)", sync_next_reward: "{n} steps to next reward",
         login_terms_html: 'By continuing, you agree to BRAVECAT\'s <a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">Terms of Service</a> and <a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">Usage Policy</a>, and acknowledge the <a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">Privacy Policy</a>.'
     },
     ja: {
@@ -335,9 +361,9 @@ const i18n = {
         auth_toggle_signup: "アカウントをお持ちでない方はこちら", auth_toggle_login: "アカウントをお持ちの方はこちら",
         ph_email: "メールアドレス", ph_pw: "パスワード", ph_pw_conf: "パスワード確認",
         pw_req_hint: "※ パスワード：8文字以上、大文字1つ以上、特殊文字2つ以上を含む",
-        disclaimer_txt: "※ 가입 시 이용약관 및 면책사항에 동의하는 것으로 간주됩니다. 본 앱은 건강 보조 목적이며, 퀘스트 수행 중 발생하는 신체적 부상이나 손해에 대해 일절 책임지지 않습니다.",
-        login_err_empty: "이메일과 비밀번호를 모두 입력해주세요.", login_err_email: "유효한 이메일 주소를 입력해주세요.", 
-        login_err_pw_req: "비밀번호 조건(8자리 이상, 대문자 1개 이상, 특수문자 2개 이상)을 충족해주세요.", pw_mismatch: "비밀번호가 일치하지 않습니다.",
+        disclaimer_txt: "※ 登録により利用規約および免責事項に同意したものとみなされます。本アプリは健康補助目的であり、クエスト実行中に発生した身体的傷害や損害について一切責任を負いません。",
+        login_err_empty: "メールアドレスとパスワードを入力してください。", login_err_email: "有効なメールアドレスを入力してください。",
+        login_err_pw_req: "パスワード条件（8文字以上、大文字1つ以上、特殊文字2つ以上）を満たしてください。", pw_mismatch: "パスワードが一致しません。",
 
         nav_status: "ステータス", nav_quest: "クエスト", nav_diary: "プランナー", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
         prof_name: "プレイヤー (私)", btn_hist: "称号履歴", avail_pts: "保有ポイント", btn_lvlup: "レベルUP", req_pts: "必要量:",
@@ -489,6 +515,20 @@ const i18n = {
         forgot_pw: "パスワードをお忘れですか？", forgot_pw_no_email: "パスワードをリセットするメールアドレスを入力してください。",
         forgot_pw_sent: "パスワードリセットメールを送信しました。受信トレイを確認してください。",
         forgot_pw_error: "パスワードリセットメールの送信に失敗しました。",
+        img_compressing: "画像を最適化中...", img_too_large: "画像が大きすぎます。別の写真を選択してください。",
+
+        // ダンジョンUI
+        raid_deadline: "締切まで {h}時間 {m}分", raid_next: "次のレイドまで {h}時間 {m}分",
+        raid_join_btn: "作戦参加（入場）", raid_stat_required: "{stat} 必要",
+        raid_participants_count: "{n} 名参加中", raid_people_unit: "名", raid_participants_count_suffix: "名参加中",
+        raid_settle_done: "精算完了", raid_loot_claim: "戦利品獲得",
+        raid_data_sent: "データ送信完了", raid_contribute_btn: "データ同期（貢献する）",
+        // プランナーUI
+        planner_add_btn: "+ 追加", planner_task_placeholder: "タスクを入力...",
+        timebox_empty: "-- なし --",
+        // フィットネス同期
+        sync_complete_msg: "同期完了 ({source}): 合計 {steps}歩", sync_reward_msg: "追加報酬: +{points}P, STR +{str}",
+        sync_no_steps: "歩数記録がありません。(0歩)", sync_next_reward: "次の報酬まで {n}歩",
         login_terms_html: '続行すると、BRAVECATの<a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">利用規約</a>および<a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">利用ポリシー</a>に同意し、<a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">プライバシーポリシー</a>を確認したものとみなされます。'
     }
 };
