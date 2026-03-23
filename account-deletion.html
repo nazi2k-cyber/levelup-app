@@ -22,6 +22,15 @@
         .btn-google { display: inline-flex; align-items: center; gap: 10px; background: #ffffff; color: #333; border: none; border-radius: 8px; padding: 12px 24px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
         .btn-google:hover { background: #f0f0f0; }
         .btn-google svg { width: 20px; height: 20px; }
+        .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.15); }
+        .divider span { font-size: 0.75rem; color: #666; white-space: nowrap; }
+        .email-form { display: flex; flex-direction: column; gap: 10px; }
+        .email-form input { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 14px; font-size: 0.85rem; color: #e0e0e0; outline: none; transition: border-color 0.2s; }
+        .email-form input:focus { border-color: #00d9ff; }
+        .email-form input::placeholder { color: #666; }
+        .btn-email { display: block; width: 100%; background: rgba(0,217,255,0.12); border: 1px solid rgba(0,217,255,0.4); color: #00d9ff; border-radius: 8px; padding: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-email:hover { background: rgba(0,217,255,0.2); }
         .btn-delete { display: block; width: 100%; background: rgba(255,60,60,0.15); border: 1px solid #ff3c3c; color: #ff3c3c; border-radius: 8px; padding: 14px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 16px; }
         .btn-delete:hover { background: rgba(255,60,60,0.3); }
         .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -87,6 +96,12 @@
                 <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 <span data-i18n="btn_login">Google 계정으로 로그인</span>
             </button>
+            <div class="divider"><span data-i18n="or">또는</span></div>
+            <div class="email-form">
+                <input type="email" id="email-input" placeholder="이메일" data-i18n-placeholder="email_placeholder">
+                <input type="password" id="password-input" placeholder="비밀번호" data-i18n-placeholder="password_placeholder">
+                <button class="btn-email" onclick="emailLogin()" data-i18n="btn_email_login">이메일로 로그인</button>
+            </div>
         </div>
 
         <!-- 로그인 후 -->
@@ -113,7 +128,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
 
         const firebaseConfig = {
@@ -148,6 +163,28 @@
                 await signInWithPopup(auth, provider);
             } catch (e) {
                 showStatus('error', e.message);
+            }
+        };
+
+        window.emailLogin = async function() {
+            const email = document.getElementById('email-input').value.trim();
+            const password = document.getElementById('password-input').value;
+            const t = window._i18n || {};
+            if (!email || !password) {
+                showStatus('error', t.email_empty || '이메일과 비밀번호를 입력해주세요.');
+                return;
+            }
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (e) {
+                const code = e.code;
+                if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+                    showStatus('error', t.email_invalid || '이메일 또는 비밀번호가 올바르지 않습니다.');
+                } else if (code === 'auth/too-many-requests') {
+                    showStatus('error', t.email_too_many || '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
+                } else {
+                    showStatus('error', t.email_fail || '로그인에 실패했습니다: ' + e.message);
+                }
             }
         };
 
@@ -201,7 +238,14 @@
                 ret_item1: "계정 복구를 위한 익명화된 백업 데이터",
                 warning: "계정 삭제는 되돌릴 수 없습니다. 삭제 후 동일한 계정으로 재가입하더라도 이전 데이터는 복구되지 않습니다.",
                 login_desc: "계정 삭제를 진행하려면 먼저 본인 확인을 위해 로그인해주세요.",
-                btn_login: "Google 계정으로 로그인", btn_logout: "로그아웃",
+                btn_login: "Google 계정으로 로그인", or: "또는",
+                email_placeholder: "이메일", password_placeholder: "비밀번호",
+                btn_email_login: "이메일로 로그인",
+                email_empty: "이메일과 비밀번호를 입력해주세요.",
+                email_invalid: "이메일 또는 비밀번호가 올바르지 않습니다.",
+                email_too_many: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+                email_fail: "로그인에 실패했습니다: ",
+                btn_logout: "로그아웃",
                 delete_desc: "아래 버튼을 클릭하면 위에 표시된 계정과 모든 관련 데이터가 영구적으로 삭제됩니다.",
                 btn_delete: "계정 영구 삭제", privacy_link: "개인정보 처리방침",
                 confirm1: "정말로 계정을 삭제하시겠습니까?\n\n삭제된 계정은 복구할 수 없으며, 모든 게임 데이터가 영구적으로 삭제됩니다.",
@@ -218,7 +262,14 @@
                 ret_item1: "Anonymized backup data for account recovery",
                 warning: "Account deletion is irreversible. Even if you sign up again with the same account, your previous data cannot be recovered.",
                 login_desc: "Please log in to verify your identity before proceeding with account deletion.",
-                btn_login: "Sign in with Google", btn_logout: "Sign out",
+                btn_login: "Sign in with Google", or: "or",
+                email_placeholder: "Email", password_placeholder: "Password",
+                btn_email_login: "Sign in with Email",
+                email_empty: "Please enter your email and password.",
+                email_invalid: "Invalid email or password.",
+                email_too_many: "Too many login attempts. Please try again later.",
+                email_fail: "Login failed: ",
+                btn_logout: "Sign out",
                 delete_desc: "Clicking the button below will permanently delete the account shown above and all associated data.",
                 btn_delete: "Permanently Delete Account", privacy_link: "Privacy Policy",
                 confirm1: "Are you sure you want to delete your account?\n\nThis action cannot be undone and all game data will be permanently deleted.",
@@ -235,7 +286,14 @@
                 ret_item1: "アカウント復旧のための匿名化されたバックアップデータ",
                 warning: "アカウント削除は取り消せません。同じアカウントで再登録しても、以前のデータは復元されません。",
                 login_desc: "アカウント削除を進めるには、本人確認のためログインしてください。",
-                btn_login: "Googleアカウントでログイン", btn_logout: "ログアウト",
+                btn_login: "Googleアカウントでログイン", or: "または",
+                email_placeholder: "メールアドレス", password_placeholder: "パスワード",
+                btn_email_login: "メールでログイン",
+                email_empty: "メールアドレスとパスワードを入力してください。",
+                email_invalid: "メールアドレスまたはパスワードが正しくありません。",
+                email_too_many: "ログイン試行回数が多すぎます。しばらくしてから再度お試しください。",
+                email_fail: "ログインに失敗しました: ",
+                btn_logout: "ログアウト",
                 delete_desc: "以下のボタンをクリックすると、上記のアカウントおよびすべての関連データが完全に削除されます。",
                 btn_delete: "アカウントを完全に削除", privacy_link: "プライバシーポリシー",
                 confirm1: "本当にアカウントを削除しますか？\n\n削除されたアカウントは復元できず、すべてのゲームデータが完全に削除されます。",
@@ -251,6 +309,10 @@
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (window._i18n[key]) el.textContent = window._i18n[key];
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (window._i18n[key]) el.placeholder = window._i18n[key];
             });
             document.documentElement.lang = lang;
         };
