@@ -3364,7 +3364,7 @@ async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut
 
 // 계정 삭제 (Google 정책 준수)
 async function deleteMyAccount() {
-    const t = AppState.i18n[AppState.lang] || AppState.i18n.ko;
+    const t = i18n[AppState.currentLang] || i18n.ko;
     const confirmMsg = t.del_confirm || "정말로 계정을 삭제하시겠습니까?\n\n삭제된 계정은 복구할 수 없으며, 모든 게임 데이터가 영구적으로 삭제됩니다.";
     const secondConfirmMsg = t.del_confirm2 || "마지막 확인입니다.\n계정을 삭제하면 되돌릴 수 없습니다.\n\n정말 삭제하시겠습니까?";
 
