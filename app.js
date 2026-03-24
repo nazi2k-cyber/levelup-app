@@ -7086,19 +7086,39 @@ function updateStepCountUI() {
     const lang = i18n[AppState.currentLang];
     const valueEl = document.getElementById('step-count-value');
     const infoEl = document.getElementById('step-count-info');
+    const reqPanel = document.getElementById('step-req-panel');
 
     // 항상 표시
     card.style.display = '';
 
     if (!AppState.user.syncEnabled) {
-        // 권한 없음 → 설명문 표시
+        // 권한 없음 → 설명문 + 제약사항 패널 표시
         valueEl.textContent = '-';
         infoEl.textContent = lang.step_no_perm || '설정에서 피트니스 동기화를 활성화하세요';
         infoEl.style.color = 'var(--neon-red)';
+
+        if (reqPanel) {
+            reqPanel.style.display = '';
+            const titleEl = document.getElementById('step-req-title');
+            const listEl = document.getElementById('step-req-list');
+            if (titleEl) titleEl.textContent = lang.step_req_title || '걸음수 연동 필수 조건';
+            if (listEl) {
+                const items = [
+                    { icon: '📲', text: lang.step_req_1 || 'Google Fit 또는 Health Connect 앱 설치 필요' },
+                    { icon: '⚙️', text: lang.step_req_2 || '설정 → 피트니스 동기화 활성화' },
+                    { icon: '🔑', text: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용' },
+                    { icon: '🎁', text: lang.step_req_reward || '1,000보마다 +10P & STR +0.5 보상' }
+                ];
+                listEl.innerHTML = items.map(r =>
+                    `<li style="margin-bottom:2px;">${r.icon} ${r.text}</li>`
+                ).join('');
+            }
+        }
         return;
     }
 
-    // 동기화 활성 → 걸음수 표시 (실제 총 걸음수)
+    // 동기화 활성 → 걸음수 표시 (실제 총 걸음수) + 제약사항 패널 숨김
+    if (reqPanel) reqPanel.style.display = 'none';
     const totalSteps = AppState.user.stepData?.totalSteps || 0;
     valueEl.textContent = totalSteps.toLocaleString();
     const remaining = 1000 - (totalSteps % 1000);
