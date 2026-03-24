@@ -191,7 +191,19 @@ const i18n = {
         ob_title_5: "소셜 & 랭킹", ob_desc_5: "글로벌 랭킹에서 경쟁하고<br>친구와 함께 성장하세요",
         ob_start_btn: "시작하기",
         ob_quest_ex1: "운동 30분 하기", ob_quest_ex2: "독서 20페이지", ob_quest_ex3: "물 2리터 마시기",
-        ob_plan_ex1: "아침 루틴", ob_plan_ex2: "집중 공부", ob_plan_ex3: "운동"
+        ob_plan_ex1: "아침 루틴", ob_plan_ex2: "집중 공부", ob_plan_ex3: "운동",
+        // Life Status
+        life_status_title: "LIFE STATUS", life_status_setting: "⚙️ 설정",
+        life_status_empty: "생년월일을 설정하여 나의 인생 현황을 확인하세요.",
+        life_days_lived: "살아온 날", life_days_unit: "일", life_remaining: "남은 시간",
+        life_years: "년", life_months: "개월", life_hours: "시간",
+        life_current_age: "현재 나이", life_age_unit: "세", life_based_on: "기준",
+        life_progress: "인생 진행률", life_target_age: "설정 나이",
+        life_status_setting_title: "LIFE STATUS 설정",
+        life_birthday_label: "생년월일", life_target_age_label: "설정 나이 (선택)",
+        life_target_age_hint: "목표 나이를 설정하면 추가 통계가 표시됩니다.",
+        life_save: "저장", life_cancel: "취소", life_remove_target: "설정 나이 해제",
+        life_err_future: "미래 날짜는 설정할 수 없습니다."
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -381,7 +393,19 @@ const i18n = {
         ob_title_5: "Social & Rankings", ob_desc_5: "Compete on global rankings<br>and grow together with friends",
         ob_start_btn: "Get Started",
         ob_quest_ex1: "Exercise 30 min", ob_quest_ex2: "Read 20 pages", ob_quest_ex3: "Drink 2L water",
-        ob_plan_ex1: "Morning routine", ob_plan_ex2: "Focus study", ob_plan_ex3: "Workout"
+        ob_plan_ex1: "Morning routine", ob_plan_ex2: "Focus study", ob_plan_ex3: "Workout",
+        // Life Status
+        life_status_title: "LIFE STATUS", life_status_setting: "⚙️ Settings",
+        life_status_empty: "Set your birthday to view your life status.",
+        life_days_lived: "Days Lived", life_days_unit: " days", life_remaining: "Remaining",
+        life_years: "y ", life_months: "m", life_hours: "h",
+        life_current_age: "Current Age", life_age_unit: "", life_based_on: "basis",
+        life_progress: "Life Progress", life_target_age: "Target Age",
+        life_status_setting_title: "LIFE STATUS Settings",
+        life_birthday_label: "Date of Birth", life_target_age_label: "Target Age (optional)",
+        life_target_age_hint: "Set a target age to see additional statistics.",
+        life_save: "Save", life_cancel: "Cancel", life_remove_target: "Remove Target Age",
+        life_err_future: "Cannot set a future date."
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -571,7 +595,19 @@ const i18n = {
         ob_title_5: "ソーシャル＆ランキング", ob_desc_5: "グローバルランキングで競い合い<br>友達と一緒に成長しよう",
         ob_start_btn: "スタート",
         ob_quest_ex1: "運動30分", ob_quest_ex2: "読書20ページ", ob_quest_ex3: "水2リットル飲む",
-        ob_plan_ex1: "朝のルーティン", ob_plan_ex2: "集中勉強", ob_plan_ex3: "ワークアウト"
+        ob_plan_ex1: "朝のルーティン", ob_plan_ex2: "集中勉強", ob_plan_ex3: "ワークアウト",
+        // Life Status
+        life_status_title: "LIFE STATUS", life_status_setting: "⚙️ 設定",
+        life_status_empty: "生年月日を設定して人生の現況を確認しましょう。",
+        life_days_lived: "生きた日数", life_days_unit: "日", life_remaining: "残り時間",
+        life_years: "年", life_months: "ヶ月", life_hours: "時間",
+        life_current_age: "現在の年齢", life_age_unit: "歳", life_based_on: "基準",
+        life_progress: "人生進行率", life_target_age: "設定年齢",
+        life_status_setting_title: "LIFE STATUS 設定",
+        life_birthday_label: "生年月日", life_target_age_label: "設定年齢（任意）",
+        life_target_age_hint: "目標年齢を設定すると追加の統計が表示されます。",
+        life_save: "保存", life_cancel: "キャンセル", life_remove_target: "設定年齢を解除",
+        life_err_future: "未来の日付は設定できません。"
     }
 };
 

@@ -627,7 +627,9 @@ function getInitialAppState() {
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
             nameLastChanged: null,
-            rareTitle: { unlocked: [] }
+            rareTitle: { unlocked: [] },
+            birthday: null,
+            targetAge: null
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -947,6 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePointUI();
             drawRadarChart();
             renderDDayList();
+            renderLifeStatus();
             updateDungeonStatus();
             startRaidTimer();
             renderQuestList();
@@ -1347,7 +1350,9 @@ async function _doSaveUserData() {
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
             questHistoryStr: JSON.stringify(AppState.questHistory),
             rareTitleStr: JSON.stringify(AppState.user.rareTitle),
-            ddaysStr: JSON.stringify(AppState.ddays || [])
+            ddaysStr: JSON.stringify(AppState.ddays || []),
+            birthday: AppState.user.birthday || null,
+            targetAge: AppState.user.targetAge || null
         };
         // 진단: 페이로드 크기 및 photoURL 상태 로그
         const payloadSize = new Blob([JSON.stringify(payload)]).size;
@@ -1433,6 +1438,8 @@ async function loadUserDataFromDB(user) {
             if(data.ddaysStr) {
                 try { AppState.ddays = JSON.parse(data.ddaysStr); } catch(e) { AppState.ddays = []; }
             }
+            if(data.birthday) AppState.user.birthday = data.birthday;
+            if(data.targetAge) AppState.user.targetAge = data.targetAge;
             // 스트릭 계산 및 스탯 감소
             applyStreakAndDecay();
             if(data.diaryStr) {
@@ -3120,7 +3127,7 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList();
+        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderLifeStatus();
     } else {
         mainEl.style.overflowY = 'auto';
     }
@@ -3203,6 +3210,7 @@ function changeLanguage(langCode) {
         renderPlannerCalendar();
         renderQuote();
         renderDDayList();
+        renderLifeStatus();
         updatePointUI();
         updateDungeonStatus();
         loadPlayerName();
@@ -8148,3 +8156,228 @@ window.selectDDayType = selectDDayType;
 window.saveDDayFromModal = saveDDayFromModal;
 window.deleteDDay = deleteDDay;
 window.closeDDayModal = closeDDayModal;
+
+// ===== LIFE STATUS (상태창 - 살아온 날/남은 시간) =====
+const DEFAULT_LIFESPAN = 80;
+
+function renderLifeStatus() {
+    const container = document.getElementById('life-status-content');
+    if (!container) return;
+    const lang = AppState.currentLang;
+    const birthday = AppState.user.birthday;
+
+    if (!birthday) {
+        container.innerHTML = `<div class="life-status-empty">
+            ${i18n[lang]?.life_status_empty || '생년월일을 설정하여 나의 인생 현황을 확인하세요.'}
+        </div>`;
+        return;
+    }
+
+    const now = new Date();
+    const birth = new Date(birthday);
+    const diffMs = now.getTime() - birth.getTime();
+    const daysLived = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // 현재 나이 계산
+    let currentAge = now.getFullYear() - birth.getFullYear();
+    const monthDiff = now.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) currentAge--;
+
+    // 기본 기대수명 기준 남은 시간
+    const baseLifespan = DEFAULT_LIFESPAN;
+    const baseEnd = new Date(birth);
+    baseEnd.setFullYear(baseEnd.getFullYear() + baseLifespan);
+    const baseRemainMs = Math.max(0, baseEnd.getTime() - now.getTime());
+    const baseRemainYears = Math.floor(baseRemainMs / (1000 * 60 * 60 * 24 * 365.25));
+    const baseRemainMonths = Math.floor((baseRemainMs % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24 * 30.44));
+    const baseRemainHours = Math.floor(baseRemainMs / (1000 * 60 * 60));
+    const baseLifePercent = Math.min(100, Math.max(0, (daysLived / (baseLifespan * 365.25)) * 100));
+
+    // 살아온 날 라벨
+    const daysLivedLabel = i18n[lang]?.life_days_lived || '살아온 날';
+    const daysUnit = i18n[lang]?.life_days_unit || '일';
+    const remainLabel = i18n[lang]?.life_remaining || '남은 시간';
+    const yearsUnit = i18n[lang]?.life_years || '년';
+    const monthsUnit = i18n[lang]?.life_months || '개월';
+    const hoursUnit = i18n[lang]?.life_hours || '시간';
+    const ageLabel = i18n[lang]?.life_current_age || '현재 나이';
+    const ageUnit = i18n[lang]?.life_age_unit || '세';
+    const basedOn = i18n[lang]?.life_based_on || '기준';
+    const lifeProgressLabel = i18n[lang]?.life_progress || '인생 진행률';
+
+    let html = '';
+
+    // 살아온 날
+    html += `<div class="life-status-item">
+        <div>
+            <div class="life-status-label">🗓️ ${daysLivedLabel}</div>
+            <div class="life-status-sub">${ageLabel}: ${currentAge}${ageUnit}</div>
+        </div>
+        <div class="life-status-value">${daysLived.toLocaleString()}${daysUnit}</div>
+    </div>`;
+
+    // 남은 시간 (기본 기대수명 기준)
+    html += `<div class="life-status-item">
+        <div>
+            <div class="life-status-label">⏳ ${remainLabel}</div>
+            <div class="life-status-sub">${baseLifespan}${ageUnit} ${basedOn}</div>
+        </div>
+        <div class="life-status-value gold">${baseRemainYears}${yearsUnit} ${baseRemainMonths}${monthsUnit}</div>
+    </div>`;
+
+    // 남은 시간 (시간 단위)
+    html += `<div class="life-status-item">
+        <div>
+            <div class="life-status-label">⏰ ${remainLabel} (${hoursUnit})</div>
+            <div class="life-status-sub">${baseLifespan}${ageUnit} ${basedOn}</div>
+        </div>
+        <div class="life-status-value gold">${baseRemainHours.toLocaleString()}${hoursUnit}</div>
+    </div>`;
+
+    // 인생 진행률 프로그레스 바
+    html += `<div class="life-status-item" style="flex-direction:column; align-items:stretch;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="life-status-label">📊 ${lifeProgressLabel} (${baseLifespan}${ageUnit})</div>
+            <div class="life-status-value" style="font-size:0.85rem;">${baseLifePercent.toFixed(1)}%</div>
+        </div>
+        <div class="life-status-progress-bar">
+            <div class="life-status-progress-fill" style="width:${baseLifePercent}%"></div>
+        </div>
+    </div>`;
+
+    // 설정나이 기준 (선택 시 추가)
+    const targetAge = AppState.user.targetAge;
+    if (targetAge && targetAge > currentAge) {
+        const targetEnd = new Date(birth);
+        targetEnd.setFullYear(targetEnd.getFullYear() + targetAge);
+        const targetRemainMs = Math.max(0, targetEnd.getTime() - now.getTime());
+        const targetRemainYears = Math.floor(targetRemainMs / (1000 * 60 * 60 * 24 * 365.25));
+        const targetRemainMonths = Math.floor((targetRemainMs % (1000 * 60 * 60 * 24 * 365.25)) / (1000 * 60 * 60 * 24 * 30.44));
+        const targetRemainHours = Math.floor(targetRemainMs / (1000 * 60 * 60));
+        const targetLifePercent = Math.min(100, Math.max(0, (daysLived / (targetAge * 365.25)) * 100));
+        const targetLabel = i18n[lang]?.life_target_age || '설정 나이';
+
+        html += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color);">
+            <div class="life-status-item">
+                <div>
+                    <div class="life-status-label">🎯 ${remainLabel}</div>
+                    <div class="life-status-sub">${targetLabel}: ${targetAge}${ageUnit} ${basedOn}</div>
+                </div>
+                <div class="life-status-value purple">${targetRemainYears}${yearsUnit} ${targetRemainMonths}${monthsUnit}</div>
+            </div>
+            <div class="life-status-item">
+                <div>
+                    <div class="life-status-label">🎯 ${remainLabel} (${hoursUnit})</div>
+                    <div class="life-status-sub">${targetLabel}: ${targetAge}${ageUnit} ${basedOn}</div>
+                </div>
+                <div class="life-status-value purple">${targetRemainHours.toLocaleString()}${hoursUnit}</div>
+            </div>
+            <div class="life-status-item" style="flex-direction:column; align-items:stretch;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="life-status-label">📊 ${lifeProgressLabel} (${targetAge}${ageUnit})</div>
+                    <div class="life-status-value purple" style="font-size:0.85rem;">${targetLifePercent.toFixed(1)}%</div>
+                </div>
+                <div class="life-status-progress-bar">
+                    <div class="life-status-progress-fill" style="width:${targetLifePercent}%; background:linear-gradient(90deg, var(--neon-purple), var(--neon-red));"></div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+function openLifeStatusSettingModal() {
+    const lang = AppState.currentLang;
+    const overlay = document.createElement('div');
+    overlay.className = 'report-modal-overlay';
+    overlay.id = 'life-status-modal-overlay';
+
+    const currentBirthday = AppState.user.birthday || '';
+    const currentTargetAge = AppState.user.targetAge || '';
+
+    const titleText = i18n[lang]?.life_status_setting_title || 'LIFE STATUS 설정';
+    const birthdayLabel = i18n[lang]?.life_birthday_label || '생년월일';
+    const targetAgeLabel = i18n[lang]?.life_target_age_label || '설정 나이 (선택)';
+    const targetAgeHint = i18n[lang]?.life_target_age_hint || '목표 나이를 설정하면 추가 통계가 표시됩니다.';
+    const saveText = i18n[lang]?.life_save || '저장';
+    const cancelText = i18n[lang]?.life_cancel || '취소';
+    const removeTargetText = i18n[lang]?.life_remove_target || '설정 나이 해제';
+
+    overlay.innerHTML = `
+    <div class="report-modal-content" style="max-width:340px; padding:20px;">
+        <h3 style="margin:0 0 16px; font-size:1rem; color:var(--neon-blue);">⚙️ ${titleText}</h3>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${birthdayLabel}</label>
+            <input id="life-status-birthday" type="date" value="${currentBirthday}"
+                style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${targetAgeLabel}</label>
+            <input id="life-status-target-age" type="number" min="1" max="150" value="${currentTargetAge}" placeholder="예: 100"
+                style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+            <div style="font-size:0.65rem; color:var(--text-sub); margin-top:4px;">${targetAgeHint}</div>
+        </div>
+        ${currentTargetAge ? `<button onclick="removeLifeStatusTargetAge()" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--neon-red); font-size:0.8rem; cursor:pointer; margin-bottom:10px;">${removeTargetText}</button>` : ''}
+        <div style="display:flex; gap:8px;">
+            <button onclick="closeLifeStatusModal()" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; cursor:pointer;">${cancelText}</button>
+            <button onclick="saveLifeStatusSetting()" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${saveText}</button>
+        </div>
+    </div>`;
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLifeStatusModal(); });
+    document.body.appendChild(overlay);
+}
+
+function saveLifeStatusSetting() {
+    const birthdayInput = document.getElementById('life-status-birthday');
+    const targetAgeInput = document.getElementById('life-status-target-age');
+
+    const birthday = birthdayInput ? birthdayInput.value : null;
+    const targetAge = targetAgeInput && targetAgeInput.value ? parseInt(targetAgeInput.value) : null;
+
+    if (birthday) {
+        const birthDate = new Date(birthday);
+        if (birthDate > new Date()) {
+            alert(i18n[AppState.currentLang]?.life_err_future || '미래 날짜는 설정할 수 없습니다.');
+            return;
+        }
+        AppState.user.birthday = birthday;
+    } else {
+        AppState.user.birthday = null;
+    }
+
+    if (targetAge && targetAge > 0 && targetAge <= 150) {
+        AppState.user.targetAge = targetAge;
+    } else {
+        AppState.user.targetAge = null;
+    }
+
+    closeLifeStatusModal();
+    renderLifeStatus();
+    saveUserData();
+}
+
+function removeLifeStatusTargetAge() {
+    AppState.user.targetAge = null;
+    closeLifeStatusModal();
+    renderLifeStatus();
+    saveUserData();
+}
+
+function closeLifeStatusModal() {
+    const overlay = document.getElementById('life-status-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+// Life Status 버튼 이벤트 바인딩
+document.addEventListener('DOMContentLoaded', () => {
+    const settingBtn = document.getElementById('btn-life-status-setting');
+    if (settingBtn) settingBtn.addEventListener('click', openLifeStatusSettingModal);
+});
+
+// Life Status 함수들을 window에 노출
+window.openLifeStatusSettingModal = openLifeStatusSettingModal;
+window.saveLifeStatusSetting = saveLifeStatusSetting;
+window.removeLifeStatusTargetAge = removeLifeStatusTargetAge;
+window.closeLifeStatusModal = closeLifeStatusModal;
