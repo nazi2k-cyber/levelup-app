@@ -520,11 +520,12 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                             <span class="cond-type-label">D-Day Reminder</span>
                             <span class="cond-type-sub">LocalNotifications</span>
                         </td>
-                        <td><span class="cond-schedule">09:00 KST (D-Day)</span></td>
+                        <td><span class="cond-schedule">09:00 KST (D-Day 당일)</span></td>
                         <td class="cond-condition">
-                            <code>ddays[].type == 'dday'</code><br>
-                            <code>ddays[].pushEnabled == true</code><br>
-                            <code>ddays[].date == today</code>
+                            <code>ddays[].type</code> ∈ <code>'dday'</code> 📅 | <code>'dday+'</code> 🔥<br>
+                            <code>ddays[].pushEnabled == true</code> 🔔<br>
+                            <code>ddays[].date == today</code><br>
+                            <span style="font-size:0.7rem; color:var(--text-sub);">기본 날짜: 당일 / 유형별 아이콘 선택 가능</span>
                         </td>
                         <td><span class="cond-target-badge cond-target-individual">Local Notification</span></td>
                         <td>
@@ -582,7 +583,7 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                     <div class="stat-card"><div class="number" id="cond-stat-warn">-</div><div class="label">Streak Warning (2d)</div></div>
                     <div class="stat-card"><div class="number" id="cond-stat-broken">-</div><div class="label">Streak Broken (3d+)</div></div>
                     <div class="stat-card"><div class="number" id="cond-stat-cleanup">-</div><div class="label">Cleanup Target (30d+)</div></div>
-                    <div class="stat-card"><div class="number" id="cond-stat-dday">-</div><div class="label">D-Day Push Enabled</div></div>
+                    <div class="stat-card"><div class="number" id="cond-stat-dday">-</div><div class="label">D-Day/D-Day+ Push 🔔</div></div>
                 </div>
             </div>
 
@@ -603,7 +604,8 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                 <select id="send-type" onchange="updatePreview()">
                     <option value="raid_start">Raid Alert</option>
                     <option value="daily_reminder">Daily Reminder</option>
-                    <option value="dday_reminder">D-Day Reminder</option>
+                    <option value="dday_reminder">📅 D-Day Reminder</option>
+                    <option value="dday_plus_reminder">🔥 D-Day+ Reminder</option>
                     <option value="streak_warning">Streak Warning</option>
                     <option value="streak_broken">Streak Broken</option>
                     <option value="custom">Custom Message</option>
@@ -926,6 +928,11 @@ const MESSAGES = {
         ko: { title: "\uD83D\uDCC5 D-Day \uC54C\uB9BC", body: "\uC624\uB298\uC740 \uC124\uC815\uD558\uC2E0 D-Day \uC785\uB2C8\uB2E4!" },
         en: { title: "\uD83D\uDCC5 D-Day Reminder", body: "Today is your D-Day!" },
         ja: { title: "\uD83D\uDCC5 D-Day \u30EA\u30DE\u30A4\u30F3\u30C0\u30FC", body: "\u4ECA\u65E5\u306F\u8A2D\u5B9A\u3057\u305FD-Day\u3067\u3059\uFF01" }
+    },
+    dday_plus_reminder: {
+        ko: { title: "\uD83D\uDD25 D-Day+ \uC54C\uB9BC", body: "\uC624\uB298\uC740 D-Day+ \uC2DC\uC791\uC77C\uC785\uB2C8\uB2E4. \uD654\uC774\uD305!" },
+        en: { title: "\uD83D\uDD25 D-Day+ Reminder", body: "Today marks the start of your D-Day+. Keep it up!" },
+        ja: { title: "\uD83D\uDD25 D-Day+ \u30EA\u30DE\u30A4\u30F3\u30C0\u30FC", body: "\u4ECA\u65E5\u306FD-Day+\u306E\u958B\u59CB\u65E5\u3067\u3059\u3002\u30D5\u30A1\u30A4\u30C8!" }
     },
     streak_warning: {
         ko: { title: "\uD83D\uDD25 \uC2A4\uD2B8\uB9AD\uC774 \uC704\uD5D8\uD574\uC694!", body: "2\uC77C\uC9F8 \uBBF8\uC811\uC18D \uC911\uC785\uB2C8\uB2E4. \uB0B4\uC77C\uAE4C\uC9C0 \uC811\uC18D\uD558\uC9C0 \uC54A\uC73C\uBA74 \uC2A4\uD0EF\uC774 \uAC10\uC18C\uD569\uB2C8\uB2E4!" },
@@ -1383,7 +1390,7 @@ window.refreshConditionsStatus = async function() {
             // D-Day push enabled count
             try {
                 const ddays = JSON.parse(d.ddaysStr || "[]");
-                if (ddays.some(dd => dd.type === 'dday' && dd.pushEnabled)) ddayPushCount++;
+                if (ddays.some(dd => (dd.type === 'dday' || dd.type === 'dday+') && dd.pushEnabled)) ddayPushCount++;
             } catch {}
         });
 
