@@ -342,6 +342,11 @@ function getImageExtension() {
 // 비용 최적화: Firebase Storage URL을 썸네일 URL로 변환
 // Cloud Function(generateThumbnail)이 업로드된 이미지에 대해 thumb_ prefix 파일을 자동 생성함
 // 피드/랭킹에서 원본(~2MB) 대신 썸네일(~100KB)을 로드하여 다운로드 비용 50~70% 절감
+
+// 썸네일 미존재 URL 캐시: 한 번 404된 원본 URL은 이후 thumb_ 변환을 건너뜀
+// → 소셜 탭 전환 등으로 재렌더링 시 반복 404 방지
+const _thumbMissCache = new Set();
+
 function getThumbURL(url) {
     if (!url || typeof url !== 'string') return url;
     // Firebase Storage URL이 아니면 변환 불필요 (base64, Google 프로필 등)
@@ -350,6 +355,8 @@ function getThumbURL(url) {
     if (url.includes('%2Fthumb_') || url.includes('/thumb_')) return url;
     // 썸네일 지원 경로만 변환 (profile_images, reels_photos)
     if (!url.includes('profile_images') && !url.includes('reels_photos')) return url;
+    // 이전에 썸네일이 404였던 URL이면 원본 그대로 반환 (반복 404 방지)
+    if (_thumbMissCache.has(url)) return url;
     // URL 경로의 마지막 파일명 앞에 thumb_ 추가
     // "...%2Fprofile.webp?..." → "...%2Fthumb_profile.webp?..."
     return url.replace(/%2F([^%/?]+)(\?|$)/, '%2Fthumb_$1$2');
@@ -360,7 +367,9 @@ function getThumbURL(url) {
 function thumbFallback(img) {
     const src = img.src;
     if (src.includes('%2Fthumb_') || src.includes('/thumb_')) {
-        // 1차 폴백: 썸네일 → 원본 URL
+        // 원본 URL 복원 + 캐시에 등록 (이후 getThumbURL()이 thumb_ 변환 건너뜀)
+        const originalURL = src.replace(/%2Fthumb_/g, '%2F').replace(/\/thumb_/g, '/');
+        _thumbMissCache.add(originalURL);
         const fallbackSrc = img.getAttribute('data-fallback-src');
         img.onerror = function() {
             this.onerror = null;
@@ -368,7 +377,7 @@ function thumbFallback(img) {
             if (fallbackSrc) { this.src = fallbackSrc; }
             else { this.style.display = 'none'; if (this.nextElementSibling) this.nextElementSibling.style.display = ''; }
         };
-        img.src = src.replace(/%2Fthumb_/g, '%2F').replace(/\/thumb_/g, '/');
+        img.src = originalURL;
     } else {
         // 원본도 실패 — data-fallback-src가 있으면 사용, 없으면 숨기기
         const fallbackSrc = img.getAttribute('data-fallback-src');
