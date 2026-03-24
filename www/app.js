@@ -8140,10 +8140,12 @@ async function scheduleDDayNotifications() {
     }
 }
 
-// D-Day 버튼 이벤트 바인딩
+// D-Day & Life Status 버튼 이벤트 바인딩
 document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('btn-add-dday');
     if (addBtn) addBtn.addEventListener('click', openDDayAddModal);
+    const lifeBtn = document.getElementById('btn-life-status-setting');
+    if (lifeBtn) lifeBtn.addEventListener('click', openLifeStatusSettingModal);
 });
 
 // D-Day 함수들을 window에 노출 (type="module" 대응)
