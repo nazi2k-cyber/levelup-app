@@ -624,6 +624,7 @@ function getInitialAppState() {
             pushEnabled: false,
             fcmToken: null,
             stepData: { date: "", rewardedSteps: 0, totalSteps: 0 },
+            adReward: { date: "", count: 0 },
             instaId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
             nameLastChanged: null,
@@ -1040,7 +1041,9 @@ function bindEvents() {
     document.getElementById('btn-settings-delete-guide').addEventListener('click', () => openSettingsGuideModal('delete'));
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
-    document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
+    document.getElementById('btn-levelup').addEventListener('click', processLevelUp);
+    document.getElementById('btn-watch-ad').addEventListener('click', watchRewardedAd);
+    updateAdRewardUI();
     document.querySelectorAll('.social-tab-btn').forEach(btn => { btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn)); });
     document.querySelectorAll('.rank-tab-btn').forEach(btn => { btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn)); });
 
@@ -1242,6 +1245,7 @@ async function _doSaveUserData() {
             pushEnabled: normalizeBooleanForFirestore(AppState.user.pushEnabled),
             fcmToken: AppState.user.fcmToken || null,
             stepData: normalizedStepData,
+            adRewardStr: JSON.stringify(AppState.user.adReward || { date: '', count: 0 }),
             instaId: AppState.user.instaId || "",
             nameLastChanged: normalizedNameLastChanged,
             streakStr: JSON.stringify(AppState.user.streak),
@@ -1325,6 +1329,9 @@ async function loadUserDataFromDB(user) {
             if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
             if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
+            if(data.adRewardStr) {
+                try { AppState.user.adReward = JSON.parse(data.adRewardStr); } catch(e) { AppState.user.adReward = { date: '', count: 0 }; }
+            }
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.nameLastChanged) AppState.user.nameLastChanged = data.nameLastChanged;
             if(data.streakStr) {
@@ -7104,6 +7111,102 @@ function updateStepCountUI() {
     const remaining = 1000 - (totalSteps % 1000);
     infoEl.textContent = (lang.step_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', remaining);
     infoEl.style.color = 'var(--neon-gold)';
+}
+
+// --- 보상형 광고 (AdMob Rewarded Ad) ---
+const AD_REWARD_POINTS = 100;
+const AD_REWARD_DAILY_LIMIT = 5;
+const ADMOB_REWARDED_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8552907541';
+
+function getTodayDateStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getAdRewardState() {
+    const today = getTodayDateStr();
+    if (!AppState.user.adReward || AppState.user.adReward.date !== today) {
+        AppState.user.adReward = { date: today, count: 0 };
+    }
+    return AppState.user.adReward;
+}
+
+function updateAdRewardUI() {
+    const state = getAdRewardState();
+    const remaining = AD_REWARD_DAILY_LIMIT - state.count;
+    const countEl = document.getElementById('ad-reward-count');
+    const btn = document.getElementById('btn-watch-ad');
+    if (!countEl || !btn) return;
+
+    const lang = i18n[AppState.currentLang] || {};
+    if (remaining <= 0) {
+        countEl.textContent = lang.ad_reward_limit || '오늘 횟수를 모두 사용했습니다';
+        countEl.style.color = 'var(--neon-red)';
+        btn.disabled = true;
+        btn.style.opacity = '0.4';
+    } else {
+        countEl.textContent = (lang.ad_reward_remaining || '오늘 {n}회 남음').replace('{n}', remaining);
+        countEl.style.color = 'var(--neon-gold)';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    }
+}
+
+async function watchRewardedAd() {
+    const state = getAdRewardState();
+    const remaining = AD_REWARD_DAILY_LIMIT - state.count;
+    const lang = i18n[AppState.currentLang] || {};
+
+    if (remaining <= 0) {
+        alert(lang.ad_reward_limit || '오늘 횟수를 모두 사용했습니다');
+        return;
+    }
+
+    const btn = document.getElementById('btn-watch-ad');
+    if (btn) { btn.disabled = true; btn.textContent = lang.ad_reward_loading || '로딩 중...'; }
+
+    try {
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.RewardedAd) {
+            // 네이티브 AdMob SDK
+            const result = await window.Capacitor.Plugins.RewardedAd.showRewardedAd({ adUnitId: ADMOB_REWARDED_AD_UNIT_ID });
+            if (!result || !result.rewarded) {
+                if (btn) { btn.disabled = false; btn.textContent = lang.ad_reward_btn || '+100P 받기'; }
+                updateAdRewardUI();
+                return;
+            }
+        } else {
+            // 웹 환경 또는 플러그인 미설치: 시뮬레이션 (테스트용)
+            const confirmed = confirm(lang.ad_reward_confirm || '광고를 시청하고 100P를 받으시겠습니까?');
+            if (!confirmed) {
+                if (btn) { btn.disabled = false; btn.textContent = lang.ad_reward_btn || '+100P 받기'; }
+                updateAdRewardUI();
+                return;
+            }
+        }
+
+        // 보상 지급
+        AppState.user.points += AD_REWARD_POINTS;
+        state.count += 1;
+        AppState.user.adReward = state;
+
+        updatePointUI();
+        updateAdRewardUI();
+        saveUserData();
+
+        if (window.AppLogger) AppLogger.info(`[AdReward] 보상 지급: +${AD_REWARD_POINTS}P (오늘 ${state.count}/${AD_REWARD_DAILY_LIMIT}회)`);
+
+        alert((lang.ad_reward_success || '보상이 지급되었습니다! +{n}P').replace('{n}', AD_REWARD_POINTS));
+
+    } catch (e) {
+        console.error('[AdReward] 광고 표시 실패:', e);
+        if (window.AppLogger) AppLogger.error('[AdReward] 실패: ' + (e.message || ''));
+        alert(lang.ad_reward_error || '광고를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+        if (btn) { btn.textContent = lang.ad_reward_btn || '+100P 받기'; }
+        updateAdRewardUI();
+    }
 }
 
 // --- 푸시 알림 (FCM) ---
