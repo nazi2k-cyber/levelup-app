@@ -7197,14 +7197,20 @@ function updateStepCountUI() {
             const listEl = document.getElementById('step-req-list');
             if (titleEl) titleEl.textContent = lang.step_req_title || '걸음수 연동 필수 조건';
             if (listEl) {
+                const googleFitUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.fitness';
+                const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
+                const req1Text = lang.step_req_1 || 'Google Fit 또는 Health Connect 앱 설치 필요';
+                const req1Html = req1Text
+                    .replace('Google Fit', `<a href="${googleFitUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Google Fit</a>`)
+                    .replace('Health Connect', `<a href="${healthConnectUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
                 const items = [
-                    { icon: '📲', text: lang.step_req_1 || 'Google Fit 또는 Health Connect 앱 설치 필요' },
-                    { icon: '⚙️', text: lang.step_req_2 || '설정 → 피트니스 동기화 활성화' },
-                    { icon: '🔑', text: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용' },
-                    { icon: '🎁', text: lang.step_req_reward || '1,000보마다 +10P & STR +0.5 보상' }
+                    { icon: '📲', html: req1Html },
+                    { icon: '⚙️', html: lang.step_req_2 || '설정 → 피트니스 동기화 활성화' },
+                    { icon: '🔑', html: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용' },
+                    { icon: '🎁', html: lang.step_req_reward || '1,000보마다 +10P & STR +0.5 보상' }
                 ];
                 listEl.innerHTML = items.map(r =>
-                    `<li style="margin-bottom:2px;">${r.icon} ${r.text}</li>`
+                    `<li style="margin-bottom:2px;">${r.icon} ${r.html}</li>`
                 ).join('');
             }
         }
