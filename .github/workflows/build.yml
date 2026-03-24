@@ -232,6 +232,12 @@ jobs:
             echo "✅ Health Connect intent-filter 주입 완료"
           fi
 
+          # AdMob APPLICATION_ID 메타데이터 주입 (보상형 광고)
+          if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "$MANIFEST"; then
+            sed -i '/<\/application>/i\        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-6654057059754695~1600694849" />' "$MANIFEST"
+            echo "✅ AdMob APPLICATION_ID 메타데이터 주입 완료"
+          fi
+
           echo ""
           echo "📋 최종 AndroidManifest.xml 권한 목록:"
           grep "uses-permission" "$MANIFEST" || true
@@ -252,6 +258,7 @@ jobs:
               echo 'import com.levelup.reboot.plugins.GoogleFitPlugin;'
               echo 'import com.levelup.reboot.plugins.HealthConnectPlugin;'
               echo 'import com.levelup.reboot.plugins.FCMPlugin;'
+              echo 'import com.levelup.reboot.plugins.RewardedAdPlugin;'
               echo 'public class MainActivity extends BridgeActivity {'
               echo '    @Override'
               echo '    public void onCreate(android.os.Bundle savedInstanceState) {'
@@ -259,6 +266,7 @@ jobs:
               echo '        registerPlugin(GoogleFitPlugin.class);'
               echo '        registerPlugin(HealthConnectPlugin.class);'
               echo '        registerPlugin(FCMPlugin.class);'
+              echo '        registerPlugin(RewardedAdPlugin.class);'
               echo '        super.onCreate(savedInstanceState);'
               echo '    }'
               echo '}'
@@ -301,6 +309,14 @@ jobs:
             echo "✅ Firebase Messaging 의존성 추가 완료"
           else
             echo "ℹ️ Firebase Messaging 의존성이 이미 존재합니다"
+          fi
+
+          # Google AdMob SDK 추가 (RewardedAdPlugin 보상형 광고)
+          if ! grep -q "play-services-ads" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-ads:23.6.0"' "$BUILD_GRADLE"
+            echo "✅ Google AdMob SDK 의존성 추가 완료"
+          else
+            echo "ℹ️ Google AdMob SDK 의존성이 이미 존재합니다"
           fi
 
           # compileSdkVersion을 34 이상으로 업그레이드 (Health Connect 필수)

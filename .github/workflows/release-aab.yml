@@ -224,6 +224,8 @@ jobs:
             sed -i '/<manifest/a\    <uses-permission android:name="android.permission.health.READ_STEPS" />' "$MANIFEST"
           ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST" && \
             sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"
+          ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "$MANIFEST" && \
+            sed -i '/<\/application>/i\        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-6654057059754695~1600694849" />' "$MANIFEST"
           echo "✅ 권한 주입 완료"
           grep "uses-permission" "$MANIFEST"
 
@@ -239,6 +241,7 @@ jobs:
               echo 'import com.levelup.reboot.plugins.GoogleFitPlugin;'
               echo 'import com.levelup.reboot.plugins.HealthConnectPlugin;'
               echo 'import com.levelup.reboot.plugins.FCMPlugin;'
+              echo 'import com.levelup.reboot.plugins.RewardedAdPlugin;'
               echo 'public class MainActivity extends BridgeActivity {'
               echo '    @Override'
               echo '    public void onCreate(android.os.Bundle savedInstanceState) {'
@@ -246,6 +249,7 @@ jobs:
               echo '        registerPlugin(GoogleFitPlugin.class);'
               echo '        registerPlugin(HealthConnectPlugin.class);'
               echo '        registerPlugin(FCMPlugin.class);'
+              echo '        registerPlugin(RewardedAdPlugin.class);'
               echo '        super.onCreate(savedInstanceState);'
               echo '    }'
               echo '}'
@@ -265,6 +269,8 @@ jobs:
           fi
           ! grep -q "firebase-messaging" "$BUILD_GRADLE" && \
             sed -i '/^dependencies {/a\    implementation "com.google.firebase:firebase-messaging:24.0.0"' "$BUILD_GRADLE"
+          ! grep -q "play-services-ads" "$BUILD_GRADLE" && \
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-ads:23.6.0"' "$BUILD_GRADLE"
           # compileSdk / targetSdk → 34 이상
           sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
           sed -i 's/compileSdkVersion\s*3[0-3]/compileSdkVersion 34/' "$BUILD_GRADLE"
