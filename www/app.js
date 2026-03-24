@@ -966,8 +966,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // 콜드 스타트 시 대기 중인 알림 데이터 처리 (푸시 클릭으로 앱 진입 시)
             processPendingNotification();
 
-            // 로그인 후 권한 요청 프롬프트 표시 (푸시/GPS/피트니스)
-            showPermissionPrompts();
+            // 로그인 후 권한 요청 프롬프트 표시 (온보딩 완료 후 실행)
+            if (!localStorage.getItem(ONBOARDING_STORAGE_KEY)) {
+                // 온보딩이 표시될 예정이면, 종료 후 권한 요청
+                window._pendingPermissionPrompts = true;
+            } else {
+                showPermissionPrompts();
+            }
         } else {
             AppLogger.info('[Auth] 로그아웃 상태');
             _initializedUid = null;
@@ -1027,6 +1032,11 @@ function dismissOnboardingGuide() {
     const guide = document.getElementById('onboarding-guide');
     if (guide) guide.classList.add('d-none');
     localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
+    // 온보딩 종료 후 안드로이드 권한 동의 팝업 표시
+    if (window._pendingPermissionPrompts) {
+        window._pendingPermissionPrompts = false;
+        setTimeout(() => showPermissionPrompts(), 300);
+    }
 }
 
 function _obUpdateSlides() {
