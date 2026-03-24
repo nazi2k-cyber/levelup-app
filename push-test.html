@@ -514,6 +514,24 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                         </td>
                     </tr>
 
+                    <tr id="cond-dday">
+                        <td>
+                            <span class="cond-type-icon">📅</span>
+                            <span class="cond-type-label">D-Day Reminder</span>
+                            <span class="cond-type-sub">LocalNotifications</span>
+                        </td>
+                        <td><span class="cond-schedule">09:00 KST (D-Day)</span></td>
+                        <td class="cond-condition">
+                            <code>ddays[].type == 'dday'</code><br>
+                            <code>ddays[].pushEnabled == true</code><br>
+                            <code>ddays[].date == today</code>
+                        </td>
+                        <td><span class="cond-target-badge cond-target-individual">Local Notification</span></td>
+                        <td>
+                            <span style="font-size:0.72rem; color:var(--text-sub);">Client-side only</span>
+                        </td>
+                    </tr>
+
                     <tr><td colspan="5" class="cond-section-label">Manual — Admin</td></tr>
 
                     <tr id="cond-announce">
@@ -564,6 +582,7 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                     <div class="stat-card"><div class="number" id="cond-stat-warn">-</div><div class="label">Streak Warning (2d)</div></div>
                     <div class="stat-card"><div class="number" id="cond-stat-broken">-</div><div class="label">Streak Broken (3d+)</div></div>
                     <div class="stat-card"><div class="number" id="cond-stat-cleanup">-</div><div class="label">Cleanup Target (30d+)</div></div>
+                    <div class="stat-card"><div class="number" id="cond-stat-dday">-</div><div class="label">D-Day Push Enabled</div></div>
                 </div>
             </div>
 
@@ -584,6 +603,7 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                 <select id="send-type" onchange="updatePreview()">
                     <option value="raid_start">Raid Alert</option>
                     <option value="daily_reminder">Daily Reminder</option>
+                    <option value="dday_reminder">D-Day Reminder</option>
                     <option value="streak_warning">Streak Warning</option>
                     <option value="streak_broken">Streak Broken</option>
                     <option value="custom">Custom Message</option>
@@ -901,6 +921,11 @@ const MESSAGES = {
         ko: { title: "\uD83C\uDFAF \uC624\uB298\uC758 \uD018\uC2A4\uD2B8\uAC00 \uAE30\uB2E4\uB9AC\uACE0 \uC788\uC5B4\uC694", body: "\uC77C\uC77C \uD018\uC2A4\uD2B8\uB97C \uC644\uB8CC\uD558\uACE0 \uACBD\uD5D8\uCE58\uB97C \uD68D\uB4DD\uD558\uC138\uC694!" },
         en: { title: "\uD83C\uDFAF Daily quests are waiting", body: "Complete your daily quests and earn XP!" },
         ja: { title: "\uD83C\uDFAF \u672C\u65E5\u306E\u30AF\u30A8\u30B9\u30C8\u304C\u5F85\u3063\u3066\u3044\u307E\u3059", body: "\u30C7\u30A4\u30EA\u30FC\u30AF\u30A8\u30B9\u30C8\u3092\u5B8C\u4E86\u3057\u3066EXP\u3092\u7372\u5F97\u3057\u3088\u3046!" }
+    },
+    dday_reminder: {
+        ko: { title: "\uD83D\uDCC5 D-Day \uC54C\uB9BC", body: "\uC624\uB298\uC740 \uC124\uC815\uD558\uC2E0 D-Day \uC785\uB2C8\uB2E4!" },
+        en: { title: "\uD83D\uDCC5 D-Day Reminder", body: "Today is your D-Day!" },
+        ja: { title: "\uD83D\uDCC5 D-Day \u30EA\u30DE\u30A4\u30F3\u30C0\u30FC", body: "\u4ECA\u65E5\u306F\u8A2D\u5B9A\u3057\u305FD-Day\u3067\u3059\uFF01" }
     },
     streak_warning: {
         ko: { title: "\uD83D\uDD25 \uC2A4\uD2B8\uB9AD\uC774 \uC704\uD5D8\uD574\uC694!", body: "2\uC77C\uC9F8 \uBBF8\uC811\uC18D \uC911\uC785\uB2C8\uB2E4. \uB0B4\uC77C\uAE4C\uC9C0 \uC811\uC18D\uD558\uC9C0 \uC54A\uC73C\uBA74 \uC2A4\uD0EF\uC774 \uAC10\uC18C\uD569\uB2C8\uB2E4!" },
@@ -1339,7 +1364,7 @@ window.refreshConditionsStatus = async function() {
     try {
         const usersSnap = await getDocs(collection(db, "users"));
         const now = new Date();
-        let pushOnCount = 0, warnCount = 0, brokenCount = 0, cleanupCount = 0;
+        let pushOnCount = 0, warnCount = 0, brokenCount = 0, cleanupCount = 0, ddayPushCount = 0;
 
         usersSnap.forEach(doc => {
             const d = doc.data();
@@ -1354,6 +1379,12 @@ window.refreshConditionsStatus = async function() {
                     else if (diff >= 2 && d.fcmToken && d.pushEnabled) warnCount++;
                 }
             } catch {}
+
+            // D-Day push enabled count
+            try {
+                const ddays = JSON.parse(d.ddaysStr || "[]");
+                if (ddays.some(dd => dd.type === 'dday' && dd.pushEnabled)) ddayPushCount++;
+            } catch {}
         });
 
         document.getElementById("cond-stat-raid").textContent = pushOnCount;
@@ -1361,10 +1392,11 @@ window.refreshConditionsStatus = async function() {
         document.getElementById("cond-stat-warn").textContent = warnCount;
         document.getElementById("cond-stat-broken").textContent = brokenCount;
         document.getElementById("cond-stat-cleanup").textContent = cleanupCount;
+        document.getElementById("cond-stat-dday").textContent = ddayPushCount;
         document.getElementById("cond-match-time").textContent =
             "Updated: " + now.toLocaleString("ko-KR", { hour12: false });
 
-        tok("Conditions", `Raid/Daily≈${pushOnCount}, Warning=${warnCount}, Broken=${brokenCount}, Cleanup=${cleanupCount}`);
+        tok("Conditions", `Raid/Daily≈${pushOnCount}, Warning=${warnCount}, Broken=${brokenCount}, Cleanup=${cleanupCount}, D-DayPush=${ddayPushCount}`);
     } catch (e) {
         terror("Conditions", "Failed to load stats: " + (e.code || "") + " " + (e.message || e));
     }
