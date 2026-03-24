@@ -8052,3 +8052,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('btn-add-dday');
     if (addBtn) addBtn.addEventListener('click', openDDayAddModal);
 });
+
+// D-Day 함수들을 window에 노출 (type="module" 대응)
+window.openDDayAddModal = openDDayAddModal;
+window.openDDayEditModal = openDDayEditModal;
+window.selectDDayType = selectDDayType;
+window.saveDDayFromModal = saveDDayFromModal;
+window.deleteDDay = deleteDDay;
+window.closeDDayModal = closeDDayModal;
