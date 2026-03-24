@@ -160,7 +160,7 @@ try {
 }
 
 // --- 프로필 이미지 기본값 & 안전한 로드 ---
-const DEFAULT_PROFILE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+const DEFAULT_PROFILE_SVG = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23555%27%3E%3Cpath d=%27M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%27/%3E%3C/svg%3E";
 
 function setProfilePreview(url) {
     const el = document.getElementById('profilePreview');
@@ -348,10 +348,36 @@ function getThumbURL(url) {
     if (!url.includes('firebasestorage.googleapis.com') && !url.includes('firebasestorage.app')) return url;
     // 이미 썸네일 URL이면 그대로 반환
     if (url.includes('%2Fthumb_') || url.includes('/thumb_')) return url;
+    // 썸네일 지원 경로만 변환 (profile_images, reels_photos)
+    if (!url.includes('profile_images') && !url.includes('reels_photos')) return url;
     // URL 경로의 마지막 파일명 앞에 thumb_ 추가
     // "...%2Fprofile.webp?..." → "...%2Fthumb_profile.webp?..."
     return url.replace(/%2F([^%/?]+)(\?|$)/, '%2Fthumb_$1$2');
 }
+
+// 썸네일 로드 실패 시 원본 URL로 폴백하는 onerror 핸들러
+// generateThumbnail 미배포 또는 기존 이미지(썸네일 미생성) 대응
+function thumbFallback(img) {
+    const src = img.src;
+    if (src.includes('%2Fthumb_') || src.includes('/thumb_')) {
+        // 1차 폴백: 썸네일 → 원본 URL
+        const fallbackSrc = img.getAttribute('data-fallback-src');
+        img.onerror = function() {
+            this.onerror = null;
+            // 2차 폴백: data-fallback-src가 있으면 사용 (예: 기본 프로필 SVG)
+            if (fallbackSrc) { this.src = fallbackSrc; }
+            else { this.style.display = 'none'; if (this.nextElementSibling) this.nextElementSibling.style.display = ''; }
+        };
+        img.src = src.replace(/%2Fthumb_/g, '%2F').replace(/\/thumb_/g, '/');
+    } else {
+        // 원본도 실패 — data-fallback-src가 있으면 사용, 없으면 숨기기
+        const fallbackSrc = img.getAttribute('data-fallback-src');
+        img.onerror = null;
+        if (fallbackSrc) { img.src = fallbackSrc; }
+        else { img.style.display = 'none'; if (img.nextElementSibling) img.nextElementSibling.style.display = ''; }
+    }
+}
+window.thumbFallback = thumbFallback;
 
 // base64 이미지 압축 유틸리티 (maxDim: 최대 픽셀, quality: 0~1)
 function compressBase64Image(base64str, maxDim, quality) {
@@ -3263,7 +3289,7 @@ function renderUsers(criteria, btn = null) {
         <div class="user-card ${u.isMe ? 'my-rank' : ''}">
             <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
             <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                ${u.photoURL ? `<img src="${sanitizeURL(getThumbURL(u.photoURL))}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display=''" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                ${u.photoURL ? `<img src="${sanitizeURL(getThumbURL(u.photoURL))}" referrerpolicy="no-referrer" onerror="thumbFallback(this)" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
                 <div class="user-info" style="margin-left:0;">
                     ${titleBadgeHTML}
                     <div style="font-size:0.9rem; display:flex; align-items:center;">
@@ -6147,7 +6173,7 @@ function renderReelsCards(posts, lang) {
 
     const html = posts.map(post => {
         const postId = getPostId(post);
-        const profileSrc = post.userPhoto ? sanitizeURL(getThumbURL(post.userPhoto)) : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+        const profileSrc = post.userPhoto ? sanitizeURL(getThumbURL(post.userPhoto)) : DEFAULT_PROFILE_SVG;
         const isMe = post.uid === auth.currentUser?.uid;
         const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(post.userInstaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
 
@@ -6164,7 +6190,7 @@ function renderReelsCards(posts, lang) {
 
         return `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
-                <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
+                <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="thumbFallback(this)" data-fallback-src="${DEFAULT_PROFILE_SVG}" alt="">
                 <div class="reels-user-info">
                     <div class="reels-username">${sanitizeText(post.userName || '헌터')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
@@ -6172,7 +6198,7 @@ function renderReelsCards(posts, lang) {
                 </div>
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
-            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(getThumbURL(post.photo))}" alt="Timetable"></div>` : ''}
+            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(getThumbURL(post.photo))}" onerror="thumbFallback(this)" alt="Timetable"></div>` : ''}
             ${post.caption ? `<div class="reels-caption">${sanitizeText(post.caption).replace(/\n/g,'<br>')}</div>` : ''}
             <div class="reels-timetable">
                 <div class="reels-timetable-title" ${moreCount > 0 ? `onclick="toggleScheduleFold('${postId}')" style="cursor:pointer;"` : ''}>
@@ -6462,7 +6488,7 @@ function renderCommentsSection(postId, comments) {
         container.innerHTML = `<div class="reels-comment-empty">${i18n[lang].reels_comment_empty}</div>`;
     } else {
         container.innerHTML = comments.map(c => {
-            const cPhoto = c.photoURL ? sanitizeURL(c.photoURL) : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23555'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+            const cPhoto = c.photoURL ? sanitizeURL(c.photoURL) : DEFAULT_PROFILE_SVG;
             const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(c.instaId)}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
             const timeAgo = getTimeAgo(c.timestamp, lang);
             return `<div class="reels-comment-item">
