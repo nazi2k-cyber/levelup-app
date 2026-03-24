@@ -7912,7 +7912,7 @@ function renderDDayList() {
 
         const icon = dd.type === 'dday' ? '📅' : '🔥';
         const typeLabel = dd.type === 'dday' ? 'D-Day' : 'D-Day+';
-        const notify = dd.pushEnabled ? '🔔' : '';
+        const notify = (dd.pushEnabled && dd.type === 'dday') ? '🔔 9:00 AM' : '';
 
         return `<div class="dday-item" data-idx="${idx}" onclick="openDDayEditModal(${idx})">
             <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
@@ -7950,6 +7950,10 @@ function _openDDayFormModal(editIdx) {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
+    const isDDayPlus = isEdit && dd.type === 'ddayplus';
+    const pushDisabled = isDDayPlus ? 'disabled' : '';
+    const pushChecked = (isEdit && dd.pushEnabled && !isDDayPlus) ? 'checked' : '';
+
     overlay.innerHTML = `
     <div class="report-modal-content" style="max-width:340px; padding:20px;">
         <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">${isEdit ? 'D-Day 수정' : 'D-Day 추가'}</div>
@@ -7962,19 +7966,19 @@ function _openDDayFormModal(editIdx) {
             <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">유형</label>
             <div style="display:flex; gap:8px;">
                 <button class="dday-type-btn ${(!isEdit || dd.type === 'dday') ? 'active' : ''}" data-type="dday" onclick="selectDDayType('dday')" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.8rem; cursor:pointer;">📅 D-Day</button>
-                <button class="dday-type-btn ${(isEdit && dd.type === 'ddayplus') ? 'active' : ''}" data-type="ddayplus" onclick="selectDDayType('ddayplus')" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.8rem; cursor:pointer;">🔥 D-Day+</button>
+                <button class="dday-type-btn ${isDDayPlus ? 'active' : ''}" data-type="ddayplus" onclick="selectDDayType('ddayplus')" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.8rem; cursor:pointer;">🔥 D-Day+</button>
             </div>
             <div id="dday-type-desc" style="font-size:0.65rem; color:var(--text-sub); margin-top:4px;">${(!isEdit || dd.type === 'dday') ? '목표일까지 남은 날을 카운트합니다.' : '시작일로부터 경과한 날을 카운트합니다.'}</div>
         </div>
         <div style="margin-bottom:10px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${(!isEdit || dd.type === 'dday') ? '목표 날짜' : '시작 날짜'}</label>
+            <label id="dday-date-label" style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${isDDayPlus ? '시작 날짜' : '목표 날짜'}</label>
             <input id="dday-input-date" type="date" value="${isEdit ? dd.date : todayStr}"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
         </div>
-        <div style="margin-bottom:14px;">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                <input id="dday-input-push" type="checkbox" ${isEdit && dd.pushEnabled ? 'checked' : ''}>
-                <span style="font-size:0.8rem; color:var(--text-main);">🔔 D-Day 당일 푸시 알림</span>
+        <div id="dday-push-row" style="margin-bottom:14px; ${isDDayPlus ? 'opacity:0.4;' : ''}">
+            <label style="display:flex; align-items:center; gap:8px; cursor:${isDDayPlus ? 'not-allowed' : 'pointer'};">
+                <input id="dday-input-push" type="checkbox" ${pushChecked} ${pushDisabled}>
+                <span style="font-size:0.8rem; color:var(--text-main);">🔔 D-Day 당일 오전 9시 푸시 알림</span>
             </label>
         </div>
         <div style="display:flex; gap:8px;">
@@ -7993,12 +7997,27 @@ function selectDDayType(type) {
         b.classList.toggle('active', b.dataset.type === type);
     });
     const desc = document.getElementById('dday-type-desc');
-    const dateLabel = document.querySelector('#dday-modal-overlay label[for], #dday-input-date')?.previousElementSibling;
+    const dateLabel = document.getElementById('dday-date-label');
+    const pushRow = document.getElementById('dday-push-row');
+    const pushInput = document.getElementById('dday-input-push');
+    const isDDayPlus = type === 'ddayplus';
+
     if (type === 'dday') {
         if (desc) desc.textContent = '목표일까지 남은 날을 카운트합니다.';
+        if (dateLabel) dateLabel.textContent = '목표 날짜';
     } else {
         if (desc) desc.textContent = '시작일로부터 경과한 날을 카운트합니다.';
+        if (dateLabel) dateLabel.textContent = '시작 날짜';
     }
+
+    // D-Day+는 특정 목표일이 없으므로 푸시 알림 비활성화
+    if (pushRow) pushRow.style.opacity = isDDayPlus ? '0.4' : '1';
+    if (pushInput) {
+        pushInput.disabled = isDDayPlus;
+        if (isDDayPlus) pushInput.checked = false;
+    }
+    const pushLabel = pushRow?.querySelector('label');
+    if (pushLabel) pushLabel.style.cursor = isDDayPlus ? 'not-allowed' : 'pointer';
 }
 
 function saveDDayFromModal(editIdx) {
@@ -8029,6 +8048,7 @@ function saveDDayFromModal(editIdx) {
     closeDDayModal();
     renderDDayList();
     saveUserData();
+    scheduleDDayNotifications();
 }
 
 function deleteDDay(idx) {
@@ -8037,6 +8057,7 @@ function deleteDDay(idx) {
     closeDDayModal();
     renderDDayList();
     saveUserData();
+    scheduleDDayNotifications();
 }
 
 function closeDDayModal() {
@@ -8044,6 +8065,55 @@ function closeDDayModal() {
     if (overlay) {
         overlay.classList.remove('active');
         setTimeout(() => overlay.remove(), 300);
+    }
+}
+
+// D-Day 로컬 푸시 알림 스케줄링 (D-Day 당일 오전 9시)
+async function scheduleDDayNotifications() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.LocalNotifications) {
+        console.log('[D-Day] LocalNotifications 플러그인 없음, 알림 스케줄 건너뜀');
+        return;
+    }
+    const { LocalNotifications } = cap.Plugins;
+
+    try {
+        // 기존 D-Day 알림 모두 취소 (ID 범위: 9000~9002)
+        const idsToCancel = [{ id: 9000 }, { id: 9001 }, { id: 9002 }];
+        await LocalNotifications.cancel({ notifications: idsToCancel });
+
+        const ddays = AppState.ddays || [];
+        const notifications = [];
+        const now = new Date();
+
+        ddays.forEach((dd, idx) => {
+            if (dd.type !== 'dday' || !dd.pushEnabled) return;
+
+            // D-Day 당일 오전 9시
+            const scheduleDate = new Date(dd.date + 'T09:00:00');
+            if (scheduleDate <= now) return; // 이미 지난 날짜는 스케줄하지 않음
+
+            notifications.push({
+                title: '📅 D-Day 알림',
+                body: `오늘은 [${dd.title}] D-Day 입니다!`,
+                id: 9000 + idx,
+                schedule: { at: scheduleDate },
+                sound: 'default',
+                channelId: 'dday-notifications'
+            });
+        });
+
+        if (notifications.length > 0) {
+            const perm = await LocalNotifications.requestPermissions();
+            if (perm.display === 'granted') {
+                await LocalNotifications.schedule({ notifications });
+                console.log(`[D-Day] ${notifications.length}개 알림 스케줄 완료`);
+                if (window.AppLogger) AppLogger.info(`[D-Day] ${notifications.length}개 알림 스케줄됨`);
+            }
+        }
+    } catch(e) {
+        console.warn('[D-Day] 알림 스케줄 실패:', e);
+        if (window.AppLogger) AppLogger.warn('[D-Day] 알림 스케줄 실패: ' + e.message);
     }
 }
 
