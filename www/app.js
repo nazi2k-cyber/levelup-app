@@ -478,6 +478,14 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
     }
     const storageRef = ref(storage, storagePath);
 
+    // CDN 캐싱을 위한 Cache-Control 메타데이터 설정
+    const CACHE_CONTROL_MAP = {
+        'reels_photos': 'public, max-age=86400',      // 24시간 (릴스 수명과 일치)
+        'profile_images': 'public, max-age=604800',    // 7일 (변경 빈도 낮음)
+        'planner_photos': 'private, max-age=86400'     // 비공개, 1일
+    };
+    const cacheControl = CACHE_CONTROL_MAP[pathPrefix] || 'no-cache';
+
     // 프로필 이미지: 기존 파일 삭제 후 업로드 (best-effort, 5초 타임아웃)
     if (storagePath.startsWith('profile_images/')) {
         try {
@@ -514,7 +522,7 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
             if (useSimpleUpload) {
                 _log('4-UPLOAD', `Using simple uploadBytes (${blob.size}B), attempt ${attempt}/${MAX_RETRIES}`);
                 const snapshot = await Promise.race([
-                    uploadBytes(storageRef, blob, { contentType }),
+                    uploadBytes(storageRef, blob, { contentType, cacheControl }),
                     new Promise((_, rej) => setTimeout(() => rej(new Error(`Upload timed out after ${uploadTimeoutMs / 1000}s`)), uploadTimeoutMs))
                 ]);
                 if (onProgress) onProgress(100);
@@ -524,7 +532,7 @@ async function _uploadImageToStorageImpl(storagePath, base64str, onProgress) {
             } else {
                 _log('4-UPLOAD', `Calling uploadBytesResumable... (attempt ${attempt}/${MAX_RETRIES})`);
                 const url = await new Promise((resolve, reject) => {
-                    const uploadTask = uploadBytesResumable(storageRef, blob, { contentType });
+                    const uploadTask = uploadBytesResumable(storageRef, blob, { contentType, cacheControl });
                     let lastProgressTime = Date.now();
                     const timeout = setTimeout(() => {
                         uploadTask.cancel();

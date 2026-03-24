@@ -3,9 +3,9 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // profile_images: 본인만 쓰기/삭제, 인증된 유저 읽기
+    // profile_images: 공개 읽기 (CDN 캐싱 활성화), 본인만 쓰기/삭제
     match /profile_images/{userId}/{allPaths=**} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, update: if request.auth != null && request.auth.uid == userId
                             && request.resource.size < 500 * 1024
                             && request.resource.contentType.matches('image/.*');
@@ -21,9 +21,9 @@ service firebase.storage {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // reels_photos: 본인만 쓰기/삭제, 인증된 유저 읽기
+    // reels_photos: 공개 읽기 (CDN 캐싱 활성화), 본인만 쓰기/삭제
     match /reels_photos/{userId}/{allPaths=**} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, update: if request.auth != null && request.auth.uid == userId
                             && request.resource.size < 2 * 1024 * 1024
                             && request.resource.contentType.matches('image/.*');

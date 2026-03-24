@@ -2,6 +2,7 @@
 const CACHE_VERSION = 'levelup-v1.0.0';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
+const IMAGE_CACHE = 'storage-images-v1';
 
 // 앱 셸 (App Shell) — 오프라인에서 반드시 필요한 정적 리소스
 const APP_SHELL = [
@@ -87,7 +88,7 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((keyList) => {
             return Promise.all(
                 keyList.map((key) => {
-                    if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE) {
+                    if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE && key !== IMAGE_CACHE) {
                         console.log('[SW] 이전 캐시 삭제:', key);
                         return caches.delete(key);
                     }
@@ -110,10 +111,16 @@ self.addEventListener('fetch', (event) => {
 
     // Firebase Auth/Firestore API → Network Only (인증/데이터는 항상 최신)
     if (url.hostname.includes('firebaseio.com') ||
-        url.hostname.includes('googleapis.com') ||
-        url.hostname.includes('firestore.googleapis.com') ||
-        url.hostname.includes('identitytoolkit.googleapis.com') ||
-        url.hostname.includes('securetoken.googleapis.com')) {
+        url.hostname === 'firestore.googleapis.com' ||
+        url.hostname === 'identitytoolkit.googleapis.com' ||
+        url.hostname === 'securetoken.googleapis.com') {
+        return;
+    }
+
+    // Firebase Storage 이미지 → Cache First (24시간 만료, 최대 150개)
+    if (url.hostname.includes('firebasestorage.googleapis.com') ||
+        url.hostname.includes('firebasestorage.app')) {
+        event.respondWith(storageImageCacheFirst(request));
         return;
     }
 
@@ -205,6 +212,50 @@ async function staleWhileRevalidate(request) {
     });
 
     return cached || fetchPromise;
+}
+
+// Storage Image Cache First: 캐시 우선 + 24시간 만료 + 최대 150개
+const IMAGE_CACHE_MAX_AGE = 24 * 60 * 60 * 1000; // 24시간
+const IMAGE_CACHE_MAX_ENTRIES = 150;
+
+async function storageImageCacheFirst(request) {
+    const cache = await caches.open(IMAGE_CACHE);
+    const cached = await cache.match(request);
+
+    if (cached) {
+        const cachedAt = cached.headers.get('sw-cached-at');
+        if (cachedAt && (Date.now() - parseInt(cachedAt)) < IMAGE_CACHE_MAX_AGE) {
+            return cached;
+        }
+    }
+
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const headers = new Headers(response.headers);
+            headers.set('sw-cached-at', String(Date.now()));
+            const timestamped = new Response(await response.clone().blob(), {
+                status: response.status,
+                headers
+            });
+            cache.put(request, timestamped);
+            trimCache(IMAGE_CACHE, IMAGE_CACHE_MAX_ENTRIES);
+        }
+        return response;
+    } catch (err) {
+        if (cached) return cached;
+        return new Response('', { status: 503, statusText: 'Service Unavailable' });
+    }
+}
+
+async function trimCache(cacheName, maxEntries) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    if (keys.length > maxEntries) {
+        for (let i = 0; i < keys.length - maxEntries; i++) {
+            await cache.delete(keys[i]);
+        }
+    }
 }
 
 // --- 알림 클릭 처리 ---
