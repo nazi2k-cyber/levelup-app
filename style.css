@@ -480,6 +480,18 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     .compact-score-val { font-size: 1.3rem; }
 }
 
+/* D-Day 카드 스타일 */
+.dday-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border-color); margin-bottom: 6px;
+    background: rgba(0, 217, 255, 0.03); transition: background 0.2s;
+}
+.dday-item:last-child { margin-bottom: 0; }
+.dday-item:active { background: rgba(0, 217, 255, 0.08); }
+.dday-type-btn { transition: all 0.2s; }
+.dday-type-btn.active { border-color: var(--neon-blue) !important; color: var(--neon-blue) !important; background: rgba(0,217,255,0.1) !important; }
+
 /* ★ 추가됨: 소셜 탭 인스타그램 아이콘 스타일 ★ */
 .social-insta-btn {
     font-size: 1rem; margin-left: 5px; cursor: pointer; transition: transform 0.2s; display: inline-block; vertical-align: middle;

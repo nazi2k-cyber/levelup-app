@@ -638,6 +638,7 @@ function getInitialAppState() {
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0, raidParticipants: [] },
         diyQuests: { definitions: [], completedToday: {}, lastResetDate: null },
         questHistory: {},
+        ddays: [],
     };
 }
 
@@ -945,6 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCalendar();
             updatePointUI();
             drawRadarChart();
+            renderDDayList();
             updateDungeonStatus();
             startRaidTimer();
             renderQuestList();
@@ -1344,7 +1346,8 @@ async function _doSaveUserData() {
             lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
             questHistoryStr: JSON.stringify(AppState.questHistory),
-            rareTitleStr: JSON.stringify(AppState.user.rareTitle)
+            rareTitleStr: JSON.stringify(AppState.user.rareTitle),
+            ddaysStr: JSON.stringify(AppState.ddays || [])
         };
         // 진단: 페이로드 크기 및 photoURL 상태 로그
         const payloadSize = new Blob([JSON.stringify(payload)]).size;
@@ -1426,6 +1429,9 @@ async function loadUserDataFromDB(user) {
             }
             if(data.rareTitleStr) {
                 try { const parsed = JSON.parse(data.rareTitleStr); AppState.user.rareTitle = { unlocked: parsed.unlocked || [] }; } catch(e) { AppState.user.rareTitle = { unlocked: [] }; }
+            }
+            if(data.ddaysStr) {
+                try { AppState.ddays = JSON.parse(data.ddaysStr); } catch(e) { AppState.ddays = []; }
             }
             // 스트릭 계산 및 스탯 감소
             applyStreakAndDecay();
@@ -3114,7 +3120,7 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); renderQuote();
+        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList();
     } else {
         mainEl.style.overflowY = 'auto';
     }
@@ -3196,6 +3202,7 @@ function changeLanguage(langCode) {
         renderCalendar();
         renderPlannerCalendar();
         renderQuote();
+        renderDDayList();
         updatePointUI();
         updateDungeonStatus();
         loadPlayerName();
@@ -7864,3 +7871,184 @@ function sanitizeURL(url) {
     if (trimmed.startsWith('javascript:') || trimmed.startsWith('data:text/html')) return '';
     return sanitizeAttr(url);
 }
+
+// ===================== D-DAY 기능 =====================
+
+const DDAY_MAX = 3;
+
+function renderDDayList() {
+    const container = document.getElementById('dday-list');
+    if (!container) return;
+    const ddays = AppState.ddays || [];
+    const addBtn = document.getElementById('btn-add-dday');
+    if (addBtn) addBtn.style.display = ddays.length >= DDAY_MAX ? 'none' : '';
+
+    if (ddays.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:15px 0; color:var(--text-sub); font-size:0.8rem;">
+            D-Day를 추가하여 중요한 날을 관리하세요.
+        </div>`;
+        return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    container.innerHTML = ddays.map((dd, idx) => {
+        const target = new Date(dd.date);
+        target.setHours(0, 0, 0, 0);
+        const diffMs = dd.type === 'dday'
+            ? target.getTime() - today.getTime()
+            : today.getTime() - target.getTime();
+        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+        let label, color;
+        if (dd.type === 'dday') {
+            if (diffDays > 0) { label = `D-${diffDays}`; color = 'var(--neon-blue)'; }
+            else if (diffDays === 0) { label = 'D-DAY'; color = 'var(--neon-gold)'; }
+            else { label = `D+${Math.abs(diffDays)}`; color = 'var(--text-sub)'; }
+        } else {
+            label = `D+${diffDays}`; color = 'var(--neon-purple)';
+        }
+
+        const icon = dd.type === 'dday' ? '📅' : '🔥';
+        const typeLabel = dd.type === 'dday' ? 'D-Day' : 'D-Day+';
+        const notify = dd.pushEnabled ? '🔔' : '';
+
+        return `<div class="dday-item" data-idx="${idx}" onclick="openDDayEditModal(${idx})">
+            <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                <span style="font-size:1.1rem;">${icon}</span>
+                <div style="min-width:0; flex:1;">
+                    <div style="font-size:0.85rem; font-weight:bold; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${sanitizeText(dd.title)}</div>
+                    <div style="font-size:0.65rem; color:var(--text-sub);">${typeLabel} · ${dd.date} ${notify}</div>
+                </div>
+            </div>
+            <div style="font-size:1.1rem; font-weight:900; color:${color}; white-space:nowrap;">${label}</div>
+        </div>`;
+    }).join('');
+}
+
+function openDDayAddModal() {
+    const ddays = AppState.ddays || [];
+    if (ddays.length >= DDAY_MAX) {
+        alert(`D-Day는 최대 ${DDAY_MAX}개까지 설정할 수 있습니다.`);
+        return;
+    }
+    _openDDayFormModal(-1);
+}
+
+function openDDayEditModal(idx) {
+    _openDDayFormModal(idx);
+}
+
+function _openDDayFormModal(editIdx) {
+    const isEdit = editIdx >= 0;
+    const dd = isEdit ? AppState.ddays[editIdx] : null;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'report-modal-overlay';
+    overlay.id = 'dday-modal-overlay';
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    overlay.innerHTML = `
+    <div class="report-modal-content" style="max-width:340px; padding:20px;">
+        <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">${isEdit ? 'D-Day 수정' : 'D-Day 추가'}</div>
+        <div style="margin-bottom:10px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">제목</label>
+            <input id="dday-input-title" type="text" maxlength="20" placeholder="예: 시험일, 금연 시작" value="${isEdit ? sanitizeAttr(dd.title) : ''}"
+                style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:10px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">유형</label>
+            <div style="display:flex; gap:8px;">
+                <button class="dday-type-btn ${(!isEdit || dd.type === 'dday') ? 'active' : ''}" data-type="dday" onclick="selectDDayType('dday')" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.8rem; cursor:pointer;">📅 D-Day</button>
+                <button class="dday-type-btn ${(isEdit && dd.type === 'ddayplus') ? 'active' : ''}" data-type="ddayplus" onclick="selectDDayType('ddayplus')" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.8rem; cursor:pointer;">🔥 D-Day+</button>
+            </div>
+            <div id="dday-type-desc" style="font-size:0.65rem; color:var(--text-sub); margin-top:4px;">${(!isEdit || dd.type === 'dday') ? '목표일까지 남은 날을 카운트합니다.' : '시작일로부터 경과한 날을 카운트합니다.'}</div>
+        </div>
+        <div style="margin-bottom:10px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${(!isEdit || dd.type === 'dday') ? '목표 날짜' : '시작 날짜'}</label>
+            <input id="dday-input-date" type="date" value="${isEdit ? dd.date : todayStr}"
+                style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input id="dday-input-push" type="checkbox" ${isEdit && dd.pushEnabled ? 'checked' : ''}>
+                <span style="font-size:0.8rem; color:var(--text-main);">🔔 D-Day 당일 푸시 알림</span>
+            </label>
+        </div>
+        <div style="display:flex; gap:8px;">
+            ${isEdit ? `<button onclick="deleteDDay(${editIdx})" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">삭제</button>` : ''}
+            <button onclick="closeDDayModal()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">취소</button>
+            <button onclick="saveDDayFromModal(${editIdx})" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${isEdit ? '저장' : '추가'}</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('active'));
+}
+
+function selectDDayType(type) {
+    document.querySelectorAll('.dday-type-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === type);
+    });
+    const desc = document.getElementById('dday-type-desc');
+    const dateLabel = document.querySelector('#dday-modal-overlay label[for], #dday-input-date')?.previousElementSibling;
+    if (type === 'dday') {
+        if (desc) desc.textContent = '목표일까지 남은 날을 카운트합니다.';
+    } else {
+        if (desc) desc.textContent = '시작일로부터 경과한 날을 카운트합니다.';
+    }
+}
+
+function saveDDayFromModal(editIdx) {
+    const title = (document.getElementById('dday-input-title')?.value || '').trim();
+    const date = document.getElementById('dday-input-date')?.value || '';
+    const pushEnabled = document.getElementById('dday-input-push')?.checked || false;
+    const typeBtn = document.querySelector('.dday-type-btn.active');
+    const type = typeBtn ? typeBtn.dataset.type : 'dday';
+
+    if (!title) { alert('제목을 입력하세요.'); return; }
+    if (!date) { alert('날짜를 선택하세요.'); return; }
+
+    if (!AppState.ddays) AppState.ddays = [];
+
+    const entry = { title, date, type, pushEnabled, createdAt: Date.now() };
+
+    if (editIdx >= 0) {
+        entry.createdAt = AppState.ddays[editIdx]?.createdAt || Date.now();
+        AppState.ddays[editIdx] = entry;
+    } else {
+        if (AppState.ddays.length >= DDAY_MAX) {
+            alert(`D-Day는 최대 ${DDAY_MAX}개까지 설정할 수 있습니다.`);
+            return;
+        }
+        AppState.ddays.push(entry);
+    }
+
+    closeDDayModal();
+    renderDDayList();
+    saveUserData();
+}
+
+function deleteDDay(idx) {
+    if (!confirm('이 D-Day를 삭제하시겠습니까?')) return;
+    AppState.ddays.splice(idx, 1);
+    closeDDayModal();
+    renderDDayList();
+    saveUserData();
+}
+
+function closeDDayModal() {
+    const overlay = document.getElementById('dday-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+
+// D-Day 버튼 이벤트 바인딩
+document.addEventListener('DOMContentLoaded', () => {
+    const addBtn = document.getElementById('btn-add-dday');
+    if (addBtn) addBtn.addEventListener('click', openDDayAddModal);
+});
