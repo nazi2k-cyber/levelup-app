@@ -7205,7 +7205,18 @@ function updateStepCountUI() {
                     .replace('Health Connect', `<a href="${healthConnectUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
                 const items = [
                     { icon: '📲', html: req1Html },
-                    { icon: '⚙️', html: lang.step_req_2 || '설정 → 피트니스 동기화 활성화' },
+                    { icon: '⚙️', html: (() => {
+                        const req2Text = lang.step_req_2 || '내 정보 → 구글 피트니스 앱 동기화 활성화';
+                        const myInfoLabels = ['내 정보', 'My Info', 'マイ情報'];
+                        let result = req2Text;
+                        for (const label of myInfoLabels) {
+                            if (req2Text.includes(label)) {
+                                result = req2Text.replace(label, `<a href="javascript:void(0)" onclick="document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active'));document.getElementById('settings').classList.add('active');document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));" style="color:inherit;text-decoration:underline;">${label}</a>`);
+                                break;
+                            }
+                        }
+                        return result;
+                    })() },
                     { icon: '🔑', html: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용' },
                     { icon: '🎁', html: lang.step_req_reward || '1,000보마다 +10P & STR +0.5 보상' }
                 ];
