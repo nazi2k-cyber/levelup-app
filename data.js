@@ -204,6 +204,11 @@ const i18n = {
         life_target_age_hint: "목표 나이를 설정하면 추가 통계가 표시됩니다.",
         life_save: "저장", life_cancel: "취소", life_remove_target: "설정 나이 해제",
         life_err_future: "미래 날짜는 설정할 수 없습니다.",
+        life_err_year: "올바른 년도를 입력해주세요. (1900~현재)",
+        life_err_month: "올바른 월을 입력해주세요. (1~12)",
+        life_err_day: "올바른 일을 입력해주세요. (1~{max})",
+        life_ph_year: "년 (예: 1990)", life_ph_month: "월", life_ph_day: "일",
+        life_calculating: "계산 중...",
         life_privacy_notice: "※ 입력한 정보는 기기에만 저장되며, 서버에 전송되지 않습니다."
     },
     en: {
@@ -407,6 +412,11 @@ const i18n = {
         life_target_age_hint: "Set a target age to see additional statistics.",
         life_save: "Save", life_cancel: "Cancel", life_remove_target: "Remove Target Age",
         life_err_future: "Cannot set a future date.",
+        life_err_year: "Please enter a valid year. (1900~present)",
+        life_err_month: "Please enter a valid month. (1~12)",
+        life_err_day: "Please enter a valid day. (1~{max})",
+        life_ph_year: "Year (e.g. 1990)", life_ph_month: "Month", life_ph_day: "Day",
+        life_calculating: "Calculating...",
         life_privacy_notice: "※ Your data is stored on this device only and is never sent to the server."
     },
     ja: {
@@ -610,6 +620,11 @@ const i18n = {
         life_target_age_hint: "目標年齢を設定すると追加の統計が表示されます。",
         life_save: "保存", life_cancel: "キャンセル", life_remove_target: "設定年齢を解除",
         life_err_future: "未来の日付は設定できません。",
+        life_err_year: "正しい年を入力してください。(1900〜現在)",
+        life_err_month: "正しい月を入力してください。(1〜12)",
+        life_err_day: "正しい日を入力してください。(1〜{max})",
+        life_ph_year: "年 (例: 1990)", life_ph_month: "月", life_ph_day: "日",
+        life_calculating: "計算中...",
         life_privacy_notice: "※ 入力した情報は端末にのみ保存され、サーバーには送信されません。"
     }
 };

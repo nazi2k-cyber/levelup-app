@@ -8296,6 +8296,15 @@ function openLifeStatusSettingModal() {
     const currentBirthday = AppState.user.birthday || '';
     const currentTargetAge = AppState.user.targetAge || '';
 
+    // 기존 생년월일 파싱
+    let bYear = '', bMonth = '', bDay = '';
+    if (currentBirthday) {
+        const parts = currentBirthday.split('-');
+        bYear = parts[0] || '';
+        bMonth = parseInt(parts[1]) || '';
+        bDay = parseInt(parts[2]) || '';
+    }
+
     const titleText = i18n[lang]?.life_status_setting_title || 'LIFE STATUS 설정';
     const birthdayLabel = i18n[lang]?.life_birthday_label || '생년월일';
     const targetAgeLabel = i18n[lang]?.life_target_age_label || '설정 나이 (선택)';
@@ -8304,6 +8313,11 @@ function openLifeStatusSettingModal() {
     const cancelText = i18n[lang]?.life_cancel || '취소';
     const removeTargetText = i18n[lang]?.life_remove_target || '설정 나이 해제';
     const privacyText = i18n[lang]?.life_privacy_notice || '※ 입력한 정보는 기기에만 저장되며, 서버에 전송되지 않습니다.';
+    const yearPh = i18n[lang]?.life_ph_year || '년 (예: 1990)';
+    const monthPh = i18n[lang]?.life_ph_month || '월';
+    const dayPh = i18n[lang]?.life_ph_day || '일';
+
+    const inputStyle = 'padding:10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.9rem; box-sizing:border-box; text-align:center; -moz-appearance:textfield;';
 
     overlay.innerHTML = `
     <div class="report-modal-content" style="max-width:340px; padding:20px;">
@@ -8312,43 +8326,79 @@ function openLifeStatusSettingModal() {
             <div style="font-size:0.7rem; color:var(--text-sub);">🔒 ${privacyText}</div>
         </div>
         <div style="margin-bottom:14px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${birthdayLabel}</label>
-            <input id="life-status-birthday" type="date" value="${currentBirthday}"
-                style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:6px;">${birthdayLabel}</label>
+            <div style="display:flex; gap:6px;">
+                <input id="life-input-year" type="number" min="1900" max="2025" value="${bYear}" placeholder="${yearPh}"
+                    style="flex:2; ${inputStyle}" inputmode="numeric">
+                <input id="life-input-month" type="number" min="1" max="12" value="${bMonth}" placeholder="${monthPh}"
+                    style="flex:1; ${inputStyle}" inputmode="numeric">
+                <input id="life-input-day" type="number" min="1" max="31" value="${bDay}" placeholder="${dayPh}"
+                    style="flex:1; ${inputStyle}" inputmode="numeric">
+            </div>
+            <div id="life-input-error" style="font-size:0.65rem; color:var(--neon-red); margin-top:4px; display:none;"></div>
         </div>
         <div style="margin-bottom:14px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${targetAgeLabel}</label>
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:6px;">${targetAgeLabel}</label>
             <input id="life-status-target-age" type="number" min="1" max="150" value="${currentTargetAge}" placeholder="예: 100"
-                style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+                style="width:100%; ${inputStyle} text-align:left;" inputmode="numeric">
             <div style="font-size:0.65rem; color:var(--text-sub); margin-top:4px;">${targetAgeHint}</div>
         </div>
         ${currentTargetAge ? `<button onclick="removeLifeStatusTargetAge()" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--neon-red); font-size:0.8rem; cursor:pointer; margin-bottom:10px;">${removeTargetText}</button>` : ''}
         <div style="display:flex; gap:8px;">
             <button onclick="closeLifeStatusModal()" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; cursor:pointer;">${cancelText}</button>
-            <button onclick="saveLifeStatusSetting()" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${saveText}</button>
+            <button id="life-save-btn" onclick="saveLifeStatusSetting()" style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${saveText}</button>
         </div>
     </div>`;
 
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLifeStatusModal(); });
     document.body.appendChild(overlay);
+
+    // 월 입력 시 자동으로 일 필드로 포커스
+    document.getElementById('life-input-year').addEventListener('input', function() {
+        if (this.value.length >= 4) document.getElementById('life-input-month').focus();
+    });
+    document.getElementById('life-input-month').addEventListener('input', function() {
+        if (this.value.length >= 2 || parseInt(this.value) > 1) document.getElementById('life-input-day').focus();
+    });
 }
 
 function saveLifeStatusSetting() {
-    const birthdayInput = document.getElementById('life-status-birthday');
-    const targetAgeInput = document.getElementById('life-status-target-age');
+    const lang = AppState.currentLang;
+    const yearEl = document.getElementById('life-input-year');
+    const monthEl = document.getElementById('life-input-month');
+    const dayEl = document.getElementById('life-input-day');
+    const targetAgeEl = document.getElementById('life-status-target-age');
+    const errorEl = document.getElementById('life-input-error');
 
-    const birthday = birthdayInput ? birthdayInput.value : null;
-    const targetAge = targetAgeInput && targetAgeInput.value ? parseInt(targetAgeInput.value) : null;
+    const year = parseInt(yearEl.value);
+    const month = parseInt(monthEl.value);
+    const day = parseInt(dayEl.value);
+    const targetAge = targetAgeEl && targetAgeEl.value ? parseInt(targetAgeEl.value) : null;
 
-    if (birthday) {
-        const birthDate = new Date(birthday);
-        if (birthDate > new Date()) {
-            alert(i18n[AppState.currentLang]?.life_err_future || '미래 날짜는 설정할 수 없습니다.');
-            return;
-        }
-        AppState.user.birthday = birthday;
-    } else {
+    // 유효성 검사
+    if (!year && !month && !day) {
+        // 모두 비어있으면 생년월일 초기화
         AppState.user.birthday = null;
+    } else {
+        if (!year || year < 1900 || year > new Date().getFullYear()) {
+            errorEl.textContent = i18n[lang]?.life_err_year || '올바른 년도를 입력해주세요. (1900~현재)';
+            errorEl.style.display = 'block'; return;
+        }
+        if (!month || month < 1 || month > 12) {
+            errorEl.textContent = i18n[lang]?.life_err_month || '올바른 월을 입력해주세요. (1~12)';
+            errorEl.style.display = 'block'; return;
+        }
+        const maxDay = new Date(year, month, 0).getDate();
+        if (!day || day < 1 || day > maxDay) {
+            errorEl.textContent = (i18n[lang]?.life_err_day || '올바른 일을 입력해주세요. (1~{max})').replace('{max}', maxDay);
+            errorEl.style.display = 'block'; return;
+        }
+        const birthDate = new Date(year, month - 1, day);
+        if (birthDate > new Date()) {
+            errorEl.textContent = i18n[lang]?.life_err_future || '미래 날짜는 설정할 수 없습니다.';
+            errorEl.style.display = 'block'; return;
+        }
+        AppState.user.birthday = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     }
 
     if (targetAge && targetAge > 0 && targetAge <= 150) {
@@ -8357,9 +8407,24 @@ function saveLifeStatusSetting() {
         AppState.user.targetAge = null;
     }
 
-    closeLifeStatusModal();
+    // 즉시 저장
     _saveLifeStatusToLocal();
-    renderLifeStatus();
+
+    // 계산 중 화면 표시
+    closeLifeStatusModal();
+    const container = document.getElementById('life-status-content');
+    if (container) {
+        const calcText = i18n[lang]?.life_calculating || '계산 중...';
+        container.innerHTML = `<div style="text-align:center; padding:25px 0;">
+            <div style="font-size:1.5rem; margin-bottom:8px; animation: blink 1s infinite;">⏳</div>
+            <div style="font-size:0.85rem; color:var(--neon-blue); font-weight:bold;">${calcText}</div>
+        </div>`;
+    }
+
+    // 렌더링을 다음 프레임으로 지연하여 계산 중 화면이 보이도록 함
+    requestAnimationFrame(() => {
+        setTimeout(() => { renderLifeStatus(); }, 150);
+    });
 }
 
 function removeLifeStatusTargetAge() {
