@@ -5367,7 +5367,19 @@ function loadPlannerForDate(dateStr) {
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) { preview.src = saved.photo; preview.classList.remove('d-none'); }
+        if (preview) {
+            preview.onerror = function() {
+                this.onerror = null;
+                this.classList.add('d-none');
+                if (placeholder) placeholder.classList.remove('d-none');
+                if (removeBtn) removeBtn.classList.add('d-none');
+                plannerPhotoData = null;
+                _plannerPhotoBase64 = null;
+                AppLogger.warn('[Planner] 사진 로드 실패: ' + (saved.photo || '').substring(0, 80));
+            };
+            preview.src = saved.photo;
+            preview.classList.remove('d-none');
+        }
         if (placeholder) placeholder.classList.add('d-none');
         if (removeBtn) removeBtn.classList.remove('d-none');
 

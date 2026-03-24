@@ -52,7 +52,8 @@ service cloud.firestore {
         'questStr', 'questWeekStart', 'diaryStr', 'reelsStr',
         'dungeonStr', 'diyQuestsStr', 'questHistoryStr',
         'titleHistoryStr', 'streakStr', 'rareTitleStr',
-        'hasActiveReels', '_profileUploadFailed'
+        'hasActiveReels', '_profileUploadFailed',
+        'adRewardStr'
       ];
     }
 
@@ -120,7 +121,8 @@ service cloud.firestore {
         && (!('questHistoryStr' in d) || (d.questHistoryStr is string && d.questHistoryStr.size() <= 200000))
         && (!('titleHistoryStr' in d) || (d.titleHistoryStr is string && d.titleHistoryStr.size() <= 50000))
         && (!('streakStr' in d) || (d.streakStr is string && d.streakStr.size() <= 5000))
-        && (!('rareTitleStr' in d) || (d.rareTitleStr is string && d.rareTitleStr.size() <= 10000));
+        && (!('rareTitleStr' in d) || (d.rareTitleStr is string && d.rareTitleStr.size() <= 10000))
+        && (!('adRewardStr' in d) || (d.adRewardStr is string && d.adRewardStr.size() <= 1000));
     }
 
     // ──────────────────────────────────────────────
