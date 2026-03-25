@@ -26,7 +26,7 @@
 | **배너 (Banner)** | 안정적 기본 수익 | 30~40% | 상시 노출 |
 | **전면 (Interstitial)** | 주요 수익원 | 35~45% | 자연스러운 전환점에서 노출 |
 | **보상형 (Rewarded)** | 유저 주도 + 높은 eCPM | 20~30% | 유저 선택 시 노출 |
-| **네이티브 고급형 (Native Advanced)** | 피드 내 자연스러운 광고 | 10~15% | 소셜탭 랭킹 리스트 내 |
+| **네이티브 고급형 (Native Advanced)** | 피드 내 자연스러운 광고 | 10~15% | 소셜탭 랭킹 리스트 + Day1탭 피드 내 |
 
 ---
 
@@ -95,33 +95,39 @@
 - 광고 시청 완료 후에만 보상 지급 (30초 미만 이탈 시 보상 없음)
 - 보상 지급은 서버(Cloud Functions)에서 검증
 
-### 2.5 네이티브 광고 고급형 (Native Advanced Ad) — 소셜탭
+### 2.5 네이티브 광고 고급형 (Native Advanced Ad) — 소셜탭 + Day1탭
 
-소셜탭의 글로벌/친구 랭킹 리스트 내에 **인라인 네이티브 광고**를 삽입합니다.
-유저 카드와 동일한 시각적 스타일로 렌더링하여 자연스러운 UX를 제공합니다.
+소셜탭 랭킹 리스트와 Day1탭 피드 내에 **인라인 네이티브 광고**를 삽입합니다.
+각 탭의 콘텐츠 카드와 동일한 시각적 스타일로 렌더링하여 자연스러운 UX를 제공합니다.
 
-| 항목 | 설정 |
-|------|------|
-| **Ad Unit ID** | `ca-app-pub-6654057059754695/8612252339` |
-| **테스트 Ad Unit ID** | `ca-app-pub-3940256099942544/2247696110` |
-| **삽입 위치** | 랭킹 리스트 5번째 유저 카드 뒤 |
-| **노출 조건** | 소셜탭 활성 + 유저 수 5명 이상 |
-| **렌더링 방식** | 커스텀 Capacitor 플러그인 (NativeAdPlugin) + Native Android 오버레이 |
+| 항목 | 소셜탭 | Day1탭 |
+|------|--------|--------|
+| **Ad Unit ID** | `ca-app-pub-6654057059754695/8612252339` | 동일 (공유) |
+| **테스트 Ad Unit ID** | `ca-app-pub-3940256099942544/2247696110` | 동일 (공유) |
+| **삽입 위치** | 랭킹 리스트 5번째 유저 카드 뒤 | 피드 3번째 포스트 뒤 |
+| **노출 조건** | 소셜탭 활성 + 유저 수 5명 이상 | Day1탭 활성 + 포스트 3개 이상 |
+| **Sticky Header 클리핑** | `.social-sticky-header` 기준 클리핑 | 없음 (clipTop=0) |
+| **렌더링 방식** | 커스텀 Capacitor 플러그인 (NativeAdPlugin) + Native Android 오버레이 | 동일 |
 
-**아키텍처:**
+> **동시 노출 불가:** NativeAdPlugin은 1개의 오버레이만 지원하므로, 탭 전환 시 기존 광고를 파괴하고 새 탭에서 재로드합니다.
+
+**아키텍처 (탭 공용):**
 
 ```
 WebView (app.js)                    Native Android Layer
 ════════════════                    ════════════════════
-renderUsers()에서                   NativeAdPlugin.java
-  placeholder <div> 삽입              → AdLoader로 NativeAd 로드
-  (5번째 유저 카드 뒤)                 → NativeAdView 생성 (정책 준수)
-                                      → Activity root에 오버레이
+renderUsers() 또는                  NativeAdPlugin.java
+renderReelsCards()에서                → AdLoader로 NativeAd 로드
+  placeholder <div> 삽입              → NativeAdView 생성 (정책 준수)
+  (소셜: 5번째 유저 / Day1: 3번째     → Activity root에 오버레이
+   포스트 뒤)
+
 scroll 이벤트 →
   requestAnimationFrame 스로틀        → NativeAdView Y좌표 동기화
   IntersectionObserver               → 화면 밖 시 hide, 복귀 시 show
 
 탭 전환 → cleanupNativeAd()          → 오버레이 제거 및 리소스 해제
+(_nativeAdActiveTab 추적)            (social/reels 이탈 시 자동 정리)
 ```
 
 **네이티브 광고 구성 요소:**
@@ -142,7 +148,7 @@ scroll 이벤트 →
 | 파일 | 작업 |
 |------|------|
 | `native-plugins/NativeAdPlugin.java` | 신규 — 네이티브 광고 로드/표시/위치동기화/정리 플러그인 |
-| `www/app.js` | 수정 — renderUsers()에 placeholder 삽입, 광고 컨트롤러 함수, switchTab() 정리 |
+| `www/app.js` | 수정 — renderUsers()+renderReelsCards()에 placeholder 삽입, 탭 공용 광고 컨트롤러 함수(`loadAndShowNativeAd(tabId)` 등), switchTab() 탭 전환 정리 |
 | `www/style.css` | 수정 — `.native-ad-slot` 스타일 추가 |
 | `MainActivity.java` | 수정 — `registerPlugin(NativeAdPlugin.class)` 등록 |
 
@@ -384,12 +390,17 @@ public class NativeAdPlugin extends Plugin {
 // 광고 단위 ID
 const NATIVE_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8612252339';
 const NATIVE_AD_TEST_ID = 'ca-app-pub-3940256099942544/2247696110';
-const NATIVE_AD_POSITION = 5; // 5번째 유저 카드 뒤
+const NATIVE_AD_POSITION = 5; // 소셜탭: 5번째 유저 카드 뒤
+const REELS_NATIVE_AD_POSITION = 3; // Day1탭: 3번째 포스트 뒤
 
-// renderUsers() 내에서 placeholder 삽입
-// → loadAndShowNativeAd() 호출
-// → setupNativeAdScrollSync() 스크롤 동기화
-// → switchTab() 시 cleanupNativeAd() 정리
+let _nativeAdActiveTab = null; // 'social' | 'reels' | null
+
+// renderUsers() / renderReelsCards() 내에서 탭별 placeholder 삽입
+//   소셜: id="native-ad-placeholder-social"
+//   Day1: id="native-ad-placeholder-reels"
+// → loadAndShowNativeAd(tabId) 호출
+// → setupNativeAdScrollSync(tabId) 스크롤 동기화
+// → switchTab() 시 _nativeAdActiveTab 기반 cleanupNativeAd() 정리
 ```
 
 **Step 3: MainActivity 등록**
@@ -411,7 +422,7 @@ registerPlugin(NativeAdPlugin.class);
 | Adaptive Banner | 하단 배너 | 생성 필요 | ❌ 미생성 |
 | Interstitial | 전면 광고 | 생성 필요 | ❌ 미생성 |
 | Rewarded | 보상형 광고 | `ca-app-pub-6654057059754695/8552907541` | ✅ 구현 완료 |
-| **Native Advanced** | **소셜탭 인라인 광고** | **`ca-app-pub-6654057059754695/8612252339`** | **🔧 구현 중** |
+| **Native Advanced** | **소셜탭 + Day1탭 인라인 광고** | **`ca-app-pub-6654057059754695/8612252339`** | **✅ 구현 완료** |
 
 ### 5.2 테스트용 Ad Unit ID (개발 시 사용)
 
