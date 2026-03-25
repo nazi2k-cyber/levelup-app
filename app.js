@@ -3698,7 +3698,24 @@ async function simulateGoogleLogin() {
     }
 }
 
-async function logout() { AppLogger.info('[Auth] 로그아웃'); await fbSignOut(auth); localStorage.clear(); window.location.reload(); }
+async function logout() {
+    AppLogger.info('[Auth] 로그아웃');
+    // 네이티브 앱에서 Google 세션도 완전히 해제 (계정 선택 화면이 다시 표시되도록)
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (isNative) {
+        try {
+            const { GoogleAuth } = window.Capacitor.Plugins;
+            if (GoogleAuth) {
+                await GoogleAuth.signOut();
+            }
+        } catch (e) {
+            AppLogger.warn('[Auth] Google signOut 실패 (무시): ' + (e.message || e));
+        }
+    }
+    await fbSignOut(auth);
+    localStorage.clear();
+    window.location.reload();
+}
 
 // 계정 삭제 (Google 정책 준수)
 async function deleteMyAccount() {
