@@ -1248,6 +1248,7 @@ function bindEvents() {
     document.getElementById('prof-title-badge').addEventListener('click', openTitleModal);
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
     document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
+    document.getElementById('btn-save-status-image').addEventListener('click', saveStatusImage);
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
@@ -2207,6 +2208,321 @@ function drawRadarChart() {
     
     const totalScoreEl = document.getElementById('totalScore');
     if(totalScoreEl) totalScoreEl.innerHTML = `${totalSum}`;
+}
+
+// --- 상태창 이미지 저장 ---
+async function saveStatusImage() {
+    const lang = AppState.currentLang;
+    const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+    const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
+
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const W = 540;
+        const pad = 24;
+        const innerW = W - pad * 2;
+
+        // 프로필 이미지 로드
+        async function loadImg(src) {
+            if (!src) return null;
+            try {
+                if (src.startsWith('data:') || src.startsWith('blob:')) {
+                    return await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
+                }
+                const resp = await fetch(src);
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = url; });
+                URL.revokeObjectURL(url);
+                return img;
+            } catch(e) { return null; }
+        }
+
+        const profileEl = document.getElementById('profilePreview');
+        const profileImg = profileEl ? await loadImg(profileEl.src) : null;
+
+        // 유저 정보
+        const userName = AppState.user.name || i18n[lang].prof_name || 'Player';
+        const userLevel = AppState.user.level || 1;
+        const display = typeof getDisplayTitle === 'function' ? getDisplayTitle() : null;
+        const titleText = display ? (display.baseIcon + ' ' + display.baseText) : '';
+        const totalScore = document.getElementById('totalScore')?.textContent || '0';
+
+        // 레이더 데이터 계산
+        const centerX = 50, centerY = 50, radius = 33;
+        const angles = [];
+        for (let i = 0; i < 6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
+        const stats = [];
+        for (let i = 0; i < 6; i++) {
+            const key = statKeys[i];
+            const val = Math.round(Number(AppState.user.stats[key]) || 0);
+            stats.push({ key, val, label: i18n[lang][key] || key.toUpperCase() });
+        }
+
+        // 높이 계산
+        const headerH = 80;
+        const radarSize = 260;
+        const footerH = 36;
+        const totalH = pad + headerH + 16 + radarSize + 16 + footerH + pad;
+
+        canvas.width = W;
+        canvas.height = totalH;
+
+        // 배경
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(0, 0, W, totalH);
+
+        // 카드 영역
+        const cardX = pad - 4, cardY = pad - 4;
+        const cardW = innerW + 8, cardH = totalH - pad * 2 + 8;
+        ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(cardX, cardY, cardW, cardH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        let y = pad + 12;
+
+        // 프로필 헤더
+        const avatarSize = 52;
+        const avatarX = pad + 10;
+        const avatarY = y;
+
+        // 아바타 원형 클리핑
+        if (profileImg) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(profileImg, avatarX, avatarY, avatarSize, avatarSize);
+            ctx.restore();
+            // 아바타 테두리
+            ctx.strokeStyle = '#00d9ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = '#1a2332';
+            ctx.beginPath();
+            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#00d9ff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#555';
+            ctx.font = '22px Pretendard, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('👤', avatarX + avatarSize / 2, avatarY + avatarSize / 2 + 8);
+        }
+
+        // 칭호
+        const textX = avatarX + avatarSize + 14;
+        if (titleText) {
+            ctx.fillStyle = '#aaa';
+            ctx.font = '11px Pretendard, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(titleText, textX, y + 16);
+        }
+
+        // 이름
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px Pretendard, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(userName, textX, y + 36);
+
+        // 레벨
+        ctx.fillStyle = '#00d9ff';
+        ctx.font = 'bold 12px Pretendard, sans-serif';
+        ctx.fillText('Lv.' + userLevel, textX + ctx.measureText(userName).width + 8, y + 36);
+
+        // 종합 스코어 (우측)
+        const scoreLabel = i18n[lang].tot_score || '종합 스코어';
+        ctx.fillStyle = '#aaa';
+        ctx.font = '10px Pretendard, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(scoreLabel, W - pad - 10, y + 16);
+        ctx.fillStyle = '#00d9ff';
+        ctx.font = 'bold 24px Pretendard, sans-serif';
+        ctx.fillText(totalScore, W - pad - 10, y + 42);
+
+        y += headerH;
+
+        // 구분선
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad + 6, y);
+        ctx.lineTo(W - pad - 6, y);
+        ctx.stroke();
+        y += 8;
+
+        // STAT RADAR 제목
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px Pretendard, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(i18n[lang].radar_title || 'STAT RADAR', W / 2, y + 14);
+        y += 24;
+
+        // 레이더 차트 그리기
+        const rCenterX = W / 2;
+        const rCenterY = y + radarSize / 2 - 16;
+        const rRadius = 90;
+
+        // 그리드 (5단계)
+        ctx.strokeStyle = 'rgba(51, 51, 51, 0.8)';
+        ctx.lineWidth = 0.8;
+        for (let level = 1; level <= 5; level++) {
+            const r = rRadius * (level / 5);
+            ctx.beginPath();
+            for (let i = 0; i <= 6; i++) {
+                const idx = i % 6;
+                const px = rCenterX + r * Math.cos(angles[idx]);
+                const py = rCenterY + r * Math.sin(angles[idx]);
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // 축선
+        for (let i = 0; i < 6; i++) {
+            ctx.beginPath();
+            ctx.moveTo(rCenterX, rCenterY);
+            ctx.lineTo(rCenterX + rRadius * Math.cos(angles[i]), rCenterY + rRadius * Math.sin(angles[i]));
+            ctx.stroke();
+        }
+
+        // 데이터 폴리곤
+        ctx.fillStyle = 'rgba(0, 217, 255, 0.25)';
+        ctx.strokeStyle = '#00d9ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const r = rRadius * (stats[i].val / 100);
+            const px = rCenterX + r * Math.cos(angles[i]);
+            const py = rCenterY + r * Math.sin(angles[i]);
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 데이터 포인트
+        ctx.fillStyle = '#00d9ff';
+        for (let i = 0; i < 6; i++) {
+            const r = rRadius * (stats[i].val / 100);
+            const px = rCenterX + r * Math.cos(angles[i]);
+            const py = rCenterY + r * Math.sin(angles[i]);
+            ctx.beginPath();
+            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 라벨 & 값
+        const labelRadius = rRadius + 24;
+        for (let i = 0; i < 6; i++) {
+            const lx = rCenterX + labelRadius * Math.cos(angles[i]);
+            const ly = rCenterY + labelRadius * Math.sin(angles[i]);
+            let align = 'center';
+            if (i === 1 || i === 2) align = 'left';
+            if (i === 4 || i === 5) align = 'right';
+
+            ctx.textAlign = align;
+            ctx.fillStyle = '#aaa';
+            ctx.font = 'bold 11px Pretendard, sans-serif';
+            ctx.fillText(stats[i].label, lx, ly - 4);
+            ctx.fillStyle = '#00d9ff';
+            ctx.font = 'bold 11px Pretendard, sans-serif';
+            ctx.fillText(String(stats[i].val), lx, ly + 10);
+        }
+
+        // 푸터
+        ctx.fillStyle = '#444';
+        ctx.font = '10px Pretendard, sans-serif';
+        ctx.textAlign = 'left';
+        const today = new Date();
+        const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        ctx.fillText('LEVEL UP: REBOOT | ' + dateStr, pad + 6, totalH - pad + 4);
+
+        // 이미지 저장
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+        if (!blob) throw new Error('toBlob failed');
+
+        const safeName = (AppState.user.name || '').replace(/[^a-zA-Z0-9가-힣]/g, '');
+        const fileName = `status_${dateStr}_${safeName}.png`;
+        const dataUrl = canvas.toDataURL('image/png');
+
+        // localStorage에 저장
+        try {
+            localStorage.setItem('savedStatusImage', dataUrl);
+            localStorage.setItem('savedStatusImageDate', dateStr);
+        } catch(e) {
+            // localStorage 용량 초과 시 무시
+        }
+
+        let saved = false;
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+        // 네이티브 앱: Capacitor Filesystem
+        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+            const Filesystem = window.Capacitor.Plugins.Filesystem;
+            const base64Data = dataUrl.split(',')[1];
+            const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
+            for (const dir of dirs) {
+                try {
+                    await Filesystem.writeFile({ path: fileName, data: base64Data, directory: dir, recursive: true });
+                    saved = true;
+                    break;
+                } catch(e) { /* try next dir */ }
+            }
+        }
+
+        // Web Share API
+        if (!saved && navigator.share && navigator.canShare) {
+            try {
+                const file = new File([blob], fileName, { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file] });
+                    saved = true;
+                }
+            } catch(e) {
+                if (e.name === 'AbortError') saved = true;
+            }
+        }
+
+        // 네이티브 인앱 오버레이
+        if (!saved && isNative) {
+            showImageOverlay(dataUrl, lang);
+            saved = true;
+        }
+
+        // 데스크톱 웹: <a> 다운로드
+        if (!saved && !isNative) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => { document.body.removeChild(link); URL.revokeObjectURL(url); }, 1000);
+            saved = true;
+        }
+
+        if (saved) {
+            alert(msgs[lang] || msgs.ko);
+        } else {
+            throw new Error('All save methods failed');
+        }
+    } catch(e) {
+        AppLogger.error('[StatusImage] Save error: ' + e.message);
+        alert(failMsgs[lang] || failMsgs.ko);
+    }
 }
 
 // --- 퀘스트 로직 ---
