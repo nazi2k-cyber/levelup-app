@@ -3257,8 +3257,10 @@ function switchTab(tabId, el) {
         mainEl.style.overflowY = 'auto';
     }
     
-    // 소셜탭 이탈 시 네이티브 광고 정리
-    if(tabId !== 'social') cleanupNativeAd();
+    // 네이티브 광고: 현재 활성 탭이 아닌 다른 탭으로 이동 시 정리
+    if (_nativeAdActiveTab && _nativeAdActiveTab !== tabId) {
+        cleanupNativeAd();
+    }
 
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); renderWeeklyChallenges(); renderRoulette(); }
@@ -3483,14 +3485,14 @@ function renderUsers(criteria, btn = null) {
 
         // 네이티브 광고 placeholder 삽입 (N번째 유저 카드 뒤)
         if (i === NATIVE_AD_POSITION - 1 && list.length >= NATIVE_AD_POSITION) {
-            return cardHTML + `<div id="native-ad-placeholder" class="native-ad-slot"><span class="ad-loading-text">광고</span></div>`;
+            return cardHTML + `<div id="native-ad-placeholder-social" class="native-ad-slot"><span class="ad-loading-text">광고</span></div>`;
         }
         return cardHTML;
     }).join('');
 
     // 네이티브 광고 로드 (placeholder가 삽입된 경우)
     if (list.length >= NATIVE_AD_POSITION && isNativePlatform) {
-        setTimeout(() => loadAndShowNativeAd(), 300);
+        setTimeout(() => loadAndShowNativeAd('social'), 300);
     }
 }
 
@@ -5543,26 +5545,28 @@ async function applyBonusExpReward() {
     if (window.AppLogger) AppLogger.info(`[BonusEXP] EXP +${BONUS_EXP_AMOUNT} 지급 완료`);
 }
 
-// --- ★ P6: 네이티브 광고 고급형 - 소셜탭 (AdMob Native Advanced) ★ ---
+// --- ★ P6: 네이티브 광고 고급형 - 소셜탭 + Day1탭 (AdMob Native Advanced) ★ ---
 const NATIVE_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8612252339';
 const NATIVE_AD_TEST_ID = 'ca-app-pub-3940256099942544/2247696110';
-const NATIVE_AD_POSITION = 5; // 5번째 유저 카드 뒤에 삽입
+const NATIVE_AD_POSITION = 5; // 소셜탭: 5번째 유저 카드 뒤에 삽입
+const REELS_NATIVE_AD_POSITION = 3; // Day1탭: 3번째 포스트 뒤에 삽입
 
 let _nativeAdLoaded = false;
 let _nativeAdVisible = false;
 let _nativeAdScrollRAF = null;
 let _nativeAdObserver = null;
+let _nativeAdActiveTab = null; // 'social' | 'reels' | null — 현재 네이티브 광고가 활성인 탭
 
 /**
- * 네이티브 광고 로드 및 표시
- * renderUsers() 완료 후 호출됨
+ * 네이티브 광고 로드 및 표시 (탭 공용)
+ * @param {string} tabId - 'social' | 'reels'
  */
-async function loadAndShowNativeAd() {
+async function loadAndShowNativeAd(tabId) {
     if (!isNativePlatform) return;
 
-    // ★ 소셜탭이 활성 상태인지 확인 — 다른 탭에서 로드 방지
-    const socialSection = document.getElementById('social');
-    if (!socialSection || !socialSection.classList.contains('active')) {
+    // ★ 해당 탭이 활성 상태인지 확인 — 다른 탭에서 로드 방지
+    const tabSection = document.getElementById(tabId);
+    if (!tabSection || !tabSection.classList.contains('active')) {
         return;
     }
 
@@ -5570,11 +5574,12 @@ async function loadAndShowNativeAd() {
         await initAdMob();
     }
 
-    const placeholder = document.getElementById('native-ad-placeholder');
+    const placeholderId = 'native-ad-placeholder-' + tabId;
+    const placeholder = document.getElementById(placeholderId);
     if (!placeholder) return;
 
-    // ★ 로드 시작 전 다시 한번 소셜탭 활성 확인 (initAdMob 대기 중 탭 전환 가능)
-    if (!document.getElementById('social')?.classList.contains('active')) {
+    // ★ 로드 시작 전 다시 한번 탭 활성 확인 (initAdMob 대기 중 탭 전환 가능)
+    if (!document.getElementById(tabId)?.classList.contains('active')) {
         return;
     }
 
@@ -5596,45 +5601,51 @@ async function loadAndShowNativeAd() {
         });
 
         if (result && result.loaded) {
-            // ★ 로드 완료 후 소셜탭 활성 확인 (로드 중 탭 전환 시 즉시 파괴)
-            if (!document.getElementById('social')?.classList.contains('active')) {
+            // ★ 로드 완료 후 탭 활성 확인 (로드 중 탭 전환 시 즉시 파괴)
+            if (!document.getElementById(tabId)?.classList.contains('active')) {
                 NativeAd.destroyAd().catch(() => {});
                 _nativeAdLoaded = false;
+                _nativeAdActiveTab = null;
                 return;
             }
 
             _nativeAdLoaded = true;
-            if (window.AppLogger) AppLogger.info('[NativeAd] 소셜탭 네이티브 광고 로드 완료');
+            _nativeAdActiveTab = tabId;
+            if (window.AppLogger) AppLogger.info(`[NativeAd] ${tabId}탭 네이티브 광고 로드 완료`);
 
             // placeholder 좌표로 오버레이 표시
-            positionNativeAd();
-            setupNativeAdScrollSync();
+            positionNativeAd(tabId);
+            setupNativeAdScrollSync(tabId);
         }
     } catch (e) {
         console.warn('[NativeAd] 로드 실패:', e);
         if (window.AppLogger) AppLogger.warn('[NativeAd] 로드 실패: ' + (e.message || ''));
         _nativeAdLoaded = false;
+        _nativeAdActiveTab = null;
         // 로드 실패 시 placeholder 숨김
         placeholder.style.display = 'none';
     }
 }
 
 /**
- * placeholder 좌표를 계산하여 네이티브 광고 오버레이 위치 지정
+ * placeholder 좌표를 계산하여 네이티브 광고 오버레이 위치 지정 (탭 공용)
+ * @param {string} tabId - 'social' | 'reels'
  */
-async function positionNativeAd() {
-    const placeholder = document.getElementById('native-ad-placeholder');
+async function positionNativeAd(tabId) {
+    const placeholderId = 'native-ad-placeholder-' + tabId;
+    const placeholder = document.getElementById(placeholderId);
     if (!placeholder || !_nativeAdLoaded) return;
 
-    // ★ 소셜탭이 아니면 표시하지 않음
-    if (!document.getElementById('social')?.classList.contains('active')) return;
+    // ★ 해당 탭이 아니면 표시하지 않음
+    if (!document.getElementById(tabId)?.classList.contains('active')) return;
 
     try {
         const { NativeAd } = window.Capacitor.Plugins;
         if (!NativeAd) return;
 
         const rect = placeholder.getBoundingClientRect();
-        const stickyHeader = document.querySelector('.social-sticky-header');
+        // 소셜탭은 sticky header 있음, Day1탭은 없음
+        const stickyHeader = tabId === 'social' ? document.querySelector('.social-sticky-header') : null;
         const clipTop = stickyHeader ? stickyHeader.getBoundingClientRect().bottom : 0;
         await NativeAd.showAd({
             x: rect.left,
@@ -5650,14 +5661,16 @@ async function positionNativeAd() {
 }
 
 /**
- * 스크롤 동기화 설정
+ * 스크롤 동기화 설정 (탭 공용)
  * main 요소의 스크롤에 맞춰 네이티브 오버레이 Y좌표를 업데이트
+ * @param {string} tabId - 'social' | 'reels'
  */
-function setupNativeAdScrollSync() {
+function setupNativeAdScrollSync(tabId) {
     cleanupNativeAdScrollSync();
 
     const mainEl = document.querySelector('main');
-    const placeholder = document.getElementById('native-ad-placeholder');
+    const placeholderId = 'native-ad-placeholder-' + tabId;
+    const placeholder = document.getElementById(placeholderId);
     if (!mainEl || !placeholder) return;
 
     // IntersectionObserver: placeholder가 화면 밖으로 나가면 hide
@@ -5683,8 +5696,8 @@ function setupNativeAdScrollSync() {
     _nativeAdObserver.observe(placeholder);
 
     // scroll 이벤트: requestAnimationFrame 스로틀링으로 Y좌표 동기화
-    // sticky header 하단 좌표를 clipTop으로 전달하여 광고가 헤더 위로 올라가지 않도록 클리핑
-    const stickyHeader = document.querySelector('.social-sticky-header');
+    // 소셜탭은 sticky header 클리핑 필요, Day1탭은 불필요
+    const stickyHeader = tabId === 'social' ? document.querySelector('.social-sticky-header') : null;
 
     function onScroll() {
         if (_nativeAdScrollRAF) return;
@@ -5734,6 +5747,7 @@ async function cleanupNativeAd() {
     cleanupNativeAdScrollSync();
     _nativeAdLoaded = false;
     _nativeAdVisible = false;
+    _nativeAdActiveTab = null;
 
     if (!isNativePlatform) return;
 
@@ -6771,6 +6785,10 @@ async function renderReelsFeed() {
         if (window._reelsFeedLastKey !== localKey) {
             container.innerHTML = renderReelsCards(localPosts, lang);
             window._reelsFeedLastKey = localKey;
+            // Day1 네이티브 광고 로드 (로컬 캐시 렌더 후)
+            if (localPosts.length >= REELS_NATIVE_AD_POSITION && isNativePlatform) {
+                setTimeout(() => loadAndShowNativeAd('reels'), 300);
+            }
         }
     } else if (!window._reelsFeedLastKey) {
         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);">로딩 중...</div>';
@@ -6795,8 +6813,14 @@ async function renderReelsFeed() {
         const serverKey = postsKey(posts);
         // Firestore 데이터가 로컬과 동일하면 DOM 교체 스킵 (깜빡임 방지)
         if (window._reelsFeedLastKey !== serverKey) {
+            // DOM 교체 전 기존 광고 정리 (placeholder가 사라지므로)
+            if (_nativeAdActiveTab === 'reels') cleanupNativeAd();
             container.innerHTML = renderReelsCards(posts, lang);
             window._reelsFeedLastKey = serverKey;
+            // Day1 네이티브 광고 로드 (서버 데이터 렌더 후)
+            if (posts.length >= REELS_NATIVE_AD_POSITION && isNativePlatform) {
+                setTimeout(() => loadAndShowNativeAd('reels'), 300);
+            }
         }
     } catch(e) {
         // 타임아웃 또는 네트워크 오류 시 로컬 데이터 유지
@@ -6846,7 +6870,7 @@ function renderReelsCards(posts, lang) {
     const commentIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
     const reportIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
 
-    const html = posts.map(post => {
+    const html = posts.map((post, postIdx) => {
         const postId = getPostId(post);
         const profileSrc = post.userPhoto ? sanitizeURL(post.userPhoto) : DEFAULT_PROFILE_SVG;
         const isMe = post.uid === auth.currentUser?.uid;
@@ -6863,7 +6887,7 @@ function renderReelsCards(posts, lang) {
         ).join('');
         const moreCount = mergedBlocks.length > FOLD_LIMIT ? mergedBlocks.length - FOLD_LIMIT : 0;
 
-        return `<div class="system-card reels-card" data-post-id="${postId}">
+        const cardHTML = `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
                 <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
                 <div class="reels-user-info">
@@ -6905,6 +6929,12 @@ function renderReelsCards(posts, lang) {
                 </div>
             </div>
         </div>`;
+
+        // Day1 네이티브 광고 placeholder 삽입 (N번째 포스트 뒤)
+        if (postIdx === REELS_NATIVE_AD_POSITION - 1 && posts.length >= REELS_NATIVE_AD_POSITION) {
+            return cardHTML + `<div id="native-ad-placeholder-reels" class="native-ad-slot"><span class="ad-loading-text">광고</span></div>`;
+        }
+        return cardHTML;
     }).join('');
 
     // 렌더 후 각 포스트의 리액션 데이터 및 신고 상태 로드
