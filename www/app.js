@@ -2246,8 +2246,9 @@ async function saveStatusImage() {
         const userName = AppState.user.name || i18n[lang].prof_name || 'Player';
         const userLevel = AppState.user.level || 1;
         const display = typeof getDisplayTitle === 'function' ? getDisplayTitle() : null;
-        const titleText = display ? (display.baseIcon + ' ' + display.baseText) : '';
         const totalScore = document.getElementById('totalScore')?.textContent || '0';
+        const userPoints = AppState.user.points || 0;
+        const reqPoints = document.getElementById('display-req-pts')?.textContent || '100';
 
         // 레이더 데이터 계산
         const centerX = 50, centerY = 50, radius = 33;
@@ -2261,10 +2262,14 @@ async function saveStatusImage() {
         }
 
         // 높이 계산
-        const headerH = 80;
-        const radarSize = 260;
-        const footerH = 36;
-        const totalH = pad + headerH + 16 + radarSize + 16 + footerH + pad;
+        const headerBarH = 44;
+        const profileCardH = 100;
+        const pointsPanelH = 56;
+        const radarTitleH = 30;
+        const radarSize = 280;
+        const footerH = 32;
+        const gap = 12;
+        const totalH = pad + headerBarH + gap + profileCardH + gap + pointsPanelH + gap + radarTitleH + radarSize + gap + footerH + pad;
 
         canvas.width = W;
         canvas.height = totalH;
@@ -2273,25 +2278,47 @@ async function saveStatusImage() {
         ctx.fillStyle = '#0d1117';
         ctx.fillRect(0, 0, W, totalH);
 
-        // 카드 영역
-        const cardX = pad - 4, cardY = pad - 4;
-        const cardW = innerW + 8, cardH = totalH - pad * 2 + 8;
+        let y = pad;
+
+        // ===== 상단 헤더 바: LEVEL UP: REBOOT + Lv. 뱃지 =====
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px Pretendard, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('LEVEL UP: REBOOT', pad, y + 28);
+
+        // Lv. 뱃지 (우측)
+        const lvText = 'Lv. ' + userLevel;
+        ctx.font = 'bold 13px Pretendard, sans-serif';
+        const lvW = ctx.measureText(lvText).width + 16;
+        const lvH = 26;
+        const lvX = W - pad - lvW;
+        const lvY = y + 10;
+        ctx.fillStyle = '#00d9ff';
+        ctx.beginPath();
+        ctx.roundRect(lvX, lvY, lvW, lvH, 5);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(lvText, lvX + lvW / 2, lvY + 18);
+
+        y += headerBarH + gap;
+
+        // ===== 프로필 카드 =====
+        const card1X = pad, card1Y = y;
+        const card1W = innerW, card1H = profileCardH;
         ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(cardX, cardY, cardW, cardH, 10);
+        ctx.roundRect(card1X, card1Y, card1W, card1H, 10);
         ctx.fill();
         ctx.stroke();
 
-        let y = pad + 12;
-
-        // 프로필 헤더
+        // 아바타
         const avatarSize = 52;
-        const avatarX = pad + 10;
-        const avatarY = y;
+        const avatarX = card1X + 16;
+        const avatarY = card1Y + (card1H - avatarSize) / 2;
 
-        // 아바타 원형 클리핑
         if (profileImg) {
             ctx.save();
             ctx.beginPath();
@@ -2300,7 +2327,6 @@ async function saveStatusImage() {
             ctx.clip();
             ctx.drawImage(profileImg, avatarX, avatarY, avatarSize, avatarSize);
             ctx.restore();
-            // 아바타 테두리
             ctx.strokeStyle = '#00d9ff';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -2320,57 +2346,134 @@ async function saveStatusImage() {
             ctx.fillText('👤', avatarX + avatarSize / 2, avatarY + avatarSize / 2 + 8);
         }
 
-        // 칭호
         const textX = avatarX + avatarSize + 14;
-        if (titleText) {
-            ctx.fillStyle = '#aaa';
-            ctx.font = '11px Pretendard, sans-serif';
+
+        // 칭호 뱃지들
+        const badgeY = card1Y + 18;
+        let badgeX = textX;
+        const rarityColors = {
+            uncommon: '#00cc66',
+            rare: '#0099ff',
+            epic: '#c084fc',
+            legendary: '#ffcc00'
+        };
+
+        function drawBadge(x, y, text, color) {
+            ctx.font = 'bold 10px Pretendard, sans-serif';
+            const tw = ctx.measureText(text).width;
+            const bw = tw + 10;
+            const bh = 18;
+            ctx.fillStyle = color + '33';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(x, y - 13, bw, bh, 3);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = color;
             ctx.textAlign = 'left';
-            ctx.fillText(titleText, textX, y + 16);
+            ctx.fillText(text, x + 5, y);
+            return bw + 5;
+        }
+
+        if (display) {
+            const baseBadgeText = display.baseIcon + ' ' + display.baseText;
+            badgeX += drawBadge(badgeX, badgeY, baseBadgeText, '#b53cff');
+            if (display.isRare && display.rareText) {
+                const rareColor = rarityColors[display.rarity] || '#b53cff';
+                const rareBadgeText = display.rareIcon + ' ' + display.rareText;
+                badgeX += drawBadge(badgeX, badgeY, rareBadgeText, rareColor);
+            }
         }
 
         // 이름
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 16px Pretendard, sans-serif';
+        ctx.font = 'bold 15px Pretendard, sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(userName, textX, y + 36);
-
-        // 레벨
-        ctx.fillStyle = '#00d9ff';
-        ctx.font = 'bold 12px Pretendard, sans-serif';
-        ctx.fillText('Lv.' + userLevel, textX + ctx.measureText(userName).width + 8, y + 36);
+        ctx.fillText(userName, textX, card1Y + 48);
 
         // 종합 스코어 (우측)
         const scoreLabel = i18n[lang].tot_score || '종합 스코어';
         ctx.fillStyle = '#aaa';
         ctx.font = '10px Pretendard, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(scoreLabel, W - pad - 10, y + 16);
+        ctx.fillText(scoreLabel, card1X + card1W - 14, card1Y + 30);
         ctx.fillStyle = '#00d9ff';
-        ctx.font = 'bold 24px Pretendard, sans-serif';
-        ctx.fillText(totalScore, W - pad - 10, y + 42);
+        ctx.font = 'bold 26px Pretendard, sans-serif';
+        ctx.fillText(totalScore, card1X + card1W - 14, card1Y + 60);
 
-        y += headerH;
+        y += profileCardH + gap;
 
-        // 구분선
+        // ===== 보유 포인트 패널 =====
+        const card2X = pad, card2Y = y;
+        const card2W = innerW, card2H = pointsPanelH;
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 1;
+        ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
+        ctx.beginPath();
+        ctx.roundRect(card2X, card2Y, card2W, card2H, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // 보유 포인트 라벨
+        const ptLabel = i18n[lang].avail_pts || '보유 포인트';
+        ctx.fillStyle = '#aaa';
+        ctx.font = '10px Pretendard, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(ptLabel, card2X + 14, card2Y + 18);
+
+        // 포인트 값
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 22px Pretendard, sans-serif';
+        ctx.fillText(String(userPoints), card2X + 14, card2Y + 42);
+        const ptValW = ctx.measureText(String(userPoints)).width;
+        ctx.font = 'bold 14px Pretendard, sans-serif';
+        ctx.fillText(' P', card2X + 14 + ptValW, card2Y + 42);
+
+        // 요구량 (우측)
+        const reqLabel = i18n[lang].req_pts || '요구량:';
+        ctx.fillStyle = '#aaa';
+        ctx.font = '10px Pretendard, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(reqLabel, card2X + card2W - 80, card2Y + 24);
+        ctx.fillText(reqPoints + ' P', card2X + card2W - 80, card2Y + 40);
+
+        // 레벨 업 버튼
+        const btnW = 64, btnH = 28;
+        const btnX = card2X + card2W - 14 - btnW;
+        const btnY = card2Y + (card2H - btnH) / 2;
+        ctx.fillStyle = '#444';
+        ctx.beginPath();
+        ctx.roundRect(btnX, btnY, btnW, btnH, 5);
+        ctx.fill();
+        ctx.fillStyle = '#ccc';
+        ctx.font = 'bold 12px Pretendard, sans-serif';
+        ctx.textAlign = 'center';
+        const lvlUpText = i18n[lang].btn_lvlup || '레벨 업';
+        ctx.fillText(lvlUpText, btnX + btnW / 2, btnY + 18);
+
+        y += pointsPanelH + gap;
+
+        // ===== 스탯 레이더 카드 =====
+        const card3X = pad, card3Y = y;
+        const card3W = innerW, card3H = radarTitleH + radarSize;
+        ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(pad + 6, y);
-        ctx.lineTo(W - pad - 6, y);
+        ctx.roundRect(card3X, card3Y, card3W, card3H, 10);
+        ctx.fill();
         ctx.stroke();
-        y += 8;
 
         // STAT RADAR 제목
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 13px Pretendard, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(i18n[lang].radar_title || 'STAT RADAR', W / 2, y + 14);
-        y += 24;
+        ctx.fillStyle = '#00d9ff';
+        ctx.font = 'bold 14px Pretendard, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(i18n[lang].radar_title || 'STAT RADAR', card3X + 16, card3Y + 22);
 
         // 레이더 차트 그리기
         const rCenterX = W / 2;
-        const rCenterY = y + radarSize / 2 - 16;
+        const rCenterY = card3Y + radarTitleH + radarSize / 2 - 10;
         const rRadius = 90;
 
         // 그리드 (5단계)
@@ -2424,7 +2527,7 @@ async function saveStatusImage() {
         }
 
         // 라벨 & 값
-        const labelRadius = rRadius + 24;
+        const labelRadius = rRadius + 28;
         for (let i = 0; i < 6; i++) {
             const lx = rCenterX + labelRadius * Math.cos(angles[i]);
             const ly = rCenterY + labelRadius * Math.sin(angles[i]);
@@ -2434,20 +2537,22 @@ async function saveStatusImage() {
 
             ctx.textAlign = align;
             ctx.fillStyle = '#aaa';
-            ctx.font = 'bold 11px Pretendard, sans-serif';
+            ctx.font = 'bold 12px Pretendard, sans-serif';
             ctx.fillText(stats[i].label, lx, ly - 4);
             ctx.fillStyle = '#00d9ff';
-            ctx.font = 'bold 11px Pretendard, sans-serif';
-            ctx.fillText(String(stats[i].val), lx, ly + 10);
+            ctx.font = 'bold 13px Pretendard, sans-serif';
+            ctx.fillText(String(stats[i].val), lx, ly + 12);
         }
 
+        y = card3Y + card3H + gap;
+
         // 푸터
-        ctx.fillStyle = '#444';
-        ctx.font = '10px Pretendard, sans-serif';
-        ctx.textAlign = 'left';
         const today = new Date();
         const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-        ctx.fillText('LEVEL UP: REBOOT | ' + dateStr, pad + 6, totalH - pad + 4);
+        ctx.fillStyle = '#444';
+        ctx.font = '10px Pretendard, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('LEVEL UP: REBOOT | ' + dateStr, W / 2, y + 10);
 
         // 이미지 저장
         const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
