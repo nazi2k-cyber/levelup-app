@@ -26,6 +26,7 @@
 | **배너 (Banner)** | 안정적 기본 수익 | 30~40% | 상시 노출 |
 | **전면 (Interstitial)** | 주요 수익원 | 35~45% | 자연스러운 전환점에서 노출 |
 | **보상형 (Rewarded)** | 유저 주도 + 높은 eCPM | 20~30% | 유저 선택 시 노출 |
+| **네이티브 고급형 (Native Advanced)** | 피드 내 자연스러운 광고 | 10~15% | 소셜탭 랭킹 리스트 내 |
 
 ---
 
@@ -93,6 +94,57 @@
 - 각 보상 유형별 일일 1회 제한 (총 최대 4회/일)
 - 광고 시청 완료 후에만 보상 지급 (30초 미만 이탈 시 보상 없음)
 - 보상 지급은 서버(Cloud Functions)에서 검증
+
+### 2.5 네이티브 광고 고급형 (Native Advanced Ad) — 소셜탭
+
+소셜탭의 글로벌/친구 랭킹 리스트 내에 **인라인 네이티브 광고**를 삽입합니다.
+유저 카드와 동일한 시각적 스타일로 렌더링하여 자연스러운 UX를 제공합니다.
+
+| 항목 | 설정 |
+|------|------|
+| **Ad Unit ID** | `ca-app-pub-6654057059754695/8612252339` |
+| **테스트 Ad Unit ID** | `ca-app-pub-3940256099942544/2247696110` |
+| **삽입 위치** | 랭킹 리스트 5번째 유저 카드 뒤 |
+| **노출 조건** | 소셜탭 활성 + 유저 수 5명 이상 |
+| **렌더링 방식** | 커스텀 Capacitor 플러그인 (NativeAdPlugin) + Native Android 오버레이 |
+
+**아키텍처:**
+
+```
+WebView (app.js)                    Native Android Layer
+════════════════                    ════════════════════
+renderUsers()에서                   NativeAdPlugin.java
+  placeholder <div> 삽입              → AdLoader로 NativeAd 로드
+  (5번째 유저 카드 뒤)                 → NativeAdView 생성 (정책 준수)
+                                      → Activity root에 오버레이
+scroll 이벤트 →
+  requestAnimationFrame 스로틀        → NativeAdView Y좌표 동기화
+  IntersectionObserver               → 화면 밖 시 hide, 복귀 시 show
+
+탭 전환 → cleanupNativeAd()          → 오버레이 제거 및 리소스 해제
+```
+
+**네이티브 광고 구성 요소:**
+- 광고 아이콘 (30×30dp, 라운드) — 유저 프로필 사진과 동일 크기
+- Headline 텍스트 — 유저 이름 위치에 표시
+- Body 텍스트 — 부가 설명
+- MediaView — 미디어 콘텐츠 (비율 제한)
+- CTA 버튼 — neon-blue 스타일
+- "광고" 라벨 뱃지 — 우상단
+
+**기술적 이유 — 커스텀 플러그인 필요:**
+- `@capacitor-community/admob` 플러그인은 네이티브 광고를 지원하지 않음 (배너/전면/보상형만)
+- AdMob 정책상 네이티브 광고는 반드시 `NativeAdView`로 렌더링해야 노출/클릭 추적 정상 작동
+- 기존 `native-plugins/` 디렉토리에 `GoogleFitPlugin.java`, `AppSettingsPlugin.java` 등 커스텀 플러그인 패턴 활용
+
+**구현 파일:**
+
+| 파일 | 작업 |
+|------|------|
+| `native-plugins/NativeAdPlugin.java` | 신규 — 네이티브 광고 로드/표시/위치동기화/정리 플러그인 |
+| `www/app.js` | 수정 — renderUsers()에 placeholder 삽입, 광고 컨트롤러 함수, switchTab() 정리 |
+| `www/style.css` | 수정 — `.native-ad-slot` 스타일 추가 |
+| `MainActivity.java` | 수정 — `registerPlugin(NativeAdPlugin.class)` 등록 |
 
 ---
 
@@ -307,6 +359,47 @@ function applyReward(type) {
 }
 ```
 
+### 4.7 네이티브 광고 고급형 구현 (커스텀 Capacitor 플러그인)
+
+`@capacitor-community/admob`은 네이티브 광고를 지원하지 않으므로 커스텀 Capacitor 플러그인으로 구현합니다.
+
+**Step 1: NativeAdPlugin.java (Android 커스텀 플러그인)**
+
+```java
+// native-plugins/NativeAdPlugin.java
+@CapacitorPlugin(name = "NativeAd")
+public class NativeAdPlugin extends Plugin {
+    // 주요 메서드:
+    // loadAd(adId, isTesting) → AdLoader로 NativeAd 로드
+    // showAd(x, y, width, height) → NativeAdView를 Activity root에 오버레이
+    // updatePosition(y) → 스크롤 시 Y좌표 업데이트
+    // hideAd() → 오버레이 숨김
+    // destroyAd() → 리소스 해제
+}
+```
+
+**Step 2: WebView 측 (app.js)**
+
+```javascript
+// 광고 단위 ID
+const NATIVE_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8612252339';
+const NATIVE_AD_TEST_ID = 'ca-app-pub-3940256099942544/2247696110';
+const NATIVE_AD_POSITION = 5; // 5번째 유저 카드 뒤
+
+// renderUsers() 내에서 placeholder 삽입
+// → loadAndShowNativeAd() 호출
+// → setupNativeAdScrollSync() 스크롤 동기화
+// → switchTab() 시 cleanupNativeAd() 정리
+```
+
+**Step 3: MainActivity 등록**
+
+```java
+import com.levelup.reboot.plugins.NativeAdPlugin;
+// onCreate 내:
+registerPlugin(NativeAdPlugin.class);
+```
+
 ---
 
 ## 5. AdMob 광고 단위 ID 관리
@@ -317,7 +410,8 @@ function applyReward(type) {
 |-----------|------|------------|------|
 | Adaptive Banner | 하단 배너 | 생성 필요 | ❌ 미생성 |
 | Interstitial | 전면 광고 | 생성 필요 | ❌ 미생성 |
-| Rewarded | 보상형 광고 | 생성 필요 | ❌ 미생성 |
+| Rewarded | 보상형 광고 | `ca-app-pub-6654057059754695/8552907541` | ✅ 구현 완료 |
+| **Native Advanced** | **소셜탭 인라인 광고** | **`ca-app-pub-6654057059754695/8612252339`** | **🔧 구현 중** |
 
 ### 5.2 테스트용 Ad Unit ID (개발 시 사용)
 
@@ -326,6 +420,7 @@ const TEST_AD_UNITS = {
     banner: 'ca-app-pub-3940256099942544/6300978111',
     interstitial: 'ca-app-pub-3940256099942544/1033173712',
     rewarded: 'ca-app-pub-3940256099942544/5224354917',
+    native: 'ca-app-pub-3940256099942544/2247696110',
 };
 ```
 

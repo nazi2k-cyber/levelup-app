@@ -3257,6 +3257,9 @@ function switchTab(tabId, el) {
         mainEl.style.overflowY = 'auto';
     }
     
+    // 소셜탭 이탈 시 네이티브 광고 정리
+    if(tabId !== 'social') cleanupNativeAd();
+
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); renderWeeklyChallenges(); renderRoulette(); }
     if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); updateReelsResetTimer(); }
@@ -3462,7 +3465,7 @@ function renderUsers(criteria, btn = null) {
 
     container.innerHTML = list.map((u, i) => {
         const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.6rem');
-        return `
+        const cardHTML = `
         <div class="user-card ${u.isMe ? 'my-rank' : ''}">
             <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
             <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
@@ -3476,8 +3479,19 @@ function renderUsers(criteria, btn = null) {
             </div>
             <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria]}</div>
             ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? (i18n[AppState.currentLang]?.btn_added || '친구✓') : (i18n[AppState.currentLang]?.btn_add || '추가')}</button>` : ''}
-        </div>
-    `}).join('');
+        </div>`;
+
+        // 네이티브 광고 placeholder 삽입 (N번째 유저 카드 뒤)
+        if (i === NATIVE_AD_POSITION - 1 && list.length >= NATIVE_AD_POSITION) {
+            return cardHTML + `<div id="native-ad-placeholder" class="native-ad-slot"><span class="ad-loading-text">광고</span></div>`;
+        }
+        return cardHTML;
+    }).join('');
+
+    // 네이티브 광고 로드 (placeholder가 삽입된 경우)
+    if (list.length >= NATIVE_AD_POSITION && isNativePlatform) {
+        setTimeout(() => loadAndShowNativeAd(), 300);
+    }
 }
 
 window.fetchSocialData = fetchSocialData;
@@ -5527,6 +5541,181 @@ async function applyBonusExpReward() {
 
     alert(i18n[lang].bonus_exp_reward);
     if (window.AppLogger) AppLogger.info(`[BonusEXP] EXP +${BONUS_EXP_AMOUNT} 지급 완료`);
+}
+
+// --- ★ P6: 네이티브 광고 고급형 - 소셜탭 (AdMob Native Advanced) ★ ---
+const NATIVE_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8612252339';
+const NATIVE_AD_TEST_ID = 'ca-app-pub-3940256099942544/2247696110';
+const NATIVE_AD_POSITION = 5; // 5번째 유저 카드 뒤에 삽입
+
+let _nativeAdLoaded = false;
+let _nativeAdVisible = false;
+let _nativeAdScrollRAF = null;
+let _nativeAdObserver = null;
+
+/**
+ * 네이티브 광고 로드 및 표시
+ * renderUsers() 완료 후 호출됨
+ */
+async function loadAndShowNativeAd() {
+    if (!isNativePlatform) return;
+    if (!_admobInitialized) {
+        await initAdMob();
+    }
+
+    const placeholder = document.getElementById('native-ad-placeholder');
+    if (!placeholder) return;
+
+    try {
+        const { NativeAd } = window.Capacitor.Plugins;
+        if (!NativeAd) {
+            if (window.AppLogger) AppLogger.warn('[NativeAd] 플러그인 사용 불가');
+            placeholder.style.display = 'none';
+            return;
+        }
+
+        // 기존 광고 정리
+        await NativeAd.destroyAd().catch(() => {});
+
+        // 광고 로드
+        const result = await NativeAd.loadAd({
+            adId: NATIVE_AD_UNIT_ID,
+            isTesting: false,
+        });
+
+        if (result && result.loaded) {
+            _nativeAdLoaded = true;
+            if (window.AppLogger) AppLogger.info('[NativeAd] 소셜탭 네이티브 광고 로드 완료');
+
+            // placeholder 좌표로 오버레이 표시
+            positionNativeAd();
+            setupNativeAdScrollSync();
+        }
+    } catch (e) {
+        console.warn('[NativeAd] 로드 실패:', e);
+        if (window.AppLogger) AppLogger.warn('[NativeAd] 로드 실패: ' + (e.message || ''));
+        _nativeAdLoaded = false;
+        // 로드 실패 시 placeholder 숨김
+        placeholder.style.display = 'none';
+    }
+}
+
+/**
+ * placeholder 좌표를 계산하여 네이티브 광고 오버레이 위치 지정
+ */
+async function positionNativeAd() {
+    const placeholder = document.getElementById('native-ad-placeholder');
+    if (!placeholder || !_nativeAdLoaded) return;
+
+    try {
+        const { NativeAd } = window.Capacitor.Plugins;
+        if (!NativeAd) return;
+
+        const rect = placeholder.getBoundingClientRect();
+        await NativeAd.showAd({
+            x: rect.left,
+            y: rect.top,
+            width: rect.width,
+            height: rect.height,
+        });
+        _nativeAdVisible = true;
+    } catch (e) {
+        console.warn('[NativeAd] 표시 실패:', e);
+    }
+}
+
+/**
+ * 스크롤 동기화 설정
+ * main 요소의 스크롤에 맞춰 네이티브 오버레이 Y좌표를 업데이트
+ */
+function setupNativeAdScrollSync() {
+    cleanupNativeAdScrollSync();
+
+    const mainEl = document.querySelector('main');
+    const placeholder = document.getElementById('native-ad-placeholder');
+    if (!mainEl || !placeholder) return;
+
+    // IntersectionObserver: placeholder가 화면 밖으로 나가면 hide
+    _nativeAdObserver = new IntersectionObserver((entries) => {
+        const entry = entries[0];
+        if (!_nativeAdLoaded) return;
+
+        const { NativeAd } = window.Capacitor.Plugins;
+        if (!NativeAd) return;
+
+        if (entry.isIntersecting) {
+            if (!_nativeAdVisible) {
+                NativeAd.resumeAd().catch(() => {});
+                _nativeAdVisible = true;
+            }
+        } else {
+            if (_nativeAdVisible) {
+                NativeAd.hideAd().catch(() => {});
+                _nativeAdVisible = false;
+            }
+        }
+    }, { threshold: 0.1 });
+    _nativeAdObserver.observe(placeholder);
+
+    // scroll 이벤트: requestAnimationFrame 스로틀링으로 Y좌표 동기화
+    function onScroll() {
+        if (_nativeAdScrollRAF) return;
+        _nativeAdScrollRAF = requestAnimationFrame(() => {
+            _nativeAdScrollRAF = null;
+            if (!_nativeAdLoaded || !_nativeAdVisible) return;
+
+            const rect = placeholder.getBoundingClientRect();
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) {
+                NativeAd.updatePosition({ y: rect.top }).catch(() => {});
+            }
+        });
+    }
+
+    mainEl.addEventListener('scroll', onScroll, { passive: true });
+    // 이벤트 참조 저장 (cleanup용)
+    mainEl._nativeAdScrollHandler = onScroll;
+}
+
+/**
+ * 스크롤 리스너 정리
+ */
+function cleanupNativeAdScrollSync() {
+    if (_nativeAdObserver) {
+        _nativeAdObserver.disconnect();
+        _nativeAdObserver = null;
+    }
+
+    if (_nativeAdScrollRAF) {
+        cancelAnimationFrame(_nativeAdScrollRAF);
+        _nativeAdScrollRAF = null;
+    }
+
+    const mainEl = document.querySelector('main');
+    if (mainEl && mainEl._nativeAdScrollHandler) {
+        mainEl.removeEventListener('scroll', mainEl._nativeAdScrollHandler);
+        delete mainEl._nativeAdScrollHandler;
+    }
+}
+
+/**
+ * 네이티브 광고 완전 정리 (탭 전환 시 호출)
+ */
+async function cleanupNativeAd() {
+    cleanupNativeAdScrollSync();
+    _nativeAdLoaded = false;
+    _nativeAdVisible = false;
+
+    if (!isNativePlatform) return;
+
+    try {
+        const { NativeAd } = window.Capacitor.Plugins;
+        if (NativeAd) {
+            await NativeAd.destroyAd();
+        }
+    } catch (e) {
+        // 무시 — 이미 파괴되었을 수 있음
+    }
 }
 
 // --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
