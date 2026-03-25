@@ -5246,10 +5246,12 @@ const BONUS_EXP_AMOUNT = 50;
 // AdMob 초기화 상태
 let _admobInitialized = false;
 let _rewardedAdReady = false;
+let _rewardedAdListenersRegistered = false;
+let _rewardEarned = false; // 광고 시청 완료 시 true
 
 async function initAdMob() {
     if (_admobInitialized) return;
-    if (!isNativePlatform) return; // 웹에서는 AdMob 미사용
+    if (!isNativePlatform) return;
     try {
         const { AdMob } = window.Capacitor.Plugins;
         if (!AdMob) return;
@@ -5258,7 +5260,65 @@ async function initAdMob() {
         });
         _admobInitialized = true;
         if (window.AppLogger) AppLogger.info('[AdMob] 초기화 완료');
-        // 보상형 광고 프리로드
+
+        // 보상형 광고 이벤트 리스너 등록 (1회만)
+        if (!_rewardedAdListenersRegistered) {
+            _rewardedAdListenersRegistered = true;
+
+            // 광고 시청 완료 → 보상 획득
+            AdMob.addListener('onRewardedVideoAdReward', (reward) => {
+                console.log('[AdMob] 보상 획득:', reward);
+                if (window.AppLogger) AppLogger.info('[AdMob] 보상 획득: ' + JSON.stringify(reward));
+                _rewardEarned = true;
+            });
+
+            // 광고 닫힘 (시청 완료 또는 중도 이탈 모두)
+            AdMob.addListener('onRewardedVideoAdDismissed', () => {
+                console.log('[AdMob] 광고 닫힘, 보상 획득 여부:', _rewardEarned);
+                if (window.AppLogger) AppLogger.info('[AdMob] 광고 닫힘, rewarded=' + _rewardEarned);
+
+                _rewardedAdReady = false;
+                preloadRewardedAd._retryCount = 0;
+                preloadRewardedAd(); // 다음 광고 프리로드
+
+                if (_rewardEarned) {
+                    _rewardEarned = false;
+                    applyBonusExpReward();
+                } else {
+                    // 중도 이탈 — 보상 미지급
+                    const lang = AppState.currentLang;
+                    alert(i18n[lang].bonus_exp_fail);
+                    renderBonusExp();
+                }
+            });
+
+            // 광고 표시 실패
+            AdMob.addListener('onRewardedVideoAdFailedToShow', (error) => {
+                console.warn('[AdMob] 광고 표시 실패:', error);
+                if (window.AppLogger) AppLogger.warn('[AdMob] 표시 실패: ' + JSON.stringify(error));
+                _rewardedAdReady = false;
+                _rewardEarned = false;
+                preloadRewardedAd._retryCount = 0;
+                preloadRewardedAd();
+                const lang = AppState.currentLang;
+                alert(i18n[lang].bonus_exp_not_ready);
+                renderBonusExp();
+            });
+
+            // 광고 로드 완료
+            AdMob.addListener('onRewardedVideoAdLoaded', () => {
+                _rewardedAdReady = true;
+                if (window.AppLogger) AppLogger.info('[AdMob] 보상형 광고 로드 완료');
+            });
+
+            // 광고 로드 실패
+            AdMob.addListener('onRewardedVideoAdFailedToLoad', (error) => {
+                _rewardedAdReady = false;
+                console.warn('[AdMob] 보상형 광고 로드 실패:', error);
+                if (window.AppLogger) AppLogger.warn('[AdMob] 로드 실패: ' + JSON.stringify(error));
+            });
+        }
+
         preloadRewardedAd();
     } catch (e) {
         console.warn('[AdMob] 초기화 실패:', e);
@@ -5275,13 +5335,11 @@ async function preloadRewardedAd() {
             adId: REWARDED_AD_UNIT_ID,
             isTesting: false,
         });
-        _rewardedAdReady = true;
-        if (window.AppLogger) AppLogger.info('[AdMob] 보상형 광고 프리로드 완료');
+        // _rewardedAdReady는 onRewardedVideoAdLoaded 리스너에서 설정
     } catch (e) {
         _rewardedAdReady = false;
         console.warn('[AdMob] 보상형 광고 프리로드 실패:', e);
         if (window.AppLogger) AppLogger.warn('[AdMob] 프리로드 실패: ' + (e.message || ''));
-        // 30초 후 재시도 (최대 3회)
         if (!preloadRewardedAd._retryCount) preloadRewardedAd._retryCount = 0;
         if (preloadRewardedAd._retryCount < 3) {
             preloadRewardedAd._retryCount++;
@@ -5367,16 +5425,16 @@ window.claimBonusExp = async function() {
         await initAdMob();
     }
 
+    const { AdMob } = window.Capacitor.Plugins;
+    if (!AdMob) {
+        alert(i18n[lang].bonus_exp_not_ready);
+        return;
+    }
+
     if (!_rewardedAdReady) {
         // 광고 로딩 시도
         if (btn) { btn.disabled = true; btn.textContent = i18n[lang].bonus_exp_loading; }
         try {
-            const { AdMob } = window.Capacitor.Plugins;
-            if (!AdMob) {
-                alert(i18n[lang].bonus_exp_not_ready);
-                renderBonusExp();
-                return;
-            }
             await AdMob.prepareRewardVideoAd({
                 adId: REWARDED_AD_UNIT_ID,
                 isTesting: false,
@@ -5389,20 +5447,18 @@ window.claimBonusExp = async function() {
         }
     }
 
-    try {
-        if (btn) { btn.disabled = true; btn.textContent = i18n[lang].bonus_exp_loading; }
-        const { AdMob } = window.Capacitor.Plugins;
-        const result = await AdMob.showRewardVideoAd();
-        _rewardedAdReady = false;
-        preloadRewardedAd._retryCount = 0;
-        preloadRewardedAd(); // 다음 광고 프리로드
+    // 광고 표시 — 이후 처리는 이벤트 리스너(Rewarded, Dismissed, FailedToShow)에서 수행
+    if (btn) { btn.disabled = true; btn.textContent = i18n[lang].bonus_exp_loading; }
+    _rewardEarned = false;
 
-        // 광고 시청 완료 확인 — showRewardVideoAd이 resolve되면 시청 완료로 간주
-        applyBonusExpReward();
+    try {
+        await AdMob.showRewardVideoAd();
+        // showRewardVideoAd resolve 후 — 이벤트 리스너가 보상/닫힘을 처리
     } catch (e) {
         console.warn('[AdMob] 보상형 광고 표시 실패:', e);
         if (window.AppLogger) AppLogger.warn('[AdMob] 광고 표시 실패: ' + (e.message || ''));
         _rewardedAdReady = false;
+        _rewardEarned = false;
         preloadRewardedAd._retryCount = 0;
         preloadRewardedAd();
         alert(i18n[lang].bonus_exp_fail);
