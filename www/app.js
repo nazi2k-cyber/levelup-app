@@ -8146,6 +8146,8 @@ async function scheduleDDayNotifications() {
 document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('btn-add-dday');
     if (addBtn) addBtn.addEventListener('click', openDDayAddModal);
+    const captionCard = document.getElementById('dday-caption-card');
+    if (captionCard) captionCard.addEventListener('click', openDDayCaptionEdit);
 });
 
 // D-Day 함수들을 window에 노출 (type="module" 대응)
@@ -8163,7 +8165,7 @@ function renderDDayCaption() {
     if (!display) return;
     const caption = AppState.ddayCaption || '';
     if (caption) {
-        display.innerHTML = '<span class="dday-caption-text">' + sanitize(caption) + '</span>';
+        display.innerHTML = '<span class="dday-caption-text">' + sanitizeText(caption) + '</span>';
     } else {
         display.innerHTML = '<span class="dday-caption-placeholder">나의 목표 / 좌우명을 입력하세요</span>';
     }
@@ -8180,7 +8182,7 @@ function openDDayCaptionEdit() {
     overlay.innerHTML = `
         <div class="report-modal-content" style="max-width:360px; padding:24px;">
             <h3 style="margin:0 0 16px 0; font-size:1rem; color:var(--neon-blue);">목표 / 좌우명</h3>
-            <textarea id="dday-caption-input" class="dday-caption-input-field" maxlength="100" placeholder="나의 목표 또는 좌우명을 입력하세요...">${sanitize(currentCaption)}</textarea>
+            <textarea id="dday-caption-input" class="dday-caption-input-field" maxlength="100" placeholder="나의 목표 또는 좌우명을 입력하세요...">${sanitizeText(currentCaption)}</textarea>
             <div style="font-size:0.7rem; color:var(--text-sub); margin-top:4px; text-align:right;">
                 <span id="dday-caption-char-count">${currentCaption.length}</span> / 100
             </div>
