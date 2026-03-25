@@ -2541,22 +2541,8 @@ async function saveStatusImage() {
         let saved = false;
         const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
-        // 네이티브 앱: Capacitor Filesystem
-        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
-            const Filesystem = window.Capacitor.Plugins.Filesystem;
-            const base64Data = dataUrl.split(',')[1];
-            const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
-            for (const dir of dirs) {
-                try {
-                    await Filesystem.writeFile({ path: fileName, data: base64Data, directory: dir, recursive: true });
-                    saved = true;
-                    break;
-                } catch(e) { /* try next dir */ }
-            }
-        }
-
-        // Web Share API
-        if (!saved && navigator.share && navigator.canShare) {
+        // 1) Web Share API (네이티브 + 웹 모두 우선 시도 — Android에서 가장 안정적)
+        if (navigator.share && navigator.canShare) {
             try {
                 const file = new File([blob], fileName, { type: 'image/png' });
                 if (navigator.canShare({ files: [file] })) {
@@ -2568,13 +2554,29 @@ async function saveStatusImage() {
             }
         }
 
-        // 네이티브 인앱 오버레이
+        // 2) 네이티브 앱: Capacitor Filesystem (CACHE 우선 — 권한 불필요)
+        if (!saved && isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+            const Filesystem = window.Capacitor.Plugins.Filesystem;
+            const base64Data = dataUrl.split(',')[1];
+            const dirs = ['CACHE', 'DOCUMENTS', 'EXTERNAL'];
+            for (const dir of dirs) {
+                try {
+                    await Filesystem.writeFile({ path: fileName, data: base64Data, directory: dir, recursive: true });
+                    saved = true;
+                    break;
+                } catch(e) {
+                    if (window.AppLogger) AppLogger.warn(`[StatusImage] Filesystem write failed (${dir}): ${e.message}`);
+                }
+            }
+        }
+
+        // 3) 네이티브 인앱 오버레이
         if (!saved && isNative) {
             showImageOverlay(dataUrl, lang);
             saved = true;
         }
 
-        // 데스크톱 웹: <a> 다운로드
+        // 4) 데스크톱 웹: <a> 다운로드
         if (!saved && !isNative) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -5089,42 +5091,8 @@ window.sharePlannerAsImage = async function() {
 
         let saved = false;
 
-        // 네이티브 앱: Capacitor Filesystem API로 직접 로컬 저장
-        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
-            const Filesystem = window.Capacitor.Plugins.Filesystem;
-            const dataUrl = canvas.toDataURL('image/png');
-            const base64Data = dataUrl.split(',')[1];
-
-            try {
-                // Documents → External → Cache 순서로 저장 시도
-                let savedPath = null;
-                const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
-                for (const dir of dirs) {
-                    try {
-                        const result = await Filesystem.writeFile({
-                            path: fileName,
-                            data: base64Data,
-                            directory: dir,
-                            recursive: true
-                        });
-                        savedPath = result.uri;
-                        break;
-                    } catch(dirErr) {
-                        AppLogger.warn('[Planner] Filesystem write failed for dir ' + dir + ': ' + dirErr.message);
-                    }
-                }
-
-                if (savedPath) {
-                    AppLogger.info('[Planner] Image saved: ' + savedPath);
-                    saved = true;
-                }
-            } catch(fsErr) {
-                AppLogger.warn('[Planner] Filesystem save failed: ' + fsErr.message);
-            }
-        }
-
-        // Web Share API 시도 (네이티브 Filesystem 실패 시 또는 웹 브라우저)
-        if (!saved && navigator.share && navigator.canShare) {
+        // 1) Web Share API 우선 시도 (Android에서 가장 안정적)
+        if (navigator.share && navigator.canShare) {
             try {
                 const file = new File([blob], fileName, { type: 'image/png' });
                 const shareData = { files: [file] };
@@ -5141,7 +5109,31 @@ window.sharePlannerAsImage = async function() {
             }
         }
 
-        // 네이티브 앱에서 모든 방법 실패 시 인앱 오버레이로 표시
+        // 2) 네이티브 앱: Capacitor Filesystem (CACHE 우선 — 권한 불필요)
+        if (!saved && isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+            const Filesystem = window.Capacitor.Plugins.Filesystem;
+            const dataUrl = canvas.toDataURL('image/png');
+            const base64Data = dataUrl.split(',')[1];
+
+            const dirs = ['CACHE', 'DOCUMENTS', 'EXTERNAL'];
+            for (const dir of dirs) {
+                try {
+                    const result = await Filesystem.writeFile({
+                        path: fileName,
+                        data: base64Data,
+                        directory: dir,
+                        recursive: true
+                    });
+                    AppLogger.info('[Planner] Image saved: ' + (result.uri || dir));
+                    saved = true;
+                    break;
+                } catch(dirErr) {
+                    AppLogger.warn('[Planner] Filesystem write failed (' + dir + '): ' + dirErr.message);
+                }
+            }
+        }
+
+        // 3) 네이티브 앱에서 모든 방법 실패 시 인앱 오버레이로 표시
         if (!saved && isNative) {
             const overlayDataUrl = canvas.toDataURL('image/png');
             showImageOverlay(overlayDataUrl, lang);
