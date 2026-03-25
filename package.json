@@ -12,6 +12,7 @@
     "version-sync": "bash scripts/version-bump.sh"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^6.2.0",
     "@capacitor/android": "^6.2.0",
     "@capacitor/app": "^6.0.3",
     "@capacitor/core": "^6.2.0",

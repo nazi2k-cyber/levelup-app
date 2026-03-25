@@ -232,11 +232,21 @@ jobs:
             echo "✅ Health Connect intent-filter 주입 완료"
           fi
 
+          # AdMob App ID 메타데이터 주입 (보상형 광고 필수)
+          if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "$MANIFEST"; then
+            sed -i '/<\/application>/i\        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-6654057059754695~3529972498" />' "$MANIFEST"
+            echo "✅ AdMob App ID 메타데이터 주입 완료"
+          else
+            echo "ℹ️ AdMob App ID가 이미 존재합니다"
+          fi
+
           echo ""
           echo "📋 최종 AndroidManifest.xml 권한 목록:"
           grep "uses-permission" "$MANIFEST" || true
           echo ""
           grep "intent-filter" "$MANIFEST" || true
+          echo ""
+          grep "com.google.android.gms.ads" "$MANIFEST" || true
 
       # 8-0-1. MainActivity.java에 커스텀 플러그인 등록 자동 주입
       - name: 커스텀 플러그인 등록 주입 (MainActivity.java)
@@ -301,6 +311,14 @@ jobs:
             echo "✅ Firebase Messaging 의존성 추가 완료"
           else
             echo "ℹ️ Firebase Messaging 의존성이 이미 존재합니다"
+          fi
+
+          # Google AdMob SDK 라이브러리 추가 (보상형 광고)
+          if ! grep -q "play-services-ads" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-ads:23.6.0"' "$BUILD_GRADLE"
+            echo "✅ AdMob SDK 의존성 추가 완료"
+          else
+            echo "ℹ️ AdMob SDK 의존성이 이미 존재합니다"
           fi
 
           # compileSdkVersion을 34 이상으로 업그레이드 (Health Connect 필수)
