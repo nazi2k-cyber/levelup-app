@@ -316,6 +316,13 @@ nav { position: fixed; bottom: env(safe-area-inset-bottom); width: 100%; height:
 nav.nav-reorder-mode .nav-item:not(.nav-dragging) { opacity: 0.6; }
 nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 
+/* Status card reorder drag styles */
+.status-reorderable { position: relative; transition: transform 0.18s, opacity 0.18s, box-shadow 0.18s; }
+.status-reorderable.status-card-dragging { transform: scale(1.02); border: 1px solid var(--neon-blue); box-shadow: 0 0 18px rgba(0, 217, 255, 0.45); z-index: 20; position: relative; opacity: 0.92; }
+#status.status-reorder-mode .status-reorderable:not(.status-card-dragging) { opacity: 0.5; }
+.status-reorderable .card-drag-handle { display: none; position: absolute; top: 8px; right: 8px; font-size: 1rem; color: var(--neon-blue); z-index: 21; pointer-events: none; }
+#status.status-reorder-mode .status-reorderable .card-drag-handle { display: block; }
+
 /* 팝업창 및 가이드 표 */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
 .modal-content { background: var(--panel-bg); border: 1px solid var(--neon-blue); padding: 20px; border-radius: 10px; width: 85%; max-height: 70vh; display: flex; flex-direction: column; }

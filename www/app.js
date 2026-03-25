@@ -732,6 +732,124 @@ function initNavDragReorder() {
     });
 }
 
+// --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+
+function saveStatusCardOrder() {
+    const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
+    const order = cards.map(el => el.dataset.cardId);
+    localStorage.setItem('statusCardOrder', JSON.stringify(order));
+}
+
+function loadStatusCardOrder() {
+    const saved = localStorage.getItem('statusCardOrder');
+    if (!saved) return;
+    try {
+        const order = JSON.parse(saved);
+        const section = document.getElementById('status');
+        const btnMyinfo = document.getElementById('btn-myinfo');
+        order.forEach(cardId => {
+            const card = section.querySelector(`.status-reorderable[data-card-id="${cardId}"]`);
+            if (card) section.insertBefore(card, btnMyinfo);
+        });
+    } catch(e) {}
+}
+
+function initStatusCardReorder() {
+    const section = document.getElementById('status');
+    if (!section) return;
+    let dragItem = null;
+    let longPressTimer = null;
+    let isDragging = false;
+    let wasMoved = false;
+    let startY = 0;
+
+    // Add drag handle indicator to each reorderable card
+    document.querySelectorAll('#status .status-reorderable').forEach(card => {
+        if (!card.querySelector('.card-drag-handle')) {
+            const handle = document.createElement('span');
+            handle.className = 'card-drag-handle';
+            handle.textContent = '⋮⋮';
+            card.appendChild(handle);
+        }
+    });
+
+    function getReorderableCards() {
+        return Array.from(section.querySelectorAll('.status-reorderable'));
+    }
+
+    function onTouchStart(e) {
+        const card = e.currentTarget;
+        startY = e.touches[0].clientY;
+        longPressTimer = setTimeout(() => {
+            isDragging = true;
+            wasMoved = false;
+            dragItem = card;
+            card.classList.add('status-card-dragging');
+            section.classList.add('status-reorder-mode');
+            if (navigator.vibrate) navigator.vibrate(50);
+        }, 500);
+    }
+
+    function onTouchMove(e) {
+        // Cancel long press if finger moves too much before activation
+        if (!isDragging && longPressTimer) {
+            const dy = Math.abs(e.touches[0].clientY - startY);
+            if (dy > 10) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+            return;
+        }
+        if (!isDragging || !dragItem) return;
+        e.preventDefault();
+        wasMoved = true;
+        const touch = e.touches[0];
+        const cards = getReorderableCards();
+        const btnMyinfo = document.getElementById('btn-myinfo');
+
+        // Find target card by vertical position
+        let targetIndex = cards.length - 1;
+        for (let i = 0; i < cards.length; i++) {
+            const rect = cards[i].getBoundingClientRect();
+            if (touch.clientY < rect.top + rect.height / 2) {
+                targetIndex = i;
+                break;
+            }
+        }
+        const currentIndex = cards.indexOf(dragItem);
+        if (targetIndex !== currentIndex) {
+            if (targetIndex > currentIndex) {
+                const ref = cards[targetIndex].nextSibling;
+                section.insertBefore(dragItem, ref);
+            } else {
+                section.insertBefore(dragItem, cards[targetIndex]);
+            }
+        }
+    }
+
+    function onTouchEnd() {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        if (isDragging && dragItem) {
+            dragItem.classList.remove('status-card-dragging');
+            section.classList.remove('status-reorder-mode');
+            if (wasMoved) {
+                saveStatusCardOrder();
+            }
+        }
+        isDragging = false;
+        dragItem = null;
+    }
+
+    document.querySelectorAll('#status .status-reorderable').forEach(card => {
+        card.addEventListener('touchstart', onTouchStart, { passive: true });
+        card.addEventListener('touchmove', onTouchMove, { passive: false });
+        card.addEventListener('touchend', onTouchEnd);
+        card.addEventListener('touchcancel', onTouchEnd);
+    });
+}
+
 // --- Service Worker 등록 및 오프라인/온라인 감지 ---
 function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
@@ -869,6 +987,7 @@ function initOfflineDetection() {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadNavOrder();
+    loadStatusCardOrder();
     initTheme();
     bindEvents();
     // 로그인 화면 언어 적용 (저장된 언어 설정 기반)
@@ -1120,6 +1239,7 @@ function bindEvents() {
         el.addEventListener('click', () => { if (!_navDragJustEnded) switchTab(el.dataset.tab, el); });
     });
     initNavDragReorder();
+    initStatusCardReorder();
 
     document.getElementById('btn-edit-name').addEventListener('click', changePlayerName);
     document.getElementById('btn-edit-insta').addEventListener('click', changeInstaId);

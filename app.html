@@ -220,7 +220,7 @@
                     </div>
                 </div>
 
-                <div class="system-card" id="step-count-card" style="display:none; margin-bottom: 10px;">
+                <div class="system-card status-reorderable" data-card-id="step-count" id="step-count-card" style="display:none; margin-bottom: 10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="font-size:1.2rem;">🚶</span>
@@ -238,7 +238,7 @@
                     </div>
                 </div>
 
-                <div class="system-card" style="margin-bottom: 0;">
+                <div class="system-card status-reorderable" data-card-id="stat-radar" style="margin-bottom: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <h2 data-i18n="radar_title" style="margin:0;">STAT RADAR</h2>
@@ -256,7 +256,7 @@
                 </div>
 
                 <!-- Life Status Card -->
-                <div class="system-card life-status-card" style="margin-top: 10px; margin-bottom: 0;">
+                <div class="system-card status-reorderable life-status-card" data-card-id="life-status" style="margin-top: 10px; margin-bottom: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                         <h2 style="margin:0; color:var(--neon-blue);">LIFE STATUS</h2>
                         <button class="btn-info-sm" id="btn-life-status-settings" style="font-size:0.75rem;">⚙️ 설정</button>
@@ -265,7 +265,7 @@
                 </div>
 
                 <!-- D-Day Card -->
-                <div class="system-card dday-card" style="margin-top: 10px; margin-bottom: 0;">
+                <div class="system-card status-reorderable dday-card" data-card-id="dday" style="margin-top: 10px; margin-bottom: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <h2 style="margin:0;">D-DAY</h2>
@@ -276,13 +276,13 @@
                 </div>
 
                 <!-- D-Day Caption (목표/좌우명) -->
-                <div class="system-card dday-caption-card" style="margin-top: 6px; margin-bottom: 0; cursor: pointer;" id="dday-caption-card">
+                <div class="system-card status-reorderable dday-caption-card" data-card-id="dday-caption" style="margin-top: 6px; margin-bottom: 0; cursor: pointer;" id="dday-caption-card">
                     <div id="dday-caption-display" class="dday-caption-display">
                         <span class="dday-caption-placeholder">나의 목표 / 좌우명을 입력하세요</span>
                     </div>
                 </div>
 
-                <div class="system-card" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 10px;">
+                <div class="system-card status-reorderable" data-card-id="daily-quote" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 10px;">
                     <div style="font-size: 1.2rem; color: var(--neon-blue); margin-bottom: 8px;">❝</div>
                     <div id="daily-quote" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; line-height: 1.5; word-break: keep-all; font-style: italic;"></div>
                     <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
