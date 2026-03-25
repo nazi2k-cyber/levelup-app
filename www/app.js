@@ -2247,8 +2247,6 @@ async function saveStatusImage() {
         const userLevel = AppState.user.level || 1;
         const display = typeof getDisplayTitle === 'function' ? getDisplayTitle() : null;
         const totalScore = document.getElementById('totalScore')?.textContent || '0';
-        const userPoints = AppState.user.points || 0;
-        const reqPoints = document.getElementById('display-req-pts')?.textContent || '100';
 
         // 레이더 데이터 계산
         const centerX = 50, centerY = 50, radius = 33;
@@ -2263,13 +2261,12 @@ async function saveStatusImage() {
 
         // 높이 계산
         const headerBarH = 44;
-        const profileCardH = 100;
-        const pointsPanelH = 56;
+        const profileCardH = 110;
         const radarTitleH = 30;
         const radarSize = 280;
         const footerH = 32;
         const gap = 12;
-        const totalH = pad + headerBarH + gap + profileCardH + gap + pointsPanelH + gap + radarTitleH + radarSize + gap + footerH + pad;
+        const totalH = pad + headerBarH + gap + profileCardH + gap + radarTitleH + radarSize + gap + footerH + pad;
 
         canvas.width = W;
         canvas.height = totalH;
@@ -2314,8 +2311,8 @@ async function saveStatusImage() {
         ctx.fill();
         ctx.stroke();
 
-        // 아바타
-        const avatarSize = 52;
+        // 아바타 (프로필 사진)
+        const avatarSize = 60;
         const avatarX = card1X + 16;
         const avatarY = card1Y + (card1H - avatarSize) / 2;
 
@@ -2349,7 +2346,7 @@ async function saveStatusImage() {
         const textX = avatarX + avatarSize + 14;
 
         // 칭호 뱃지들
-        const badgeY = card1Y + 18;
+        const badgeY = card1Y + 22;
         let badgeX = textX;
         const rarityColors = {
             uncommon: '#00cc66',
@@ -2390,69 +2387,19 @@ async function saveStatusImage() {
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 15px Pretendard, sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(userName, textX, card1Y + 48);
+        ctx.fillText(userName, textX, card1Y + 52);
 
         // 종합 스코어 (우측)
         const scoreLabel = i18n[lang].tot_score || '종합 스코어';
         ctx.fillStyle = '#aaa';
         ctx.font = '10px Pretendard, sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(scoreLabel, card1X + card1W - 14, card1Y + 30);
+        ctx.fillText(scoreLabel, card1X + card1W - 14, card1Y + 34);
         ctx.fillStyle = '#00d9ff';
         ctx.font = 'bold 26px Pretendard, sans-serif';
-        ctx.fillText(totalScore, card1X + card1W - 14, card1Y + 60);
+        ctx.fillText(totalScore, card1X + card1W - 14, card1Y + 64);
 
         y += profileCardH + gap;
-
-        // ===== 보유 포인트 패널 =====
-        const card2X = pad, card2Y = y;
-        const card2W = innerW, card2H = pointsPanelH;
-        ctx.strokeStyle = '#ffcc00';
-        ctx.lineWidth = 1;
-        ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
-        ctx.beginPath();
-        ctx.roundRect(card2X, card2Y, card2W, card2H, 8);
-        ctx.fill();
-        ctx.stroke();
-
-        // 보유 포인트 라벨
-        const ptLabel = i18n[lang].avail_pts || '보유 포인트';
-        ctx.fillStyle = '#aaa';
-        ctx.font = '10px Pretendard, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(ptLabel, card2X + 14, card2Y + 18);
-
-        // 포인트 값
-        ctx.fillStyle = '#ffcc00';
-        ctx.font = 'bold 22px Pretendard, sans-serif';
-        ctx.fillText(String(userPoints), card2X + 14, card2Y + 42);
-        const ptValW = ctx.measureText(String(userPoints)).width;
-        ctx.font = 'bold 14px Pretendard, sans-serif';
-        ctx.fillText(' P', card2X + 14 + ptValW, card2Y + 42);
-
-        // 요구량 (우측)
-        const reqLabel = i18n[lang].req_pts || '요구량:';
-        ctx.fillStyle = '#aaa';
-        ctx.font = '10px Pretendard, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(reqLabel, card2X + card2W - 80, card2Y + 24);
-        ctx.fillText(reqPoints + ' P', card2X + card2W - 80, card2Y + 40);
-
-        // 레벨 업 버튼
-        const btnW = 64, btnH = 28;
-        const btnX = card2X + card2W - 14 - btnW;
-        const btnY = card2Y + (card2H - btnH) / 2;
-        ctx.fillStyle = '#444';
-        ctx.beginPath();
-        ctx.roundRect(btnX, btnY, btnW, btnH, 5);
-        ctx.fill();
-        ctx.fillStyle = '#ccc';
-        ctx.font = 'bold 12px Pretendard, sans-serif';
-        ctx.textAlign = 'center';
-        const lvlUpText = i18n[lang].btn_lvlup || '레벨 업';
-        ctx.fillText(lvlUpText, btnX + btnW / 2, btnY + 18);
-
-        y += pointsPanelH + gap;
 
         // ===== 스탯 레이더 카드 =====
         const card3X = pad, card3Y = y;
