@@ -5473,6 +5473,16 @@ function applyBonusExpReward() {
     // EXP(포인트) +50 지급
     AppState.user.points += BONUS_EXP_AMOUNT;
 
+    // Firestore에 즉시 저장 (디바운스 우회 — 로그아웃 시 유실 방지)
+    if (auth.currentUser) {
+        setDoc(doc(db, "users", auth.currentUser.uid), {
+            lastBonusExpDate: today,
+            points: AppState.user.points
+        }, { merge: true }).catch(e => {
+            console.warn('[BonusEXP] Firestore 즉시 저장 실패:', e);
+        });
+    }
+
     saveUserData();
     updatePointUI();
     renderBonusExp();
