@@ -1076,7 +1076,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderWeeklyChallenges();
             renderRoulette();
             renderBonusExp();
-            initAdMob();
             updateReelsResetTimer();
 
             updateStepCountUI();
