@@ -1466,7 +1466,7 @@ async function _doSaveUserData() {
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
-            lastBonusExpDate: localStorage.getItem('bonus_exp_date') || '',
+            lastBonusExpDate: localStorage.getItem(_bonusExpKey()) || '',
             lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
             questHistoryStr: JSON.stringify(AppState.questHistory),
@@ -1584,7 +1584,7 @@ async function loadUserDataFromDB(user) {
             }
             // 보너스 EXP 수령 날짜 복원
             if (data.lastBonusExpDate) {
-                localStorage.setItem('bonus_exp_date', data.lastBonusExpDate);
+                localStorage.setItem(`bonus_exp_date_${user.uid}`, data.lastBonusExpDate);
             }
             // 릴스 포스팅 타임스탬프 복원 (로그아웃 후에도 비활성화 유지)
             if (data.lastReelsPostTs) {
@@ -5347,9 +5347,14 @@ async function preloadRewardedAd() {
     }
 }
 
+function _bonusExpKey() {
+    const uid = auth.currentUser ? auth.currentUser.uid : '_anon';
+    return `bonus_exp_date_${uid}`;
+}
+
 function canClaimBonusExp() {
     const today = getTodayKST();
-    if (localStorage.getItem('bonus_exp_date') === today) return 'used';
+    if (localStorage.getItem(_bonusExpKey()) === today) return 'used';
     return 'ready';
 }
 
@@ -5468,7 +5473,7 @@ window.claimBonusExp = async function() {
 function applyBonusExpReward() {
     const lang = AppState.currentLang;
     const today = getTodayKST();
-    localStorage.setItem('bonus_exp_date', today);
+    localStorage.setItem(_bonusExpKey(), today);
 
     // EXP(포인트) +50 지급
     AppState.user.points += BONUS_EXP_AMOUNT;
