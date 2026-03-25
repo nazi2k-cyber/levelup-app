@@ -5612,11 +5612,14 @@ async function positionNativeAd() {
         if (!NativeAd) return;
 
         const rect = placeholder.getBoundingClientRect();
+        const stickyHeader = document.querySelector('.social-sticky-header');
+        const clipTop = stickyHeader ? stickyHeader.getBoundingClientRect().bottom : 0;
         await NativeAd.showAd({
             x: rect.left,
             y: rect.top,
             width: rect.width,
             height: rect.height,
+            clipTop,
         });
         _nativeAdVisible = true;
     } catch (e) {
@@ -5658,6 +5661,9 @@ function setupNativeAdScrollSync() {
     _nativeAdObserver.observe(placeholder);
 
     // scroll 이벤트: requestAnimationFrame 스로틀링으로 Y좌표 동기화
+    // sticky header 하단 좌표를 clipTop으로 전달하여 광고가 헤더 위로 올라가지 않도록 클리핑
+    const stickyHeader = document.querySelector('.social-sticky-header');
+
     function onScroll() {
         if (_nativeAdScrollRAF) return;
         _nativeAdScrollRAF = requestAnimationFrame(() => {
@@ -5665,9 +5671,10 @@ function setupNativeAdScrollSync() {
             if (!_nativeAdLoaded || !_nativeAdVisible) return;
 
             const rect = placeholder.getBoundingClientRect();
+            const clipTop = stickyHeader ? stickyHeader.getBoundingClientRect().bottom : 0;
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) {
-                NativeAd.updatePosition({ y: rect.top }).catch(() => {});
+                NativeAd.updatePosition({ y: rect.top, clipTop }).catch(() => {});
             }
         });
     }

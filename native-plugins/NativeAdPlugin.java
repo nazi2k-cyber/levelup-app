@@ -2,6 +2,7 @@ package com.levelup.reboot.plugins;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -142,6 +143,7 @@ public class NativeAdPlugin extends Plugin {
         double y = call.getDouble("y", 0.0);
         double width = call.getDouble("width", 0.0);
         double height = call.getDouble("height", 0.0);
+        double clipTop = call.getDouble("clipTop", 0.0);
 
         Activity activity = getActivity();
         if (activity == null) {
@@ -187,6 +189,19 @@ public class NativeAdPlugin extends Plugin {
                     .findViewById(android.R.id.content);
                 rootView.addView(adContainer);
 
+                // 초기 클리핑 적용 (sticky header 아래로만 보이도록)
+                int pxClipTop = (int) (clipTop * density);
+                if (pxClipTop > 0 && pxY < pxClipTop) {
+                    int clipOffset = pxClipTop - pxY;
+                    adContainer.post(() -> {
+                        int adH = adContainer.getHeight();
+                        int adW = adContainer.getWidth();
+                        if (adH > 0 && clipOffset < adH) {
+                            adContainer.setClipBounds(new Rect(0, clipOffset, adW > 0 ? adW : 9999, adH));
+                        }
+                    });
+                }
+
                 adVisible = true;
                 call.resolve();
             } catch (Exception e) {
@@ -197,12 +212,13 @@ public class NativeAdPlugin extends Plugin {
     }
 
     /**
-     * 스크롤 시 광고 Y 좌표 업데이트
-     * @param call y (CSS 픽셀 단위)
+     * 스크롤 시 광고 Y 좌표 업데이트 (클리핑 지원)
+     * @param call y (CSS 픽셀 단위), clipTop (CSS 픽셀 단위, 이 위로 잘림)
      */
     @PluginMethod()
     public void updatePosition(PluginCall call) {
         double y = call.getDouble("y", 0.0);
+        double clipTop = call.getDouble("clipTop", 0.0);
 
         if (adContainer == null || !adVisible) {
             call.resolve();
@@ -218,12 +234,31 @@ public class NativeAdPlugin extends Plugin {
         mainHandler.post(() -> {
             try {
                 DisplayMetrics dm = activity.getResources().getDisplayMetrics();
-                int pxY = (int) (y * dm.density);
+                float density = dm.density;
+                int pxY = (int) (y * density);
+                int pxClipTop = (int) (clipTop * density);
 
                 FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) adContainer.getLayoutParams();
                 if (params != null) {
                     params.topMargin = pxY;
                     adContainer.setLayoutParams(params);
+                }
+
+                // 상단 클리핑: 광고가 sticky header 아래로만 보이도록 처리
+                if (pxClipTop > 0 && pxY < pxClipTop) {
+                    int clipOffset = pxClipTop - pxY;
+                    int adHeight = adContainer.getHeight();
+                    int adWidth = adContainer.getWidth();
+                    if (adHeight > 0 && clipOffset < adHeight) {
+                        // 상단을 clipOffset만큼 잘라냄
+                        adContainer.setClipBounds(new Rect(0, clipOffset, adWidth > 0 ? adWidth : 9999, adHeight));
+                    } else if (clipOffset >= adHeight) {
+                        // 완전히 가려짐 — 숨김
+                        adContainer.setClipBounds(new Rect(0, 0, 0, 0));
+                    }
+                } else {
+                    // 클리핑 해제 (전체 보이기)
+                    adContainer.setClipBounds(null);
                 }
             } catch (Exception e) {
                 Log.w(TAG, "위치 업데이트 오류: " + e.getMessage());
