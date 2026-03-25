@@ -1030,6 +1030,14 @@ function initOfflineDetection() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 메뉴 및 UI 텍스트 복사 방지 (input/textarea 제외)
+    document.addEventListener('contextmenu', (e) => {
+        if (!e.target.closest('input, textarea')) e.preventDefault();
+    });
+    document.addEventListener('copy', (e) => {
+        if (!e.target.closest('input, textarea')) e.preventDefault();
+    });
+
     loadNavOrder();
     loadStatusCardOrder();
     initTheme();
