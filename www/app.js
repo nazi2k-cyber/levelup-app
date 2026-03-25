@@ -5271,7 +5271,7 @@ async function preloadRewardedAd() {
     try {
         const { AdMob } = window.Capacitor.Plugins;
         if (!AdMob) return;
-        await AdMob.prepareRewardItem({
+        await AdMob.prepareRewardVideoAd({
             adId: REWARDED_AD_UNIT_ID,
             isTesting: false,
         });
@@ -5377,7 +5377,7 @@ window.claimBonusExp = async function() {
                 renderBonusExp();
                 return;
             }
-            await AdMob.prepareRewardItem({
+            await AdMob.prepareRewardVideoAd({
                 adId: REWARDED_AD_UNIT_ID,
                 isTesting: false,
             });
@@ -5392,12 +5392,12 @@ window.claimBonusExp = async function() {
     try {
         if (btn) { btn.disabled = true; btn.textContent = i18n[lang].bonus_exp_loading; }
         const { AdMob } = window.Capacitor.Plugins;
-        const result = await AdMob.showRewardItem();
+        const result = await AdMob.showRewardVideoAd();
         _rewardedAdReady = false;
         preloadRewardedAd._retryCount = 0;
         preloadRewardedAd(); // 다음 광고 프리로드
 
-        // 광고 시청 완료 확인 — showRewardItem이 resolve되면 시청 완료로 간주
+        // 광고 시청 완료 확인 — showRewardVideoAd이 resolve되면 시청 완료로 간주
         applyBonusExpReward();
     } catch (e) {
         console.warn('[AdMob] 보상형 광고 표시 실패:', e);
