@@ -84,6 +84,17 @@ const i18n = {
         roulette_locked: "퀘스트를 완료하면 스핀 가능", roulette_used: "오늘 스핀 완료", roulette_result: "보상 획득!",
         roulette_next_spin: "다음 스핀까지",
 
+        // P5: 보상형 광고 일일 보너스 EXP
+        bonus_exp_title: "보너스 EXP",
+        bonus_exp_desc: "광고를 시청하고 EXP +50을 받으세요!",
+        bonus_exp_btn: "🎬 광고 보고 EXP 받기",
+        bonus_exp_used: "오늘 이미 수령함",
+        bonus_exp_reward: "EXP +50 획득!",
+        bonus_exp_fail: "광고 시청을 완료해야 보상을 받을 수 있습니다.",
+        bonus_exp_loading: "광고 로딩 중...",
+        bonus_exp_not_ready: "광고를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.",
+        bonus_exp_next: "다음 수령까지",
+
         // 릴스 탭
         nav_reels: "Day1", reels_title: "🎬 Day1", reels_post_btn: "Day1 포스팅",
         reels_post_hint: "업로드 1일 후 자동 삭제",
@@ -274,6 +285,17 @@ const i18n = {
         roulette_locked: "Complete a quest to spin", roulette_used: "Spin used today", roulette_result: "Reward!",
         roulette_next_spin: "Next spin in",
 
+        // P5: Rewarded Ad Daily Bonus EXP
+        bonus_exp_title: "Bonus EXP",
+        bonus_exp_desc: "Watch an ad to earn EXP +50!",
+        bonus_exp_btn: "🎬 Watch Ad for EXP",
+        bonus_exp_used: "Already claimed today",
+        bonus_exp_reward: "EXP +50 earned!",
+        bonus_exp_fail: "You must watch the full ad to receive the reward.",
+        bonus_exp_loading: "Loading ad...",
+        bonus_exp_not_ready: "Ad not available. Please try again later.",
+        bonus_exp_next: "Next claim in",
+
         // Reels tab
         nav_reels: "Reels", reels_title: "🎬 Reels", reels_post_btn: "Post Timetable",
         reels_post_hint: "Complete your timetable and add a photo to post",
@@ -463,6 +485,17 @@ const i18n = {
         roulette_title: "デイリーボーナスルーレット", roulette_spin: "スピン！", roulette_desc: "クエスト1つ以上完了で1日1回スピン可能",
         roulette_locked: "クエストを完了するとスピン可能", roulette_used: "本日スピン済", roulette_result: "報酬獲得！",
         roulette_next_spin: "次のスピンまで",
+
+        // P5: リワード広告デイリーボーナスEXP
+        bonus_exp_title: "ボーナスEXP",
+        bonus_exp_desc: "広告を視聴してEXP +50を獲得！",
+        bonus_exp_btn: "🎬 広告を見てEXP獲得",
+        bonus_exp_used: "本日受取済み",
+        bonus_exp_reward: "EXP +50 獲得！",
+        bonus_exp_fail: "広告の視聴を完了すると報酬が受け取れます。",
+        bonus_exp_loading: "広告読み込み中...",
+        bonus_exp_not_ready: "広告を読み込めません。しばらくしてから再試行してください。",
+        bonus_exp_next: "次の受取まで",
 
         // リールタブ
         nav_reels: "リール", reels_title: "🎬 リール", reels_post_btn: "タイムテーブル投稿",

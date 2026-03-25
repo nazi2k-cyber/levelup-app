@@ -1075,6 +1075,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderWeeklyChallenges();
             renderRoulette();
+            renderBonusExp();
+            initAdMob();
             updateReelsResetTimer();
 
             updateStepCountUI();
@@ -1465,6 +1467,7 @@ async function _doSaveUserData() {
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
+            lastBonusExpDate: localStorage.getItem('bonus_exp_date') || '',
             lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests),
             questHistoryStr: JSON.stringify(AppState.questHistory),
@@ -1579,6 +1582,10 @@ async function loadUserDataFromDB(user) {
             // 룰렛 스핀 날짜 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.lastRouletteDate) {
                 localStorage.setItem('roulette_date', data.lastRouletteDate);
+            }
+            // 보너스 EXP 수령 날짜 복원
+            if (data.lastBonusExpDate) {
+                localStorage.setItem('bonus_exp_date', data.lastBonusExpDate);
             }
             // 릴스 포스팅 타임스탬프 복원 (로그아웃 후에도 비활성화 유지)
             if (data.lastReelsPostTs) {
@@ -3246,7 +3253,7 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus();
+        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus(); renderBonusExp();
     } else {
         mainEl.style.overflowY = 'auto';
     }
@@ -5230,6 +5237,199 @@ window.spinRoulette = function() {
         canvas.style.transform = `rotate(${targetAngle}deg)`;
     }, 3200);
 };
+
+// --- ★ P5: 보상형 광고 일일 보너스 EXP (AdMob Rewarded Ad) ★ ---
+const REWARDED_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8552907541';
+const REWARDED_AD_TEST_ID = 'ca-app-pub-3940256099942544/5224354917';
+const BONUS_EXP_AMOUNT = 50;
+
+// AdMob 초기화 상태
+let _admobInitialized = false;
+let _rewardedAdReady = false;
+
+async function initAdMob() {
+    if (_admobInitialized) return;
+    if (!isNativePlatform) return; // 웹에서는 AdMob 미사용
+    try {
+        const { AdMob } = window.Capacitor.Plugins;
+        if (!AdMob) return;
+        await AdMob.initialize({
+            initializeForTesting: false,
+        });
+        _admobInitialized = true;
+        if (window.AppLogger) AppLogger.info('[AdMob] 초기화 완료');
+        // 보상형 광고 프리로드
+        preloadRewardedAd();
+    } catch (e) {
+        console.warn('[AdMob] 초기화 실패:', e);
+        if (window.AppLogger) AppLogger.warn('[AdMob] 초기화 실패: ' + (e.message || ''));
+    }
+}
+
+async function preloadRewardedAd() {
+    if (!_admobInitialized) return;
+    try {
+        const { AdMob } = window.Capacitor.Plugins;
+        if (!AdMob) return;
+        await AdMob.prepareRewardItem({
+            adId: REWARDED_AD_UNIT_ID,
+            isTesting: false,
+        });
+        _rewardedAdReady = true;
+        if (window.AppLogger) AppLogger.info('[AdMob] 보상형 광고 프리로드 완료');
+    } catch (e) {
+        _rewardedAdReady = false;
+        console.warn('[AdMob] 보상형 광고 프리로드 실패:', e);
+        if (window.AppLogger) AppLogger.warn('[AdMob] 프리로드 실패: ' + (e.message || ''));
+        // 30초 후 재시도 (최대 3회)
+        if (!preloadRewardedAd._retryCount) preloadRewardedAd._retryCount = 0;
+        if (preloadRewardedAd._retryCount < 3) {
+            preloadRewardedAd._retryCount++;
+            setTimeout(() => preloadRewardedAd(), 30000);
+        }
+    }
+}
+
+function canClaimBonusExp() {
+    const today = getTodayKST();
+    if (localStorage.getItem('bonus_exp_date') === today) return 'used';
+    return 'ready';
+}
+
+let _bonusExpTimerInterval = null;
+
+function startBonusExpTimer() {
+    stopBonusExpTimer();
+    const timerEl = document.getElementById('bonus-exp-timer');
+    if (!timerEl) return;
+
+    function tick() {
+        const ms = getMsUntilNextKSTMidnight();
+        const lang = AppState.currentLang;
+        timerEl.textContent = `${i18n[lang].bonus_exp_next} ${formatCountdown(ms)}`;
+        timerEl.style.display = '';
+        if (ms <= 1000) {
+            stopBonusExpTimer();
+            setTimeout(() => renderBonusExp(), 1100);
+        }
+    }
+    tick();
+    _bonusExpTimerInterval = setInterval(tick, 1000);
+}
+
+function stopBonusExpTimer() {
+    if (_bonusExpTimerInterval) {
+        clearInterval(_bonusExpTimerInterval);
+        _bonusExpTimerInterval = null;
+    }
+}
+
+function renderBonusExp() {
+    const btn = document.getElementById('btn-bonus-exp');
+    const statusText = document.getElementById('bonus-exp-status');
+    const timerEl = document.getElementById('bonus-exp-timer');
+    if (!btn || !statusText) return;
+
+    const lang = AppState.currentLang;
+    const status = canClaimBonusExp();
+
+    if (status === 'used') {
+        btn.disabled = true;
+        btn.textContent = i18n[lang].bonus_exp_used;
+        btn.style.opacity = '0.4';
+        statusText.textContent = i18n[lang].bonus_exp_used;
+        statusText.style.color = 'var(--text-sub)';
+        startBonusExpTimer();
+    } else {
+        btn.disabled = false;
+        btn.textContent = i18n[lang].bonus_exp_btn;
+        btn.style.opacity = '1';
+        statusText.textContent = i18n[lang].bonus_exp_desc;
+        statusText.style.color = 'var(--neon-gold)';
+        stopBonusExpTimer();
+        if (timerEl) timerEl.style.display = 'none';
+    }
+}
+
+window.claimBonusExp = async function() {
+    if (canClaimBonusExp() !== 'ready') return;
+
+    const lang = AppState.currentLang;
+    const btn = document.getElementById('btn-bonus-exp');
+
+    // 네이티브가 아닌 경우 (웹 테스트) — 광고 없이 바로 보상 지급
+    if (!isNativePlatform) {
+        applyBonusExpReward();
+        return;
+    }
+
+    if (!_admobInitialized) {
+        await initAdMob();
+    }
+
+    if (!_rewardedAdReady) {
+        // 광고 로딩 시도
+        if (btn) { btn.disabled = true; btn.textContent = i18n[lang].bonus_exp_loading; }
+        try {
+            const { AdMob } = window.Capacitor.Plugins;
+            if (!AdMob) {
+                alert(i18n[lang].bonus_exp_not_ready);
+                renderBonusExp();
+                return;
+            }
+            await AdMob.prepareRewardItem({
+                adId: REWARDED_AD_UNIT_ID,
+                isTesting: false,
+            });
+            _rewardedAdReady = true;
+        } catch (e) {
+            alert(i18n[lang].bonus_exp_not_ready);
+            renderBonusExp();
+            return;
+        }
+    }
+
+    try {
+        if (btn) { btn.disabled = true; btn.textContent = i18n[lang].bonus_exp_loading; }
+        const { AdMob } = window.Capacitor.Plugins;
+        const result = await AdMob.showRewardItem();
+        _rewardedAdReady = false;
+        preloadRewardedAd._retryCount = 0;
+        preloadRewardedAd(); // 다음 광고 프리로드
+
+        // 광고 시청 완료 확인 — showRewardItem이 resolve되면 시청 완료로 간주
+        applyBonusExpReward();
+    } catch (e) {
+        console.warn('[AdMob] 보상형 광고 표시 실패:', e);
+        if (window.AppLogger) AppLogger.warn('[AdMob] 광고 표시 실패: ' + (e.message || ''));
+        _rewardedAdReady = false;
+        preloadRewardedAd._retryCount = 0;
+        preloadRewardedAd();
+        alert(i18n[lang].bonus_exp_fail);
+        renderBonusExp();
+    }
+};
+
+function applyBonusExpReward() {
+    const lang = AppState.currentLang;
+    const today = getTodayKST();
+    localStorage.setItem('bonus_exp_date', today);
+
+    // EXP(포인트) +50 지급
+    AppState.user.points += BONUS_EXP_AMOUNT;
+
+    saveUserData();
+    updatePointUI();
+    renderBonusExp();
+
+    // Analytics 이벤트
+    if (analytics) {
+        try { fbLogEvent(analytics, 'rewarded_ad_bonus_exp', { reward: BONUS_EXP_AMOUNT }); } catch {}
+    }
+
+    alert(i18n[lang].bonus_exp_reward);
+    if (window.AppLogger) AppLogger.info(`[BonusEXP] EXP +${BONUS_EXP_AMOUNT} 지급 완료`);
+}
 
 // --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
 let diarySelectedDate = getTodayStr();

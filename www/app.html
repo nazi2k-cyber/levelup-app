@@ -288,6 +288,15 @@
                     <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
                 </div>
 
+                <!-- P5: 보상형 광고 일일 보너스 EXP -->
+                <div class="system-card status-reorderable" data-card-id="bonus-exp" style="padding:15px; text-align:center; margin-top:10px;">
+                    <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-cyan);" data-i18n="bonus_exp_title">보너스 EXP</h3>
+                    <div id="bonus-exp-icon" style="font-size:2.2rem; margin:8px 0;">🎬</div>
+                    <div id="bonus-exp-status" style="font-size:0.75rem; color:var(--neon-gold); margin:6px 0;"></div>
+                    <div id="bonus-exp-timer" style="font-size:0.75rem; color:var(--neon-cyan); margin:4px 0; display:none;"></div>
+                    <button id="btn-bonus-exp" class="btn-primary" style="max-width:220px; margin:0 auto; background:linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));" onclick="window.claimBonusExp()">🎬 광고 보고 EXP 받기</button>
+                </div>
+
                 <button class="btn-myinfo" id="btn-myinfo" data-i18n="btn_myinfo">&#9881; 내 정보</button>
 
             </section>
@@ -344,6 +353,8 @@
                         <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
                         <div id="roulette-timer" style="font-size:0.75rem; color:var(--neon-cyan); margin:4px 0; display:none;"></div>
                         <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
+                    </div>
+
                     </div>
                 </div>
 
