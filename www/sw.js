@@ -229,21 +229,34 @@ async function storageImageCacheFirst(request) {
     }
 
     try {
+        // Capacitor WebView(https://localhost)에서 원본 request 모드로 fetch 시도
         const response = await fetch(request);
         if (response.ok) {
-            const headers = new Headers(response.headers);
-            headers.set('sw-cached-at', String(Date.now()));
-            const timestamped = new Response(await response.clone().blob(), {
-                status: response.status,
-                headers
-            });
-            cache.put(request, timestamped);
-            trimCache(IMAGE_CACHE, IMAGE_CACHE_MAX_ENTRIES);
+            try {
+                const headers = new Headers(response.headers);
+                headers.set('sw-cached-at', String(Date.now()));
+                const timestamped = new Response(await response.clone().blob(), {
+                    status: response.status,
+                    headers
+                });
+                cache.put(request, timestamped);
+                trimCache(IMAGE_CACHE, IMAGE_CACHE_MAX_ENTRIES);
+            } catch (cacheErr) {
+                // 캐시 저장 실패 무시 — 응답은 반환
+            }
         }
         return response;
     } catch (err) {
-        if (cached) return cached;
-        return new Response('', { status: 503, statusText: 'Service Unavailable' });
+        // 원본 fetch 실패 시, no-cors 모드로 재시도 (CORS 차단 우회)
+        try {
+            const noCorsResponse = await fetch(request.url, { mode: 'no-cors', credentials: 'omit' });
+            return noCorsResponse;
+        } catch (noCorsErr) {
+            // no-cors도 실패 — 캐시 반환 또는 네트워크 에러 전파
+            if (cached) return cached;
+            // 503 대신 네트워크 에러를 그대로 전파하여 클라이언트 onerror가 정상 동작하도록 함
+            throw err;
+        }
     }
 }
 

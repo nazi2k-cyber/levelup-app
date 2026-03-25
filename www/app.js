@@ -162,12 +162,56 @@ try {
 // --- 프로필 이미지 기본값 & 안전한 로드 ---
 const DEFAULT_PROFILE_SVG = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23555%27%3E%3Cpath d=%27M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%27/%3E%3C/svg%3E";
 
+// --- Firebase Storage 이미지 로드 헬퍼 (WebView fetch+blob 폴백) ---
+const _blobUrlCache = new Map();
+const _BLOB_CACHE_MAX = 100;
+
+async function _fetchAsBlobUrl(url) {
+    const cached = _blobUrlCache.get(url);
+    if (cached) return cached;
+    try {
+        const resp = await fetch(url, { mode: 'cors', credentials: 'omit' });
+        if (!resp.ok) return null;
+        const blob = await resp.blob();
+        if (!blob || blob.size === 0) return null;
+        const blobUrl = URL.createObjectURL(blob);
+        if (_blobUrlCache.size >= _BLOB_CACHE_MAX) {
+            const firstKey = _blobUrlCache.keys().next().value;
+            URL.revokeObjectURL(_blobUrlCache.get(firstKey));
+            _blobUrlCache.delete(firstKey);
+        }
+        _blobUrlCache.set(url, blobUrl);
+        return blobUrl;
+    } catch (e) {
+        return null;
+    }
+}
+
+// 글로벌 함수: innerHTML onerror에서 호출 가능
+// fallbackSrc: 실패 시 대체 이미지 (없으면 숨김)
+// hideAndShowNext: true면 실패 시 img 숨기고 nextElementSibling 표시
+window._retryFirebaseImg = function(imgEl, originalUrl, fallbackSrc, hideAndShowNext) {
+    _fetchAsBlobUrl(originalUrl).then(blobUrl => {
+        if (blobUrl) { imgEl.src = blobUrl; }
+        else if (fallbackSrc) { imgEl.src = fallbackSrc; }
+        else if (hideAndShowNext) { imgEl.style.display = 'none'; if (imgEl.nextElementSibling) imgEl.nextElementSibling.style.display = ''; }
+        else { imgEl.style.display = 'none'; }
+    }).catch(() => {
+        if (fallbackSrc) imgEl.src = fallbackSrc;
+        else if (hideAndShowNext) { imgEl.style.display = 'none'; if (imgEl.nextElementSibling) imgEl.nextElementSibling.style.display = ''; }
+        else imgEl.style.display = 'none';
+    });
+};
+
 function setProfilePreview(url) {
     const el = document.getElementById('profilePreview');
     if (!el) return;
+    if (!url || url === DEFAULT_PROFILE_SVG) { el.src = url || DEFAULT_PROFILE_SVG; return; }
+    const cached = _blobUrlCache.get(url);
+    if (cached) { el.src = cached; return; }
     el.onerror = function() {
         this.onerror = null;
-        this.src = DEFAULT_PROFILE_SVG;
+        window._retryFirebaseImg(this, url, DEFAULT_PROFILE_SVG);
     };
     el.src = url;
 }
@@ -2965,7 +3009,7 @@ function renderRaidParticipants(participants) {
         return `
         <div class="user-card ${u.isMe ? 'my-rank' : ''}" style="padding:8px;">
             <div style="display:flex; align-items:center; flex-grow:1;">
-                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display=''" style="width:28px; height:28px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:28px; height:28px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:28px; height:28px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:28px; height:28px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:28px; height:28px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:28px; height:28px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
                 <div>
                     ${titleBadgeHTML}
                     <div style="font-size:0.8rem; display:flex; align-items:center;">
@@ -3471,7 +3515,7 @@ function renderUsers(criteria, btn = null) {
         <div class="user-card ${u.isMe ? 'my-rank' : ''}">
             <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
             <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display=''" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
                 <div class="user-info" style="margin-left:0;">
                     ${titleBadgeHTML}
                     <div style="font-size:0.9rem; display:flex; align-items:center;">
@@ -6126,7 +6170,16 @@ function loadPlannerForDate(dateStr) {
         const preview = document.getElementById('planner-photo-preview');
         const placeholder = document.getElementById('planner-photo-placeholder');
         const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) { preview.src = saved.photo; preview.classList.remove('d-none'); }
+        if (preview) {
+            if (saved.photo && saved.photo.startsWith('http')) {
+                preview.onerror = function() {
+                    this.onerror = null;
+                    window._retryFirebaseImg(this, saved.photo);
+                };
+            }
+            preview.src = saved.photo;
+            preview.classList.remove('d-none');
+        }
         if (placeholder) placeholder.classList.add('d-none');
         if (removeBtn) removeBtn.classList.remove('d-none');
 
@@ -6897,7 +6950,7 @@ function renderReelsCards(posts, lang) {
 
         const cardHTML = `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
-                <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
+                <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(profileSrc)}','${DEFAULT_PROFILE_SVG}')" alt="">
                 <div class="reels-user-info">
                     <div class="reels-username">${sanitizeText(post.userName || '헌터')}${instaLink}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
@@ -6905,7 +6958,7 @@ function renderReelsCards(posts, lang) {
                 </div>
                 <div class="reels-time">${formatReelsTime(post.timestamp)}</div>
             </div>
-            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(post.photo)}" alt="Timetable"></div>` : ''}
+            ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(post.photo)}" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(post.photo)}')" alt="Timetable"></div>` : ''}
             ${post.caption ? `<div class="reels-caption">${sanitizeText(post.caption).replace(/\n/g,'<br>')}</div>` : ''}
             <div class="reels-timetable">
                 <div class="reels-timetable-title" ${moreCount > 0 ? `onclick="toggleScheduleFold('${postId}')" style="cursor:pointer;"` : ''}>
@@ -7205,7 +7258,7 @@ function renderCommentsSection(postId, comments) {
             const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(c.instaId)}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
             const timeAgo = getTimeAgo(c.timestamp, lang);
             return `<div class="reels-comment-item">
-                <img class="reels-comment-avatar" src="${cPhoto}" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_SVG}'" alt="">
+                <img class="reels-comment-avatar" src="${cPhoto}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(cPhoto)}','${DEFAULT_PROFILE_SVG}')" alt="">
                 <div class="reels-comment-body">
                     <div class="reels-comment-meta">
                         <span class="reels-comment-name">${sanitizeText(c.name || '헌터')}</span>${instaBtn}
