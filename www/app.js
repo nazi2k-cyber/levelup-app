@@ -3120,7 +3120,7 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList();
+        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderLifeStatus();
     } else {
         mainEl.style.overflowY = 'auto';
     }
@@ -8148,3 +8148,193 @@ window.selectDDayType = selectDDayType;
 window.saveDDayFromModal = saveDDayFromModal;
 window.deleteDDay = deleteDDay;
 window.closeDDayModal = closeDDayModal;
+
+// ===================== LIFE STATUS 기능 =====================
+
+const LIFE_STATUS_STORAGE_KEY = 'life_status_config';
+
+function getLifeStatusConfig() {
+    try {
+        const raw = localStorage.getItem(LIFE_STATUS_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+}
+
+function saveLifeStatusConfig(config) {
+    localStorage.setItem(LIFE_STATUS_STORAGE_KEY, JSON.stringify(config));
+}
+
+function renderLifeStatus() {
+    const container = document.getElementById('life-status-content');
+    if (!container) return;
+
+    const config = getLifeStatusConfig();
+
+    if (!config || !config.birthday) {
+        container.innerHTML = `<div style="text-align:center; padding:20px 0; color:var(--text-sub); font-size:0.85rem; line-height:1.6;">
+            생년월일을 설정하여 나의 인생 현황을 확인하세요.
+            <div style="margin-top:6px; font-size:0.75rem;">🔒 ※ 입력한 정보는 기기에만 저장되며, 서버에 전송되지 않습니다.</div>
+        </div>`;
+        return;
+    }
+
+    const now = new Date();
+    const birth = new Date(config.birthday);
+    const expectAge = config.expectAge || 80;
+
+    // 살아온 날
+    const daysLived = Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+
+    // 현재 나이 (만 나이)
+    let currentAge = now.getFullYear() - birth.getFullYear();
+    const mDiff = now.getMonth() - birth.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && now.getDate() < birth.getDate())) currentAge--;
+
+    // 기대 수명 날짜
+    const expectDate = new Date(birth);
+    expectDate.setFullYear(expectDate.getFullYear() + expectAge);
+
+    // 남은 시간
+    const remainMs = Math.max(0, expectDate.getTime() - now.getTime());
+    const remainDays = Math.floor(remainMs / (1000 * 60 * 60 * 24));
+    const remainYears = Math.floor(remainDays / 365);
+    const remainMonths = Math.floor((remainDays % 365) / 30);
+    const remainHours = Math.floor(remainMs / (1000 * 60 * 60));
+
+    // 인생 진행률
+    const totalDays = Math.floor((expectDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+    const progress = Math.min(100, Math.max(0, (daysLived / totalDays) * 100));
+
+    container.innerHTML = `
+        <div class="life-status-item">
+            <div>
+                <div class="ls-label">📅 살아온 날</div>
+                <div class="ls-sub">현재 나이: ${currentAge}세</div>
+            </div>
+            <div class="ls-value blue">${daysLived.toLocaleString()}일</div>
+        </div>
+        <div class="life-status-item">
+            <div>
+                <div class="ls-label">⏳ 남은 시간</div>
+                <div class="ls-sub">${expectAge}세 기준</div>
+            </div>
+            <div class="ls-value gold">${remainYears}년 ${remainMonths}개월</div>
+        </div>
+        <div class="life-status-item">
+            <div>
+                <div class="ls-label">⏰ 남은 시간 (시간)</div>
+                <div class="ls-sub">${expectAge}세 기준</div>
+            </div>
+            <div class="ls-value gold">${remainHours.toLocaleString()}시간</div>
+        </div>
+        <div class="life-status-item">
+            <div style="width:100%;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="ls-label">📊 인생 진행률 (${expectAge}세)</div>
+                    <div class="ls-value gold" style="font-size:1rem;">${progress.toFixed(1)}%</div>
+                </div>
+                <div class="life-status-progress-bar">
+                    <div class="life-status-progress-fill" style="width:${progress.toFixed(1)}%;"></div>
+                </div>
+            </div>
+        </div>`;
+}
+
+function openLifeStatusSettings() {
+    const config = getLifeStatusConfig() || {};
+    const overlay = document.createElement('div');
+    overlay.className = 'report-modal-overlay';
+    overlay.id = 'life-status-modal-overlay';
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const savedBirthday = config.birthday || '';
+    const savedAge = config.expectAge || 80;
+
+    const ageOptions = [60,65,70,75,80,85,90,95,100].map(a =>
+        `<option value="${a}" ${a === savedAge ? 'selected' : ''}>${a}세</option>`
+    ).join('');
+
+    overlay.innerHTML = `
+    <div class="report-modal-content" style="max-width:340px; padding:20px;">
+        <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">Life Status 설정</div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">생년월일</label>
+            <input id="ls-input-birthday" type="date" value="${savedBirthday}" max="${todayStr}"
+                style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">기대 나이</label>
+            <select id="ls-input-expect-age"
+                style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+                ${ageOptions}
+            </select>
+        </div>
+        <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:14px;">🔒 입력한 정보는 기기에만 저장되며, 서버에 전송되지 않습니다.</div>
+        <div id="ls-loading-msg" style="display:none; text-align:center; padding:8px 0; font-size:0.8rem; color:var(--neon-blue);">계산 중입니다...</div>
+        <div style="display:flex; gap:8px;">
+            ${config.birthday ? `<button onclick="resetLifeStatus()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">초기화</button>` : ''}
+            <button onclick="closeLifeStatusModal()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">취소</button>
+            <button onclick="saveLifeStatusFromModal()" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">저장</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('active'));
+}
+
+function saveLifeStatusFromModal() {
+    const birthday = document.getElementById('ls-input-birthday')?.value || '';
+    const expectAge = parseInt(document.getElementById('ls-input-expect-age')?.value) || 80;
+
+    if (!birthday) { alert('생년월일을 입력하세요.'); return; }
+
+    const loadingMsg = document.getElementById('ls-loading-msg');
+    let loadingShown = false;
+
+    // 1초 이상 소요 시 로딩 안내문구 표시
+    const loadingTimer = setTimeout(() => {
+        if (loadingMsg) { loadingMsg.style.display = 'block'; loadingShown = true; }
+    }, 1000);
+
+    // 비동기로 처리하여 로딩 타이머가 동작할 수 있도록
+    requestAnimationFrame(() => {
+        saveLifeStatusConfig({ birthday, expectAge });
+        renderLifeStatus();
+        clearTimeout(loadingTimer);
+
+        if (loadingShown) {
+            setTimeout(() => closeLifeStatusModal(), 500);
+        } else {
+            closeLifeStatusModal();
+        }
+    });
+}
+
+function resetLifeStatus() {
+    if (!confirm('Life Status 정보를 초기화하시겠습니까?')) return;
+    localStorage.removeItem(LIFE_STATUS_STORAGE_KEY);
+    closeLifeStatusModal();
+    renderLifeStatus();
+}
+
+function closeLifeStatusModal() {
+    const overlay = document.getElementById('life-status-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+
+// Life Status 이벤트 바인딩
+document.addEventListener('DOMContentLoaded', () => {
+    const settingsBtn = document.getElementById('btn-life-status-settings');
+    if (settingsBtn) settingsBtn.addEventListener('click', openLifeStatusSettings);
+    renderLifeStatus();
+});
+
+// Life Status 함수들을 window에 노출
+window.openLifeStatusSettings = openLifeStatusSettings;
+window.saveLifeStatusFromModal = saveLifeStatusFromModal;
+window.resetLifeStatus = resetLifeStatus;
+window.closeLifeStatusModal = closeLifeStatusModal;
+window.renderLifeStatus = renderLifeStatus;
