@@ -2227,20 +2227,41 @@ async function saveStatusImage() {
         async function loadImg(src) {
             if (!src) return null;
             try {
+                // data: / blob: URL은 직접 로드
                 if (src.startsWith('data:') || src.startsWith('blob:')) {
                     return await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
                 }
-                const resp = await fetch(src);
-                const blob = await resp.blob();
-                const url = URL.createObjectURL(blob);
-                const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = url; });
-                URL.revokeObjectURL(url);
-                return img;
+                // 외부 URL: crossOrigin 설정 후 로드, 실패 시 fetch fallback
+                return await new Promise((resolve) => {
+                    const i = new Image();
+                    i.crossOrigin = 'anonymous';
+                    i.onload = () => resolve(i);
+                    i.onerror = async () => {
+                        // crossOrigin 실패 시 fetch로 재시도
+                        try {
+                            const resp = await fetch(src);
+                            const blob = await resp.blob();
+                            const url = URL.createObjectURL(blob);
+                            const i2 = new Image();
+                            i2.onload = () => { URL.revokeObjectURL(url); resolve(i2); };
+                            i2.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+                            i2.src = url;
+                        } catch(e) { resolve(null); }
+                    };
+                    i.src = src;
+                });
             } catch(e) { return null; }
         }
 
+        // 프로필 이미지: DOM 요소 → AppState.user.photoURL → 기본 SVG 순으로 시도
         const profileEl = document.getElementById('profilePreview');
-        const profileImg = profileEl ? await loadImg(profileEl.src) : null;
+        let profileImg = null;
+        if (profileEl && profileEl.src) {
+            profileImg = await loadImg(profileEl.src);
+        }
+        if (!profileImg && AppState.user.photoURL) {
+            profileImg = await loadImg(AppState.user.photoURL);
+        }
 
         // 유저 정보
         const userName = AppState.user.name || i18n[lang].prof_name || 'Player';
