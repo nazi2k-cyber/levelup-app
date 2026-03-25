@@ -3461,6 +3461,33 @@ async function renderQuote() {
     }
 }
 
+// --- 명언 텍스트 복사 ---
+window.copyQuoteText = function() {
+    const quoteEl = document.getElementById('daily-quote');
+    const authorEl = document.getElementById('daily-quote-author');
+    if (!quoteEl || !authorEl) return;
+
+    const quoteText = quoteEl.innerText || '';
+    const authorText = authorEl.innerText || '';
+    if (!quoteText) return;
+
+    const text = `${quoteText}\n${authorText}`;
+    const lang = AppState.currentLang;
+    const msgs = { ko: '명언이 클립보드에 복사되었습니다.', en: 'Quote copied to clipboard.', ja: '名言がクリップボードにコピーされました。' };
+
+    navigator.clipboard.writeText(text).then(() => {
+        alert(msgs[lang] || msgs.ko);
+    }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert(msgs[lang] || msgs.ko);
+    });
+};
+
 // --- 소셜 탭 ---
 async function fetchSocialData() {
     const container = document.getElementById('user-list-container');

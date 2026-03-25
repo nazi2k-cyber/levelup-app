@@ -291,10 +291,11 @@
                     </div>
                 </div>
 
-                <div class="system-card status-reorderable" data-card-id="daily-quote" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 10px;">
+                <div class="system-card status-reorderable" data-card-id="daily-quote" style="text-align: center; padding: 20px 15px; margin-top: 15px; margin-bottom: 10px; position: relative;">
                     <div style="font-size: 1.2rem; color: var(--neon-blue); margin-bottom: 8px;">❝</div>
                     <div id="daily-quote" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; line-height: 1.5; word-break: keep-all; font-style: italic;"></div>
-                    <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
+                    <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold; margin-bottom: 8px;"></div>
+                    <button id="btn-copy-quote" onclick="copyQuoteText()" style="background: none; border: 1px solid var(--neon-blue, #00bfff); color: var(--neon-blue, #00bfff); font-size: 0.7rem; padding: 4px 12px; border-radius: 12px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📋 복사</button>
                 </div>
 
                 <button class="btn-myinfo" id="btn-myinfo" data-i18n="btn_myinfo">&#9881; 내 정보</button>
