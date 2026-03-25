@@ -8199,7 +8199,17 @@ function renderLifeStatus() {
     const remainDays = Math.floor(remainMs / (1000 * 60 * 60 * 24));
     const remainYears = Math.floor(remainDays / 365);
     const remainMonths = Math.floor((remainDays % 365) / 30);
-    const remainHours = Math.floor(remainMs / (1000 * 60 * 60));
+
+    // 괄호 안 단위 계산
+    const remainUnit = config.remainUnit || 'hours';
+    let remainDetail = '';
+    if (remainUnit === 'hours') {
+        remainDetail = `${Math.floor(remainMs / (1000 * 60 * 60)).toLocaleString()}시간`;
+    } else if (remainUnit === 'days') {
+        remainDetail = `${remainDays.toLocaleString()}일`;
+    } else if (remainUnit === 'weeks') {
+        remainDetail = `${Math.floor(remainDays / 7).toLocaleString()}주`;
+    }
 
     // 인생 진행률
     const totalDays = Math.floor((expectDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
@@ -8218,14 +8228,10 @@ function renderLifeStatus() {
                 <div class="ls-label">⏳ 남은 시간</div>
                 <div class="ls-sub">${expectAge}세 기준</div>
             </div>
-            <div class="ls-value gold">${remainYears}년 ${remainMonths}개월</div>
-        </div>
-        <div class="life-status-item">
-            <div>
-                <div class="ls-label">⏰ 남은 시간 (시간)</div>
-                <div class="ls-sub">${expectAge}세 기준</div>
+            <div style="text-align:right;">
+                <div class="ls-value gold">${remainYears}년 ${remainMonths}개월</div>
+                <div style="font-size:0.75rem; color:var(--neon-blue); margin-top:2px;">(${remainDetail})</div>
             </div>
-            <div class="ls-value gold">${remainHours.toLocaleString()}시간</div>
         </div>
         <div class="life-status-item">
             <div style="width:100%;">
@@ -8249,10 +8255,17 @@ function openLifeStatusSettings() {
     const todayStr = new Date().toISOString().split('T')[0];
     const savedBirthday = config.birthday || '';
     const savedAge = config.expectAge || 80;
+    const savedUnit = config.remainUnit || 'hours';
 
     const ageOptions = [60,65,70,75,80,85,90,95,100].map(a =>
         `<option value="${a}" ${a === savedAge ? 'selected' : ''}>${a}세</option>`
     ).join('');
+
+    const unitOptions = [
+        { value: 'hours', label: '시간' },
+        { value: 'days', label: '일' },
+        { value: 'weeks', label: '주' }
+    ].map(u => `<option value="${u.value}" ${u.value === savedUnit ? 'selected' : ''}>${u.label}</option>`).join('');
 
     overlay.innerHTML = `
     <div class="report-modal-content" style="max-width:340px; padding:20px;">
@@ -8262,11 +8275,18 @@ function openLifeStatusSettings() {
             <input id="ls-input-birthday" type="date" value="${savedBirthday}" max="${todayStr}"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
         </div>
-        <div style="margin-bottom:14px;">
+        <div style="margin-bottom:12px;">
             <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">기대 나이</label>
             <select id="ls-input-expect-age"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
                 ${ageOptions}
+            </select>
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">남은 시간 단위</label>
+            <select id="ls-input-remain-unit"
+                style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
+                ${unitOptions}
             </select>
         </div>
         <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:14px;">🔒 입력한 정보는 기기에만 저장되며, 서버에 전송되지 않습니다.</div>
@@ -8285,6 +8305,7 @@ function openLifeStatusSettings() {
 function saveLifeStatusFromModal() {
     const birthday = document.getElementById('ls-input-birthday')?.value || '';
     const expectAge = parseInt(document.getElementById('ls-input-expect-age')?.value) || 80;
+    const remainUnit = document.getElementById('ls-input-remain-unit')?.value || 'hours';
 
     if (!birthday) { alert('생년월일을 입력하세요.'); return; }
 
@@ -8298,7 +8319,7 @@ function saveLifeStatusFromModal() {
 
     // 비동기로 처리하여 로딩 타이머가 동작할 수 있도록
     requestAnimationFrame(() => {
-        saveLifeStatusConfig({ birthday, expectAge });
+        saveLifeStatusConfig({ birthday, expectAge, remainUnit });
         renderLifeStatus();
         clearTimeout(loadingTimer);
 
