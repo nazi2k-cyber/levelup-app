@@ -217,7 +217,9 @@ const i18n = {
         pomo_notif_done_title: "🎉 뽀모도로 4세트 완료!", pomo_notif_done_body: "대단해요! 긴 휴식을 가지세요.",
         pomo_settings_title: "뽀모도로 설정",
         pomo_focus_min: "집중 시간 (분)", pomo_break_min: "휴식 시간 (분)", pomo_long_break_min: "긴 휴식 (분)",
-        pomo_save: "저장", pomo_reward: "4세트 완료: +10P & AGI +0.3"
+        pomo_save: "저장", pomo_reward: "4세트 완료: +10P & AGI +0.3",
+        pomo_guide_title: "사용 방법",
+        pomo_guide_body: "1. 시작 버튼을 눌러 집중 타이머를 시작하세요.<br>2. 집중 시간이 끝나면 자동으로 휴식이 시작됩니다.<br>3. 4세트를 완료하면 긴 휴식이 주어집니다.<br>4. 매일 4세트 완료 시 +10P & AGI +0.3 보상!"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -433,7 +435,9 @@ const i18n = {
         pomo_notif_done_title: "🎉 4 Pomodoros Complete!", pomo_notif_done_body: "Great job! Take a long break.",
         pomo_settings_title: "Pomodoro Settings",
         pomo_focus_min: "Focus (min)", pomo_break_min: "Break (min)", pomo_long_break_min: "Long Break (min)",
-        pomo_save: "Save", pomo_reward: "4 sets done: +10P & AGI +0.3"
+        pomo_save: "Save", pomo_reward: "4 sets done: +10P & AGI +0.3",
+        pomo_guide_title: "How to Use",
+        pomo_guide_body: "1. Tap Start to begin the focus timer.<br>2. A break starts automatically after focus ends.<br>3. A long break is given after 4 sets.<br>4. Complete 4 sets daily for +10P & AGI +0.3 reward!"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -649,7 +653,9 @@ const i18n = {
         pomo_notif_done_title: "🎉 ポモドーロ4セット完了！", pomo_notif_done_body: "素晴らしい！長い休憩をとりましょう。",
         pomo_settings_title: "ポモドーロ設定",
         pomo_focus_min: "集中時間（分）", pomo_break_min: "休憩時間（分）", pomo_long_break_min: "長い休憩（分）",
-        pomo_save: "保存", pomo_reward: "4セット完了: +10P & AGI +0.3"
+        pomo_save: "保存", pomo_reward: "4セット完了: +10P & AGI +0.3",
+        pomo_guide_title: "使い方",
+        pomo_guide_body: "1. 開始ボタンを押して集中タイマーを開始します。<br>2. 集中時間が終わると自動的に休憩が始まります。<br>3. 4セット完了で長い休憩が与えられます。<br>4. 毎日4セット完了で +10P & AGI +0.3 報酬！"
     }
 };
 

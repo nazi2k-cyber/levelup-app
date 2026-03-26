@@ -9707,6 +9707,10 @@ window.renderLifeStatus = renderLifeStatus;
                     <button onclick="window.savePomoSettingsFromModal()" class="btn-primary" style="flex:1; padding:10px; border-radius:8px; background:linear-gradient(135deg, var(--neon-red), #ff6b3c);">${lang.pomo_save || '저장'}</button>
                     <button onclick="window.closePomoSettings()" style="flex:1; padding:10px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border-color); color:var(--text-sub); cursor:pointer;">✕</button>
                 </div>
+                <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border-color);">
+                    <div style="font-size:0.75rem; font-weight:700; color:var(--neon-gold); margin-bottom:8px;">${lang.pomo_guide_title || '사용 방법'}</div>
+                    <div style="font-size:0.7rem; color:var(--text-sub); line-height:1.6;">${lang.pomo_guide_body || '1. 시작 버튼을 눌러 집중 타이머를 시작하세요.<br>2. 집중 시간이 끝나면 자동으로 휴식 시간이 시작됩니다.<br>3. 4세트를 완료하면 긴 휴식이 주어집니다.<br>4. 매일 4세트 완료 시 +10P & AGI +0.3 보상!'}</div>
+                </div>
             </div>
         `;
         overlay.addEventListener('click', (e) => { if (e.target === overlay) window.closePomoSettings(); });
