@@ -44,6 +44,7 @@
             <button class="tab-btn" data-tab="analytics">유저 분석</button>
             <button class="tab-btn" data-tab="usermgmt">유저 관리</button>
             <button class="tab-btn" data-tab="screening">포스팅 스크리닝</button>
+            <button class="tab-btn" data-tab="autoscreen">자동 스크리닝</button>
             <button class="tab-btn" data-tab="reports">신고 관리</button>
         </nav>
 
@@ -55,6 +56,7 @@
         <div id="tab-analytics" class="tab-content"></div>
         <div id="tab-usermgmt" class="tab-content"></div>
         <div id="tab-screening" class="tab-content"></div>
+        <div id="tab-autoscreen" class="tab-content"></div>
         <div id="tab-reports" class="tab-content"></div>
     </div>
 </div>
@@ -85,6 +87,7 @@ import { initDashboard, loadDashboard } from "./js/dashboard.js";
 import { initUserAnalytics, loadUserAnalytics } from "./js/user-analytics.js";
 import { initUserManagement } from "./js/user-management.js";
 import { initPostScreening } from "./js/post-screening.js";
+import { initAutoScreening } from "./js/auto-screening.js";
 import { initReportManagement } from "./js/report-management.js";
 
 // Initialize log panel and tabs
@@ -137,6 +140,7 @@ onAdminAuth((user, admin, master, operator) => {
         initUserAnalytics("tab-analytics");
         initUserManagement("tab-usermgmt");
         initPostScreening("tab-screening");
+        initAutoScreening("tab-autoscreen");
         initReportManagement("tab-reports");
 
         if (admin) { loadDashboard(); loadUserAnalytics(); }

@@ -235,6 +235,22 @@ service cloud.firestore {
     }
 
     // ──────────────────────────────────────────────
+    // screening_results: 자동 스크리닝 결과 (관리자만 읽기, Cloud Functions에서 쓰기)
+    // ──────────────────────────────────────────────
+    match /screening_results/{resultId} {
+      allow read: if request.auth != null && isAdminOrOperator();
+      allow write: if false;
+    }
+
+    // ──────────────────────────────────────────────
+    // screening_config: 자동 스크리닝 설정 (관리자만 읽기/쓰기 via Cloud Functions)
+    // ──────────────────────────────────────────────
+    match /screening_config/{docId} {
+      allow read: if request.auth != null && isAdminOrOperator();
+      allow write: if false;
+    }
+
+    // ──────────────────────────────────────────────
     // app_error_logs: 인증 유저가 본인 에러 로그만 생성 (디버깅용)
     // ──────────────────────────────────────────────
     match /app_error_logs/{logId} {
