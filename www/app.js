@@ -9503,12 +9503,58 @@ window.renderLifeStatus = renderLifeStatus;
         updatePomoUI();
     }
 
-    function onPhaseComplete() {
+    function showPomoCompleteNotification(phase) {
         const lang = i18n[AppState.currentLang] || i18n.ko;
+        let title, body;
+        if (phase === 'focus') {
+            title = lang.pomo_notif_focus_title || '🍅 집중 시간 종료!';
+            body = lang.pomo_notif_focus_body || '잘했어요! 휴식 시간입니다.';
+        } else if (phase === 'longBreak') {
+            title = lang.pomo_notif_done_title || '🎉 뽀모도로 4세트 완료!';
+            body = lang.pomo_notif_done_body || '대단해요! 긴 휴식을 가지세요.';
+        } else {
+            title = lang.pomo_notif_break_title || '⏰ 휴식 종료!';
+            body = lang.pomo_notif_break_body || '다시 집중할 시간입니다!';
+        }
+
+        // Cancel the scheduled notification since phase already completed
+        cancelPomoNotification();
+
+        // Always show in-app banner (works in foreground)
+        if (typeof showInAppNotification === 'function') {
+            showInAppNotification(title, body, { tab: 'status' });
+        }
+
+        // Also fire an immediate local notification for background/lock screen
+        try {
+            const cap = window.Capacitor;
+            if (cap && cap.Plugins && cap.Plugins.LocalNotifications) {
+                const { LocalNotifications } = cap.Plugins;
+                LocalNotifications.schedule({
+                    notifications: [{
+                        title: title,
+                        body: body,
+                        id: POMO_NOTIF_ID + 1,
+                        channelId: POMO_CHANNEL_ID,
+                        sound: 'default',
+                        schedule: { at: new Date(Date.now() + 500) }
+                    }]
+                });
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, { body, icon: '/res/mipmap-xxxhdpi/ic_launcher.png' });
+            }
+        } catch(e) {
+            console.warn('[Pomodoro] 즉시 알림 실패:', e);
+        }
+    }
+
+    function onPhaseComplete() {
+        const completedPhase = pomoState.phase;
 
         if (pomoState.phase === 'focus') {
             pomoState.completedSessions++;
             playPomoSound();
+            showPomoCompleteNotification(completedPhase);
 
             if (pomoState.completedSessions >= 4) {
                 // 4 sessions complete → long break + reward
@@ -9520,6 +9566,7 @@ window.renderLifeStatus = renderLifeStatus;
         } else {
             // Break or long break ended
             playPomoSound();
+            showPomoCompleteNotification(completedPhase);
             if (pomoState.phase === 'longBreak') {
                 // Full cycle done
                 pomoState.completedSessions = 0;
@@ -9740,6 +9787,26 @@ window.renderLifeStatus = renderLifeStatus;
         }
     };
 
+    // Register foreground local notification listener for Pomodoro
+    function initPomoLocalNotifListener() {
+        try {
+            const cap = window.Capacitor;
+            if (cap && cap.Plugins && cap.Plugins.LocalNotifications) {
+                const { LocalNotifications } = cap.Plugins;
+                LocalNotifications.addListener('localNotificationReceived', (notification) => {
+                    if (notification.id === POMO_NOTIF_ID || notification.id === POMO_NOTIF_ID + 1) {
+                        // Show in-app banner when local notification fires while app is in foreground
+                        if (typeof showInAppNotification === 'function') {
+                            showInAppNotification(notification.title, notification.body, { tab: 'status' });
+                        }
+                    }
+                });
+            }
+        } catch(e) {
+            console.warn('[Pomodoro] 로컬 알림 리스너 등록 실패:', e);
+        }
+    }
+
     // Init on DOM ready
     document.addEventListener('DOMContentLoaded', () => {
         const settings = getPomoSettings();
@@ -9749,5 +9816,7 @@ window.renderLifeStatus = renderLifeStatus;
 
         const settingsBtn = document.getElementById('btn-pomo-settings');
         if (settingsBtn) settingsBtn.addEventListener('click', window.openPomoSettings);
+
+        initPomoLocalNotifListener();
     });
 })();
