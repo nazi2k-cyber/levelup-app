@@ -2022,6 +2022,21 @@ async function handleBatchScreenPosts(request) {
     let flaggedCount = 0;
     let autoDeletedCount = 0;
     let autoHiddenCount = 0;
+    let skippedCount = 0;
+
+    // 상세 통계
+    let textScreenedCount = 0;
+    let textFlaggedCount = 0;
+    let imageScreenedCount = 0;
+    let imageFlaggedCount = 0;
+    let nsfwjsCount = 0;
+    let azureCount = 0;
+    let nsfwjsFlaggedCount = 0;
+    let azureFlaggedCount = 0;
+
+    const textEnabled = config.settings.textScreeningEnabled !== false;
+    const imageEnabled = !!config.settings.imageScreeningEnabled;
+    const azureEnabled = !!config.settings.azureEnabled;
 
     for (const userDoc of usersSnap.docs) {
         const data = userDoc.data();
@@ -2037,7 +2052,7 @@ async function handleBatchScreenPosts(request) {
             // 이미 스크리닝된 포스트는 스킵
             const postId = `${userDoc.id}_${post.timestamp}`;
             const existingDoc = await db.collection("screening_results").doc(postId).get();
-            if (existingDoc.exists) continue;
+            if (existingDoc.exists) { skippedCount++; continue; }
 
             screenedCount++;
             const result = await executeScreening({
@@ -2048,18 +2063,57 @@ async function handleBatchScreenPosts(request) {
                 photo: post.photo || "",
             }, config);
 
+            // 상세 통계 집계
+            if (textEnabled && post.caption) textScreenedCount++;
+            if (imageEnabled && post.photo) {
+                imageScreenedCount++;
+                nsfwjsCount++; // NSFWJS는 이미지 스크리닝 시 항상 1차로 실행
+            }
+
             if (result) {
                 flaggedCount++;
                 if (result.status === "auto_deleted") autoDeletedCount++;
                 if (result.status === "auto_hidden") autoHiddenCount++;
+                if (result.textFlags && result.textFlags.length > 0) textFlaggedCount++;
+                if (result.imageFlags) {
+                    imageFlaggedCount++;
+                    if (result.imageFlags._source === "azure") {
+                        azureCount++;
+                        azureFlaggedCount++;
+                    } else {
+                        nsfwjsFlaggedCount++;
+                    }
+                }
             }
         }
     }
 
+    // Azure 2차 호출은 NSFWJS 애매한 결과에서만 발생하므로 별도 추적
+    // azureCount는 실제 Azure 플래그 결과가 있는 경우만 카운트됨
+
     const adminEmail = request.auth.token.email || request.auth.uid;
     console.log(`[batchScreenPosts] Admin ${adminEmail}: screened=${screenedCount}, flagged=${flaggedCount}, autoDeleted=${autoDeletedCount}, autoHidden=${autoHiddenCount}`);
 
-    return { screenedCount, flaggedCount, autoDeletedCount, autoHiddenCount };
+    return {
+        screenedCount,
+        flaggedCount,
+        autoDeletedCount,
+        autoHiddenCount,
+        skippedCount,
+        detail: {
+            textEnabled,
+            imageEnabled,
+            azureEnabled,
+            textScreenedCount,
+            textFlaggedCount,
+            imageScreenedCount,
+            imageFlaggedCount,
+            nsfwjsCount,
+            azureCount,
+            nsfwjsFlaggedCount,
+            azureFlaggedCount,
+        }
+    };
 }
 
 // ─── 자동 스크리닝: 핸들러 — 스크리닝 결과 조회 ───

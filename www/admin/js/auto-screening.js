@@ -1,6 +1,6 @@
 // ─── Auto Screening Module (자동 스크리닝 관리) ───
 import { functions, httpsCallable } from "./firebase-init.js";
-import { tlog, tok, terror } from "./log-panel.js";
+import { tlog, tok, twarn, terror } from "./log-panel.js";
 
 let _container = null;
 let _results = [];
@@ -197,8 +197,64 @@ async function batchScreen() {
 
     try {
         const result = await callAdmin("batchScreenPosts");
+        const d = result.detail || {};
+
+        // 요약 로그
         tok("AutoScreen", `일괄 스크리닝 완료: ${result.screenedCount}건 스캔, ${result.flaggedCount}건 플래그`);
-        alert(`스크리닝 완료!\n\n스캔: ${result.screenedCount}건\n플래그: ${result.flaggedCount}건\n자동 삭제: ${result.autoDeletedCount}건\n자동 숨김: ${result.autoHiddenCount}건`);
+
+        // 스킵 정보
+        if (result.skippedCount > 0) {
+            tlog("AutoScreen", `기스크리닝 스킵: ${result.skippedCount}건 (이미 검사됨)`);
+        }
+
+        // 텍스트 스크리닝 상세
+        if (d.textEnabled) {
+            const textMsg = `텍스트 스크리닝: ${d.textScreenedCount}건 검사 → ${d.textFlaggedCount}건 플래그`;
+            d.textFlaggedCount > 0 ? twarn("Text", textMsg) : tok("Text", textMsg);
+        } else {
+            tlog("Text", "텍스트 스크리닝: 비활성화 상태");
+        }
+
+        // 이미지 스크리닝 상세
+        if (d.imageEnabled) {
+            const imgMsg = `이미지 스크리닝: ${d.imageScreenedCount}건 검사 → ${d.imageFlaggedCount}건 플래그`;
+            d.imageFlaggedCount > 0 ? twarn("Image", imgMsg) : tok("Image", imgMsg);
+
+            // NSFWJS 상세
+            const nsfwMsg = `NSFWJS 1차: ${d.nsfwjsCount}건 분석 → ${d.nsfwjsFlaggedCount}건 플래그`;
+            d.nsfwjsFlaggedCount > 0 ? twarn("NSFWJS", nsfwMsg) : tok("NSFWJS", nsfwMsg);
+
+            // Azure 상세
+            if (d.azureEnabled) {
+                const azMsg = `Azure 2차: ${d.azureCount}건 정밀검사 → ${d.azureFlaggedCount}건 플래그`;
+                d.azureFlaggedCount > 0 ? twarn("Azure", azMsg) : tok("Azure", azMsg);
+            } else {
+                tlog("Azure", "Azure 2차 정밀검사: 비활성화 상태");
+            }
+        } else {
+            tlog("Image", "이미지 스크리닝: 비활성화 상태");
+        }
+
+        // 자동 조치 로그
+        if (result.autoDeletedCount > 0) {
+            twarn("AutoScreen", `자동 삭제: ${result.autoDeletedCount}건`);
+        }
+        if (result.autoHiddenCount > 0) {
+            twarn("AutoScreen", `자동 숨김: ${result.autoHiddenCount}건`);
+        }
+
+        // alert에도 상세 정보 포함
+        let alertMsg = `스크리닝 완료!\n\n` +
+            `스캔: ${result.screenedCount}건 | 플래그: ${result.flaggedCount}건\n` +
+            `자동 삭제: ${result.autoDeletedCount}건 | 자동 숨김: ${result.autoHiddenCount}건`;
+        if (result.skippedCount > 0) alertMsg += `\n스킵: ${result.skippedCount}건 (이미 검사됨)`;
+        alertMsg += `\n\n── 상세 ──`;
+        if (d.textEnabled) alertMsg += `\n텍스트: ${d.textScreenedCount}건 검사 → ${d.textFlaggedCount}건 플래그`;
+        if (d.imageEnabled) {
+            alertMsg += `\nNSFWJS: ${d.nsfwjsCount}건 분석 → ${d.nsfwjsFlaggedCount}건 플래그`;
+            if (d.azureEnabled) alertMsg += `\nAzure: ${d.azureCount}건 정밀검사 → ${d.azureFlaggedCount}건 플래그`;
+        }
+        alert(alertMsg);
         loadStats();
     } catch (e) {
         terror("AutoScreen", "일괄 스크리닝 실패: " + e.message);
