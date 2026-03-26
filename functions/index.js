@@ -1631,6 +1631,7 @@ function getOverallSeverity(textFlags, imageFlags) {
             VERY_UNLIKELY: "low"
         };
         for (const [key, likelihood] of Object.entries(imageFlags)) {
+            if (key.startsWith("_")) continue; // 메타데이터 필드 스킵 (_source, _nsfwScores 등)
             const sev = likelihoodSeverityMap[likelihood] || "low";
             if (sev !== "low") hasAnyFlag = true;
             if ((SEVERITY_ORDER[sev] || 0) > (SEVERITY_ORDER[maxSev] || 0)) {
@@ -1803,12 +1804,21 @@ async function screenImage(photoUrl, settings, meta) {
 
     // 1차: NSFWJS 로컬 스크리닝
     const localResult = await screenImageLocal(photoUrl);
-    if (localResult && meta) meta.nsfwjsRan = true;
 
-    if (localResult) {
+    if (!localResult) {
+        // NSFWJS 실패 (모델 로드 실패, 이미지 다운로드 실패 등)
+        if (meta) {
+            meta.nsfwjsVerdict = "error";
+            meta.errors.push("NSFWJS 이미지 분석 실패 (모델 또는 이미지 오류)");
+        }
+        console.warn(`[screenImage] NSFWJS 1차 실패 → Azure fallback 시도`);
+    } else {
+        if (meta) meta.nsfwjsScores = localResult;
+
         // 명확한 부적절 이미지 → 즉시 플래그 (Azure 호출 불필요)
         if (localResult.porn > 0.80 || localResult.hentai > 0.80) {
-            console.log(`[screenImage] NSFWJS 1차 판정: 명확한 부적절 (Porn=${localResult.porn.toFixed(2)}, Hentai=${localResult.hentai.toFixed(2)})`);
+            if (meta) meta.nsfwjsVerdict = "flagged";
+            console.log(`[screenImage] NSFWJS 1차 판정: 부적절 (Porn=${localResult.porn.toFixed(2)}, Hentai=${localResult.hentai.toFixed(2)})`);
             return {
                 adult: nsfwProbToLikelihood(localResult.porn),
                 violence: "VERY_UNLIKELY",
@@ -1822,21 +1832,35 @@ async function screenImage(photoUrl, settings, meta) {
 
         // 명확한 일반 이미지 → 통과 (Azure 호출 불필요)
         if (localResult.neutral > 0.90 || localResult.drawing > 0.90) {
+            if (meta) meta.nsfwjsVerdict = "safe";
             console.log(`[screenImage] NSFWJS 1차 판정: 안전 (Neutral=${localResult.neutral.toFixed(2)}, Drawing=${localResult.drawing.toFixed(2)})`);
             return null; // 플래그 없음
         }
 
+        // 애매한 결과 → Azure 2차 검사 대상
+        if (meta) meta.nsfwjsVerdict = "ambiguous";
         console.log(`[screenImage] NSFWJS 1차 판정: 애매 (Sexy=${localResult.sexy.toFixed(2)}, Porn=${localResult.porn.toFixed(2)}) → Azure 2차 검사`);
     }
 
-    // 2차: Azure Content Safety 정밀 스크리닝 (NSFWJS 실패 시에도 fallback)
+    // 2차: Azure Content Safety 정밀 스크리닝 (NSFWJS 애매/실패 시)
     if (settings?.azureEnabled) {
-        if (meta) meta.azureRan = true;
         const azureResult = await screenImageAzure(photoUrl);
         if (azureResult) {
             azureResult._source = "azure";
             if (localResult) azureResult._nsfwScores = localResult;
+            // Azure 결과에서 플래그 여부 판정
+            const hasAzureFlag = ["adult", "violence", "racy", "hate", "selfHarm"].some(
+                k => azureResult[k] && azureResult[k] !== "VERY_UNLIKELY" && azureResult[k] !== "UNLIKELY"
+            );
+            if (meta) meta.azureVerdict = hasAzureFlag ? "flagged" : "clean";
+            console.log(`[screenImage] Azure 2차 판정: ${hasAzureFlag ? "플래그" : "정상"} (adult=${azureResult.adult}, violence=${azureResult.violence})`);
             return azureResult;
+        } else {
+            if (meta) {
+                meta.azureVerdict = "error";
+                meta.errors.push("Azure Content Safety 호출 실패 (API 오류/한도 초과/미설정)");
+            }
+            console.warn(`[screenImage] Azure 2차 실패 → NSFWJS fallback`);
         }
     }
 
@@ -1884,12 +1908,14 @@ async function executeScreening(post, config) {
     const { settings, keywords } = config;
     const postId = `${post.ownerUid}_${post.timestamp}`;
 
-    // 실제 실행 추적 메타데이터
+    // 실제 실행 추적 메타데이터 (verdict 기반)
     const meta = {
         textScreened: false,
         imageScreened: false,
-        nsfwjsRan: false,
-        azureRan: false,
+        nsfwjsVerdict: null,    // "safe" | "flagged" | "ambiguous" | "error" | null
+        nsfwjsScores: null,     // raw NSFWJS scores {porn, sexy, hentai, neutral, drawing}
+        azureVerdict: null,      // "clean" | "flagged" | "error" | null
+        errors: [],
     };
 
     // 텍스트 스크리닝
@@ -1919,6 +1945,13 @@ async function executeScreening(post, config) {
             overallSeverity: null,
             textFlags: [],
             imageFlags: null,
+            // 엔진 진단 데이터 (clean 결과에도 저장하여 디버깅 지원)
+            engineData: meta.imageScreened ? {
+                nsfwjsVerdict: meta.nsfwjsVerdict,
+                nsfwjsScores: meta.nsfwjsScores,
+                azureVerdict: meta.azureVerdict,
+                errors: meta.errors.length > 0 ? meta.errors : null,
+            } : null,
         });
         return { status: "clean", _meta: meta };
     }
@@ -1945,7 +1978,14 @@ async function executeScreening(post, config) {
         overallSeverity,
         status,
         reviewedBy: null,
-        reviewedAt: null
+        reviewedAt: null,
+        // 엔진 진단 데이터
+        engineData: meta.imageScreened ? {
+            nsfwjsVerdict: meta.nsfwjsVerdict,
+            nsfwjsScores: meta.nsfwjsScores,
+            azureVerdict: meta.azureVerdict,
+            errors: meta.errors.length > 0 ? meta.errors : null,
+        } : null,
     };
 
     // Firestore에 저장
@@ -2051,19 +2091,53 @@ async function handleBatchScreenPosts(request) {
     let autoHiddenCount = 0;
     let skippedCount = 0;
 
-    // 실제 실행 기반 상세 통계
+    // 실제 실행 기반 상세 통계 (verdict 기반)
     let textScreenedCount = 0;
     let textFlaggedCount = 0;
     let imageScreenedCount = 0;
     let imageFlaggedCount = 0;
+    // NSFWJS 판정별 카운트
     let nsfwjsCount = 0;
-    let azureCount = 0;
     let nsfwjsFlaggedCount = 0;
+    let nsfwjsSafeCount = 0;
+    let nsfwjsAmbiguousCount = 0;
+    let nsfwjsErrorCount = 0;
+    // Azure 실제 호출 기반 카운트
+    let azureCount = 0;
     let azureFlaggedCount = 0;
+    let azureErrorCount = 0;
 
     const textEnabled = config.settings.textScreeningEnabled !== false;
     const imageEnabled = !!config.settings.imageScreeningEnabled;
     const azureEnabled = !!config.settings.azureEnabled;
+
+    // 엔진 구동 상태 사전 점검
+    let nsfwjsModelReady = false;
+    let nsfwjsModelError = null;
+    let azureClientReady = false;
+    let azureClientError = null;
+
+    if (imageEnabled) {
+        try {
+            const model = await getNsfwModel();
+            nsfwjsModelReady = !!model;
+            if (!model) nsfwjsModelError = "NSFWJS 모델 로드 실패 (null 반환)";
+        } catch (e) {
+            nsfwjsModelError = e.message;
+        }
+        console.log(`[batchScreenPosts] NSFWJS 엔진: ${nsfwjsModelReady ? "구동 성공" : "구동 실패 — " + nsfwjsModelError}`);
+
+        if (azureEnabled) {
+            try {
+                const client = getAzureClient();
+                azureClientReady = !!client;
+                if (!client) azureClientError = "Azure 클라이언트 초기화 실패 (엔드포인트/키 미설정 또는 패키지 미설치)";
+            } catch (e) {
+                azureClientError = e.message;
+            }
+            console.log(`[batchScreenPosts] Azure 엔진: ${azureClientReady ? "구동 성공" : "구동 실패 — " + azureClientError}`);
+        }
+    }
 
     for (const userDoc of usersSnap.docs) {
         const data = userDoc.data();
@@ -2093,13 +2167,32 @@ async function handleBatchScreenPosts(request) {
                 photo: post.photo || "",
             }, config);
 
-            // _meta 기반 실제 실행 통계 집계
+            // _meta 기반 실제 실행 통계 집계 (verdict 기반)
             if (result && result._meta) {
                 const m = result._meta;
                 if (m.textScreened) textScreenedCount++;
                 if (m.imageScreened) imageScreenedCount++;
-                if (m.nsfwjsRan) nsfwjsCount++;
-                if (m.azureRan) azureCount++;
+
+                // NSFWJS 판정별 집계
+                if (m.nsfwjsVerdict) {
+                    nsfwjsCount++;
+                    if (m.nsfwjsVerdict === "safe") nsfwjsSafeCount++;
+                    else if (m.nsfwjsVerdict === "flagged") nsfwjsFlaggedCount++;
+                    else if (m.nsfwjsVerdict === "ambiguous") nsfwjsAmbiguousCount++;
+                    else if (m.nsfwjsVerdict === "error") nsfwjsErrorCount++;
+                }
+
+                // Azure 실제 호출 기반 집계 (호출된 건만 카운트)
+                if (m.azureVerdict) {
+                    azureCount++;
+                    if (m.azureVerdict === "flagged") azureFlaggedCount++;
+                    else if (m.azureVerdict === "error") azureErrorCount++;
+                }
+
+                // 오류 로그
+                for (const err of (m.errors || [])) {
+                    console.warn(`[batchScreenPosts] ${postId}: ${err}`);
+                }
             }
 
             // 플래그 통계 (clean이 아닌 경우만)
@@ -2108,11 +2201,7 @@ async function handleBatchScreenPosts(request) {
                 if (result.status === "auto_deleted") autoDeletedCount++;
                 if (result.status === "auto_hidden") autoHiddenCount++;
                 if (result.textFlags && result.textFlags.length > 0) textFlaggedCount++;
-                if (result.imageFlags) {
-                    imageFlaggedCount++;
-                    if (result.imageFlags._source === "azure") azureFlaggedCount++;
-                    else nsfwjsFlaggedCount++;
-                }
+                if (result.imageFlags) imageFlaggedCount++;
             }
         }
     }
@@ -2130,14 +2219,27 @@ async function handleBatchScreenPosts(request) {
             textEnabled,
             imageEnabled,
             azureEnabled,
+            // 엔진 구동 상태
+            nsfwjsModelReady,
+            nsfwjsModelError,
+            azureClientReady,
+            azureClientError,
+            // 텍스트 상세
             textScreenedCount,
             textFlaggedCount,
+            // 이미지 상세
             imageScreenedCount,
             imageFlaggedCount,
+            // NSFWJS 판정별 상세
             nsfwjsCount,
-            azureCount,
             nsfwjsFlaggedCount,
+            nsfwjsSafeCount,
+            nsfwjsAmbiguousCount,
+            nsfwjsErrorCount,
+            // Azure 실제 호출 기반 상세
+            azureCount,
             azureFlaggedCount,
+            azureErrorCount,
         }
     };
 }
