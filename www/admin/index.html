@@ -41,6 +41,7 @@
             <button class="tab-btn" data-tab="rules">보안 규칙</button>
             <button class="tab-btn" data-tab="claims">Claim 관리</button>
             <button class="tab-btn" data-tab="dashboard">대시보드</button>
+            <button class="tab-btn" data-tab="analytics">유저 분석</button>
             <button class="tab-btn" data-tab="usermgmt">유저 관리</button>
             <button class="tab-btn" data-tab="screening">포스팅 스크리닝</button>
             <button class="tab-btn" data-tab="reports">신고 관리</button>
@@ -51,6 +52,7 @@
         <div id="tab-rules" class="tab-content"></div>
         <div id="tab-claims" class="tab-content"></div>
         <div id="tab-dashboard" class="tab-content"></div>
+        <div id="tab-analytics" class="tab-content"></div>
         <div id="tab-usermgmt" class="tab-content"></div>
         <div id="tab-screening" class="tab-content"></div>
         <div id="tab-reports" class="tab-content"></div>
@@ -80,6 +82,7 @@ import { initDiagPermissions } from "./js/diag-permissions.js";
 import { initDiagRules } from "./js/diag-rules.js";
 import { initAdminClaims } from "./js/admin-claims.js";
 import { initDashboard, loadDashboard } from "./js/dashboard.js";
+import { initUserAnalytics, loadUserAnalytics } from "./js/user-analytics.js";
 import { initUserManagement } from "./js/user-management.js";
 import { initPostScreening } from "./js/post-screening.js";
 import { initReportManagement } from "./js/report-management.js";
@@ -131,11 +134,12 @@ onAdminAuth((user, admin, master, operator) => {
         initDiagRules("tab-rules");
         initAdminClaims("tab-claims");
         initDashboard("tab-dashboard");
+        initUserAnalytics("tab-analytics");
         initUserManagement("tab-usermgmt");
         initPostScreening("tab-screening");
         initReportManagement("tab-reports");
 
-        if (admin) loadDashboard();
+        if (admin) { loadDashboard(); loadUserAnalytics(); }
     } else {
         loginSec.classList.remove("hidden");
         adminSec.classList.add("hidden");

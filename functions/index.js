@@ -817,6 +817,81 @@ async function handleMigrateUsernames(request) {
 // Routes admin actions through the working ping function to bypass
 // per-function Cloud Run deployment/IAM issues in Gen 2.
 
+// ─── Admin: 유저 분석 핸들러 ───
+
+async function handleGetUserAnalytics(request) {
+    await assertAdmin(request);
+
+    const usersSnap = await db.collection("users").get();
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+    let totalUsers = 0;
+    let active7d = 0;
+    let active30d = 0;
+    const langCount = {};
+    const levelDistribution = { "1-10": 0, "11-30": 0, "31-50": 0, "51-100": 0, "100+": 0 };
+
+    for (const doc of usersSnap.docs) {
+        totalUsers++;
+        const data = doc.data();
+
+        // 활성 유저 계산 (streak 기반)
+        try {
+            const streak = JSON.parse(data.streakStr || "{}");
+            if (streak.lastActiveDate) {
+                const lastActive = new Date(streak.lastActiveDate).getTime();
+                if ((now - lastActive) <= sevenDays) active7d++;
+                if ((now - lastActive) <= thirtyDays) active30d++;
+            }
+        } catch (_) { /* ignore */ }
+
+        // 언어/국적 집계
+        const lang = data.lang || "ko";
+        langCount[lang] = (langCount[lang] || 0) + 1;
+
+        // 레벨 분포
+        const lv = data.level || 1;
+        if (lv <= 10) levelDistribution["1-10"]++;
+        else if (lv <= 30) levelDistribution["11-30"]++;
+        else if (lv <= 50) levelDistribution["31-50"]++;
+        else if (lv <= 100) levelDistribution["51-100"]++;
+        else levelDistribution["100+"]++;
+    }
+
+    // Firebase Auth에서 가입 경로 집계
+    let signupGoogle = 0;
+    let signupEmail = 0;
+    let signupOther = 0;
+    try {
+        const listResult = await getAuth().listUsers(1000);
+        for (const user of listResult.users) {
+            const providers = user.providerData.map(p => p.providerId);
+            if (providers.includes("google.com")) {
+                signupGoogle++;
+            } else if (providers.includes("password")) {
+                signupEmail++;
+            } else {
+                signupOther++;
+            }
+        }
+    } catch (e) {
+        console.error("[getUserAnalytics] Auth listUsers failed:", e.message);
+    }
+
+    return {
+        totalUsers,
+        active7d,
+        active30d,
+        signupGoogle,
+        signupEmail,
+        signupOther,
+        langCount,
+        levelDistribution
+    };
+}
+
 exports.ping = onCall(callableOpts, async (request) => {
     // ── Action router: handle admin actions via ping ──
     const action = request.data?.action;
@@ -863,6 +938,8 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleMigrateUsernames(request);
                 case "listAdminOperators":
                     return await handleListAdminOperators(request);
+                case "getUserAnalytics":
+                    return await handleGetUserAnalytics(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }

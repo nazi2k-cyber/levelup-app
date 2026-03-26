@@ -148,6 +148,52 @@ td { padding: 8px; border-bottom: 1px solid var(--border); }
 .gap-8 { gap: 8px; }
 .hidden { display: none !important; }
 
+/* ─── User Analytics ─── */
+.ua-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+@media (max-width: 640px) {
+    .ua-charts-row { grid-template-columns: 1fr; }
+}
+.ua-chart-box {
+    background: var(--bg-input);
+    border-radius: 10px;
+    padding: 16px;
+}
+.ua-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+}
+.ua-bar-label {
+    min-width: 64px;
+    color: var(--text);
+    white-space: nowrap;
+}
+.ua-bar-track {
+    flex: 1;
+    height: 18px;
+    background: var(--bg-deep);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.ua-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+.ua-bar-value {
+    min-width: 80px;
+    text-align: right;
+    color: var(--text);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
 /* ─── Reported Post Row Highlight ─── */
 .ps-reported { background: rgba(255, 82, 82, 0.08); }
 .ps-reported:hover { background: rgba(255, 82, 82, 0.15); }
