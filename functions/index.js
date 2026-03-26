@@ -15,10 +15,10 @@ let nsfwModel = null;
 async function getNsfwModel() {
     if (!nsfwModel) {
         try {
-            const tf = require("@tensorflow/tfjs-node");
+            require("@tensorflow/tfjs");
             const nsfw = require("nsfwjs");
             nsfwModel = await nsfw.load("MobileNetV2");
-            console.log("[NSFWJS] 모델 로드 완료 (MobileNetV2)");
+            console.log("[NSFWJS] 모델 로드 완료 (MobileNetV2, pure JS)");
         } catch (e) {
             console.warn("[NSFWJS] 모델 로드 실패:", e.message);
             return null;
@@ -1673,9 +1673,22 @@ async function screenImageLocal(photoUrl) {
     if (!model || !photoUrl) return null;
 
     try {
-        const tf = require("@tensorflow/tfjs-node");
+        const tf = require("@tensorflow/tfjs");
+        const sharp = require("sharp");
         const imageBuffer = await downloadImage(photoUrl);
-        const decodedImage = tf.node.decodeImage(imageBuffer, 3);
+
+        // sharp로 이미지 디코딩 → 224x224 RGB raw pixels
+        const { data, info } = await sharp(imageBuffer)
+            .resize(224, 224)
+            .removeAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        // raw pixel data → tf.tensor3d
+        const decodedImage = tf.tensor3d(
+            new Uint8Array(data),
+            [info.height, info.width, 3]
+        );
         const predictions = await model.classify(decodedImage);
         decodedImage.dispose();
 
