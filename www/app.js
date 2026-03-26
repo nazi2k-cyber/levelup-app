@@ -3323,6 +3323,13 @@ function switchTab(tabId, el) {
         cleanupNativeAd();
     }
 
+    // 배너 광고: 던전 탭에서만 표시
+    if (tabId === 'dungeon') {
+        showBannerAd();
+    } else {
+        hideBannerAd();
+    }
+
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); renderWeeklyChallenges(); renderRoulette(); }
     if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); updateReelsResetTimer(); }
@@ -5372,6 +5379,12 @@ const REWARDED_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8552907541';
 const REWARDED_AD_TEST_ID = 'ca-app-pub-3940256099942544/5224354917';
 const BONUS_EXP_AMOUNT = 50;
 
+// --- ★ P6: 배너 광고 (AdMob Banner Ad) — 던전 탭 ★ ---
+const BANNER_AD_UNIT_ID = 'ca-app-pub-6654057059754695/2995161826';
+const BANNER_AD_TEST_ID = 'ca-app-pub-3940256099942544/6300978111';
+let _bannerAdLoaded = false;
+let _bannerAdVisible = false;
+
 // --- ★ P5-B: 보상형 전면 광고 (AdMob Rewarded Interstitial) ★ ---
 const REWARDED_INTERSTITIAL_AD_UNIT_ID = 'ca-app-pub-6654057059754695/6916027284';
 let _rewardedInterstitialReady = false;
@@ -5503,6 +5516,16 @@ async function initAdMob() {
             });
         }
 
+        // ★ 배너 광고 이벤트 리스너
+        AdMob.addListener('onBannerAdLoaded', () => {
+            if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 로드 완료');
+        });
+        AdMob.addListener('onBannerAdFailedToLoad', (error) => {
+            _bannerAdLoaded = false;
+            _bannerAdVisible = false;
+            if (window.AppLogger) AppLogger.warn('[AdMob] 배너 광고 로드 실패: ' + JSON.stringify(error));
+        });
+
         preloadRewardedInterstitial();
     } catch (e) {
         console.warn('[AdMob] 초기화 실패:', e);
@@ -5570,6 +5593,47 @@ async function showRewardedInterstitial(context) {
         preloadRewardedInterstitial._retryCount = 0;
         preloadRewardedInterstitial();
         return false;
+    }
+}
+
+// --- 배너 광고 함수 (던전 탭 전용) ---
+async function showBannerAd() {
+    if (!_admobInitialized || !isNativePlatform) return;
+    try {
+        const { AdMob } = window.Capacitor.Plugins;
+        if (!AdMob) return;
+
+        if (_bannerAdLoaded) {
+            await AdMob.resumeBanner();
+        } else {
+            await AdMob.showBanner({
+                adId: BANNER_AD_UNIT_ID,
+                adSize: 'ADAPTIVE_BANNER',
+                position: 'BOTTOM_CENTER',
+                margin: 65,
+                isTesting: false,
+            });
+            _bannerAdLoaded = true;
+        }
+        _bannerAdVisible = true;
+        if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 표시');
+    } catch (e) {
+        console.warn('[AdMob] 배너 광고 표시 실패:', e);
+        if (window.AppLogger) AppLogger.warn('[AdMob] 배너 표시 실패: ' + (e.message || ''));
+    }
+}
+
+async function hideBannerAd() {
+    if (!_bannerAdVisible || !_admobInitialized) return;
+    try {
+        const { AdMob } = window.Capacitor.Plugins;
+        if (!AdMob) return;
+        await AdMob.hideBanner();
+        _bannerAdVisible = false;
+        if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 숨김');
+    } catch (e) {
+        console.warn('[AdMob] 배너 광고 숨김 실패:', e);
+        if (window.AppLogger) AppLogger.warn('[AdMob] 배너 숨김 실패: ' + (e.message || ''));
     }
 }
 

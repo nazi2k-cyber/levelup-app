@@ -55,8 +55,8 @@
 |------|------|
 | **사이즈** | Adaptive Banner (화면 너비에 맞춰 자동 조정) |
 | **위치** | 하단 네비게이션 바 바로 위 |
-| **노출 페이지** | 상태창, 플래너, 소셜, 설정 |
-| **비노출 페이지** | 퀘스트 수행 중, 던전 레이드 중, Day1 릴스 작성 중 |
+| **노출 페이지** | 던전 |
+| **비노출 페이지** | 상태창, 플래너, 퀘스트, Day1, 소셜, 설정 (현재 던전 탭만 배너 활성) |
 | **갱신 주기** | 60초 (AdMob 기본값, 최소 30초 이상 권장) |
 
 **비노출 기준 이유:**
@@ -272,13 +272,13 @@ async function initializeAdMob() {
 
 ```javascript
 const AD_UNITS = {
-    banner: 'ca-app-pub-6654057059754695/BANNER_ID',
+    banner: 'ca-app-pub-6654057059754695/2995161826',
     interstitial: 'ca-app-pub-6654057059754695/INTERSTITIAL_ID',
     rewarded: 'ca-app-pub-6654057059754695/REWARDED_ID',
 };
 
 // 배너 비노출 탭 목록
-const BANNER_HIDDEN_TABS = ['quests', 'dungeon', 'reels'];
+const BANNER_HIDDEN_TABS = ['quests', 'reels'];
 
 async function showBannerAd() {
     await AdMob.showBanner({
@@ -452,7 +452,7 @@ registerPlugin(NativeAdPlugin.class);
 
 | 광고 유형 | 용도 | Ad Unit ID | 상태 |
 |-----------|------|------------|------|
-| Adaptive Banner | 하단 배너 | 생성 필요 | ❌ 미생성 |
+| Adaptive Banner | 하단 배너 (던전 탭) | `ca-app-pub-6654057059754695/2995161826` | ✅ 구현 완료 |
 | Interstitial | 전면 광고 | 생성 필요 | ❌ 미생성 |
 | Rewarded | 보상형 광고 | `ca-app-pub-6654057059754695/8552907541` | ✅ 구현 완료 |
 | **Rewarded Interstitial** | **보상형 전면 광고 (스핀/던전)** | **`ca-app-pub-6654057059754695/6916027284`** | **✅ 구현 완료** |
