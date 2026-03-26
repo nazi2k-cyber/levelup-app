@@ -2,6 +2,7 @@
   "name": "levelup-reboot",
   "version": "1.0.0",
   "description": "LEVEL UP: REBOOT - 게임처럼 현실을 레벨업하는 앱",
+  "license": "UNLICENSED",
   "main": "app.html",
   "scripts": {
     "sync-www": "bash sync-www.sh",

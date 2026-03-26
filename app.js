@@ -4989,6 +4989,36 @@ window.sharePlannerLink = function() {
 
 // --- ★ 약관 모달 (인앱 표시 - 인라인) ★ ---
 const legalContents = {
+    oss: {
+        title: '오픈소스 라이선스',
+        html: `<div class="legal-date" style="font-size:0.75rem;color:#888;margin-bottom:20px;">최종 확인: 2026년 3월 26일</div>
+<div class="section" style="margin-bottom:16px;"><p>본 앱은 아래의 오픈소스 소프트웨어 및 폰트를 사용합니다.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">폰트</h2>
+<h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">Pretendard</h3>
+<p>Copyright (c) 2021 Kil Hyung-jin<br>License: SIL Open Font License 1.1<br>https://github.com/orioncactus/pretendard</p>
+<h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">Inter</h3>
+<p>Copyright (c) 2016 The Inter Project Authors (Rasmus Andersson)<br>License: SIL Open Font License 1.1<br>https://github.com/rsms/inter</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">Capacitor</h2>
+<p><b>@capacitor/core, @capacitor/android, @capacitor/app, @capacitor/filesystem, @capacitor/geolocation, @capacitor/local-notifications, @capacitor/push-notifications, @capacitor/cli</b></p>
+<p>Copyright (c) 2017-present Drifty Co.<br>License: MIT License<br>https://github.com/ionic-team/capacitor</p>
+<h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">@capacitor-community/admob</h3>
+<p>Copyright (c) Capacitor Community<br>License: MIT License<br>https://github.com/capacitor-community/admob</p>
+<h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">@codetrix-studio/capacitor-google-auth</h3>
+<p>Copyright (c) CodetrixStudio<br>License: MIT License<br>https://github.com/CodetrixStudio/CapacitorGoogleAuth</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">Firebase SDK</h2>
+<p><b>Firebase JavaScript SDK v10.8.1</b><br>(firebase-app, firebase-auth, firebase-firestore, firebase-storage, firebase-messaging, firebase-analytics, firebase-remote-config, firebase-functions)</p>
+<p>Copyright (c) Google LLC<br>License: Apache License 2.0<br>https://github.com/firebase/firebase-js-sdk</p>
+<h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">firebase-admin (Node.js)</h3>
+<p>Copyright (c) Google LLC<br>License: Apache License 2.0<br>https://github.com/firebase/firebase-admin-node</p>
+<h3 style="font-size:0.9rem;font-weight:600;margin:12px 0 6px;">firebase-functions (Node.js)</h3>
+<p>Copyright (c) Google LLC<br>License: Apache License 2.0<br>https://github.com/firebase/firebase-functions</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">MIT License</h2>
+<p style="font-size:0.75rem;color:#aaa;line-height:1.6;">Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:<br><br>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.<br><br>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">Apache License 2.0</h2>
+<p style="font-size:0.75rem;color:#aaa;line-height:1.6;">Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0<br><br>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</p></div>
+<div class="section" style="margin-bottom:16px;"><h2 style="font-size:1rem;font-weight:700;color:var(--neon-blue);margin:18px 0 10px;">SIL Open Font License 1.1</h2>
+<p style="font-size:0.75rem;color:#aaa;line-height:1.6;">This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org</p></div>`
+    },
     terms: {
         title: '소비자 약관',
         html: `<div class="legal-date" style="font-size:0.75rem;color:#888;margin-bottom:20px;">시행일: 2025년 3월 1일 | 최종 수정: 2026년 3월 16일</div>
