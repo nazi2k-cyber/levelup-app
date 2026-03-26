@@ -2085,6 +2085,32 @@ async function handleBatchScreenPosts(request) {
     const config = await getScreeningConfig();
     const usersSnap = await db.collection("users").where("hasActiveReels", "==", true).get();
     const now = Date.now();
+
+    // forceRescan(전수조사) 시 기존 screening_results 전체 삭제 (고아 문서 정리)
+    if (forceRescan) {
+        const existingSnap = await db.collection("screening_results").get();
+        const batch = db.batch();
+        let batchCount = 0;
+        for (const doc of existingSnap.docs) {
+            batch.delete(doc.ref);
+            batchCount++;
+            if (batchCount >= 500) break; // Firestore batch limit
+        }
+        if (batchCount > 0) {
+            await batch.commit();
+            console.log(`[batchScreenPosts] forceRescan: deleted ${batchCount} existing screening results`);
+        }
+        // 500건 초과 시 추가 삭제
+        if (existingSnap.size > 500) {
+            const remaining = existingSnap.docs.slice(500);
+            const batch2 = db.batch();
+            for (const doc of remaining) {
+                batch2.delete(doc.ref);
+            }
+            await batch2.commit();
+            console.log(`[batchScreenPosts] forceRescan: deleted ${remaining.length} more screening results`);
+        }
+    }
     let screenedCount = 0;
     let flaggedCount = 0;
     let autoDeletedCount = 0;
@@ -2150,12 +2176,11 @@ async function handleBatchScreenPosts(request) {
             const age = now - (post.timestamp || 0);
             if (age >= 24 * 60 * 60 * 1000) continue;
 
-            // 이미 스크리닝된 포스트는 스킵 (forceRescan 시 기존 결과 삭제 후 재검사)
+            // 이미 스크리닝된 포스트는 스킵 (forceRescan 시 이미 전체 삭제됨)
             const postId = `${userDoc.id}_${post.timestamp}`;
-            const existingDoc = await db.collection("screening_results").doc(postId).get();
-            if (existingDoc.exists) {
-                if (!forceRescan) { skippedCount++; continue; }
-                await db.collection("screening_results").doc(postId).delete();
+            if (!forceRescan) {
+                const existingDoc = await db.collection("screening_results").doc(postId).get();
+                if (existingDoc.exists) { skippedCount++; continue; }
             }
 
             screenedCount++;

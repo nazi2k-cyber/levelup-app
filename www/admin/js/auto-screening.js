@@ -82,6 +82,7 @@ function renderDashboard() {
 
 async function loadStats() {
     const area = document.getElementById("as-stats-area");
+    if (!area) return; // 대시보드 뷰가 아닌 경우 스킵
     area.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
     tlog("AutoScreen", "스크리닝 통계 로딩...");
 
@@ -148,7 +149,7 @@ async function loadStats() {
         `;
     } catch (e) {
         terror("AutoScreen", "통계 로드 실패: " + e.message);
-        area.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
+        if (area) area.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
     }
 }
 
@@ -321,7 +322,11 @@ async function batchScreen(forceRescan = false) {
             if (d.azureEnabled) alertMsg += `\nAzure: ${d.azureCount}건 정밀검사 → ${d.azureFlaggedCount}건 플래그${d.azureErrorCount ? ` (오류 ${d.azureErrorCount})` : ""}`;
         }
         alert(alertMsg);
+        // 현재 뷰에 따라 적절한 데이터 새로고침
         loadStats();
+        if (_currentView === "results") {
+            loadResults();
+        }
     } catch (e) {
         terror("AutoScreen", `${modeLabel} 실패: ` + e.message);
         alert(`${modeLabel} 실패: ` + e.message);
