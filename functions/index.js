@@ -10,7 +10,24 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
-// ─── Azure Content Safety API (선택적 이미지 스크리닝) ───
+// ─── NSFWJS (1차 로컬 이미지 스크리닝, 무료) ───
+let nsfwModel = null;
+async function getNsfwModel() {
+    if (!nsfwModel) {
+        try {
+            const tf = require("@tensorflow/tfjs-node");
+            const nsfw = require("nsfwjs");
+            nsfwModel = await nsfw.load("MobileNetV2");
+            console.log("[NSFWJS] 모델 로드 완료 (MobileNetV2)");
+        } catch (e) {
+            console.warn("[NSFWJS] 모델 로드 실패:", e.message);
+            return null;
+        }
+    }
+    return nsfwModel;
+}
+
+// ─── Azure Content Safety API (2차 정밀 이미지 스크리닝) ───
 let azureClient = null;
 function getAzureClient() {
     if (!azureClient) {
@@ -1616,7 +1633,61 @@ function getOverallSeverity(textFlags, imageFlags) {
     return hasAnyFlag ? maxSev : null;
 }
 
-// ─── 자동 스크리닝: 이미지 스크리닝 유틸 (Azure Content Safety) ───
+// ─── 자동 스크리닝: 이미지 다운로드 유틸 ───
+
+async function downloadImage(photoUrl) {
+    const https = require("https");
+    const http = require("http");
+    return new Promise((resolve, reject) => {
+        const mod = photoUrl.startsWith("https") ? https : http;
+        mod.get(photoUrl, (res) => {
+            const chunks = [];
+            res.on("data", (chunk) => chunks.push(chunk));
+            res.on("end", () => resolve(Buffer.concat(chunks)));
+            res.on("error", reject);
+        }).on("error", reject);
+    });
+}
+
+// ─── 자동 스크리닝: NSFWJS 1차 로컬 스크리닝 (무료) ───
+
+function nsfwProbToLikelihood(probability) {
+    if (probability > 0.85) return "VERY_LIKELY";
+    if (probability > 0.65) return "LIKELY";
+    if (probability > 0.35) return "POSSIBLE";
+    if (probability > 0.15) return "UNLIKELY";
+    return "VERY_UNLIKELY";
+}
+
+async function screenImageLocal(photoUrl) {
+    const model = await getNsfwModel();
+    if (!model || !photoUrl) return null;
+
+    try {
+        const tf = require("@tensorflow/tfjs-node");
+        const imageBuffer = await downloadImage(photoUrl);
+        const decodedImage = tf.node.decodeImage(imageBuffer, 3);
+        const predictions = await model.classify(decodedImage);
+        decodedImage.dispose();
+
+        // predictions: [{className: "Porn"|"Sexy"|"Hentai"|"Neutral"|"Drawing", probability: 0~1}]
+        const scores = {};
+        for (const p of predictions) scores[p.className] = p.probability;
+
+        return {
+            porn: scores.Porn || 0,
+            sexy: scores.Sexy || 0,
+            hentai: scores.Hentai || 0,
+            neutral: scores.Neutral || 0,
+            drawing: scores.Drawing || 0,
+        };
+    } catch (e) {
+        console.error("[screenImageLocal] NSFWJS 추론 실패:", e.message);
+        return null;
+    }
+}
+
+// ─── 자동 스크리닝: Azure Content Safety 2차 정밀 스크리닝 ───
 
 function azureSeverityToLikelihood(severity) {
     if (severity >= 5) return "VERY_LIKELY";
@@ -1626,24 +1697,12 @@ function azureSeverityToLikelihood(severity) {
     return "VERY_UNLIKELY";
 }
 
-async function screenImage(photoUrl) {
+async function screenImageAzure(photoUrl) {
     const client = getAzureClient();
     if (!client || !photoUrl) return null;
 
     try {
-        // 이미지 URL에서 바이너리 다운로드
-        const https = require("https");
-        const http = require("http");
-        const imageBuffer = await new Promise((resolve, reject) => {
-            const mod = photoUrl.startsWith("https") ? https : http;
-            mod.get(photoUrl, (res) => {
-                const chunks = [];
-                res.on("data", (chunk) => chunks.push(chunk));
-                res.on("end", () => resolve(Buffer.concat(chunks)));
-                res.on("error", reject);
-            }).on("error", reject);
-        });
-
+        const imageBuffer = await downloadImage(photoUrl);
         const base64Content = imageBuffer.toString("base64");
 
         const result = await client.path("/image:analyze").post({
@@ -1654,7 +1713,7 @@ async function screenImage(photoUrl) {
         });
 
         if (result.status !== "200") {
-            console.error("[screenImage] Azure API 오류:", result.status, result.body);
+            console.error("[screenImageAzure] Azure API 오류:", result.status, result.body);
             return null;
         }
 
@@ -1672,9 +1731,74 @@ async function screenImage(photoUrl) {
             selfHarm: azureSeverityToLikelihood(getScore("SelfHarm"))
         };
     } catch (e) {
-        console.error("[screenImage] Azure Content Safety 호출 실패:", e.message);
+        console.error("[screenImageAzure] Azure Content Safety 호출 실패:", e.message);
         return null;
     }
+}
+
+// ─── 자동 스크리닝: 하이브리드 이미지 스크리닝 (NSFWJS → Azure) ───
+//
+// 1차: NSFWJS 로컬 추론 (무료, 성적 콘텐츠 감지)
+//   → Porn/Hentai > 80% → 즉시 HIGH 플래그 (Azure 호출 안함)
+//   → Neutral/Drawing > 90% → 통과 (Azure 호출 안함)
+//   → 애매한 결과 (Sexy > 30% 등) → 2차 Azure 정밀 검사
+// 2차: Azure Content Safety (유료, 전체 카테고리 감지)
+//   → Sexual, Violence, Hate, SelfHarm 정밀 분석
+
+async function screenImage(photoUrl, settings) {
+    if (!photoUrl) return null;
+
+    // 1차: NSFWJS 로컬 스크리닝
+    const localResult = await screenImageLocal(photoUrl);
+
+    if (localResult) {
+        // 명확한 부적절 이미지 → 즉시 플래그 (Azure 호출 불필요)
+        if (localResult.porn > 0.80 || localResult.hentai > 0.80) {
+            console.log(`[screenImage] NSFWJS 1차 판정: 명확한 부적절 (Porn=${localResult.porn.toFixed(2)}, Hentai=${localResult.hentai.toFixed(2)})`);
+            return {
+                adult: nsfwProbToLikelihood(localResult.porn),
+                violence: "VERY_UNLIKELY",
+                racy: nsfwProbToLikelihood(localResult.sexy),
+                hate: "VERY_UNLIKELY",
+                selfHarm: "VERY_UNLIKELY",
+                _source: "nsfwjs",
+                _nsfwScores: localResult
+            };
+        }
+
+        // 명확한 일반 이미지 → 통과 (Azure 호출 불필요)
+        if (localResult.neutral > 0.90 || localResult.drawing > 0.90) {
+            console.log(`[screenImage] NSFWJS 1차 판정: 안전 (Neutral=${localResult.neutral.toFixed(2)}, Drawing=${localResult.drawing.toFixed(2)})`);
+            return null; // 플래그 없음
+        }
+
+        console.log(`[screenImage] NSFWJS 1차 판정: 애매 (Sexy=${localResult.sexy.toFixed(2)}, Porn=${localResult.porn.toFixed(2)}) → Azure 2차 검사`);
+    }
+
+    // 2차: Azure Content Safety 정밀 스크리닝 (NSFWJS 실패 시에도 fallback)
+    if (settings?.azureEnabled) {
+        const azureResult = await screenImageAzure(photoUrl);
+        if (azureResult) {
+            azureResult._source = "azure";
+            if (localResult) azureResult._nsfwScores = localResult;
+            return azureResult;
+        }
+    }
+
+    // NSFWJS 결과만으로 판정 (Azure 미사용 또는 실패 시)
+    if (localResult && localResult.sexy > 0.30) {
+        return {
+            adult: nsfwProbToLikelihood(localResult.porn),
+            violence: "VERY_UNLIKELY",
+            racy: nsfwProbToLikelihood(localResult.sexy),
+            hate: "VERY_UNLIKELY",
+            selfHarm: "VERY_UNLIKELY",
+            _source: "nsfwjs",
+            _nsfwScores: localResult
+        };
+    }
+
+    return null;
 }
 
 // ─── 자동 스크리닝: 스크리닝 설정 조회 ───
@@ -1711,10 +1835,10 @@ async function executeScreening(post, config) {
         textFlags = screenCaption(post.caption, keywords.categories);
     }
 
-    // 이미지 스크리닝
+    // 이미지 스크리닝 (하이브리드: NSFWJS 1차 → Azure 2차)
     let imageFlags = null;
-    if (settings.azureEnabled && settings.imageScreeningEnabled && post.photo) {
-        imageFlags = await screenImage(post.photo);
+    if (settings.imageScreeningEnabled && post.photo) {
+        imageFlags = await screenImage(post.photo, settings);
     }
 
     const overallSeverity = getOverallSeverity(textFlags, imageFlags);

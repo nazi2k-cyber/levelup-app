@@ -367,14 +367,26 @@ function selectResult(postId) {
             ).join("") + '</div>';
     }
 
-    // 이미지 플래그 표시 (Azure Content Safety)
+    // 이미지 플래그 표시 (하이브리드: NSFWJS + Azure)
     let imageFlagsHtml = '<p class="text-sub text-sm">이미지 분석 없음</p>';
     if (r.imageFlags) {
         const imgLabels = { adult: "성인", violence: "폭력", racy: "선정", hate: "혐오", selfHarm: "자해" };
-        imageFlagsHtml = '<div class="as-keyword-tags">' +
-            Object.entries(r.imageFlags).map(([key, val]) =>
+        const source = r.imageFlags._source === "azure" ? "Azure Content Safety" : "NSFWJS (로컬)";
+        const sourceBadge = `<span class="badge badge-info" style="margin-bottom:6px;">${source}</span>`;
+
+        const mainFlags = Object.entries(r.imageFlags)
+            .filter(([key]) => !key.startsWith("_"))
+            .map(([key, val]) =>
                 `<span class="as-keyword-tag as-tag-${getImageFlagSeverity(val)}">${imgLabels[key] || key}: ${val}</span>`
-            ).join("") + '</div>';
+            ).join("");
+
+        let nsfwScoresHtml = "";
+        if (r.imageFlags._nsfwScores) {
+            const ns = r.imageFlags._nsfwScores;
+            nsfwScoresHtml = `<div style="margin-top:6px;" class="text-sub text-sm">NSFWJS: Porn=${(ns.porn||0).toFixed(2)} Sexy=${(ns.sexy||0).toFixed(2)} Hentai=${(ns.hentai||0).toFixed(2)} Neutral=${(ns.neutral||0).toFixed(2)}</div>`;
+        }
+
+        imageFlagsHtml = sourceBadge + '<div class="as-keyword-tags">' + mainFlags + '</div>' + nsfwScoresHtml;
     }
 
     document.getElementById("as-detail-content").innerHTML = `
@@ -515,11 +527,11 @@ function renderConfigForm() {
                 </label>
                 <label class="as-toggle-row">
                     <input type="checkbox" id="cfg-image-enabled" ${s.imageScreeningEnabled ? "checked" : ""}>
-                    <span>이미지 스크리닝 활성화</span>
+                    <span>이미지 스크리닝 활성화 <span class="text-sub">(NSFWJS 1차 무료)</span></span>
                 </label>
                 <label class="as-toggle-row">
                     <input type="checkbox" id="cfg-azure-enabled" ${s.azureEnabled ? "checked" : ""}>
-                    <span>Azure Content Safety <span class="text-sub">(F0: 5,000건/월 무료)</span></span>
+                    <span>Azure 2차 정밀검사 <span class="text-sub">(F0: 5,000건/월 무료, 애매한 결과만 호출)</span></span>
                 </label>
                 <label class="as-toggle-row">
                     <input type="checkbox" id="cfg-notify" ${s.notifyOnFlag !== false ? "checked" : ""}>

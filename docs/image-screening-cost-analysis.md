@@ -3,7 +3,7 @@
 ## 1. 개요
 
 자동 스크리닝 시스템의 이미지 검열에 사용할 수 있는 솔루션들의 비용, 정확도, 호환성을 비교 분석합니다.
-검토 결과 **Azure Content Safety (F0 무료 tier)** 를 채택하였습니다.
+검토 결과 **NSFWJS (1차 무료) + Azure Content Safety (2차 정밀) 하이브리드 방식**을 채택하였습니다.
 이 문서는 비교 분석 과정과 비용 시뮬레이션을 기록합니다.
 
 ### 기술 환경 조건
@@ -331,119 +331,131 @@ NSFWJS 로컬 추론 (무료)
 
 ---
 
-## 7. 현재 시스템 구현 (Azure Content Safety 채택)
+## 7. 현재 시스템 구현 (NSFWJS + Azure 하이브리드 채택)
 
-비교 분석 결과 **Azure Content Safety**를 채택하여 구현 완료되었습니다.
+비교 분석 결과 **NSFWJS 1차 로컬 필터 + Azure Content Safety 2차 정밀검사** 하이브리드 방식을 채택하여 구현 완료되었습니다.
 
 ### 7.1 채택 이유
 
-| 기준 | Google Vision | **Azure Content Safety** | NSFWJS |
-|------|-------------|------------------------|--------|
-| 무료 한도 | 1,000건/월 | **5,000건/월 (영구)** | 무제한 |
-| 유료 가격 | $1.50/1K | **$1.00/1K (-33%)** | $0 |
-| 콜드 스타트 | 낮음 | **낮음** | 3~8초 |
-| 폭력 감지 | 있음 | **있음** | 없음 |
-| 혐오 감지 | **없음** | **있음** | 없음 |
-| 자해 감지 | **없음** | **있음** | 없음 |
-| 심각도 세분화 | 5단계 | **7단계 (0~6)** | 확률값 |
+단일 솔루션의 한계를 조합으로 해결:
 
-### 7.2 현재 구현 구조
+| 기준 | NSFWJS 단독 | Azure 단독 | **하이브리드 (채택)** |
+|------|-----------|-----------|---------------------|
+| 비용 | $0 | F0: 5,000건/월 | **$0 (~40,000건까지)** |
+| 성적 콘텐츠 감지 | 우수 | 우수 | **우수** |
+| 폭력/혐오/자해 | 불가 | 가능 | **가능** (2차에서) |
+| 콜드 스타트 | 3~8초 | 낮음 | 3~8초 (1차) |
+| API 비용 최적화 | N/A | 100% 호출 | **~12%만 호출** |
 
-```javascript
-// functions/index.js — 현재 구현 (Azure Content Safety)
-async function screenImage(photoUrl) {
-    const client = getAzureClient(); // @azure-rest/ai-content-safety
-    if (!client || !photoUrl) return null;
+### 7.2 현재 구현: 하이브리드 흐름
 
-    // 이미지 URL → base64 다운로드 → Azure API 호출
-    const result = await client.path("/image:analyze").post({
-        body: {
-            image: { content: base64Content },
-            categories: ["Sexual", "Violence", "Hate", "SelfHarm"]
-        }
-    });
-
-    // Azure severity(0~6)를 내부 Likelihood로 매핑
-    return {
-        adult: azureSeverityToLikelihood(getScore("Sexual")),
-        violence: azureSeverityToLikelihood(getScore("Violence")),
-        racy: azureSeverityToLikelihood(getScore("Sexual")),
-        hate: azureSeverityToLikelihood(getScore("Hate")),
-        selfHarm: azureSeverityToLikelihood(getScore("SelfHarm"))
-    };
-}
+```
+이미지 업로드
+    │
+    ▼
+[1차] NSFWJS 로컬 추론 (screenImageLocal)
+    │   MobileNetV2 모델, 무료, ~100-300ms (warm)
+    │
+    ├── Porn/Hentai > 80%
+    │   → 즉시 HIGH 플래그 반환 (_source: "nsfwjs")
+    │   → Azure 호출 안함 ✓
+    │
+    ├── Neutral/Drawing > 90%
+    │   → null 반환 (안전, 플래그 없음)
+    │   → Azure 호출 안함 ✓
+    │
+    └── 애매한 결과 (Sexy > 30% 등)
+         │
+         ├── [azureEnabled = true]
+         │   ▼
+         │   [2차] Azure Content Safety (screenImageAzure)
+         │   → Sexual, Violence, Hate, SelfHarm 정밀 분석
+         │   → _source: "azure", _nsfwScores 포함 반환
+         │
+         └── [azureEnabled = false]
+             → NSFWJS 결과로 플래그 반환 (_source: "nsfwjs")
 ```
 
 ### 7.3 반환 형식
 
 ```javascript
-// 모든 값은 Likelihood 문자열로 통일
 {
     adult: "VERY_UNLIKELY" | "UNLIKELY" | "POSSIBLE" | "LIKELY" | "VERY_LIKELY",
-    violence: "...",
+    violence: "...",     // Azure 2차에서만 감지
     racy: "...",
-    hate: "...",       // Azure 전용 (혐오)
-    selfHarm: "..."    // Azure 전용 (자해)
+    hate: "...",         // Azure 2차에서만 감지
+    selfHarm: "...",     // Azure 2차에서만 감지
+    _source: "nsfwjs" | "azure",    // 판정 소스
+    _nsfwScores: {                  // NSFWJS 원본 점수 (진단용)
+        porn: 0.02, sexy: 0.35, hentai: 0.01, neutral: 0.52, drawing: 0.10
+    }
 }
 ```
 
-### 7.4 환경변수 설정
+### 7.4 NSFWJS 판정 기준값
+
+| 조건 | 동작 | Azure 호출 |
+|------|------|-----------|
+| `Porn > 0.80` 또는 `Hentai > 0.80` | 즉시 HIGH 플래그 | **안함** |
+| `Neutral > 0.90` 또는 `Drawing > 0.90` | 안전 통과 | **안함** |
+| `Sexy > 0.30` (Azure 꺼짐) | NSFWJS 결과로 플래그 | **안함** |
+| 그 외 애매한 결과 (Azure 켜짐) | Azure 2차 검사 | **호출** |
+
+### 7.5 환경변수 설정
 
 ```bash
-# Firebase Functions 환경변수
+# Azure 2차 정밀검사 사용 시 (선택)
 AZURE_CS_ENDPOINT=https://<리소스명>.cognitiveservices.azure.com
 AZURE_CS_KEY=<Azure KEY 1>
+
+# NSFWJS는 환경변수 불필요 (npm 패키지에 모델 포함)
 ```
 
-### 7.5 향후 다른 솔루션으로 교체 시
+### 7.6 필요 의존성
 
-`screenImage()` 함수의 내부 구현만 교체하면 됩니다. 반환 형식(Likelihood 문자열)만 동일하게 유지하면 나머지 시스템(`getOverallSeverity`, `executeScreening`, 관리자 UI)은 변경 없이 동작합니다.
-
-**NSFWJS로 교체 시** (비용 $0, 성적 콘텐츠만 감지):
-```bash
-npm install nsfwjs @tensorflow/tfjs-node
-# Cloud Functions 메모리: 1GB 이상 필요
-# 콜드 스타트: 3~8초 증가
+```json
+{
+    "nsfwjs": "^4.1.0",
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "@azure-rest/ai-content-safety": "^1.0.0",
+    "@azure/core-auth": "^1.9.0"
+}
 ```
 
-**AWS Rekognition으로 교체 시** (최다 카테고리):
-```bash
-npm install @aws-sdk/client-rekognition
-# AWS IAM 설정 필요
-# 12개월 무료 5,000건 → 이후 $1.00/1K
-```
+> Cloud Functions 메모리: NSFWJS 모델 로딩에 **최소 512MB, 권장 1GB** 필요
 
 ---
 
 ## 8. 최종 결론
 
-### 현재 상태: Azure Content Safety 구현 완료 (기본 꺼짐)
+### 현재 상태: NSFWJS + Azure 하이브리드 구현 완료
 
-- Azure Content Safety는 설정에서 **기본 꺼짐** → 텍스트 스크리닝만으로 시작
-- 필요 시 관리자 UI에서 **활성화** 가능
-- F0 tier로 월 **5,000건까지 무료 (영구)**
-- 5,000건 초과 시 S0 tier 전환: $1.00/1,000건
+- **이미지 스크리닝**: 기본 꺼짐 → 관리자 UI에서 활성화
+- **1차 NSFWJS**: 이미지 스크리닝 활성화만으로 무료 사용 (무제한)
+- **2차 Azure**: 별도 토글로 활성화 (F0: 5,000건/월 무료, 실제 호출은 ~12%만)
+- **월 ~40,000건까지 완전 무료** (Azure F0 5,000건 ÷ 12% ≈ 41,667건)
 
 ### 단계별 운영 로드맵
 
 ```
 Phase 1 (현재): 텍스트 스크리닝만 사용 — $0
     ↓ 이미지 검열 필요 발생 시
-Phase 2: Azure Content Safety 활성화 — $0 (F0: 5,000건/월 무료, 영구)
-    ↓ 월 5,000건 초과 시
-Phase 3a: Azure S0 tier 전환 — $1.00/1K (Google Vision 대비 33% 저렴)
-    또는
-Phase 3b: NSFWJS 하이브리드 도입 — Azure 비용 85%+ 절감
+Phase 2: 이미지 스크리닝 활성화 (NSFWJS만) — $0 (무제한, 성적 콘텐츠만)
+    ↓ 폭력/혐오/자해 감지 필요 시
+Phase 3: Azure 2차 정밀검사 활성화 — $0 (~40,000건/월까지 무료)
+    ↓ 월 40,000건 초과 시
+Phase 4: Azure S0 tier 전환 — ~$1/월 (50,000건 기준, 12%만 호출)
     ↓ 대규모 성장 시
-Phase 4: AWS Rekognition 전환 검토 — $1.00/1K (최다 카테고리)
+Phase 5: AWS Rekognition 전환 검토 — $1.00/1K (최다 카테고리)
 ```
 
 ### 핵심 요약
 
-| 규모 | 현재 솔루션 | 월 비용 |
-|------|-----------|--------|
-| ~5,000건 | **Azure Content Safety F0 (현재)** | **$0** |
-| ~10,000건 | Azure Content Safety S0 | ~$10 |
-| ~10,000건+ (비용 최소화) | NSFWJS + Azure 하이브리드 | ~$1~2 |
-| ~50,000건 (정확도 우선) | Azure S0 또는 AWS Rekognition | ~$50 |
-| 무제한 (비용 $0 필수) | NSFWJS 단독 | $0 (메모리 비용 별도) |
+| 규모 | 현재 솔루션 | Azure 호출 (~12%) | 월 비용 |
+|------|-----------|-----------------|--------|
+| ~5,000건 | **하이브리드 (현재)** | ~600건 (F0) | **$0** |
+| ~10,000건 | 하이브리드 | ~1,200건 (F0) | **$0** |
+| ~30,000건 | 하이브리드 | ~3,600건 (F0) | **$0** |
+| ~40,000건 | 하이브리드 | ~4,800건 (F0) | **$0** |
+| ~50,000건 | 하이브리드 | ~6,000건 (S0) | **~$1** |
+| ~100,000건 | 하이브리드 | ~12,000건 (S0) | **~$12** |
