@@ -224,6 +224,22 @@ async function batchScreen(forceRescan = false) {
             tlog("AutoScreen", `기 스크리닝 스킵: ${result.skippedCount}건 (이미 검사됨)`);
         }
 
+        // 엔진 구동 상태 로그
+        if (d.imageEnabled) {
+            if (d.nsfwjsModelReady) {
+                tok("NSFWJS", "NSFWJS 엔진 구동 성공 (MobileNetV2)");
+            } else {
+                terror("NSFWJS", `NSFWJS 엔진 구동 실패: ${d.nsfwjsModelError || "알 수 없는 오류"}`);
+            }
+            if (d.azureEnabled) {
+                if (d.azureClientReady) {
+                    tok("Azure", "Azure Content Safety 엔진 구동 성공");
+                } else {
+                    terror("Azure", `Azure 엔진 구동 실패: ${d.azureClientError || "알 수 없는 오류"}`);
+                }
+            }
+        }
+
         // 텍스트 스크리닝 상세
         if (d.textEnabled) {
             if (d.textScreenedCount > 0) {
@@ -293,6 +309,11 @@ async function batchScreen(forceRescan = false) {
             `스캔: ${result.screenedCount}건 | 플래그: ${result.flaggedCount}건\n` +
             `자동 삭제: ${result.autoDeletedCount}건 | 자동 숨김: ${result.autoHiddenCount}건`;
         if (result.skippedCount > 0) alertMsg += `\n스킵: ${result.skippedCount}건 (이미 검사됨)`;
+        alertMsg += `\n\n── 엔진 상태 ──`;
+        if (d.imageEnabled) {
+            alertMsg += `\nNSFWJS: ${d.nsfwjsModelReady ? "구동 OK" : "구동 실패 — " + (d.nsfwjsModelError || "?")}`;
+            if (d.azureEnabled) alertMsg += `\nAzure: ${d.azureClientReady ? "구동 OK" : "구동 실패 — " + (d.azureClientError || "?")}`;
+        }
         alertMsg += `\n\n── 상세 ──`;
         if (d.textEnabled) alertMsg += `\n텍스트: ${d.textScreenedCount}건 검사 → ${d.textFlaggedCount}건 플래그`;
         if (d.imageEnabled && d.imageScreenedCount > 0) {

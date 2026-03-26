@@ -2111,6 +2111,34 @@ async function handleBatchScreenPosts(request) {
     const imageEnabled = !!config.settings.imageScreeningEnabled;
     const azureEnabled = !!config.settings.azureEnabled;
 
+    // 엔진 구동 상태 사전 점검
+    let nsfwjsModelReady = false;
+    let nsfwjsModelError = null;
+    let azureClientReady = false;
+    let azureClientError = null;
+
+    if (imageEnabled) {
+        try {
+            const model = await getNsfwModel();
+            nsfwjsModelReady = !!model;
+            if (!model) nsfwjsModelError = "NSFWJS 모델 로드 실패 (null 반환)";
+        } catch (e) {
+            nsfwjsModelError = e.message;
+        }
+        console.log(`[batchScreenPosts] NSFWJS 엔진: ${nsfwjsModelReady ? "구동 성공" : "구동 실패 — " + nsfwjsModelError}`);
+
+        if (azureEnabled) {
+            try {
+                const client = getAzureClient();
+                azureClientReady = !!client;
+                if (!client) azureClientError = "Azure 클라이언트 초기화 실패 (엔드포인트/키 미설정 또는 패키지 미설치)";
+            } catch (e) {
+                azureClientError = e.message;
+            }
+            console.log(`[batchScreenPosts] Azure 엔진: ${azureClientReady ? "구동 성공" : "구동 실패 — " + azureClientError}`);
+        }
+    }
+
     for (const userDoc of usersSnap.docs) {
         const data = userDoc.data();
         if (!data.reelsStr) continue;
@@ -2191,8 +2219,15 @@ async function handleBatchScreenPosts(request) {
             textEnabled,
             imageEnabled,
             azureEnabled,
+            // 엔진 구동 상태
+            nsfwjsModelReady,
+            nsfwjsModelError,
+            azureClientReady,
+            azureClientError,
+            // 텍스트 상세
             textScreenedCount,
             textFlaggedCount,
+            // 이미지 상세
             imageScreenedCount,
             imageFlaggedCount,
             // NSFWJS 판정별 상세
