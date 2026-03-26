@@ -56,6 +56,15 @@ const callableOpts = {
     invoker: "public"
 };
 
+// ping 함수 전용 옵션 (이미지 스크리닝 시 NSFWJS 모델 로딩에 메모리/타임아웃 필요)
+const pingCallableOpts = {
+    region: "asia-northeast3",
+    cors: true,
+    invoker: "public",
+    memory: "1GiB",
+    timeoutSeconds: 120
+};
+
 // ─── Admin / Master claim helper ───
 
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS
@@ -931,7 +940,7 @@ async function handleGetUserAnalytics(request) {
     };
 }
 
-exports.ping = onCall(callableOpts, async (request) => {
+exports.ping = onCall(pingCallableOpts, async (request) => {
     // ── Action router: handle admin actions via ping ──
     const action = request.data?.action;
     if (action) {
