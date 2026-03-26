@@ -1,0 +1,694 @@
+// ─── Auto Screening Module (자동 스크리닝 관리) ───
+import { functions, httpsCallable } from "./firebase-init.js";
+import { tlog, tok, terror } from "./log-panel.js";
+
+let _container = null;
+let _results = [];
+let _config = null;
+let _stats = null;
+let _currentView = "dashboard"; // dashboard | results | config
+
+const ping = httpsCallable(functions, "ping");
+
+async function callAdmin(action, data = {}) {
+    const result = await ping({ action, ...data });
+    return result.data;
+}
+
+export function initAutoScreening(containerId) {
+    _container = document.getElementById(containerId);
+    render();
+}
+
+function render() {
+    if (!_container) return;
+    _container.innerHTML = `
+        <div class="card">
+            <h2>자동 스크리닝 시스템</h2>
+            <p class="text-sub text-sm mb-8">캡션/이미지 자동 검열 시스템을 관리합니다.</p>
+            <div class="as-view-tabs">
+                <button class="as-view-tab active" data-view="dashboard">대시보드</button>
+                <button class="as-view-tab" data-view="results">스크리닝 결과</button>
+                <button class="as-view-tab" data-view="config">설정 관리</button>
+            </div>
+        </div>
+        <div id="as-view-content"></div>
+    `;
+
+    _container.querySelectorAll(".as-view-tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            _container.querySelectorAll(".as-view-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            _currentView = btn.dataset.view;
+            renderView();
+        });
+    });
+
+    renderView();
+}
+
+function renderView() {
+    switch (_currentView) {
+        case "dashboard": renderDashboard(); break;
+        case "results": renderResults(); break;
+        case "config": renderConfig(); break;
+    }
+}
+
+// ─── 대시보드 뷰 ───
+
+function renderDashboard() {
+    const el = document.getElementById("as-view-content");
+    el.innerHTML = `
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h2>스크리닝 대시보드</h2>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-outline btn-sm" id="btn-refresh-stats">통계 새로고침</button>
+                    <button class="btn btn-primary btn-sm" id="btn-batch-screen">일괄 스크리닝 실행</button>
+                </div>
+            </div>
+            <div id="as-stats-area">
+                <p class="text-sub text-sm">통계를 로드하려면 '통계 새로고침'을 클릭하세요.</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("btn-refresh-stats").addEventListener("click", loadStats);
+    document.getElementById("btn-batch-screen").addEventListener("click", batchScreen);
+}
+
+async function loadStats() {
+    const area = document.getElementById("as-stats-area");
+    area.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
+    tlog("AutoScreen", "스크리닝 통계 로딩...");
+
+    try {
+        _stats = await callAdmin("getScreeningStats");
+        tok("AutoScreen", "통계 로드 완료");
+
+        area.innerHTML = `
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">${_stats.total || 0}</div>
+                    <div class="stat-label">총 플래그</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value as-pending">${_stats.pending || 0}</div>
+                    <div class="stat-label">검토 대기</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value as-approved">${_stats.approved || 0}</div>
+                    <div class="stat-label">승인됨</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value as-rejected">${_stats.rejected || 0}</div>
+                    <div class="stat-label">거부됨</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value as-auto-deleted">${_stats.autoDeleted || 0}</div>
+                    <div class="stat-label">자동 삭제</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value as-auto-hidden">${_stats.autoHidden || 0}</div>
+                    <div class="stat-label">자동 숨김</div>
+                </div>
+            </div>
+            <div class="ua-charts-row" style="margin-top:16px;">
+                <div class="ua-chart-box">
+                    <h3 class="text-sm" style="color:var(--accent); margin-bottom:12px;">심각도별 분포</h3>
+                    ${renderSeverityBars(_stats.bySeverity || {})}
+                </div>
+                <div class="ua-chart-box">
+                    <h3 class="text-sm" style="color:var(--accent); margin-bottom:12px;">카테고리별 분포</h3>
+                    ${renderCategoryBars(_stats.byCategory || {})}
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        terror("AutoScreen", "통계 로드 실패: " + e.message);
+        area.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
+    }
+}
+
+function renderSeverityBars(data) {
+    const total = (data.low || 0) + (data.medium || 0) + (data.high || 0);
+    if (total === 0) return '<p class="text-sub text-sm">데이터 없음</p>';
+
+    const items = [
+        { label: "Low", count: data.low || 0, color: "#ffc107" },
+        { label: "Medium", count: data.medium || 0, color: "#ff9800" },
+        { label: "High", count: data.high || 0, color: "#ff5252" },
+    ];
+
+    return items.map(i => `
+        <div class="ua-bar-row">
+            <span class="ua-bar-label">${i.label}</span>
+            <div class="ua-bar-track">
+                <div class="ua-bar-fill" style="width:${total ? (i.count / total * 100) : 0}%; background:${i.color};"></div>
+            </div>
+            <span class="ua-bar-value">${i.count}건</span>
+        </div>
+    `).join("");
+}
+
+function renderCategoryBars(data) {
+    const entries = Object.entries(data);
+    if (entries.length === 0) return '<p class="text-sub text-sm">데이터 없음</p>';
+
+    const total = entries.reduce((s, [, v]) => s + v, 0);
+    const catLabels = {
+        profanity: "욕설/비속어",
+        hate: "혐오표현",
+        spam: "스팸/홍보",
+        nsfw: "음란물",
+        illegal: "불법정보"
+    };
+
+    return entries.map(([cat, count]) => `
+        <div class="ua-bar-row">
+            <span class="ua-bar-label">${catLabels[cat] || cat}</span>
+            <div class="ua-bar-track">
+                <div class="ua-bar-fill" style="width:${total ? (count / total * 100) : 0}%; background:var(--accent);"></div>
+            </div>
+            <span class="ua-bar-value">${count}건</span>
+        </div>
+    `).join("");
+}
+
+async function batchScreen() {
+    if (!confirm("전체 활성 포스트에 대해 일괄 스크리닝을 실행하시겠습니까?\n\n이미 스크리닝된 포스트는 건너뜁니다.")) return;
+
+    tlog("AutoScreen", "일괄 스크리닝 실행 중...");
+    const btn = document.getElementById("btn-batch-screen");
+    btn.disabled = true;
+    btn.textContent = "스크리닝 중...";
+
+    try {
+        const result = await callAdmin("batchScreenPosts");
+        tok("AutoScreen", `일괄 스크리닝 완료: ${result.screenedCount}건 스캔, ${result.flaggedCount}건 플래그`);
+        alert(`스크리닝 완료!\n\n스캔: ${result.screenedCount}건\n플래그: ${result.flaggedCount}건\n자동 삭제: ${result.autoDeletedCount}건\n자동 숨김: ${result.autoHiddenCount}건`);
+        loadStats();
+    } catch (e) {
+        terror("AutoScreen", "일괄 스크리닝 실패: " + e.message);
+        alert("일괄 스크리닝 실패: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "일괄 스크리닝 실행";
+    }
+}
+
+// ─── 결과 뷰 ───
+
+function renderResults() {
+    const el = document.getElementById("as-view-content");
+    el.innerHTML = `
+        <div class="card">
+            <h2>스크리닝 결과</h2>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+                <button class="btn btn-outline btn-sm" id="btn-load-results">결과 조회</button>
+                <select id="as-filter-status" style="width:auto; padding:6px 10px; font-size:0.8rem;">
+                    <option value="">전체 상태</option>
+                    <option value="pending">검토 대기</option>
+                    <option value="approved">승인됨</option>
+                    <option value="rejected">거부됨</option>
+                    <option value="auto_deleted">자동 삭제</option>
+                    <option value="auto_hidden">자동 숨김</option>
+                </select>
+                <select id="as-filter-severity" style="width:auto; padding:6px 10px; font-size:0.8rem;">
+                    <option value="">전체 심각도</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+                <span class="text-sub text-sm" id="as-result-count"></span>
+            </div>
+            <div id="as-result-list"></div>
+        </div>
+        <div id="as-detail-panel" class="hidden">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h2 id="as-detail-title">스크리닝 상세</h2>
+                    <button class="btn btn-outline btn-sm" id="btn-close-as-detail">닫기</button>
+                </div>
+                <div id="as-detail-content"></div>
+                <div id="as-detail-actions" style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px;"></div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("btn-load-results").addEventListener("click", loadResults);
+    document.getElementById("btn-close-as-detail").addEventListener("click", () => {
+        document.getElementById("as-detail-panel").classList.add("hidden");
+    });
+}
+
+async function loadResults() {
+    const listEl = document.getElementById("as-result-list");
+    const countEl = document.getElementById("as-result-count");
+    listEl.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
+    tlog("AutoScreen", "스크리닝 결과 로딩...");
+
+    const status = document.getElementById("as-filter-status").value || undefined;
+    const severity = document.getElementById("as-filter-severity").value || undefined;
+
+    try {
+        const data = await callAdmin("getScreeningResults", { status, severity });
+        _results = data.results || [];
+        tok("AutoScreen", `${_results.length}건 조회 완료`);
+        countEl.textContent = `${_results.length}건`;
+
+        if (_results.length === 0) {
+            listEl.innerHTML = '<p class="text-sub text-sm">스크리닝 결과가 없습니다.</p>';
+            return;
+        }
+
+        listEl.innerHTML = renderResultTable(_results);
+        bindResultClicks();
+    } catch (e) {
+        terror("AutoScreen", "결과 로드 실패: " + e.message);
+        listEl.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
+    }
+}
+
+function renderResultTable(results) {
+    let html = `<table>
+        <thead><tr>
+            <th>작성자</th>
+            <th>캡션</th>
+            <th>심각도</th>
+            <th>상태</th>
+            <th>플래그</th>
+            <th>스크리닝 시간</th>
+        </tr></thead>
+        <tbody>`;
+
+    for (const r of results) {
+        const captionPreview = escHtml((r.caption || "").substring(0, 40)) + (r.caption && r.caption.length > 40 ? "..." : "");
+        const dt = r.screenedAt ? new Date(r.screenedAt).toLocaleString("ko-KR") : "—";
+        const sevBadge = getSeverityBadge(r.overallSeverity);
+        const statusBadge = getStatusBadge(r.status);
+        const flagCount = (r.textFlags || []).length + (r.imageFlags ? 1 : 0);
+
+        html += `<tr class="as-row as-sev-${r.overallSeverity}" data-postid="${escHtml(r.postId)}" style="cursor:pointer;">
+            <td>${escHtml(r.ownerName || "—")}</td>
+            <td class="text-sm">${captionPreview || '<span class="text-sub">—</span>'}</td>
+            <td>${sevBadge}</td>
+            <td>${statusBadge}</td>
+            <td class="text-sm">${flagCount}건</td>
+            <td class="text-sub text-sm">${dt}</td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    return html;
+}
+
+function getSeverityBadge(severity) {
+    const map = {
+        low: '<span class="badge as-badge-low">LOW</span>',
+        medium: '<span class="badge as-badge-medium">MEDIUM</span>',
+        high: '<span class="badge as-badge-high">HIGH</span>'
+    };
+    return map[severity] || '<span class="badge badge-info">—</span>';
+}
+
+function getStatusBadge(status) {
+    const map = {
+        pending: '<span class="badge badge-warn">검토 대기</span>',
+        approved: '<span class="badge badge-ok">승인</span>',
+        rejected: '<span class="badge badge-fail">거부</span>',
+        auto_deleted: '<span class="badge badge-fail">자동삭제</span>',
+        auto_hidden: '<span class="badge as-badge-medium">자동숨김</span>'
+    };
+    return map[status] || '<span class="badge badge-info">—</span>';
+}
+
+function bindResultClicks() {
+    document.querySelectorAll(".as-row").forEach(row => {
+        row.addEventListener("click", () => selectResult(row.dataset.postid));
+    });
+}
+
+function selectResult(postId) {
+    const r = _results.find(x => x.postId === postId);
+    if (!r) return;
+
+    const panel = document.getElementById("as-detail-panel");
+    panel.classList.remove("hidden");
+
+    document.getElementById("as-detail-title").textContent = `${r.ownerName || "—"}의 포스트 스크리닝`;
+
+    const dt = r.screenedAt ? new Date(r.screenedAt).toLocaleString("ko-KR") : "—";
+    const reviewDt = r.reviewedAt ? new Date(r.reviewedAt).toLocaleString("ko-KR") : "—";
+
+    let photoHtml = "";
+    if (r.photo) {
+        photoHtml = `<div style="margin-top:12px;">
+            <img src="${escHtml(r.photo)}" alt="post photo"
+                 style="max-width:100%; max-height:300px; border-radius:8px; border:1px solid var(--border);"
+                 onerror="this.style.display='none'">
+        </div>`;
+    }
+
+    // 텍스트 플래그 표시
+    const catLabels = {
+        profanity: "욕설/비속어",
+        hate: "혐오표현",
+        spam: "스팸/홍보",
+        nsfw: "음란물",
+        illegal: "불법정보"
+    };
+
+    let textFlagsHtml = '<p class="text-sub text-sm">텍스트 플래그 없음</p>';
+    if (r.textFlags && r.textFlags.length > 0) {
+        textFlagsHtml = '<div class="as-keyword-tags">' +
+            r.textFlags.map(f =>
+                `<span class="as-keyword-tag as-tag-${f.severity}">${escHtml(f.keyword)} <span class="text-sub">(${catLabels[f.category] || f.category})</span></span>`
+            ).join("") + '</div>';
+    }
+
+    // 이미지 플래그 표시
+    let imageFlagsHtml = '<p class="text-sub text-sm">이미지 분석 없음</p>';
+    if (r.imageFlags) {
+        const imgLabels = { adult: "성인", violence: "폭력", racy: "선정", medical: "의료", spoof: "스푸핑" };
+        imageFlagsHtml = '<div class="as-keyword-tags">' +
+            Object.entries(r.imageFlags).map(([key, val]) =>
+                `<span class="as-keyword-tag as-tag-${getImageFlagSeverity(val)}">${imgLabels[key] || key}: ${val}</span>`
+            ).join("") + '</div>';
+    }
+
+    document.getElementById("as-detail-content").innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value text-sm">${escHtml(r.ownerName || "—")}</div><div class="stat-label">작성자</div></div>
+            <div class="stat-card"><div class="stat-value text-sm">${getSeverityBadge(r.overallSeverity)}</div><div class="stat-label">심각도</div></div>
+            <div class="stat-card"><div class="stat-value text-sm">${getStatusBadge(r.status)}</div><div class="stat-label">상태</div></div>
+            <div class="stat-card"><div class="stat-value text-sm">${dt}</div><div class="stat-label">스크리닝 시간</div></div>
+        </div>
+        <p class="text-sub text-sm">UID: ${r.ownerUid} | PostID: ${r.postId}</p>
+        ${r.reviewedBy ? `<p class="text-sub text-sm">검토: ${escHtml(r.reviewedBy)} (${reviewDt})</p>` : ""}
+        <div style="margin-top:12px; padding:12px; background:var(--bg-input); border-radius:8px;">
+            <p class="text-sm" style="white-space:pre-wrap;">${escHtml(r.caption || "(캡션 없음)")}</p>
+        </div>
+        ${photoHtml}
+        <div style="margin-top:16px;">
+            <h3 class="text-sm" style="color:var(--accent); margin-bottom:8px;">텍스트 플래그</h3>
+            ${textFlagsHtml}
+        </div>
+        <div style="margin-top:12px;">
+            <h3 class="text-sm" style="color:var(--accent); margin-bottom:8px;">이미지 플래그</h3>
+            ${imageFlagsHtml}
+        </div>
+    `;
+
+    // 액션 버튼 (pending 또는 auto_hidden 상태만)
+    const actionsEl = document.getElementById("as-detail-actions");
+    if (r.status === "pending" || r.status === "auto_hidden") {
+        actionsEl.innerHTML = `
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-sm" style="background:var(--success); color:#fff;" id="btn-approve-post">승인 (문제 없음)</button>
+                <button class="btn btn-danger btn-sm" id="btn-reject-post">거부 (포스트 삭제)</button>
+            </div>
+            <div id="as-review-result" style="margin-top:8px;"></div>
+        `;
+        document.getElementById("btn-approve-post").addEventListener("click", () => reviewPost(r.postId, "approved"));
+        document.getElementById("btn-reject-post").addEventListener("click", () => reviewPost(r.postId, "rejected"));
+    } else {
+        actionsEl.innerHTML = `<p class="text-sub text-sm">이미 처리된 항목입니다 (${getStatusBadge(r.status)})</p>`;
+    }
+
+    panel.scrollIntoView({ behavior: "smooth" });
+}
+
+function getImageFlagSeverity(likelihood) {
+    const map = { VERY_LIKELY: "high", LIKELY: "high", POSSIBLE: "medium", UNLIKELY: "low", VERY_UNLIKELY: "low" };
+    return map[likelihood] || "low";
+}
+
+async function reviewPost(postId, action) {
+    const resultEl = document.getElementById("as-review-result");
+    const actionLabel = action === "approved" ? "승인" : "거부";
+
+    if (action === "rejected" && !confirm("이 포스트를 거부하고 삭제하시겠습니까?\n\n이 작업은 복구할 수 없습니다.")) return;
+
+    resultEl.innerHTML = `<p class="text-sub text-sm">${actionLabel} 처리 중...</p>`;
+    tlog("AutoScreen", `포스트 ${actionLabel} 처리 중: ${postId}`);
+
+    try {
+        await callAdmin("reviewScreenedPost", { postId, action });
+        tok("AutoScreen", `포스트 ${actionLabel} 완료: ${postId}`);
+        resultEl.innerHTML = `<p class="text-success text-sm">${actionLabel} 완료!</p>`;
+
+        // 로컬 데이터 업데이트
+        const idx = _results.findIndex(x => x.postId === postId);
+        if (idx >= 0) {
+            _results[idx].status = action;
+        }
+
+        setTimeout(() => {
+            document.getElementById("as-detail-panel").classList.add("hidden");
+            const listEl = document.getElementById("as-result-list");
+            if (listEl && _results.length > 0) {
+                listEl.innerHTML = renderResultTable(_results);
+                bindResultClicks();
+            }
+        }, 1000);
+    } catch (e) {
+        terror("AutoScreen", `포스트 ${actionLabel} 실패: ${e.message}`);
+        resultEl.innerHTML = `<p class="text-error text-sm">${actionLabel} 실패: ${e.message}</p>`;
+    }
+}
+
+// ─── 설정 뷰 ───
+
+function renderConfig() {
+    const el = document.getElementById("as-view-content");
+    el.innerHTML = `
+        <div class="card">
+            <h2>스크리닝 설정</h2>
+            <button class="btn btn-outline btn-sm" id="btn-load-config" style="margin-bottom:16px;">설정 로드</button>
+            <div id="as-config-area">
+                <p class="text-sub text-sm">설정을 로드하려면 위 버튼을 클릭하세요.</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("btn-load-config").addEventListener("click", loadConfig);
+}
+
+async function loadConfig() {
+    const area = document.getElementById("as-config-area");
+    area.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
+    tlog("AutoScreen", "스크리닝 설정 로딩...");
+
+    try {
+        _config = await callAdmin("getScreeningConfig");
+        tok("AutoScreen", "설정 로드 완료");
+        renderConfigForm();
+    } catch (e) {
+        terror("AutoScreen", "설정 로드 실패: " + e.message);
+        area.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
+    }
+}
+
+function renderConfigForm() {
+    const area = document.getElementById("as-config-area");
+    const s = _config.settings || {};
+    const k = _config.keywords || {};
+    const categories = k.categories || {};
+
+    const catLabels = {
+        profanity: "욕설/비속어",
+        hate: "혐오표현",
+        spam: "스팸/홍보",
+        nsfw: "음란물",
+        illegal: "불법정보"
+    };
+
+    area.innerHTML = `
+        <!-- 일반 설정 -->
+        <div style="margin-bottom:24px;">
+            <h3 class="text-sm" style="color:var(--accent); margin-bottom:12px;">일반 설정</h3>
+            <div class="as-settings-grid">
+                <label class="as-toggle-row">
+                    <input type="checkbox" id="cfg-text-enabled" ${s.textScreeningEnabled !== false ? "checked" : ""}>
+                    <span>텍스트 스크리닝 활성화</span>
+                </label>
+                <label class="as-toggle-row">
+                    <input type="checkbox" id="cfg-image-enabled" ${s.imageScreeningEnabled ? "checked" : ""}>
+                    <span>이미지 스크리닝 활성화</span>
+                </label>
+                <label class="as-toggle-row">
+                    <input type="checkbox" id="cfg-vision-enabled" ${s.visionApiEnabled ? "checked" : ""}>
+                    <span>Vision API 사용 <span class="text-sub">(비용 발생)</span></span>
+                </label>
+                <label class="as-toggle-row">
+                    <input type="checkbox" id="cfg-notify" ${s.notifyOnFlag !== false ? "checked" : ""}>
+                    <span>플래그 시 알림</span>
+                </label>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap;">
+                <div>
+                    <label class="text-sub text-sm">자동 숨김 임계값</label>
+                    <select id="cfg-hide-threshold" style="width:auto; padding:6px 10px; font-size:0.8rem; margin-left:8px;">
+                        <option value="low" ${s.autoHideThreshold === "low" ? "selected" : ""}>Low</option>
+                        <option value="medium" ${s.autoHideThreshold === "medium" || !s.autoHideThreshold ? "selected" : ""}>Medium</option>
+                        <option value="high" ${s.autoHideThreshold === "high" ? "selected" : ""}>High</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sub text-sm">자동 삭제 임계값</label>
+                    <select id="cfg-delete-threshold" style="width:auto; padding:6px 10px; font-size:0.8rem; margin-left:8px;">
+                        <option value="low" ${s.autoDeleteThreshold === "low" ? "selected" : ""}>Low</option>
+                        <option value="medium" ${s.autoDeleteThreshold === "medium" ? "selected" : ""}>Medium</option>
+                        <option value="high" ${s.autoDeleteThreshold === "high" || !s.autoDeleteThreshold ? "selected" : ""}>High</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-save-settings" style="margin-top:16px;">설정 저장</button>
+            <span id="cfg-save-result" style="margin-left:8px;"></span>
+        </div>
+
+        <!-- 금칙어 관리 -->
+        <div>
+            <h3 class="text-sm" style="color:var(--accent); margin-bottom:12px;">금칙어 관리</h3>
+            <div id="as-keywords-area">
+                ${Object.entries(catLabels).map(([catKey, catLabel]) => {
+                    const cat = categories[catKey] || { keywords: [], severity: "medium", enabled: true };
+                    return renderCategorySection(catKey, catLabel, cat);
+                }).join("")}
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-save-keywords" style="margin-top:16px;">금칙어 저장</button>
+            <span id="kw-save-result" style="margin-left:8px;"></span>
+        </div>
+    `;
+
+    document.getElementById("btn-save-settings").addEventListener("click", saveSettings);
+    document.getElementById("btn-save-keywords").addEventListener("click", saveKeywords);
+
+    // 금칙어 추가 버튼 이벤트
+    document.querySelectorAll(".as-add-keyword-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const cat = btn.dataset.cat;
+            const input = document.getElementById(`kw-input-${cat}`);
+            const val = (input.value || "").trim();
+            if (!val) return;
+
+            const container = document.getElementById(`kw-tags-${cat}`);
+            container.insertAdjacentHTML("beforeend", renderKeywordTag(val, cat));
+            input.value = "";
+            bindTagRemoveButtons();
+        });
+    });
+
+    // Enter 키로 추가
+    document.querySelectorAll(".as-kw-input").forEach(input => {
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                const cat = input.dataset.cat;
+                document.querySelector(`.as-add-keyword-btn[data-cat="${cat}"]`).click();
+            }
+        });
+    });
+
+    bindTagRemoveButtons();
+}
+
+function renderCategorySection(catKey, catLabel, cat) {
+    const severityOptions = ["low", "medium", "high"].map(s =>
+        `<option value="${s}" ${cat.severity === s ? "selected" : ""}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`
+    ).join("");
+
+    const tags = (cat.keywords || []).map(kw => renderKeywordTag(kw, catKey)).join("");
+
+    return `
+        <div class="as-category-section" data-cat="${catKey}">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <label class="as-toggle-row" style="margin:0;">
+                    <input type="checkbox" class="as-cat-enabled" data-cat="${catKey}" ${cat.enabled !== false ? "checked" : ""}>
+                    <strong>${catLabel}</strong>
+                </label>
+                <select class="as-cat-severity" data-cat="${catKey}" style="width:auto; padding:4px 8px; font-size:0.75rem;">
+                    ${severityOptions}
+                </select>
+            </div>
+            <div class="as-keyword-tags" id="kw-tags-${catKey}">${tags}</div>
+            <div style="display:flex; gap:6px; margin-top:8px;">
+                <input type="text" class="as-kw-input" data-cat="${catKey}" id="kw-input-${catKey}" placeholder="새 금칙어 추가..." style="flex:1; padding:6px 10px; font-size:0.8rem;">
+                <button class="btn btn-outline btn-sm as-add-keyword-btn" data-cat="${catKey}">추가</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderKeywordTag(keyword, cat) {
+    return `<span class="as-keyword-tag as-tag-removable" data-cat="${cat}" data-keyword="${escHtml(keyword)}">${escHtml(keyword)} <span class="as-tag-remove">&times;</span></span>`;
+}
+
+function bindTagRemoveButtons() {
+    document.querySelectorAll(".as-tag-remove").forEach(btn => {
+        btn.onclick = () => btn.parentElement.remove();
+    });
+}
+
+async function saveSettings() {
+    const resultEl = document.getElementById("cfg-save-result");
+    resultEl.innerHTML = '<span class="text-sub text-sm">저장 중...</span>';
+
+    const settings = {
+        textScreeningEnabled: document.getElementById("cfg-text-enabled").checked,
+        imageScreeningEnabled: document.getElementById("cfg-image-enabled").checked,
+        visionApiEnabled: document.getElementById("cfg-vision-enabled").checked,
+        notifyOnFlag: document.getElementById("cfg-notify").checked,
+        autoHideThreshold: document.getElementById("cfg-hide-threshold").value,
+        autoDeleteThreshold: document.getElementById("cfg-delete-threshold").value,
+    };
+
+    try {
+        await callAdmin("updateScreeningConfig", { settings });
+        tok("AutoScreen", "설정 저장 완료");
+        resultEl.innerHTML = '<span class="text-success text-sm">저장 완료!</span>';
+        setTimeout(() => { resultEl.innerHTML = ""; }, 3000);
+    } catch (e) {
+        terror("AutoScreen", "설정 저장 실패: " + e.message);
+        resultEl.innerHTML = `<span class="text-error text-sm">실패: ${e.message}</span>`;
+    }
+}
+
+async function saveKeywords() {
+    const resultEl = document.getElementById("kw-save-result");
+    resultEl.innerHTML = '<span class="text-sub text-sm">저장 중...</span>';
+
+    const categories = {};
+    const catKeys = ["profanity", "hate", "spam", "nsfw", "illegal"];
+
+    for (const catKey of catKeys) {
+        const enabledEl = document.querySelector(`.as-cat-enabled[data-cat="${catKey}"]`);
+        const severityEl = document.querySelector(`.as-cat-severity[data-cat="${catKey}"]`);
+        const tagEls = document.querySelectorAll(`#kw-tags-${catKey} .as-keyword-tag`);
+
+        categories[catKey] = {
+            enabled: enabledEl ? enabledEl.checked : true,
+            severity: severityEl ? severityEl.value : "medium",
+            keywords: Array.from(tagEls).map(el => el.dataset.keyword)
+        };
+    }
+
+    try {
+        await callAdmin("updateScreeningConfig", { keywords: { categories } });
+        tok("AutoScreen", "금칙어 저장 완료");
+        resultEl.innerHTML = '<span class="text-success text-sm">저장 완료!</span>';
+        setTimeout(() => { resultEl.innerHTML = ""; }, 3000);
+    } catch (e) {
+        terror("AutoScreen", "금칙어 저장 실패: " + e.message);
+        resultEl.innerHTML = `<span class="text-error text-sm">실패: ${e.message}</span>`;
+    }
+}
+
+// ─── 유틸리티 ───
+
+function escHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+}

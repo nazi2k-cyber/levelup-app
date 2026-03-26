@@ -10,6 +10,21 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
+// ─── Google Cloud Vision API (선택적 이미지 스크리닝) ───
+let visionClient = null;
+function getVisionClient() {
+    if (!visionClient) {
+        try {
+            const vision = require("@google-cloud/vision");
+            visionClient = new vision.ImageAnnotatorClient();
+        } catch (e) {
+            console.warn("[Vision] @google-cloud/vision 패키지가 설치되지 않았습니다. 이미지 스크리닝이 비활성화됩니다.");
+            return null;
+        }
+    }
+    return visionClient;
+}
+
 // Callable 함수 공통 옵션 (Gen 2 Cloud Run 호환)
 const callableOpts = {
     region: "asia-northeast3",
@@ -940,6 +955,21 @@ exports.ping = onCall(callableOpts, async (request) => {
                     return await handleListAdminOperators(request);
                 case "getUserAnalytics":
                     return await handleGetUserAnalytics(request);
+                // ─── 자동 스크리닝 액션 ───
+                case "autoScreenPost":
+                    return await handleAutoScreenPost(request);
+                case "batchScreenPosts":
+                    return await handleBatchScreenPosts(request);
+                case "getScreeningResults":
+                    return await handleGetScreeningResults(request);
+                case "reviewScreenedPost":
+                    return await handleReviewScreenedPost(request);
+                case "getScreeningConfig":
+                    return await handleGetScreeningConfig(request);
+                case "updateScreeningConfig":
+                    return await handleUpdateScreeningConfig(request);
+                case "getScreeningStats":
+                    return await handleGetScreeningStats(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }
@@ -1492,6 +1522,443 @@ async function handleScreeningDismissReport(request) {
     console.log(`[screeningDismissReport] Admin ${adminEmail} dismissed report for ${postId}`);
 
     return { success: true, dismissedPostId: postId };
+}
+
+// ─── 자동 스크리닝: 기본 한국어 금칙어 사전 ───
+
+const DEFAULT_SCREENING_KEYWORDS = {
+    profanity: {
+        keywords: ["시발", "씨발", "ㅅㅂ", "ㅆㅂ", "개새끼", "ㄱㅅㄲ", "병신", "ㅂㅅ", "지랄", "ㅈㄹ", "미친놈", "미친년", "꺼져", "닥쳐", "존나", "ㅈㄴ", "애미", "느금마", "좆", "보지"],
+        severity: "medium",
+        enabled: true
+    },
+    hate: {
+        keywords: ["한남충", "한녀충", "틀딱", "급식충", "맘충", "장애인놈", "흑형", "짱깨", "쪽바리", "똥남아"],
+        severity: "high",
+        enabled: true
+    },
+    spam: {
+        keywords: ["텔레그램", "카톡방", "오픈채팅", "부업", "재택알바", "고수익", "일당", "투자수익", "코인추천"],
+        severity: "low",
+        enabled: true
+    },
+    nsfw: {
+        keywords: ["섹스", "야동", "포르노", "자위", "성인방", "음란", "벗방", "누드"],
+        severity: "high",
+        enabled: true
+    },
+    illegal: {
+        keywords: ["대포통장", "마약", "필로폰", "대마", "도박사이트", "불법촬영", "몰카"],
+        severity: "high",
+        enabled: true
+    }
+};
+
+const SEVERITY_ORDER = { low: 1, medium: 2, high: 3 };
+
+// ─── 자동 스크리닝: 텍스트 스크리닝 유틸 ───
+
+function screenCaption(caption, categories) {
+    if (!caption || !categories) return [];
+    const flags = [];
+    const lowerCaption = caption.toLowerCase();
+
+    for (const [catName, catConfig] of Object.entries(categories)) {
+        if (!catConfig.enabled) continue;
+        for (const keyword of (catConfig.keywords || [])) {
+            if (lowerCaption.includes(keyword.toLowerCase())) {
+                flags.push({
+                    keyword,
+                    category: catName,
+                    severity: catConfig.severity || "low"
+                });
+            }
+        }
+    }
+    return flags;
+}
+
+function getOverallSeverity(textFlags, imageFlags) {
+    let maxSev = "low";
+    let hasAnyFlag = false;
+
+    for (const f of (textFlags || [])) {
+        hasAnyFlag = true;
+        if ((SEVERITY_ORDER[f.severity] || 0) > (SEVERITY_ORDER[maxSev] || 0)) {
+            maxSev = f.severity;
+        }
+    }
+
+    if (imageFlags) {
+        const visionSeverityMap = {
+            VERY_LIKELY: "high",
+            LIKELY: "high",
+            POSSIBLE: "medium",
+            UNLIKELY: "low",
+            VERY_UNLIKELY: "low"
+        };
+        for (const [key, likelihood] of Object.entries(imageFlags)) {
+            if (key === "spoof") continue; // 스푸핑은 무시
+            const sev = visionSeverityMap[likelihood] || "low";
+            if (sev !== "low") hasAnyFlag = true;
+            if ((SEVERITY_ORDER[sev] || 0) > (SEVERITY_ORDER[maxSev] || 0)) {
+                maxSev = sev;
+            }
+        }
+    }
+
+    return hasAnyFlag ? maxSev : null;
+}
+
+// ─── 자동 스크리닝: 이미지 스크리닝 유틸 (Vision API) ───
+
+async function screenImage(photoUrl) {
+    const client = getVisionClient();
+    if (!client || !photoUrl) return null;
+
+    try {
+        const [result] = await client.safeSearchDetection(photoUrl);
+        const safe = result.safeSearchAnnotation;
+        if (!safe) return null;
+        return {
+            adult: safe.adult || "UNKNOWN",
+            violence: safe.violence || "UNKNOWN",
+            racy: safe.racy || "UNKNOWN",
+            medical: safe.medical || "UNKNOWN",
+            spoof: safe.spoof || "UNKNOWN"
+        };
+    } catch (e) {
+        console.error("[screenImage] Vision API 호출 실패:", e.message);
+        return null;
+    }
+}
+
+// ─── 자동 스크리닝: 스크리닝 설정 조회 ───
+
+async function getScreeningConfig() {
+    const settingsDoc = await db.collection("screening_config").doc("settings").get();
+    const keywordsDoc = await db.collection("screening_config").doc("keywords").get();
+
+    const settings = settingsDoc.exists ? settingsDoc.data() : {
+        autoDeleteThreshold: "high",
+        autoHideThreshold: "medium",
+        imageScreeningEnabled: false,
+        textScreeningEnabled: true,
+        visionApiEnabled: false,
+        notifyOnFlag: true
+    };
+
+    const keywords = keywordsDoc.exists ? keywordsDoc.data() : {
+        categories: DEFAULT_SCREENING_KEYWORDS
+    };
+
+    return { settings, keywords };
+}
+
+// ─── 자동 스크리닝: 단일 포스트 스크리닝 실행 ───
+
+async function executeScreening(post, config) {
+    const { settings, keywords } = config;
+    const postId = `${post.ownerUid}_${post.timestamp}`;
+
+    // 텍스트 스크리닝
+    let textFlags = [];
+    if (settings.textScreeningEnabled) {
+        textFlags = screenCaption(post.caption, keywords.categories);
+    }
+
+    // 이미지 스크리닝
+    let imageFlags = null;
+    if (settings.visionApiEnabled && settings.imageScreeningEnabled && post.photo) {
+        imageFlags = await screenImage(post.photo);
+    }
+
+    const overallSeverity = getOverallSeverity(textFlags, imageFlags);
+
+    // 플래그가 없으면 결과 저장하지 않음
+    if (!overallSeverity) return null;
+
+    // 자동 조치 결정
+    let status = "pending";
+    const sevLevel = SEVERITY_ORDER[overallSeverity] || 0;
+
+    if (settings.autoDeleteThreshold && sevLevel >= SEVERITY_ORDER[settings.autoDeleteThreshold]) {
+        status = "auto_deleted";
+    } else if (settings.autoHideThreshold && sevLevel >= SEVERITY_ORDER[settings.autoHideThreshold]) {
+        status = "auto_hidden";
+    }
+
+    const screeningResult = {
+        postId,
+        ownerUid: post.ownerUid,
+        ownerName: post.ownerName || "",
+        caption: post.caption || "",
+        photo: post.photo || "",
+        screenedAt: Date.now(),
+        textFlags,
+        imageFlags,
+        overallSeverity,
+        status,
+        reviewedBy: null,
+        reviewedAt: null
+    };
+
+    // Firestore에 저장
+    await db.collection("screening_results").doc(postId).set(screeningResult);
+
+    // 자동 삭제 실행
+    if (status === "auto_deleted") {
+        try {
+            await performAutoDelete(post.ownerUid, post.timestamp);
+            console.log(`[AutoScreen] 자동 삭제 실행: ${postId} (severity: ${overallSeverity})`);
+        } catch (e) {
+            console.error(`[AutoScreen] 자동 삭제 실패: ${postId}`, e.message);
+        }
+    }
+
+    return screeningResult;
+}
+
+// ─── 자동 스크리닝: 자동 삭제 실행 ───
+
+async function performAutoDelete(ownerUid, timestamp) {
+    const userRef = db.collection("users").doc(ownerUid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) return;
+
+    const data = userDoc.data();
+    let posts = [];
+    if (data.reelsStr) {
+        try { posts = JSON.parse(data.reelsStr); } catch (e) { posts = []; }
+    }
+
+    posts = posts.filter(p => p.timestamp !== timestamp);
+    const hasActive = posts.some(p => (Date.now() - (p.timestamp || 0)) < 24 * 60 * 60 * 1000);
+
+    await userRef.update({
+        reelsStr: JSON.stringify(posts),
+        hasActiveReels: hasActive,
+    });
+
+    // 리액션 삭제
+    const postId = `${ownerUid}_${timestamp}`;
+    try { await db.collection("reels_reactions").doc(postId).delete(); } catch (e) { }
+
+    // 스토리지 사진 삭제
+    try {
+        const bucket = getStorage().bucket();
+        await bucket.file(`reels_photos/${timestamp}.webp`).delete();
+    } catch (e) {
+        try { await getStorage().bucket().file(`reels_photos/${timestamp}.jpg`).delete(); } catch (e2) { }
+    }
+}
+
+// ─── 자동 스크리닝: 핸들러 — 단일 포스트 스크리닝 ───
+
+async function handleAutoScreenPost(request) {
+    await assertAdmin(request);
+
+    const { ownerUid, timestamp } = request.data || {};
+    if (!ownerUid || !timestamp) {
+        throw new HttpsError("invalid-argument", "ownerUid와 timestamp는 필수입니다.");
+    }
+
+    const config = await getScreeningConfig();
+
+    // 포스트 데이터 가져오기
+    const userDoc = await db.collection("users").doc(ownerUid).get();
+    if (!userDoc.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+    const data = userDoc.data();
+    let posts = [];
+    if (data.reelsStr) {
+        try { posts = JSON.parse(data.reelsStr); } catch (e) { posts = []; }
+    }
+
+    const post = posts.find(p => p.timestamp === timestamp);
+    if (!post) throw new HttpsError("not-found", "포스트를 찾을 수 없습니다.");
+
+    const result = await executeScreening({
+        ownerUid,
+        ownerName: data.name || post.userName || "",
+        timestamp: post.timestamp,
+        caption: post.caption || "",
+        photo: post.photo || "",
+    }, config);
+
+    return { result, flagged: !!result };
+}
+
+// ─── 자동 스크리닝: 핸들러 — 일괄 스크리닝 ───
+
+async function handleBatchScreenPosts(request) {
+    await assertAdmin(request);
+
+    const config = await getScreeningConfig();
+    const usersSnap = await db.collection("users").where("hasActiveReels", "==", true).get();
+    const now = Date.now();
+    let screenedCount = 0;
+    let flaggedCount = 0;
+    let autoDeletedCount = 0;
+    let autoHiddenCount = 0;
+
+    for (const userDoc of usersSnap.docs) {
+        const data = userDoc.data();
+        if (!data.reelsStr) continue;
+
+        let posts = [];
+        try { posts = JSON.parse(data.reelsStr); } catch (e) { continue; }
+
+        for (const post of posts) {
+            const age = now - (post.timestamp || 0);
+            if (age >= 24 * 60 * 60 * 1000) continue;
+
+            // 이미 스크리닝된 포스트는 스킵
+            const postId = `${userDoc.id}_${post.timestamp}`;
+            const existingDoc = await db.collection("screening_results").doc(postId).get();
+            if (existingDoc.exists) continue;
+
+            screenedCount++;
+            const result = await executeScreening({
+                ownerUid: userDoc.id,
+                ownerName: data.name || post.userName || "",
+                timestamp: post.timestamp,
+                caption: post.caption || "",
+                photo: post.photo || "",
+            }, config);
+
+            if (result) {
+                flaggedCount++;
+                if (result.status === "auto_deleted") autoDeletedCount++;
+                if (result.status === "auto_hidden") autoHiddenCount++;
+            }
+        }
+    }
+
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    console.log(`[batchScreenPosts] Admin ${adminEmail}: screened=${screenedCount}, flagged=${flaggedCount}, autoDeleted=${autoDeletedCount}, autoHidden=${autoHiddenCount}`);
+
+    return { screenedCount, flaggedCount, autoDeletedCount, autoHiddenCount };
+}
+
+// ─── 자동 스크리닝: 핸들러 — 스크리닝 결과 조회 ───
+
+async function handleGetScreeningResults(request) {
+    await assertAdmin(request);
+
+    const { status, severity, limit: maxResults } = request.data || {};
+    let q = db.collection("screening_results").orderBy("screenedAt", "desc");
+
+    if (status) q = q.where("status", "==", status);
+    if (severity) q = q.where("overallSeverity", "==", severity);
+    q = q.limit(maxResults || 100);
+
+    const snap = await q.get();
+    const results = snap.docs.map(doc => doc.data());
+
+    return { results };
+}
+
+// ─── 자동 스크리닝: 핸들러 — 관리자 승인/거부 ───
+
+async function handleReviewScreenedPost(request) {
+    await assertAdmin(request);
+
+    const { postId, action } = request.data || {};
+    if (!postId || !action) {
+        throw new HttpsError("invalid-argument", "postId와 action은 필수입니다.");
+    }
+    if (!["approved", "rejected"].includes(action)) {
+        throw new HttpsError("invalid-argument", "action은 'approved' 또는 'rejected'이어야 합니다.");
+    }
+
+    const docRef = db.collection("screening_results").doc(postId);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+        throw new HttpsError("not-found", "스크리닝 결과를 찾을 수 없습니다.");
+    }
+
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    await docRef.update({
+        status: action,
+        reviewedBy: adminEmail,
+        reviewedAt: Date.now()
+    });
+
+    // 거부 시 포스트 삭제
+    if (action === "rejected") {
+        const data = doc.data();
+        const parts = postId.split("_");
+        const ownerUid = parts.slice(0, -1).join("_");
+        const timestamp = parseInt(parts[parts.length - 1], 10);
+        try {
+            await performAutoDelete(ownerUid, timestamp);
+        } catch (e) {
+            console.error(`[reviewScreenedPost] 포스트 삭제 실패: ${postId}`, e.message);
+        }
+    }
+
+    console.log(`[reviewScreenedPost] Admin ${adminEmail}: ${action} post ${postId}`);
+    return { success: true, postId, action };
+}
+
+// ─── 자동 스크리닝: 핸들러 — 설정 조회 ───
+
+async function handleGetScreeningConfig(request) {
+    await assertAdmin(request);
+    const config = await getScreeningConfig();
+    return config;
+}
+
+// ─── 자동 스크리닝: 핸들러 — 설정 업데이트 ───
+
+async function handleUpdateScreeningConfig(request) {
+    await assertAdmin(request);
+
+    const { settings, keywords } = request.data || {};
+
+    if (settings) {
+        await db.collection("screening_config").doc("settings").set(settings, { merge: true });
+    }
+    if (keywords) {
+        await db.collection("screening_config").doc("keywords").set(keywords, { merge: true });
+    }
+
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    console.log(`[updateScreeningConfig] Admin ${adminEmail} updated screening config`);
+
+    return { success: true };
+}
+
+// ─── 자동 스크리닝: 핸들러 — 스크리닝 통계 ───
+
+async function handleGetScreeningStats(request) {
+    await assertAdmin(request);
+
+    const snap = await db.collection("screening_results").get();
+    let total = 0, pending = 0, approved = 0, rejected = 0, autoDeleted = 0, autoHidden = 0;
+    let byCategory = {};
+    let bySeverity = { low: 0, medium: 0, high: 0 };
+
+    for (const doc of snap.docs) {
+        const data = doc.data();
+        total++;
+        switch (data.status) {
+            case "pending": pending++; break;
+            case "approved": approved++; break;
+            case "rejected": rejected++; break;
+            case "auto_deleted": autoDeleted++; break;
+            case "auto_hidden": autoHidden++; break;
+        }
+        if (data.overallSeverity) {
+            bySeverity[data.overallSeverity] = (bySeverity[data.overallSeverity] || 0) + 1;
+        }
+        for (const flag of (data.textFlags || [])) {
+            byCategory[flag.category] = (byCategory[flag.category] || 0) + 1;
+        }
+    }
+
+    return { total, pending, approved, rejected, autoDeleted, autoHidden, byCategory, bySeverity };
 }
 
 // --- 만료 릴스 사진 정리 (매일 04:00 KST) ---
