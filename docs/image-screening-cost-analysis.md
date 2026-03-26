@@ -3,7 +3,8 @@
 ## 1. 개요
 
 자동 스크리닝 시스템의 이미지 검열에 사용할 수 있는 솔루션들의 비용, 정확도, 호환성을 비교 분석합니다.
-현재 시스템은 Google Cloud Vision API를 선택적으로 사용하도록 구현되어 있으며, 이 문서는 비용 최적화 및 무료 대안을 검토합니다.
+검토 결과 **Azure Content Safety (F0 무료 tier)** 를 채택하였습니다.
+이 문서는 비교 분석 과정과 비용 시뮬레이션을 기록합니다.
 
 ### 기술 환경 조건
 
@@ -330,142 +331,119 @@ NSFWJS 로컬 추론 (무료)
 
 ---
 
-## 7. 현재 시스템 적용 가이드
+## 7. 현재 시스템 구현 (Azure Content Safety 채택)
 
-현재 구현은 `functions/index.js`의 `screenImage()` 함수를 교체하는 것만으로 대안 솔루션을 적용할 수 있도록 설계되어 있습니다.
+비교 분석 결과 **Azure Content Safety**를 채택하여 구현 완료되었습니다.
 
-### 7.1 교체 포인트
+### 7.1 채택 이유
+
+| 기준 | Google Vision | **Azure Content Safety** | NSFWJS |
+|------|-------------|------------------------|--------|
+| 무료 한도 | 1,000건/월 | **5,000건/월 (영구)** | 무제한 |
+| 유료 가격 | $1.50/1K | **$1.00/1K (-33%)** | $0 |
+| 콜드 스타트 | 낮음 | **낮음** | 3~8초 |
+| 폭력 감지 | 있음 | **있음** | 없음 |
+| 혐오 감지 | **없음** | **있음** | 없음 |
+| 자해 감지 | **없음** | **있음** | 없음 |
+| 심각도 세분화 | 5단계 | **7단계 (0~6)** | 확률값 |
+
+### 7.2 현재 구현 구조
 
 ```javascript
-// functions/index.js — 현재 구현 (Google Vision)
+// functions/index.js — 현재 구현 (Azure Content Safety)
 async function screenImage(photoUrl) {
-    const client = getVisionClient();
+    const client = getAzureClient(); // @azure-rest/ai-content-safety
     if (!client || !photoUrl) return null;
-    // ... Vision API 호출
+
+    // 이미지 URL → base64 다운로드 → Azure API 호출
+    const result = await client.path("/image:analyze").post({
+        body: {
+            image: { content: base64Content },
+            categories: ["Sexual", "Violence", "Hate", "SelfHarm"]
+        }
+    });
+
+    // Azure severity(0~6)를 내부 Likelihood로 매핑
+    return {
+        adult: azureSeverityToLikelihood(getScore("Sexual")),
+        violence: azureSeverityToLikelihood(getScore("Violence")),
+        racy: azureSeverityToLikelihood(getScore("Sexual")),
+        hate: azureSeverityToLikelihood(getScore("Hate")),
+        selfHarm: azureSeverityToLikelihood(getScore("SelfHarm"))
+    };
 }
 ```
 
-이 함수의 내부 구현만 변경하면 됩니다. 반환 형식만 동일하게 유지:
+### 7.3 반환 형식
 
 ```javascript
-// 반환 형식 (모든 대안에서 동일하게 매핑)
+// 모든 값은 Likelihood 문자열로 통일
 {
     adult: "VERY_UNLIKELY" | "UNLIKELY" | "POSSIBLE" | "LIKELY" | "VERY_LIKELY",
     violence: "...",
     racy: "...",
-    medical: "...",
-    spoof: "..."
+    hate: "...",       // Azure 전용 (혐오)
+    selfHarm: "..."    // Azure 전용 (자해)
 }
 ```
 
-### 7.2 NSFWJS로 교체 시
+### 7.4 환경변수 설정
 
-```javascript
-// 설치: npm install nsfwjs @tensorflow/tfjs-node
-const tf = require("@tensorflow/tfjs-node");
-const nsfw = require("nsfwjs");
-let nsfwModel = null;
-
-async function screenImage(photoUrl) {
-    if (!photoUrl) return null;
-    if (!nsfwModel) nsfwModel = await nsfw.load();
-
-    // 이미지 다운로드 → Tensor 변환 → 추론
-    const response = await fetch(photoUrl);
-    const buffer = await response.arrayBuffer();
-    const image = tf.node.decodeImage(Buffer.from(buffer), 3);
-    const predictions = await nsfwModel.classify(image);
-    image.dispose();
-
-    // NSFWJS 결과를 Vision API 형식으로 매핑
-    const map = {};
-    for (const p of predictions) map[p.className] = p.probability;
-
-    return {
-        adult: mapToLikelihood(map.Porn || 0),
-        violence: "VERY_UNLIKELY",          // NSFWJS는 폭력 미감지
-        racy: mapToLikelihood(map.Sexy || 0),
-        medical: "VERY_UNLIKELY",           // NSFWJS는 의료 미감지
-        spoof: "VERY_UNLIKELY"
-    };
-}
-
-function mapToLikelihood(probability) {
-    if (probability > 0.85) return "VERY_LIKELY";
-    if (probability > 0.65) return "LIKELY";
-    if (probability > 0.35) return "POSSIBLE";
-    if (probability > 0.15) return "UNLIKELY";
-    return "VERY_UNLIKELY";
-}
+```bash
+# Firebase Functions 환경변수
+AZURE_CS_ENDPOINT=https://<리소스명>.cognitiveservices.azure.com
+AZURE_CS_KEY=<Azure KEY 1>
 ```
 
-### 7.3 Azure Content Safety로 교체 시
+### 7.5 향후 다른 솔루션으로 교체 시
 
-```javascript
-// 설치: npm install @azure/ai-content-safety
-const { ContentSafetyClient } = require("@azure/ai-content-safety");
-const { AzureKeyCredential } = require("@azure/core-auth");
+`screenImage()` 함수의 내부 구현만 교체하면 됩니다. 반환 형식(Likelihood 문자열)만 동일하게 유지하면 나머지 시스템(`getOverallSeverity`, `executeScreening`, 관리자 UI)은 변경 없이 동작합니다.
 
-async function screenImage(photoUrl) {
-    if (!photoUrl) return null;
+**NSFWJS로 교체 시** (비용 $0, 성적 콘텐츠만 감지):
+```bash
+npm install nsfwjs @tensorflow/tfjs-node
+# Cloud Functions 메모리: 1GB 이상 필요
+# 콜드 스타트: 3~8초 증가
+```
 
-    const client = new ContentSafetyClient(
-        process.env.AZURE_CONTENT_SAFETY_ENDPOINT,
-        new AzureKeyCredential(process.env.AZURE_CONTENT_SAFETY_KEY)
-    );
-
-    const result = await client.analyzeImage({ image: { url: photoUrl } });
-
-    // Azure 결과(0~6)를 Vision API Likelihood로 매핑
-    return {
-        adult: azureToLikelihood(result.categoriesAnalysis.find(c => c.category === "Sexual")?.severity || 0),
-        violence: azureToLikelihood(result.categoriesAnalysis.find(c => c.category === "Violence")?.severity || 0),
-        racy: azureToLikelihood(result.categoriesAnalysis.find(c => c.category === "Sexual")?.severity || 0),
-        medical: "VERY_UNLIKELY",
-        spoof: "VERY_UNLIKELY"
-    };
-}
-
-function azureToLikelihood(severity) {
-    if (severity >= 5) return "VERY_LIKELY";
-    if (severity >= 4) return "LIKELY";
-    if (severity >= 2) return "POSSIBLE";
-    if (severity >= 1) return "UNLIKELY";
-    return "VERY_UNLIKELY";
-}
+**AWS Rekognition으로 교체 시** (최다 카테고리):
+```bash
+npm install @aws-sdk/client-rekognition
+# AWS IAM 설정 필요
+# 12개월 무료 5,000건 → 이후 $1.00/1K
 ```
 
 ---
 
-## 8. 최종 권장사항
+## 8. 최종 결론
 
-### 현재 상태: Google Cloud Vision API 유지 (기본 꺼짐)
+### 현재 상태: Azure Content Safety 구현 완료 (기본 꺼짐)
 
-현재 시스템은 이미 최적의 구조로 구현되어 있습니다:
-- Vision API는 설정에서 **기본 꺼짐** → 텍스트 스크리닝만으로 시작
+- Azure Content Safety는 설정에서 **기본 꺼짐** → 텍스트 스크리닝만으로 시작
 - 필요 시 관리자 UI에서 **활성화** 가능
-- 월 1,000건까지 무료
+- F0 tier로 월 **5,000건까지 무료 (영구)**
+- 5,000건 초과 시 S0 tier 전환: $1.00/1,000건
 
-### 단계별 전환 로드맵
+### 단계별 운영 로드맵
 
 ```
 Phase 1 (현재): 텍스트 스크리닝만 사용 — $0
     ↓ 이미지 검열 필요 발생 시
-Phase 2: Google Vision API 활성화 — $0 (1,000건 이내)
-    ↓ 월 1,000건 초과 시
-Phase 3a: Azure Content Safety 도입 — $0 (5,000건 이내, 영구)
+Phase 2: Azure Content Safety 활성화 — $0 (F0: 5,000건/월 무료, 영구)
+    ↓ 월 5,000건 초과 시
+Phase 3a: Azure S0 tier 전환 — $1.00/1K (Google Vision 대비 33% 저렴)
     또는
-Phase 3b: NSFWJS 하이브리드 도입 — Vision API 비용 85%+ 절감
+Phase 3b: NSFWJS 하이브리드 도입 — Azure 비용 85%+ 절감
     ↓ 대규모 성장 시
-Phase 4: AWS Rekognition 전환 — $1.00/1K (최다 카테고리)
+Phase 4: AWS Rekognition 전환 검토 — $1.00/1K (최다 카테고리)
 ```
 
 ### 핵심 요약
 
-| 규모 | 추천 솔루션 | 월 비용 |
+| 규모 | 현재 솔루션 | 월 비용 |
 |------|-----------|--------|
-| ~1,000건 | Google Vision (현재) | $0 |
-| ~5,000건 | Azure Content Safety | $0 |
-| ~10,000건+ (비용 최소화) | NSFWJS + Vision 하이브리드 | ~$2~5 |
-| ~10,000건+ (정확도 우선) | AWS Rekognition | ~$10 |
+| ~5,000건 | **Azure Content Safety F0 (현재)** | **$0** |
+| ~10,000건 | Azure Content Safety S0 | ~$10 |
+| ~10,000건+ (비용 최소화) | NSFWJS + Azure 하이브리드 | ~$1~2 |
+| ~50,000건 (정확도 우선) | Azure S0 또는 AWS Rekognition | ~$50 |
 | 무제한 (비용 $0 필수) | NSFWJS 단독 | $0 (메모리 비용 별도) |

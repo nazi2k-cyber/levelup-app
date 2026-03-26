@@ -10,19 +10,26 @@ initializeApp();
 const db = getFirestore();
 const messaging = getMessaging();
 
-// ─── Google Cloud Vision API (선택적 이미지 스크리닝) ───
-let visionClient = null;
-function getVisionClient() {
-    if (!visionClient) {
+// ─── Azure Content Safety API (선택적 이미지 스크리닝) ───
+let azureClient = null;
+function getAzureClient() {
+    if (!azureClient) {
+        const endpoint = process.env.AZURE_CS_ENDPOINT;
+        const key = process.env.AZURE_CS_KEY;
+        if (!endpoint || !key) {
+            console.warn("[Azure] AZURE_CS_ENDPOINT 또는 AZURE_CS_KEY가 설정되지 않았습니다. 이미지 스크리닝이 비활성화됩니다.");
+            return null;
+        }
         try {
-            const vision = require("@google-cloud/vision");
-            visionClient = new vision.ImageAnnotatorClient();
+            const { ContentSafetyClient } = require("@azure-rest/ai-content-safety");
+            const { AzureKeyCredential } = require("@azure/core-auth");
+            azureClient = ContentSafetyClient(endpoint, new AzureKeyCredential(key));
         } catch (e) {
-            console.warn("[Vision] @google-cloud/vision 패키지가 설치되지 않았습니다. 이미지 스크리닝이 비활성화됩니다.");
+            console.warn("[Azure] @azure-rest/ai-content-safety 패키지가 설치되지 않았습니다:", e.message);
             return null;
         }
     }
-    return visionClient;
+    return azureClient;
 }
 
 // Callable 함수 공통 옵션 (Gen 2 Cloud Run 호환)
@@ -1590,7 +1597,7 @@ function getOverallSeverity(textFlags, imageFlags) {
     }
 
     if (imageFlags) {
-        const visionSeverityMap = {
+        const likelihoodSeverityMap = {
             VERY_LIKELY: "high",
             LIKELY: "high",
             POSSIBLE: "medium",
@@ -1598,8 +1605,7 @@ function getOverallSeverity(textFlags, imageFlags) {
             VERY_UNLIKELY: "low"
         };
         for (const [key, likelihood] of Object.entries(imageFlags)) {
-            if (key === "spoof") continue; // 스푸핑은 무시
-            const sev = visionSeverityMap[likelihood] || "low";
+            const sev = likelihoodSeverityMap[likelihood] || "low";
             if (sev !== "low") hasAnyFlag = true;
             if ((SEVERITY_ORDER[sev] || 0) > (SEVERITY_ORDER[maxSev] || 0)) {
                 maxSev = sev;
@@ -1610,25 +1616,63 @@ function getOverallSeverity(textFlags, imageFlags) {
     return hasAnyFlag ? maxSev : null;
 }
 
-// ─── 자동 스크리닝: 이미지 스크리닝 유틸 (Vision API) ───
+// ─── 자동 스크리닝: 이미지 스크리닝 유틸 (Azure Content Safety) ───
+
+function azureSeverityToLikelihood(severity) {
+    if (severity >= 5) return "VERY_LIKELY";
+    if (severity >= 4) return "LIKELY";
+    if (severity >= 2) return "POSSIBLE";
+    if (severity >= 1) return "UNLIKELY";
+    return "VERY_UNLIKELY";
+}
 
 async function screenImage(photoUrl) {
-    const client = getVisionClient();
+    const client = getAzureClient();
     if (!client || !photoUrl) return null;
 
     try {
-        const [result] = await client.safeSearchDetection(photoUrl);
-        const safe = result.safeSearchAnnotation;
-        if (!safe) return null;
+        // 이미지 URL에서 바이너리 다운로드
+        const https = require("https");
+        const http = require("http");
+        const imageBuffer = await new Promise((resolve, reject) => {
+            const mod = photoUrl.startsWith("https") ? https : http;
+            mod.get(photoUrl, (res) => {
+                const chunks = [];
+                res.on("data", (chunk) => chunks.push(chunk));
+                res.on("end", () => resolve(Buffer.concat(chunks)));
+                res.on("error", reject);
+            }).on("error", reject);
+        });
+
+        const base64Content = imageBuffer.toString("base64");
+
+        const result = await client.path("/image:analyze").post({
+            body: {
+                image: { content: base64Content },
+                categories: ["Sexual", "Violence", "Hate", "SelfHarm"]
+            }
+        });
+
+        if (result.status !== "200") {
+            console.error("[screenImage] Azure API 오류:", result.status, result.body);
+            return null;
+        }
+
+        const analysis = result.body.categoriesAnalysis || [];
+        const getScore = (cat) => {
+            const found = analysis.find(c => c.category === cat);
+            return found ? found.severity : 0;
+        };
+
         return {
-            adult: safe.adult || "UNKNOWN",
-            violence: safe.violence || "UNKNOWN",
-            racy: safe.racy || "UNKNOWN",
-            medical: safe.medical || "UNKNOWN",
-            spoof: safe.spoof || "UNKNOWN"
+            adult: azureSeverityToLikelihood(getScore("Sexual")),
+            violence: azureSeverityToLikelihood(getScore("Violence")),
+            racy: azureSeverityToLikelihood(getScore("Sexual")),
+            hate: azureSeverityToLikelihood(getScore("Hate")),
+            selfHarm: azureSeverityToLikelihood(getScore("SelfHarm"))
         };
     } catch (e) {
-        console.error("[screenImage] Vision API 호출 실패:", e.message);
+        console.error("[screenImage] Azure Content Safety 호출 실패:", e.message);
         return null;
     }
 }
@@ -1644,7 +1688,7 @@ async function getScreeningConfig() {
         autoHideThreshold: "medium",
         imageScreeningEnabled: false,
         textScreeningEnabled: true,
-        visionApiEnabled: false,
+        azureEnabled: false,
         notifyOnFlag: true
     };
 
@@ -1669,7 +1713,7 @@ async function executeScreening(post, config) {
 
     // 이미지 스크리닝
     let imageFlags = null;
-    if (settings.visionApiEnabled && settings.imageScreeningEnabled && post.photo) {
+    if (settings.azureEnabled && settings.imageScreeningEnabled && post.photo) {
         imageFlags = await screenImage(post.photo);
     }
 

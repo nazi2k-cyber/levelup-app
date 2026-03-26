@@ -367,10 +367,10 @@ function selectResult(postId) {
             ).join("") + '</div>';
     }
 
-    // 이미지 플래그 표시
+    // 이미지 플래그 표시 (Azure Content Safety)
     let imageFlagsHtml = '<p class="text-sub text-sm">이미지 분석 없음</p>';
     if (r.imageFlags) {
-        const imgLabels = { adult: "성인", violence: "폭력", racy: "선정", medical: "의료", spoof: "스푸핑" };
+        const imgLabels = { adult: "성인", violence: "폭력", racy: "선정", hate: "혐오", selfHarm: "자해" };
         imageFlagsHtml = '<div class="as-keyword-tags">' +
             Object.entries(r.imageFlags).map(([key, val]) =>
                 `<span class="as-keyword-tag as-tag-${getImageFlagSeverity(val)}">${imgLabels[key] || key}: ${val}</span>`
@@ -518,8 +518,8 @@ function renderConfigForm() {
                     <span>이미지 스크리닝 활성화</span>
                 </label>
                 <label class="as-toggle-row">
-                    <input type="checkbox" id="cfg-vision-enabled" ${s.visionApiEnabled ? "checked" : ""}>
-                    <span>Vision API 사용 <span class="text-sub">(비용 발생)</span></span>
+                    <input type="checkbox" id="cfg-azure-enabled" ${s.azureEnabled ? "checked" : ""}>
+                    <span>Azure Content Safety <span class="text-sub">(F0: 5,000건/월 무료)</span></span>
                 </label>
                 <label class="as-toggle-row">
                     <input type="checkbox" id="cfg-notify" ${s.notifyOnFlag !== false ? "checked" : ""}>
@@ -638,7 +638,7 @@ async function saveSettings() {
     const settings = {
         textScreeningEnabled: document.getElementById("cfg-text-enabled").checked,
         imageScreeningEnabled: document.getElementById("cfg-image-enabled").checked,
-        visionApiEnabled: document.getElementById("cfg-vision-enabled").checked,
+        azureEnabled: document.getElementById("cfg-azure-enabled").checked,
         notifyOnFlag: document.getElementById("cfg-notify").checked,
         autoHideThreshold: document.getElementById("cfg-hide-threshold").value,
         autoDeleteThreshold: document.getElementById("cfg-delete-threshold").value,

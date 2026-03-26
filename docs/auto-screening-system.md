@@ -4,7 +4,7 @@
 
 LEVEL UP: REBOOT 앱의 Day1(릴스) 포스트에 대한 **자동 콘텐츠 검열 시스템**입니다.
 기존 수동 포스트 스크리닝과 신고 관리에 더해, 금칙어 기반 텍스트 필터링과
-Google Cloud Vision API 기반 이미지 분석을 통해 부적절한 콘텐츠를 자동으로 감지하고 조치합니다.
+**Azure Content Safety API** 기반 이미지 분석을 통해 부적절한 콘텐츠를 자동으로 감지하고 조치합니다.
 
 ### 해결하는 문제
 
@@ -13,7 +13,19 @@ Google Cloud Vision API 기반 이미지 분석을 통해 부적절한 콘텐츠
 | 관리자가 모든 포스트를 수동 검토 | 금칙어/이미지 자동 감지 |
 | 신고 접수 후 사후 처리만 가능 | 사전 예방적 스크리닝 |
 | 검열 기준이 코드에 하드코딩 | 관리자 UI에서 실시간 설정 변경 |
-| 이미지 검열 불가 | Vision API SafeSearch로 NSFW/폭력 감지 |
+| 이미지 검열 불가 | Azure Content Safety로 성인/폭력/혐오/자해 감지 |
+
+### 이미지 스크리닝 솔루션 선택: Azure Content Safety
+
+| 항목 | Google Cloud Vision | **Azure Content Safety (채택)** |
+|------|--------------------|---------------------------------|
+| 무료 한도 | 1,000건/월 | **5,000건/월 (영구)** |
+| 유료 가격 | $1.50 / 1,000건 | **$1.00 / 1,000건** |
+| 감지 카테고리 | 5개 (Adult, Violence, Racy, Medical, Spoof) | **4개 + 심각도 0~6** (Sexual, Violence, Hate, SelfHarm) |
+| 심각도 세분화 | 5단계 Likelihood | **7단계 (0~6)** |
+| 혐오/자해 감지 | 없음 | **있음** |
+
+> 비용 분석 상세: [docs/image-screening-cost-analysis.md](./image-screening-cost-analysis.md)
 
 ---
 
@@ -37,12 +49,12 @@ Google Cloud Vision API 기반 이미지 분석을 통해 부적절한 콘텐츠
 │                     │                                │
 │         ┌───────────┴───────────┐                    │
 │         ▼                       ▼                    │
-│  ┌─────────────┐      ┌──────────────────┐          │
-│  │ screenCaption│      │  screenImage     │          │
-│  │ (금칙어 매칭) │      │  (Vision API)    │          │
-│  └──────┬──────┘      └────────┬─────────┘          │
-│         │                      │                     │
-│         ▼                      ▼                     │
+│  ┌─────────────┐   ┌────────────────────────┐       │
+│  │ screenCaption│   │     screenImage         │       │
+│  │ (금칙어 매칭) │   │ (Azure Content Safety)  │       │
+│  └──────┬──────┘   └──────────┬─────────────┘       │
+│         │                     │                      │
+│         ▼                     ▼                      │
 │  ┌─────────────────────────────────────────────┐    │
 │  │        Firestore: screening_results          │    │
 │  └─────────────────────────────────────────────┘    │
@@ -61,7 +73,7 @@ Google Cloud Vision API 기반 이미지 분석을 통해 부적절한 콘텐츠
 {
   textScreeningEnabled: true,       // 텍스트 스크리닝 활성화
   imageScreeningEnabled: false,     // 이미지 스크리닝 활성화
-  visionApiEnabled: false,          // Vision API 사용 여부 (비용 발생)
+  azureEnabled: false,              // Azure Content Safety 사용 여부 (F0: 5,000건/월 무료)
   notifyOnFlag: true,               // 플래그 시 알림
   autoHideThreshold: "medium",      // 자동 숨김 임계값
   autoDeleteThreshold: "high"       // 자동 삭제 임계값
@@ -119,13 +131,13 @@ Google Cloud Vision API 기반 이미지 분석을 통해 부적절한 콘텐츠
     { keyword: "시발", category: "profanity", severity: "medium" }
   ],
 
-  // 이미지 스크리닝 결과 (Vision API 사용 시)
+  // 이미지 스크리닝 결과 (Azure Content Safety)
   imageFlags: {
-    adult: "VERY_UNLIKELY",
-    violence: "UNLIKELY",
-    racy: "POSSIBLE",
-    medical: "VERY_UNLIKELY",
-    spoof: "VERY_UNLIKELY"
+    adult: "VERY_UNLIKELY",         // Sexual 카테고리 → adult로 매핑
+    violence: "UNLIKELY",           // Violence 카테고리
+    racy: "POSSIBLE",               // Sexual 카테고리 → racy로도 매핑
+    hate: "VERY_UNLIKELY",          // Hate 카테고리 (Azure 전용)
+    selfHarm: "VERY_UNLIKELY"       // SelfHarm 카테고리 (Azure 전용)
   },
 
   overallSeverity: "medium",        // 종합 심각도
@@ -157,15 +169,29 @@ Google Cloud Vision API 기반 이미지 분석을 통해 부적절한 콘텐츠
 
 > 임계값은 관리자 설정에서 조정 가능합니다.
 
-### 4.3 이미지 스크리닝 심각도 매핑 (Vision API)
+### 4.3 이미지 스크리닝 심각도 매핑 (Azure Content Safety → Likelihood)
 
-| Vision API Likelihood | 심각도 |
-|----------------------|--------|
-| VERY_LIKELY | High |
-| LIKELY | High |
-| POSSIBLE | Medium |
-| UNLIKELY | Low |
-| VERY_UNLIKELY | Low |
+Azure Content Safety는 각 카테고리에 0~6 심각도를 반환합니다.
+이를 시스템 내부 Likelihood 값으로 매핑:
+
+| Azure Severity (0~6) | 내부 Likelihood | 시스템 심각도 |
+|----------------------|----------------|-------------|
+| 5~6 | VERY_LIKELY | **High** |
+| 4 | LIKELY | **High** |
+| 2~3 | POSSIBLE | **Medium** |
+| 1 | UNLIKELY | **Low** |
+| 0 | VERY_UNLIKELY | **Low** |
+
+### 4.4 Azure Content Safety 감지 카테고리
+
+| Azure 카테고리 | 내부 매핑 | 설명 |
+|---------------|---------|------|
+| **Sexual** | adult, racy | 성적/선정적 콘텐츠 |
+| **Violence** | violence | 폭력적 콘텐츠 |
+| **Hate** | hate | 혐오 표현 (Azure 전용) |
+| **SelfHarm** | selfHarm | 자해/자살 관련 (Azure 전용) |
+
+> Google Vision 대비 Hate, SelfHarm 카테고리가 추가되어 커뮤니티 앱에 더 적합합니다.
 
 ---
 
@@ -203,8 +229,11 @@ screenCaption(caption, categories)
   → 카테고리별 enabled 체크, 대소문자 무시 매칭
 
 screenImage(photoUrl)
-  → Google Cloud Vision SafeSearch API 호출
-  → adult, violence, racy, medical, spoof 결과 반환
+  → Azure Content Safety API 호출 (이미지 URL → base64 → 분석)
+  → adult, violence, racy, hate, selfHarm 결과 반환 (Likelihood로 매핑)
+
+azureSeverityToLikelihood(severity)
+  → Azure 0~6 심각도를 VERY_UNLIKELY~VERY_LIKELY로 변환
 
 getOverallSeverity(textFlags, imageFlags)
   → 텍스트/이미지 플래그 중 최고 심각도 반환
@@ -243,7 +272,7 @@ performAutoDelete(ownerUid, timestamp)
   - 전체 캡션 텍스트
   - 포스트 이미지
   - 텍스트 플래그 태그 (키워드 + 카테고리)
-  - 이미지 플래그 태그 (Vision API 결과)
+  - 이미지 플래그 태그 (Azure Content Safety: 성인, 폭력, 선정, 혐오, 자해)
   - **승인/거부 버튼** (pending, auto_hidden 상태에서만 활성)
 
 ### 6.3 설정 관리
@@ -251,7 +280,7 @@ performAutoDelete(ownerUid, timestamp)
 - **일반 설정**
   - 텍스트 스크리닝 활성화 토글
   - 이미지 스크리닝 활성화 토글
-  - Vision API 사용 토글 (비용 경고 표시)
+  - Azure Content Safety 사용 토글 (F0: 5,000건/월 무료)
   - 플래그 알림 토글
   - 자동 숨김 임계값 선택 (Low / Medium / High)
   - 자동 삭제 임계값 선택 (Low / Medium / High)
@@ -268,11 +297,11 @@ performAutoDelete(ownerUid, timestamp)
 
 | 파일 | 변경 유형 | 설명 |
 |------|---------|------|
-| `functions/index.js` | 수정 | 스크리닝 백엔드 로직 전체 (+467줄) |
-| `functions/package.json` | 수정 | `@google-cloud/vision` 의존성 추가 |
+| `functions/index.js` | 수정 | 스크리닝 백엔드 로직 (Azure Content Safety 연동) |
+| `functions/package.json` | 수정 | `@azure-rest/ai-content-safety`, `@azure/core-auth` 의존성 |
 | `firestore.rules` | 수정 | `screening_results`, `screening_config` 보안 규칙 추가 |
-| `www/admin/js/auto-screening.js` | **신규** | 관리자 UI 모듈 (694줄) |
-| `www/admin/css/admin-base.css` | 수정 | 스크리닝 전용 CSS 스타일 (+110줄) |
+| `www/admin/js/auto-screening.js` | **신규** | 관리자 UI 모듈 |
+| `www/admin/css/admin-base.css` | 수정 | 스크리닝 전용 CSS 스타일 |
 | `www/admin/index.html` | 수정 | "자동 스크리닝" 탭 + import 추가 |
 
 ---
@@ -302,10 +331,39 @@ match /screening_config/{docId} {
 ### 9.1 사전 요구사항
 
 1. Firebase 프로젝트에 Cloud Functions가 Blaze(종량제) 요금제로 활성화
-2. (이미지 스크리닝 사용 시) GCP Console에서 Cloud Vision API 활성화:
-   ```bash
-   gcloud services enable vision.googleapis.com --project=levelup-app-53d02
-   ```
+2. (이미지 스크리닝 사용 시) Azure Content Safety 리소스 생성:
+
+```
+Azure Portal에서 설정:
+
+1. https://portal.azure.com 접속
+2. "리소스 만들기" → "Content Safety" 검색
+3. 리소스 생성:
+   - 이름: levelup-content-safety
+   - 지역: Korea Central (또는 East Asia)
+   - 가격 책정 계층: F0 (무료, 5,000건/월)
+4. 리소스 생성 완료 후 → "키 및 엔드포인트" 메뉴에서:
+   - 엔드포인트 URL 복사
+   - KEY 1 복사
+```
+
+3. Firebase Functions 환경변수 설정:
+
+```bash
+# Firebase Functions 환경변수에 Azure 인증 정보 추가
+firebase functions:secrets:set AZURE_CS_ENDPOINT
+# → Azure 엔드포인트 URL 입력 (예: https://levelup-content-safety.cognitiveservices.azure.com)
+
+firebase functions:secrets:set AZURE_CS_KEY
+# → Azure KEY 1 입력
+```
+
+또는 `.env` 파일 사용:
+```bash
+# functions/.env
+AZURE_CS_ENDPOINT=https://levelup-content-safety.cognitiveservices.azure.com
+AZURE_CS_KEY=your-azure-key-here
+```
 
 ### 9.2 배포 순서
 
@@ -333,7 +391,7 @@ firebase deploy --only hosting
 3. **설정 로드** 버튼 클릭 (초기 기본값 자동 생성)
 4. 금칙어 목록 확인/수정
 5. 텍스트 스크리닝 활성화 확인
-6. (선택) 이미지 스크리닝 / Vision API 활성화
+6. (선택) 이미지 스크리닝 + Azure Content Safety 활성화
 7. **설정 저장** 클릭
 8. **대시보드**로 이동 → **일괄 스크리닝 실행**으로 기존 포스트 스캔
 
@@ -379,13 +437,36 @@ firebase deploy --only hosting
 
 ---
 
-## 11. 향후 개선 사항
+## 11. 비용 요약
+
+### Azure Content Safety 가격
+
+| Tier | 한도 | 가격 | 초과 시 |
+|------|------|------|--------|
+| **F0 (무료)** | 5,000건/월 | $0 | 요청 거부 (429) |
+| **S0 (유료)** | 무제한 | $1.00 / 1,000건 | 종량제 |
+
+### 시나리오별 예상 비용
+
+| 월간 이미지 수 | Azure F0 | Azure S0 | (참고) Google Vision |
+|-------------|---------|---------|-------------------|
+| 1,000건 | **$0** | $1.00 | $0 |
+| 5,000건 | **$0** | $5.00 | $6.00 |
+| 10,000건 | (한도 초과) | $10.00 | $13.50 |
+| 50,000건 | (한도 초과) | $50.00 | $73.50 |
+
+> 상세 비용 분석: [docs/image-screening-cost-analysis.md](./image-screening-cost-analysis.md)
+
+---
+
+## 12. 향후 개선 사항
 
 | 항목 | 설명 | 우선순위 |
 |------|------|---------|
 | 정규식 패턴 지원 | 띄어쓰기 우회 감지 (예: "시 발") | 높음 |
 | 자모 분해 매칭 | 초성 축약어 감지 강화 | 중간 |
 | 클라이언트 연동 | 포스트 작성 시 실시간 스크리닝 호출 | 중간 |
+| NSFWJS 하이브리드 | 1차 로컬 필터 → 2차 Azure (비용 85% 절감) | 중간 |
 | 스크리닝 로그 | 관리자 감사 추적 전용 컬렉션 | 낮음 |
 | AI 기반 텍스트 분석 | LLM API 연동으로 문맥 기반 판단 | 낮음 |
 | 대량 포스트 최적화 | Batch 처리 시 병렬화 및 Rate Limiting | 낮음 |
