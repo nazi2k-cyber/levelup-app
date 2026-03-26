@@ -1477,7 +1477,7 @@ exports.cleanupExpiredPlannerPhotos = onSchedule({
     let deletedCount = 0;
     for (const file of files) {
         const filename = file.name.split("/").pop().replace(/\.(jpg|jpeg|webp|png)$/i, "");
-        if (/^\d{4}-\d{2}-\d{2}$/.test(filename) && filename < cutoffStr) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(filename) && filename <= cutoffStr) {
             await file.delete();
             deletedCount++;
         }
