@@ -1697,7 +1697,22 @@ function azureSeverityToLikelihood(severity) {
     return "VERY_UNLIKELY";
 }
 
+// Azure F0 한도 초과(429) 감지 시 자동 중단
+let _azureRateLimited = false;
+let _azureRateLimitedAt = 0;
+const AZURE_RATE_LIMIT_COOLDOWN = 60 * 60 * 1000; // 1시간 후 재시도
+
 async function screenImageAzure(photoUrl) {
+    // 429 한도 초과 상태면 호출 스킵 (쿨다운 후 자동 재시도)
+    if (_azureRateLimited) {
+        if (Date.now() - _azureRateLimitedAt < AZURE_RATE_LIMIT_COOLDOWN) {
+            return null;
+        }
+        // 쿨다운 경과 → 재시도 허용
+        _azureRateLimited = false;
+        console.log("[screenImageAzure] Azure 쿨다운 경과, 재시도 허용");
+    }
+
     const client = getAzureClient();
     if (!client || !photoUrl) return null;
 
@@ -1711,6 +1726,22 @@ async function screenImageAzure(photoUrl) {
                 categories: ["Sexual", "Violence", "Hate", "SelfHarm"]
             }
         });
+
+        if (result.status === "429") {
+            _azureRateLimited = true;
+            _azureRateLimitedAt = Date.now();
+            console.error("[screenImageAzure] Azure F0 월간 한도 초과 (429). 1시간 동안 Azure 호출 중단, NSFWJS fallback 전환.");
+
+            // Firestore에 한도 초과 알림 기록
+            try {
+                await db.collection("screening_config").doc("settings").set({
+                    _azureRateLimitedAt: Date.now(),
+                    _azureRateLimitMessage: "Azure Content Safety F0 월간 한도(5,000건) 초과. NSFWJS fallback으로 자동 전환됨."
+                }, { merge: true });
+            } catch (logErr) { /* 알림 기록 실패는 무시 */ }
+
+            return null;
+        }
 
         if (result.status !== "200") {
             console.error("[screenImageAzure] Azure API 오류:", result.status, result.body);
@@ -2126,7 +2157,17 @@ async function handleGetScreeningStats(request) {
         }
     }
 
-    return { total, pending, approved, rejected, autoDeleted, autoHidden, byCategory, bySeverity };
+    // Azure 한도 초과 상태 포함
+    let azureRateLimited = null;
+    try {
+        const settingsDoc = await db.collection("screening_config").doc("settings").get();
+        if (settingsDoc.exists) {
+            const s = settingsDoc.data();
+            if (s._azureRateLimitedAt) azureRateLimited = s._azureRateLimitedAt;
+        }
+    } catch (e) { /* ignore */ }
+
+    return { total, pending, approved, rejected, autoDeleted, autoHidden, byCategory, bySeverity, azureRateLimited };
 }
 
 // --- 만료 릴스 사진 정리 (매일 04:00 KST) ---

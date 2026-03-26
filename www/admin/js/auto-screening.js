@@ -87,7 +87,18 @@ async function loadStats() {
         _stats = await callAdmin("getScreeningStats");
         tok("AutoScreen", "통계 로드 완료");
 
+        let rateLimitAlert = "";
+        if (_stats.azureRateLimited) {
+            const limitDt = new Date(_stats.azureRateLimited).toLocaleString("ko-KR");
+            rateLimitAlert = `
+                <div style="background:#ff525220; border:1px solid #ff5252; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+                    <strong style="color:#ff5252;">Azure F0 한도 초과</strong>
+                    <span class="text-sm" style="margin-left:8px; color:var(--text);">${limitDt} — NSFWJS fallback 운영 중</span>
+                </div>`;
+        }
+
         area.innerHTML = `
+            ${rateLimitAlert}
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value">${_stats.total || 0}</div>
@@ -516,7 +527,23 @@ function renderConfigForm() {
         illegal: "불법정보"
     };
 
+    // Azure F0 한도 초과 알림 표시
+    let rateLimitBanner = "";
+    if (s._azureRateLimitedAt) {
+        const limitDt = new Date(s._azureRateLimitedAt).toLocaleString("ko-KR");
+        rateLimitBanner = `
+            <div style="background:#ff525220; border:1px solid #ff5252; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+                <strong style="color:#ff5252;">Azure F0 한도 초과</strong>
+                <p class="text-sm" style="margin-top:4px; color:var(--text);">
+                    ${limitDt}에 Azure Content Safety F0 월간 한도(5,000건)가 초과되었습니다.<br>
+                    현재 NSFWJS fallback으로 자동 전환되어 운영 중입니다.<br>
+                    <span class="text-sub">다음 달 1일에 한도가 리셋되거나, S0 유료 tier로 업그레이드하세요.</span>
+                </p>
+            </div>`;
+    }
+
     area.innerHTML = `
+        ${rateLimitBanner}
         <!-- 일반 설정 -->
         <div style="margin-bottom:24px;">
             <h3 class="text-sm" style="color:var(--accent); margin-bottom:12px;">일반 설정</h3>
