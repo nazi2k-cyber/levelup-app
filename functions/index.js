@@ -1946,6 +1946,8 @@ async function executeScreening(post, config) {
             postId,
             ownerUid: post.ownerUid,
             ownerName: post.ownerName || "",
+            caption: post.caption || "",
+            photo: post.photo || "",
             screenedAt: Date.now(),
             status: cleanStatus,
             overallSeverity: needsReview ? "low" : null,
@@ -1959,10 +1961,6 @@ async function executeScreening(post, config) {
                 needsReview: needsReview || null,
             } : null,
         };
-        if (needsReview) {
-            cleanDoc.caption = post.caption || "";
-            cleanDoc.photo = post.photo || "";
-        }
         await db.collection("screening_results").doc(postId).set(cleanDoc);
         return { status: cleanStatus, _meta: meta };
     }
