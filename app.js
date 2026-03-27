@@ -5671,12 +5671,19 @@ async function showRewardedInterstitial(context) {
 }
 
 // --- 배너 광고 함수 (던전 탭 전용) ---
+function _getBannerMargin() {
+    // nav 높이(65px) + safe-area-inset-bottom 을 합산하여 배너가 nav 위에 위치하도록
+    const safeBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0;
+    return 65 + safeBottom;
+}
+
 async function showBannerAd() {
     if (!_admobInitialized || !isNativePlatform) return;
     try {
         const { AdMob } = window.Capacitor.Plugins;
         if (!AdMob) return;
 
+        const bannerMargin = _getBannerMargin();
         if (_bannerAdLoaded) {
             await AdMob.resumeBanner();
         } else {
@@ -5684,12 +5691,15 @@ async function showBannerAd() {
                 adId: BANNER_AD_UNIT_ID,
                 adSize: 'ADAPTIVE_BANNER',
                 position: 'BOTTOM_CENTER',
-                margin: 65,
+                margin: bannerMargin,
                 isTesting: false,
             });
             _bannerAdLoaded = true;
         }
         _bannerAdVisible = true;
+        // 던전 콘텐츠가 배너에 가리지 않도록 하단 여백 추가
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.style.paddingBottom = `calc(${bannerMargin + 70}px + env(safe-area-inset-bottom))`;
         if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 표시');
     } catch (e) {
         console.warn('[AdMob] 배너 광고 표시 실패:', e);
@@ -5704,6 +5714,9 @@ async function hideBannerAd() {
         if (!AdMob) return;
         await AdMob.hideBanner();
         _bannerAdVisible = false;
+        // 배너 숨김 시 하단 여백 원래대로 복원
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.style.paddingBottom = '';
         if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 숨김');
     } catch (e) {
         console.warn('[AdMob] 배너 광고 숨김 실패:', e);
