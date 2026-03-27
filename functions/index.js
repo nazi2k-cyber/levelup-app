@@ -51,7 +51,7 @@ function getAzureClient() {
             return null;
         }
         try {
-            const { ContentSafetyClient } = require("@azure-rest/ai-content-safety");
+            const ContentSafetyClient = require("@azure-rest/ai-content-safety").default;
             const { AzureKeyCredential } = require("@azure/core-auth");
             azureClient = ContentSafetyClient(endpoint, new AzureKeyCredential(key));
             _azureInitError = null; // 성공 시 에러 초기화
