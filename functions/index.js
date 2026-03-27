@@ -901,6 +901,11 @@ async function handleGetUserAnalytics(request) {
     const langCount = {};
     const levelDistribution = { "1-10": 0, "11-30": 0, "31-50": 0, "51-100": 0, "100+": 0 };
 
+    // 생년월일 / 기대 나이 / 개인정보 동의 통계
+    let birthdaySetCount = 0;
+    const expectAgeDistribution = {};
+    const ageGroupDistribution = {};
+
     for (const doc of usersSnap.docs) {
         totalUsers++;
         const data = doc.data();
@@ -918,6 +923,30 @@ async function handleGetUserAnalytics(request) {
         // 언어/국적 집계
         const lang = data.lang || "ko";
         langCount[lang] = (langCount[lang] || 0) + 1;
+
+        // 생년월일 / 기대 나이 분석
+        try {
+            const lifeStatus = JSON.parse(data.lifeStatusStr || "{}");
+            if (lifeStatus.birthday) {
+                birthdaySetCount++;
+                const expectAge = lifeStatus.expectAge || 80;
+                const eaKey = String(expectAge);
+                expectAgeDistribution[eaKey] = (expectAgeDistribution[eaKey] || 0) + 1;
+
+                const birth = new Date(lifeStatus.birthday);
+                const ageDiff = now - birth.getTime();
+                const currentAge = Math.floor(ageDiff / (365.25 * 24 * 60 * 60 * 1000));
+                let ageGroup;
+                if (currentAge < 10) ageGroup = "10세 미만";
+                else if (currentAge < 20) ageGroup = "10대";
+                else if (currentAge < 30) ageGroup = "20대";
+                else if (currentAge < 40) ageGroup = "30대";
+                else if (currentAge < 50) ageGroup = "40대";
+                else if (currentAge < 60) ageGroup = "50대";
+                else ageGroup = "60세 이상";
+                ageGroupDistribution[ageGroup] = (ageGroupDistribution[ageGroup] || 0) + 1;
+            }
+        } catch (_) { /* ignore */ }
 
         // 레벨 분포
         const lv = data.level || 1;
@@ -956,7 +985,10 @@ async function handleGetUserAnalytics(request) {
         signupEmail,
         signupOther,
         langCount,
-        levelDistribution
+        levelDistribution,
+        birthdaySetCount,
+        expectAgeDistribution,
+        ageGroupDistribution
     };
 }
 

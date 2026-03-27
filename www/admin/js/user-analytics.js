@@ -26,6 +26,21 @@ function render() {
                 <div class="stat-card"><div class="stat-value" id="ua-email">—</div><div class="stat-label">이메일</div></div>
                 <div class="stat-card"><div class="stat-value" id="ua-other">—</div><div class="stat-label">기타</div></div>
             </div>
+            <h2 class="mt-16">생년월일 / 기대 나이</h2>
+            <div class="stats-grid" id="ua-life-status">
+                <div class="stat-card"><div class="stat-value" id="ua-birthday-count">—</div><div class="stat-label">생년월일 설정</div></div>
+                <div class="stat-card"><div class="stat-value" id="ua-consent-rate">—</div><div class="stat-label">개인정보 동의율</div></div>
+            </div>
+            <div class="ua-charts-row mt-16">
+                <div class="ua-chart-box">
+                    <h2>연령대 분포</h2>
+                    <div id="ua-age-chart"></div>
+                </div>
+                <div class="ua-chart-box">
+                    <h2>기대 나이 분포</h2>
+                    <div id="ua-expect-age-chart"></div>
+                </div>
+            </div>
             <div class="ua-charts-row mt-16">
                 <div class="ua-chart-box">
                     <h2>국적/언어 분포</h2>
@@ -61,6 +76,18 @@ export async function loadUserAnalytics() {
         document.getElementById("ua-email").textContent = d.signupEmail;
         document.getElementById("ua-other").textContent = d.signupOther;
 
+        // 생년월일 / 기대 나이 / 개인정보 동의
+        document.getElementById("ua-birthday-count").textContent = d.birthdaySetCount || 0;
+        const consentRate = d.totalUsers > 0 ? (((d.birthdaySetCount || 0) / d.totalUsers) * 100).toFixed(1) : "0";
+        document.getElementById("ua-consent-rate").textContent = consentRate + "%";
+
+        // 연령대 분포 바 차트
+        renderBarChart("ua-age-chart", d.ageGroupDistribution || {}, ageGroupLabel, AGE_GROUP_ORDER);
+
+        // 기대 나이 분포 바 차트 (숫자 순 정렬)
+        const expectAgeOrder = Object.keys(d.expectAgeDistribution || {}).sort((a, b) => Number(a) - Number(b));
+        renderBarChart("ua-expect-age-chart", d.expectAgeDistribution || {}, k => k + "세", expectAgeOrder);
+
         // 국적/언어 바 차트
         renderBarChart("ua-lang-chart", d.langCount, langLabel);
 
@@ -87,11 +114,19 @@ function langLabel(key) {
     return LANG_LABELS[key] || key.toUpperCase();
 }
 
-function renderBarChart(containerId, data, labelFn) {
+const AGE_GROUP_ORDER = ["10세 미만", "10대", "20대", "30대", "40대", "50대", "60세 이상"];
+function ageGroupLabel(key) { return key; }
+
+function renderBarChart(containerId, data, labelFn, customOrder) {
     const el = document.getElementById(containerId);
     if (!el) return;
 
-    const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+    let entries;
+    if (customOrder) {
+        entries = customOrder.filter(k => data[k] !== undefined).map(k => [k, data[k]]);
+    } else {
+        entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+    }
     const maxVal = Math.max(...entries.map(e => e[1]), 1);
     const total = entries.reduce((s, e) => s + e[1], 0);
 
