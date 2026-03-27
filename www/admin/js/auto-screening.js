@@ -349,6 +349,7 @@ function renderResults() {
                 <button class="btn btn-outline btn-sm" id="btn-load-results">결과 조회</button>
                 <select id="as-filter-status" style="width:auto; padding:6px 10px; font-size:0.8rem;">
                     <option value="">전체 상태</option>
+                    <option value="clean">정상 (Clean)</option>
                     <option value="pending">검토 대기</option>
                     <option value="approved">승인됨</option>
                     <option value="rejected">거부됨</option>
@@ -454,6 +455,7 @@ function getSeverityBadge(severity) {
 
 function getStatusBadge(status) {
     const map = {
+        clean: '<span class="badge badge-ok">정상</span>',
         pending: '<span class="badge badge-warn">검토 대기</span>',
         approved: '<span class="badge badge-ok">승인</span>',
         rejected: '<span class="badge badge-fail">거부</span>',

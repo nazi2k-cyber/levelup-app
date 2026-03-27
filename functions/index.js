@@ -2282,10 +2282,8 @@ async function handleGetScreeningResults(request) {
     q = q.limit(maxResults || 100);
 
     const snap = await q.get();
-    // status 필터가 없으면 "clean" 레코드 제외 (플래그된 것만 표시)
-    const results = snap.docs
-        .map(doc => doc.data())
-        .filter(r => status ? true : r.status !== "clean");
+    // 모든 상태의 결과를 반환 (clean 포함)
+    const results = snap.docs.map(doc => doc.data());
 
     return { results };
 }
