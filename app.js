@@ -9473,7 +9473,13 @@ function openLifeStatusSettings() {
                 ${unitOptions}
             </select>
         </div>
-        <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:14px;">🔒 생년월일은 계정 동기화를 위해 서버에 암호화 저장됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.</div>
+        <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:10px;">🔒 생년월일은 계정 동기화를 위해 서버에 암호화 저장됩니다.</div>
+        <div style="margin-bottom:14px;">
+            <label id="ls-consent-checkbox-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.75rem; color:var(--text-main);">
+                <input type="checkbox" id="ls-consent-checkbox" ${localStorage.getItem('life_status_privacy_consent') ? 'checked' : ''} style="accent-color:var(--neon-blue); width:16px; height:16px; cursor:pointer;" readonly>
+                📋 개인정보 수집 및 이용 동의서
+            </label>
+        </div>
         <div id="ls-loading-msg" style="display:none; text-align:center; padding:8px 0; font-size:0.8rem; color:var(--neon-blue);">계산 중입니다...</div>
         <div style="display:flex; gap:8px;">
             ${config.birthday ? `<button onclick="resetLifeStatus()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">초기화</button>` : ''}
@@ -9484,6 +9490,15 @@ function openLifeStatusSettings() {
 
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('active'));
+
+    // 체크박스 클릭 시 동의 모달 호출
+    const consentCheckbox = overlay.querySelector('#ls-consent-checkbox');
+    if (consentCheckbox) {
+        consentCheckbox.addEventListener('click', (e) => {
+            e.preventDefault();
+            openLifeStatusPrivacyModal();
+        });
+    }
 }
 
 function saveLifeStatusFromModal() {
@@ -9493,12 +9508,10 @@ function saveLifeStatusFromModal() {
 
     if (!birthday) { alert('생년월일을 입력하세요.'); return; }
 
-    // 개인정보 동의 여부 확인 — 미동의 시 동의 절차 진행
+    // 개인정보 동의 여부 확인
     const hasConsent = localStorage.getItem('life_status_privacy_consent');
     if (!hasConsent) {
-        openLifeStatusPrivacyModal(function onAgreed() {
-            _doSaveLifeStatus(birthday, expectAge, remainUnit);
-        });
+        alert('개인정보 수집 및 이용에 동의해야 저장할 수 있습니다.');
         return;
     }
 
@@ -9585,11 +9598,20 @@ function openLifeStatusPrivacyModal(onAgreeCallback) {
     overlay.querySelector('#ls-privacy-agree-btn').addEventListener('click', () => {
         localStorage.setItem('life_status_privacy_consent', new Date().toISOString());
         closeLifeStatusPrivacyModal();
+        const cb = document.getElementById('ls-consent-checkbox');
+        if (cb) cb.checked = true;
         if (typeof onAgreeCallback === 'function') onAgreeCallback();
     });
 
     overlay.querySelector('#ls-privacy-disagree-btn').addEventListener('click', () => {
+        // 동의하지 않음 선택 시 자동 초기화
+        localStorage.removeItem(LIFE_STATUS_STORAGE_KEY);
+        localStorage.removeItem('life_status_privacy_consent');
         closeLifeStatusPrivacyModal();
+        const cb = document.getElementById('ls-consent-checkbox');
+        if (cb) cb.checked = false;
+        renderLifeStatus();
+        saveUserData();
     });
 }
 
@@ -9622,8 +9644,6 @@ function closeLifeStatusModal() {
 document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('btn-life-status-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', openLifeStatusSettings);
-    const privacyBtn = document.getElementById('btn-life-status-privacy');
-    if (privacyBtn) privacyBtn.addEventListener('click', () => openLifeStatusPrivacyModal());
     renderLifeStatus();
 });
 
