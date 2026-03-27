@@ -167,6 +167,7 @@ jobs:
             "serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com|roles/iam.serviceAccountTokenCreator"
             "serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com|roles/run.invoker"
             "serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com|roles/eventarc.eventReceiver"
+            "serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-eventarc.iam.gserviceaccount.com|roles/storage.objectViewer"
           )
 
           # 현재 IAM 정책을 한 번만 조회 (API 호출 절약)
