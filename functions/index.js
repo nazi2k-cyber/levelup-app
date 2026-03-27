@@ -1934,26 +1934,35 @@ async function executeScreening(post, config) {
 
     const overallSeverity = getOverallSeverity(textFlags, imageFlags);
 
-    // 플래그 없음 → "clean" 상태로 저장 (재스캔 방지)
+    // 플래그 없음 → clean 또는 pending 판정
     if (!overallSeverity) {
+        // NSFWJS 애매/오류 + Azure 실패 시 → 수동 검토 대기
+        const needsReview = meta.imageScreened &&
+            (meta.nsfwjsVerdict === "ambiguous" || meta.nsfwjsVerdict === "error") &&
+            (meta.azureVerdict === "error" || meta.azureVerdict === null);
+        const cleanStatus = needsReview ? "pending" : "clean";
+
         await db.collection("screening_results").doc(postId).set({
             postId,
             ownerUid: post.ownerUid,
             ownerName: post.ownerName || "",
+            caption: needsReview ? (post.caption || "") : undefined,
+            photo: needsReview ? (post.photo || "") : undefined,
             screenedAt: Date.now(),
-            status: "clean",
-            overallSeverity: null,
+            status: cleanStatus,
+            overallSeverity: needsReview ? "low" : null,
             textFlags: [],
             imageFlags: null,
-            // 엔진 진단 데이터 (clean 결과에도 저장하여 디버깅 지원)
+            // 엔진 진단 데이터
             engineData: meta.imageScreened ? {
                 nsfwjsVerdict: meta.nsfwjsVerdict,
                 nsfwjsScores: meta.nsfwjsScores,
                 azureVerdict: meta.azureVerdict,
                 errors: meta.errors.length > 0 ? meta.errors : null,
+                needsReview: needsReview || undefined,
             } : null,
         });
-        return { status: "clean", _meta: meta };
+        return { status: cleanStatus, _meta: meta };
     }
 
     // 자동 조치 결정
@@ -2282,10 +2291,8 @@ async function handleGetScreeningResults(request) {
     q = q.limit(maxResults || 100);
 
     const snap = await q.get();
-    // status 필터가 없으면 "clean" 레코드 제외 (플래그된 것만 표시)
-    const results = snap.docs
-        .map(doc => doc.data())
-        .filter(r => status ? true : r.status !== "clean");
+    // 모든 상태의 결과를 반환 (clean 포함)
+    const results = snap.docs.map(doc => doc.data());
 
     return { results };
 }
