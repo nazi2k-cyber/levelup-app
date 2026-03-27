@@ -3201,6 +3201,15 @@ function renderDungeon() {
             }
         }
     }
+
+    // 네이티브 광고 placeholder 표시 및 로드 (스크롤 연동)
+    const adPlaceholder = document.getElementById('native-ad-placeholder-dungeon');
+    if (adPlaceholder) {
+        adPlaceholder.classList.remove('d-none');
+        if (isNativePlatform && _nativeAdActiveTab !== 'dungeon') {
+            setTimeout(() => loadAndShowNativeAd('dungeon'), 300);
+        }
+    }
 }
 
 window.joinDungeon = async () => {
@@ -3341,12 +3350,8 @@ function switchTab(tabId, el) {
         cleanupNativeAd();
     }
 
-    // 배너 광고: 던전 탭에서만 표시
-    if (tabId === 'dungeon') {
-        showBannerAd();
-    } else {
-        hideBannerAd();
-    }
+    // 배너 광고 숨김 (던전 탭도 네이티브 광고로 전환)
+    hideBannerAd();
 
     if(tabId === 'social') fetchSocialData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); renderWeeklyChallenges(); renderRoulette(); }
@@ -5957,11 +5962,11 @@ let _nativeAdLoaded = false;
 let _nativeAdVisible = false;
 let _nativeAdScrollRAF = null;
 let _nativeAdObserver = null;
-let _nativeAdActiveTab = null; // 'social' | 'reels' | null — 현재 네이티브 광고가 활성인 탭
+let _nativeAdActiveTab = null; // 'social' | 'reels' | 'dungeon' | null — 현재 네이티브 광고가 활성인 탭
 
 /**
  * 네이티브 광고 로드 및 표시 (탭 공용)
- * @param {string} tabId - 'social' | 'reels'
+ * @param {string} tabId - 'social' | 'reels' | 'dungeon'
  */
 async function loadAndShowNativeAd(tabId) {
     if (!isNativePlatform) return;
@@ -6031,7 +6036,7 @@ async function loadAndShowNativeAd(tabId) {
 
 /**
  * placeholder 좌표를 계산하여 네이티브 광고 오버레이 위치 지정 (탭 공용)
- * @param {string} tabId - 'social' | 'reels'
+ * @param {string} tabId - 'social' | 'reels' | 'dungeon'
  */
 async function positionNativeAd(tabId) {
     const placeholderId = 'native-ad-placeholder-' + tabId;
@@ -6046,7 +6051,7 @@ async function positionNativeAd(tabId) {
         if (!NativeAd) return;
 
         const rect = placeholder.getBoundingClientRect();
-        // 소셜탭: sticky header 기준 클리핑, Day1탭: 앱 header 기준 클리핑
+        // 소셜탭: sticky header 기준 클리핑, Day1/던전탭: 앱 header 기준 클리핑
         let clipTop = 0;
         if (tabId === 'social') {
             const sh = document.querySelector('.social-sticky-header');
@@ -6071,7 +6076,7 @@ async function positionNativeAd(tabId) {
 /**
  * 스크롤 동기화 설정 (탭 공용)
  * main 요소의 스크롤에 맞춰 네이티브 오버레이 Y좌표를 업데이트
- * @param {string} tabId - 'social' | 'reels'
+ * @param {string} tabId - 'social' | 'reels' | 'dungeon'
  */
 function setupNativeAdScrollSync(tabId) {
     cleanupNativeAdScrollSync();
