@@ -753,16 +753,6 @@ body {
     box-shadow: 0 8px 30px rgba(255, 255, 255, 0.15);
 }
 
-.btn-download--web {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.btn-download--web:hover {
-    background: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 8px 30px rgba(0, 217, 255, 0.15);
-}
 
 .btn-download small {
     display: block;
