@@ -6557,7 +6557,20 @@ function loadPlannerForDate(dateStr) {
     if (addBtn) addBtn.disabled = isFuture;
 }
 
+let _plannerSaving = false; // 플래너 저장 진행 중 플래그
+
 async function savePlannerEntry() {
+    if (_plannerSaving) return; // 중복 저장 방지
+    _plannerSaving = true;
+
+    // 저장 중 버튼 비활성화 (저장 + Day1 포스팅)
+    const saveBtn = document.getElementById('btn-planner-save');
+    const savePriorityBtn = document.getElementById('btn-planner-save-priority');
+    const postBtn = document.getElementById('btn-reels-post');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; }
+    if (savePriorityBtn) { savePriorityBtn.disabled = true; savePriorityBtn.style.opacity = '0.6'; }
+    if (postBtn) { postBtn.disabled = true; postBtn.style.opacity = '0.6'; }
+
     const dateStr = diarySelectedDate;
 
     // 타임박스 드롭다운 블록 수집
@@ -6656,6 +6669,15 @@ async function savePlannerEntry() {
         AppLogger.error('[Planner] Save error: ' + (e.stack || e.message));
         alert('저장 중 오류가 발생했습니다: ' + e.message);
         return;
+    } finally {
+        // 저장 완료 후 버튼 재활성화
+        _plannerSaving = false;
+        const _saveBtn = document.getElementById('btn-planner-save');
+        const _savePriorityBtn = document.getElementById('btn-planner-save-priority');
+        if (_saveBtn) { _saveBtn.disabled = false; _saveBtn.style.opacity = ''; }
+        if (_savePriorityBtn) { _savePriorityBtn.disabled = false; _savePriorityBtn.style.opacity = ''; }
+        // Day1 포스팅 버튼은 타이머 상태에 따라 복원
+        updateReelsResetTimer();
     }
 
     renderPlannerCalendar();
