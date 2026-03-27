@@ -1942,26 +1942,28 @@ async function executeScreening(post, config) {
             (meta.azureVerdict === "error" || meta.azureVerdict === null);
         const cleanStatus = needsReview ? "pending" : "clean";
 
-        await db.collection("screening_results").doc(postId).set({
+        const cleanDoc = {
             postId,
             ownerUid: post.ownerUid,
             ownerName: post.ownerName || "",
-            caption: needsReview ? (post.caption || "") : undefined,
-            photo: needsReview ? (post.photo || "") : undefined,
             screenedAt: Date.now(),
             status: cleanStatus,
             overallSeverity: needsReview ? "low" : null,
             textFlags: [],
             imageFlags: null,
-            // 엔진 진단 데이터
             engineData: meta.imageScreened ? {
                 nsfwjsVerdict: meta.nsfwjsVerdict,
                 nsfwjsScores: meta.nsfwjsScores,
                 azureVerdict: meta.azureVerdict,
                 errors: meta.errors.length > 0 ? meta.errors : null,
-                needsReview: needsReview || undefined,
+                needsReview: needsReview || null,
             } : null,
-        });
+        };
+        if (needsReview) {
+            cleanDoc.caption = post.caption || "";
+            cleanDoc.photo = post.photo || "";
+        }
+        await db.collection("screening_results").doc(postId).set(cleanDoc);
         return { status: cleanStatus, _meta: meta };
     }
 
