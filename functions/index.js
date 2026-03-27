@@ -81,7 +81,8 @@ const pingCallableOpts = {
     cors: true,
     invoker: "public",
     memory: "1GiB",
-    timeoutSeconds: 120
+    timeoutSeconds: 120,
+    secrets: ["AZURE_CS_ENDPOINT", "AZURE_CS_KEY"]
 };
 
 // ─── Admin / Master claim helper ───
