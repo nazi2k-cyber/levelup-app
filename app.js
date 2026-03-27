@@ -9357,7 +9357,7 @@ function renderLifeStatus() {
     if (!config || !config.birthday) {
         container.innerHTML = `<div style="text-align:center; padding:20px 0; color:var(--text-sub); font-size:0.85rem; line-height:1.6;">
             생년월일을 설정하여 나의 인생 현황을 확인하세요.
-            <div style="margin-top:6px; font-size:0.75rem;">🔒 ※ 입력한 정보는 기기에만 저장되며, 서버에 전송되지 않습니다.</div>
+            <div style="margin-top:6px; font-size:0.75rem;">🔒 저장 시 개인정보 수집에 동의하게 됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.</div>
         </div>`;
         return;
     }
@@ -9473,7 +9473,7 @@ function openLifeStatusSettings() {
                 ${unitOptions}
             </select>
         </div>
-        <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:14px;">🔒 입력한 정보는 기기에만 저장되며, 서버에 전송되지 않습니다.</div>
+        <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:14px;">🔒 생년월일은 계정 동기화를 위해 서버에 암호화 저장됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.</div>
         <div id="ls-loading-msg" style="display:none; text-align:center; padding:8px 0; font-size:0.8rem; color:var(--neon-blue);">계산 중입니다...</div>
         <div style="display:flex; gap:8px;">
             ${config.birthday ? `<button onclick="resetLifeStatus()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">초기화</button>` : ''}
@@ -9493,15 +9493,26 @@ function saveLifeStatusFromModal() {
 
     if (!birthday) { alert('생년월일을 입력하세요.'); return; }
 
+    // 개인정보 동의 여부 확인 — 미동의 시 동의 절차 진행
+    const hasConsent = localStorage.getItem('life_status_privacy_consent');
+    if (!hasConsent) {
+        openLifeStatusPrivacyModal(function onAgreed() {
+            _doSaveLifeStatus(birthday, expectAge, remainUnit);
+        });
+        return;
+    }
+
+    _doSaveLifeStatus(birthday, expectAge, remainUnit);
+}
+
+function _doSaveLifeStatus(birthday, expectAge, remainUnit) {
     const loadingMsg = document.getElementById('ls-loading-msg');
     let loadingShown = false;
 
-    // 1초 이상 소요 시 로딩 안내문구 표시
     const loadingTimer = setTimeout(() => {
         if (loadingMsg) { loadingMsg.style.display = 'block'; loadingShown = true; }
     }, 1000);
 
-    // 비동기로 처리하여 로딩 타이머가 동작할 수 있도록
     requestAnimationFrame(() => {
         saveLifeStatusConfig({ birthday, expectAge, remainUnit });
         renderLifeStatus();
@@ -9516,9 +9527,84 @@ function saveLifeStatusFromModal() {
     });
 }
 
+function openLifeStatusPrivacyModal(onAgreeCallback) {
+    const overlay = document.createElement('div');
+    overlay.className = 'report-modal-overlay';
+    overlay.id = 'life-status-privacy-overlay';
+
+    overlay.innerHTML = `
+    <div class="report-modal-content" style="max-width:380px; padding:20px; max-height:80vh; overflow-y:auto;">
+        <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">개인정보 수집 및 이용 동의서</div>
+
+        <div style="font-size:0.78rem; color:var(--text-main); line-height:1.7; margin-bottom:14px;">
+            <p style="margin:0 0 10px 0; color:var(--text-sub);">
+                LevelUp은 「개인정보 보호법」에 따라 아래와 같이 개인정보를 수집·이용하고자 합니다. 내용을 확인 후 동의 여부를 결정해 주세요.
+            </p>
+
+            <table style="width:100%; border-collapse:collapse; font-size:0.75rem; margin-bottom:12px;">
+                <thead>
+                    <tr style="background:rgba(0,180,255,0.1);">
+                        <th style="border:1px solid var(--border-color); padding:8px; text-align:left; color:var(--neon-blue);">항목</th>
+                        <th style="border:1px solid var(--border-color); padding:8px; text-align:left; color:var(--neon-blue);">내용</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">수집 항목</td>
+                        <td style="border:1px solid var(--border-color); padding:8px;">생년월일, 기대 수명 설정값</td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">수집 목적</td>
+                        <td style="border:1px solid var(--border-color); padding:8px;">Life Status(인생 현황) 기능 제공 및 기기 간 데이터 동기화</td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">보유 기간</td>
+                        <td style="border:1px solid var(--border-color); padding:8px;">회원 탈퇴 시 또는 이용자가 직접 초기화 시 즉시 파기</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="background:var(--panel-bg); border:1px solid var(--border-color); border-radius:6px; padding:10px; margin-bottom:12px; font-size:0.72rem; color:var(--text-sub); line-height:1.6;">
+                <div style="margin-bottom:4px; font-weight:bold; color:var(--text-main);">안내 사항</div>
+                • 수집된 정보는 Firebase 서버에 암호화되어 저장됩니다.<br>
+                • 수집된 정보는 위 목적 외 다른 용도로 사용되지 않습니다.<br>
+                • 동의를 거부할 수 있으며, 거부 시 Life Status 기능 이용이 제한됩니다.<br>
+                • 설정 화면의 [초기화] 버튼으로 언제든지 정보를 삭제하고 동의를 철회할 수 있습니다.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:8px;">
+            <button id="ls-privacy-disagree-btn" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">동의하지 않음</button>
+            <button id="ls-privacy-agree-btn" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">동의</button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('active'));
+
+    overlay.querySelector('#ls-privacy-agree-btn').addEventListener('click', () => {
+        localStorage.setItem('life_status_privacy_consent', new Date().toISOString());
+        closeLifeStatusPrivacyModal();
+        if (typeof onAgreeCallback === 'function') onAgreeCallback();
+    });
+
+    overlay.querySelector('#ls-privacy-disagree-btn').addEventListener('click', () => {
+        closeLifeStatusPrivacyModal();
+    });
+}
+
+function closeLifeStatusPrivacyModal() {
+    const overlay = document.getElementById('life-status-privacy-overlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+
 function resetLifeStatus() {
-    if (!confirm('Life Status 정보를 초기화하시겠습니까?')) return;
+    if (!confirm('Life Status 정보를 초기화하시겠습니까?\n개인정보 수집 동의도 함께 철회됩니다.')) return;
     localStorage.removeItem(LIFE_STATUS_STORAGE_KEY);
+    localStorage.removeItem('life_status_privacy_consent');
     closeLifeStatusModal();
     renderLifeStatus();
     saveUserData();
@@ -9536,11 +9622,15 @@ function closeLifeStatusModal() {
 document.addEventListener('DOMContentLoaded', () => {
     const settingsBtn = document.getElementById('btn-life-status-settings');
     if (settingsBtn) settingsBtn.addEventListener('click', openLifeStatusSettings);
+    const privacyBtn = document.getElementById('btn-life-status-privacy');
+    if (privacyBtn) privacyBtn.addEventListener('click', () => openLifeStatusPrivacyModal());
     renderLifeStatus();
 });
 
 // Life Status 함수들을 window에 노출
 window.openLifeStatusSettings = openLifeStatusSettings;
+window.openLifeStatusPrivacyModal = openLifeStatusPrivacyModal;
+window.closeLifeStatusPrivacyModal = closeLifeStatusPrivacyModal;
 window.saveLifeStatusFromModal = saveLifeStatusFromModal;
 window.resetLifeStatus = resetLifeStatus;
 window.closeLifeStatusModal = closeLifeStatusModal;
