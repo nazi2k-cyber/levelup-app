@@ -28,23 +28,27 @@ concurrency:
   group: firebase-deploy
   cancel-in-progress: false
 
+env:
+  FIREBASE_PROJECT: levelup-app-53d02
+  FUNCTIONS_REGION: asia-northeast3
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: 소스코드 체크아웃
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
       - name: Node.js 셋업
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Google 서비스 계정 인증
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
@@ -126,48 +130,68 @@ jobs:
       - name: Functions 환경변수 생성 (.env)
         if: steps.detect.outputs.deploy_functions == 'true'
         run: |
-          echo "ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}" > functions/.env
-          echo "MASTER_EMAILS=${{ secrets.MASTER_EMAILS }}" >> functions/.env
-          echo "AZURE_CS_ENDPOINT=${{ secrets.AZURE_CS_ENDPOINT }}" >> functions/.env
-          echo "AZURE_CS_KEY=${{ secrets.AZURE_CS_KEY }}" >> functions/.env
+          cat > functions/.env <<EOF
+          ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}
+          MASTER_EMAILS=${{ secrets.MASTER_EMAILS }}
+          AZURE_CS_ENDPOINT=${{ secrets.AZURE_CS_ENDPOINT }}
+          AZURE_CS_KEY=${{ secrets.AZURE_CS_KEY }}
+          EOF
+          # 각 줄 앞의 공백 제거 (HEREDOC 들여쓰기)
+          sed -i 's/^[[:space:]]*//' functions/.env
 
       - name: Functions 의존성 설치
         if: steps.detect.outputs.deploy_functions == 'true'
         run: cd functions && npm ci
 
-      - name: 고아 함수 정리 (sendRaidAlerts — scheduler job 누락)
+      - name: 고아 함수 정리 (sendRaidAlerts — 이전 버전 잔존)
         if: steps.detect.outputs.deploy_functions == 'true'
-        continue-on-error: true
         run: |
-          gcloud functions delete sendRaidAlerts --region=asia-northeast3 --gen2 --quiet 2>/dev/null || true
-          gcloud scheduler jobs delete firebase-schedule-sendRaidAlerts-asia-northeast3 --location=asia-northeast3 --quiet 2>/dev/null || true
+          echo "고아 함수/스케줄러 정리 시도..."
+          gcloud functions delete sendRaidAlerts \
+            --region=${{ env.FUNCTIONS_REGION }} --gen2 --quiet 2>/dev/null && \
+            echo "✅ sendRaidAlerts 함수 삭제 완료" || \
+            echo "ℹ️ sendRaidAlerts 함수 없음 (이미 정리됨)"
+          gcloud scheduler jobs delete firebase-schedule-sendRaidAlerts-${{ env.FUNCTIONS_REGION }} \
+            --location=${{ env.FUNCTIONS_REGION }} --quiet 2>/dev/null && \
+            echo "✅ sendRaidAlerts 스케줄러 삭제 완료" || \
+            echo "ℹ️ sendRaidAlerts 스케줄러 없음 (이미 정리됨)"
 
-      - name: Eventarc/Pub/Sub IAM 바인딩 (Storage 트리거용, 최초 1회)
+      - name: Eventarc/Pub/Sub IAM 바인딩 (Storage 트리거용)
         if: steps.detect.outputs.deploy_functions == 'true'
-        continue-on-error: true
         run: |
-          PROJECT_NUMBER=$(gcloud projects describe levelup-app-53d02 --format='value(projectNumber)')
-          gcloud projects add-iam-policy-binding levelup-app-53d02 \
-            --member="serviceAccount:service-${PROJECT_NUMBER}@gs-project-accounts.iam.gserviceaccount.com" \
-            --role="roles/pubsub.publisher" --condition=None --quiet
-          gcloud projects add-iam-policy-binding levelup-app-53d02 \
-            --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com" \
-            --role="roles/iam.serviceAccountTokenCreator" --condition=None --quiet
-          gcloud projects add-iam-policy-binding levelup-app-53d02 \
-            --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-            --role="roles/run.invoker" --condition=None --quiet
-          gcloud projects add-iam-policy-binding levelup-app-53d02 \
-            --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-            --role="roles/eventarc.eventReceiver" --condition=None --quiet
+          PROJECT_NUMBER=$(gcloud projects describe ${{ env.FIREBASE_PROJECT }} --format='value(projectNumber)')
+          echo "Project Number: ${PROJECT_NUMBER}"
+
+          BINDINGS=(
+            "serviceAccount:service-${PROJECT_NUMBER}@gs-project-accounts.iam.gserviceaccount.com|roles/pubsub.publisher"
+            "serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com|roles/iam.serviceAccountTokenCreator"
+            "serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com|roles/run.invoker"
+            "serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com|roles/eventarc.eventReceiver"
+          )
+
+          FAILED=0
+          for BINDING in "${BINDINGS[@]}"; do
+            MEMBER="${BINDING%%|*}"
+            ROLE="${BINDING##*|}"
+            echo "→ ${ROLE} for ${MEMBER}"
+            if ! gcloud projects add-iam-policy-binding ${{ env.FIREBASE_PROJECT }} \
+              --member="${MEMBER}" --role="${ROLE}" --condition=None --quiet 2>&1; then
+              echo "⚠️ IAM 바인딩 실패: ${ROLE} (이미 설정되었거나 권한 부족)"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          if [ $FAILED -eq 4 ]; then
+            echo "::warning::모든 IAM 바인딩이 실패했습니다. Storage 트리거가 작동하지 않을 수 있습니다."
+          fi
 
       - name: Firebase Functions 배포
         if: steps.detect.outputs.deploy_functions == 'true'
-        run: firebase deploy --only functions --force
+        run: firebase deploy --only functions --project ${{ env.FIREBASE_PROJECT }}
 
       - name: push-test.html 동기화 (root → www)
         if: steps.detect.outputs.deploy_hosting == 'true'
         run: |
-          # root push-test.html이 www보다 새로우면 복사
           if [ -f push-test.html ]; then
             cp push-test.html www/push-test.html
             echo "root push-test.html → www/push-test.html 동기화 완료"
@@ -175,11 +199,11 @@ jobs:
 
       - name: Firebase Hosting 배포
         if: steps.detect.outputs.deploy_hosting == 'true'
-        run: firebase deploy --only hosting
+        run: firebase deploy --only hosting --project ${{ env.FIREBASE_PROJECT }}
 
       - name: Firestore Rules & Indexes 배포
         if: steps.detect.outputs.deploy_firestore == 'true'
-        run: firebase deploy --only firestore
+        run: firebase deploy --only firestore --project ${{ env.FIREBASE_PROJECT }}
 
       - name: 배포 결과 요약
         if: always()
