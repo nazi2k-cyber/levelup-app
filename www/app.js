@@ -3717,7 +3717,7 @@ async function simulateGoogleLogin() {
             await GoogleAuth.initialize({
                 clientId: '233040099152-htr1tnuqmpadikjvj9hbitf4tuh0ako5.apps.googleusercontent.com',
                 scopes: ['profile', 'email'],
-                grantOfflineAccess: true
+                grantOfflineAccess: false
             });
             // 이미 로그인한 사용자는 확인 화면 없이 자동 로그인 시도
             let googleUser;
