@@ -3342,8 +3342,8 @@ function switchTab(tabId, el) {
         cleanupNativeAd();
     }
 
-    // 배너 광고: 던전 탭에서만 표시
-    if (tabId === 'dungeon') {
+    // 배너 광고: 던전 탭과 플래너 탭에서 표시
+    if (tabId === 'dungeon' || tabId === 'diary') {
         showBannerAd();
     } else {
         hideBannerAd();
