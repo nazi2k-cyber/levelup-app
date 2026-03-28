@@ -919,6 +919,8 @@ const STATUS_CARD_LABELS = {
     'daily-quote': { name: '오늘의 명언', icon: '❝' }
 };
 const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+// 삭제 불가 카드 (이동만 가능)
+const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
 function getHiddenCards() {
     try {
@@ -928,7 +930,9 @@ function getHiddenCards() {
 }
 
 function saveHiddenCards(hiddenIds) {
-    localStorage.setItem('statusCardHidden', JSON.stringify(hiddenIds));
+    // 삭제 불가 카드는 숨김 목록에서 제외
+    const filtered = hiddenIds.filter(id => !NON_REMOVABLE_CARDS.includes(id));
+    localStorage.setItem('statusCardHidden', JSON.stringify(filtered));
 }
 
 function applyCardVisibility() {
@@ -936,11 +940,10 @@ function applyCardVisibility() {
     ALL_CARD_IDS.forEach(cardId => {
         const card = document.querySelector(`#status .status-reorderable[data-card-id="${cardId}"]`);
         if (!card) return;
-        // step-count has its own visibility logic; only hide if in hidden list
         if (hidden.includes(cardId)) {
             card.style.display = 'none';
-        } else if (cardId !== 'step-count') {
-            // Don't override step-count's conditional display logic
+        } else {
+            // 숨김 해제 시 표시 복원 (step-count 포함)
             card.style.display = '';
         }
     });
@@ -1019,6 +1022,7 @@ function renderEditorCardList() {
     visibleCards.forEach(card => {
         const cardId = card.dataset.cardId;
         const info = STATUS_CARD_LABELS[cardId] || { name: cardId, icon: '📦' };
+        const isFixed = NON_REMOVABLE_CARDS.includes(cardId);
         const item = document.createElement('div');
         item.className = 'editor-card-item';
         item.dataset.cardId = cardId;
@@ -1028,7 +1032,7 @@ function renderEditorCardList() {
             <div class="editor-card-info">
                 <div class="editor-card-name">${info.name}</div>
             </div>
-            <button class="editor-card-remove-btn" data-remove-card="${cardId}">−</button>
+            ${isFixed ? '' : `<button class="editor-card-remove-btn" data-remove-card="${cardId}">−</button>`}
         `;
         list.appendChild(item);
     });
