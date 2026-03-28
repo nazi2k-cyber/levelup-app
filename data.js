@@ -452,7 +452,7 @@ const i18n = {
         nav_status: "ステータス", nav_quest: "クエスト", nav_diary: "プランナー", nav_dungeon: "ダンジョン", nav_social: "ソーシャル", nav_settings: "設定",
         prof_name: "プレイヤー (私)", btn_hist: "称号履歴", avail_pts: "保有ポイント", btn_lvlup: "レベルUP", req_pts: "必要量:",
         tot_score: "総合スコア", radar_title: "STAT RADAR", stat_hint: "※ 待機ステータスはレベルUP時に反映。ストリーク倍率が報酬に適用されます。",
-        str: "筋력", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
+        str: "筋力", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
         quest_title: "デイリークエスト", quest_hint: "※ +20P & +0.5ステータス (ストリーク倍率 · 15%クリティカル確率)", cal_title: "週間進捗度",
         raid_title: "ローカルレイド", raid_boss: "⚠️ 連合ボス出現", raid_desc1: "異常現象を感知。", raid_desc2: "連合の目標を達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 グローバルランク", soc_friend: "👥 マイフレンド", sort_tot: "総合", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷", sort_steps: "🚶 歩数",
