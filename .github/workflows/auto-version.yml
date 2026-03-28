@@ -120,15 +120,23 @@ jobs:
             ENTRIES="- 소규모 업데이트 및 개선"
           fi
 
-          # 새 CHANGELOG 블록 생성
-          NEW_BLOCK="## [${NEW_VERSION}] - ${TODAY}\n\n### 변경\n${ENTRIES}\n"
+          # 새 CHANGELOG 블록을 임시 파일에 생성
+          {
+            echo "## [${NEW_VERSION}] - ${TODAY}"
+            echo ""
+            echo "### 변경"
+            echo "$ENTRIES"
+            echo ""
+          } > /tmp/changelog_block.txt
 
           # 기존 첫 번째 ## [ 항목 앞에 삽입
           if grep -q "^## \[" CHANGELOG.md; then
-            sed -i "0,/^## \[/{s|^## \[|${NEW_BLOCK}\n## [|}" CHANGELOG.md
+            LINE_NUM=$(grep -n "^## \[" CHANGELOG.md | head -1 | cut -d: -f1)
+            { head -n $((LINE_NUM - 1)) CHANGELOG.md; cat /tmp/changelog_block.txt; tail -n +"${LINE_NUM}" CHANGELOG.md; } > /tmp/changelog_new.md
+            mv /tmp/changelog_new.md CHANGELOG.md
           else
             # ## [ 항목이 없는 경우 파일 끝에 추가
-            echo -e "\n${NEW_BLOCK}" >> CHANGELOG.md
+            cat /tmp/changelog_block.txt >> CHANGELOG.md
           fi
 
           echo "✅ CHANGELOG.md에 v${NEW_VERSION} 항목 추가됨"

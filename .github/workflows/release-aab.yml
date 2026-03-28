@@ -64,7 +64,16 @@ jobs:
               CHANGELOG_ENTRY="릴리즈 v$VERSION"
             fi
             # 첫 번째 ## 항목 앞에 새 버전 항목 삽입
-            sed -i "0,/^## \[/{s/^## \[/## [$VERSION] - $TODAY\n\n### 변경\n- $CHANGELOG_ENTRY\n\n## [/}" CHANGELOG.md
+            {
+              echo "## [$VERSION] - $TODAY"
+              echo ""
+              echo "### 변경"
+              echo "- $CHANGELOG_ENTRY"
+              echo ""
+            } > /tmp/changelog_block.txt
+            LINE_NUM=$(grep -n "^## \[" CHANGELOG.md | head -1 | cut -d: -f1)
+            { head -n $((LINE_NUM - 1)) CHANGELOG.md; cat /tmp/changelog_block.txt; tail -n +"${LINE_NUM}" CHANGELOG.md; } > /tmp/changelog_new.md
+            mv /tmp/changelog_new.md CHANGELOG.md
             echo "✅ CHANGELOG.md에 v$VERSION 항목 추가됨"
           fi
 
