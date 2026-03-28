@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.9] - 2026-03-28
+
+### 변경
+- fix: 러닝 마일리지 카드 편집기 숨김/재추가 정상 동작 수정
+- feat: 상태창에 러닝 마일리지(누적 거리) 라인차트 카드 추가
+
 ## [1.0.8] - 2026-03-28
 
 ### 변경
