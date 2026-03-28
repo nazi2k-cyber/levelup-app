@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.6] - 2026-03-28
+
+### 변경
+- fix: 플래너 복사 버튼 작동 오류 수정 및 UX 통일
+- feat: Day1 피드에서 다른 유저의 플래너를 내 플래너로 복사하는 기능 추가
+
 ## [1.0.5] - 2026-03-28
 
 ### 변경
