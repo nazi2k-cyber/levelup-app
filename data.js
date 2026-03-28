@@ -166,6 +166,7 @@ const i18n = {
         diy_limit_reached: "최대 6개까지 추가 가능합니다.",
         diy_confirm_delete: "이 퀘스트를 삭제하시겠습니까?",
         diy_duplicate_name: "같은 이름의 퀘스트가 이미 존재합니다.",
+        diy_guide_title: "DIY 퀘스트 가이드",
 
         // 퀘스트 통계 서브탭
         quest_tab_main: "📜 퀘스트", quest_tab_stats: "📊 통계",
@@ -384,6 +385,7 @@ const i18n = {
         diy_limit_reached: "Max 6 custom quests.",
         diy_confirm_delete: "Delete this quest?",
         diy_duplicate_name: "A quest with this name already exists.",
+        diy_guide_title: "DIY Quest Guide",
 
         // Quest Stats Subtab
         quest_tab_main: "📜 Quests", quest_tab_stats: "📊 Stats",
@@ -602,6 +604,7 @@ const i18n = {
         diy_limit_reached: "最大6個まで追加可能です。",
         diy_confirm_delete: "このクエストを削除しますか？",
         diy_duplicate_name: "同じ名前のクエストがすでに存在します。",
+        diy_guide_title: "DIYクエスト ガイド",
 
         // クエスト統計サブタブ
         quest_tab_main: "📜 クエスト", quest_tab_stats: "📊 統計",
