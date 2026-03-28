@@ -55,6 +55,8 @@ public class GoogleFitPlugin extends Plugin {
         return FitnessOptions.builder()
                 .addDataType(DataType.TYPE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_READ)
                 .addDataType(DataType.AGGREGATE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_READ)
+                .addDataType(DataType.TYPE_DISTANCE_DELTA, FitnessOptions.ACCESS_READ)
+                .addDataType(DataType.AGGREGATE_DISTANCE_DELTA, FitnessOptions.ACCESS_READ)
                 .build();
     }
 
@@ -347,6 +349,83 @@ public class GoogleFitPlugin extends Plugin {
                 Log.e(TAG, "Google Fit 걸음 수 조회 실패: " + e.getMessage());
                 JSObject result = new JSObject();
                 result.put("steps", 0);
+                result.put("available", false);
+                result.put("fallbackToRest", true);
+                result.put("error", e.getMessage());
+                call.resolve(result);
+            }
+        }).start();
+    }
+
+    /**
+     * 최근 7일간 일별 러닝 거리(m) 조회 (Google Fit History API)
+     * 반환: { available, days: [ { date: "YYYY-MM-DD", distanceMeters: 1234.5 }, ... ] }
+     */
+    @PluginMethod()
+    public void getWeeklyDistance(PluginCall call) {
+        new Thread(() -> {
+            try {
+                if (!hasActivityRecognitionPermission()) {
+                    JSObject result = new JSObject();
+                    result.put("available", false);
+                    result.put("fallbackToRest", true);
+                    call.resolve(result);
+                    return;
+                }
+
+                FitnessOptions fitnessOptions = getFitnessOptions();
+                GoogleSignInAccount account = getGoogleAccount();
+
+                if (account == null || !GoogleSignIn.hasPermissions(account, fitnessOptions)) {
+                    JSObject result = new JSObject();
+                    result.put("available", false);
+                    result.put("fallbackToRest", true);
+                    call.resolve(result);
+                    return;
+                }
+
+                LocalDate today = LocalDate.now();
+                LocalDate weekAgo = today.minusDays(6);
+                long startTime = weekAgo.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                long endTime = System.currentTimeMillis();
+
+                DataReadRequest readRequest = new DataReadRequest.Builder()
+                        .aggregate(DataType.TYPE_DISTANCE_DELTA)
+                        .bucketByTime(1, TimeUnit.DAYS)
+                        .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                        .build();
+
+                DataReadResponse response = Tasks.await(
+                        Fitness.getHistoryClient(getContext(), account).readData(readRequest),
+                        30, TimeUnit.SECONDS
+                );
+
+                org.json.JSONArray daysArray = new org.json.JSONArray();
+                int dayIndex = 0;
+                for (Bucket bucket : response.getBuckets()) {
+                    float distance = 0;
+                    for (DataSet dataSet : bucket.getDataSets()) {
+                        for (DataPoint dp : dataSet.getDataPoints()) {
+                            distance += dp.getValue(Field.FIELD_DISTANCE).asFloat();
+                        }
+                    }
+                    org.json.JSONObject dayObj = new org.json.JSONObject();
+                    dayObj.put("date", weekAgo.plusDays(dayIndex).toString());
+                    dayObj.put("distanceMeters", distance);
+                    daysArray.put(dayObj);
+                    dayIndex++;
+                }
+
+                JSObject result = new JSObject();
+                result.put("available", true);
+                result.put("source", "google_fit_native");
+                result.put("days", daysArray);
+                Log.i(TAG, "주간 거리 조회 성공: " + daysArray.length() + "일");
+                call.resolve(result);
+
+            } catch (Exception e) {
+                Log.e(TAG, "Google Fit 거리 조회 실패: " + e.getMessage());
+                JSObject result = new JSObject();
                 result.put("available", false);
                 result.put("fallbackToRest", true);
                 result.put("error", e.getMessage());

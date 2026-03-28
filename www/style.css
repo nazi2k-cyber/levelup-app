@@ -162,6 +162,10 @@ main { flex-grow: 1; overflow-y: auto; padding: 15px; padding-bottom: calc(80px 
 .system-card { background: var(--panel-bg); border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12px; text-transform: uppercase; }
 
+/* 러닝 마일리지 차트 */
+#running-mileage-svg text { font-family: inherit; }
+#running-chart-container { transition: opacity 0.3s ease; }
+
 .profile-compact-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 .profile-box { display: flex; align-items: center; gap: 12px; }
 .profile-image-container { position: relative; width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--neon-blue); background: #222; display: flex; justify-content: center; align-items: center; }

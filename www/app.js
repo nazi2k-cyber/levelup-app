@@ -790,7 +790,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'running-mileage', 'stat-radar', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -910,6 +910,7 @@ function initStatusCardReorder() {
 // --- 햄버거 메뉴 & 상태창 편집 ---
 const STATUS_CARD_LABELS = {
     'step-count': { name: '걸음수', icon: '🚶' },
+    'running-mileage': { name: '러닝 마일리지', icon: '🏃' },
     'stat-radar': { name: 'STAT RADAR', icon: '📊' },
     'bonus-exp': { name: '보너스 EXP', icon: '🎬' },
     'pomodoro': { name: 'POMODORO', icon: '🍅' },
@@ -918,7 +919,7 @@ const STATUS_CARD_LABELS = {
     'dday-caption': { name: '목표/좌우명', icon: '💬' },
     'daily-quote': { name: '오늘의 명언', icon: '❝' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'running-mileage', 'stat-radar', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -1441,6 +1442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateReelsResetTimer();
 
             updateStepCountUI();
+            updateRunningMileageUI();
             if (AppState.user.syncEnabled) { syncHealthData(false); }
 
             // OS 권한 상태와 앱 토글 동기화 (OS에서 차단/해제된 경우 토글 off)
@@ -3730,6 +3732,7 @@ function changeLanguage(langCode) {
         loadPlayerName();
         updateReelsResetTimer(); // i18n 업데이트 후 버튼 쿨다운 상태 재적용
         updateStepCountUI();
+        updateRunningMileageUI();
         if (document.querySelector('.quest-tab-btn[data-quest-tab="stats"].active')) renderQuestStats();
     }
 }
@@ -8760,6 +8763,7 @@ async function syncHealthData(showMsg = false) {
     }
     saveUserData();
     updateStepCountUI();
+    syncRunningMileageData();
 }
 
 // --- 걸음수 상태창 UI 업데이트 ---
@@ -8824,6 +8828,227 @@ function updateStepCountUI() {
     const remaining = 1000 - (totalSteps % 1000);
     infoEl.textContent = (lang.step_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', remaining);
     infoEl.style.color = 'var(--neon-gold)';
+}
+
+// --- 러닝 마일리지 차트 ---
+
+/**
+ * 최근 7일간 일별 거리(m) 데이터를 네이티브 플러그인에서 조회
+ * @returns {Array|null} [ { date, distanceMeters }, ... ] 또는 null
+ */
+async function fetchWeeklyDistance() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return null;
+
+    try {
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (!GoogleFit) return null;
+        const result = await GoogleFit.getWeeklyDistance();
+        if (!result.available || result.fallbackToRest) return null;
+        // days 배열이 문자열로 올 수 있으므로 파싱
+        let days = result.days;
+        if (typeof days === 'string') days = JSON.parse(days);
+        return days || null;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[RunningMileage] fetchWeeklyDistance error: ' + (e.message || JSON.stringify(e)));
+        return null;
+    }
+}
+
+/**
+ * 러닝 마일리지 SVG 라인차트 렌더링 (누적 거리)
+ * @param {Array} days - [ { date: "YYYY-MM-DD", distanceMeters: number }, ... ]
+ */
+function drawRunningMileageChart(days) {
+    const svg = document.getElementById('running-mileage-svg');
+    if (!svg) return;
+
+    const lang = i18n[AppState.currentLang] || {};
+    const padLeft = 38, padRight = 10, padTop = 12, padBottom = 22;
+    const w = 300, h = 110;
+    const chartW = w - padLeft - padRight;
+    const chartH = h - padTop - padBottom;
+
+    // 누적 거리 계산 (km)
+    const cumulative = [];
+    let total = 0;
+    for (const d of days) {
+        total += (d.distanceMeters || 0) / 1000;
+        cumulative.push({ date: d.date, km: Math.round(total * 100) / 100 });
+    }
+    const maxKm = Math.max(cumulative[cumulative.length - 1]?.km || 1, 1);
+
+    // SVG 구성
+    let svgContent = '';
+
+    // 배경 그리드 (가로선 4개)
+    for (let i = 0; i <= 4; i++) {
+        const y = padTop + (chartH / 4) * i;
+        const val = (maxKm * (4 - i) / 4).toFixed(1);
+        svgContent += `<line x1="${padLeft}" y1="${y}" x2="${w - padRight}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>`;
+        svgContent += `<text x="${padLeft - 4}" y="${y + 3}" fill="rgba(255,255,255,0.35)" font-size="7" text-anchor="end">${val}</text>`;
+    }
+
+    // X축 날짜 라벨
+    const n = cumulative.length;
+    for (let i = 0; i < n; i++) {
+        const x = padLeft + (chartW / Math.max(n - 1, 1)) * i;
+        const dateStr = cumulative[i].date;
+        let label;
+        if (i === n - 1) {
+            label = lang.running_today || '오늘';
+        } else {
+            const parts = dateStr.split('-');
+            label = parseInt(parts[1]) + '/' + parseInt(parts[2]);
+        }
+        svgContent += `<text x="${x}" y="${h - 3}" fill="rgba(255,255,255,0.4)" font-size="7" text-anchor="middle">${label}</text>`;
+    }
+
+    // 라인 + 영역 생성
+    if (n > 0) {
+        const points = cumulative.map((d, i) => {
+            const x = padLeft + (chartW / Math.max(n - 1, 1)) * i;
+            const y = padTop + chartH - (d.km / maxKm) * chartH;
+            return { x, y };
+        });
+
+        // 그라데이션 정의
+        svgContent += `<defs>
+            <linearGradient id="runGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="rgba(0,217,255,0.3)"/>
+                <stop offset="100%" stop-color="rgba(0,217,255,0.02)"/>
+            </linearGradient>
+        </defs>`;
+
+        // 영역 (area)
+        let areaPath = `M${points[0].x},${padTop + chartH}`;
+        points.forEach(p => { areaPath += ` L${p.x},${p.y}`; });
+        areaPath += ` L${points[points.length - 1].x},${padTop + chartH} Z`;
+        svgContent += `<path d="${areaPath}" fill="url(#runGrad)"/>`;
+
+        // 라인
+        let linePath = `M${points[0].x},${points[0].y}`;
+        for (let i = 1; i < points.length; i++) {
+            linePath += ` L${points[i].x},${points[i].y}`;
+        }
+        svgContent += `<path d="${linePath}" fill="none" stroke="rgba(0,217,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+        // 포인트
+        points.forEach((p, i) => {
+            const isLast = i === points.length - 1;
+            svgContent += `<circle cx="${p.x}" cy="${p.y}" r="${isLast ? 3.5 : 2.5}" fill="${isLast ? 'var(--neon-blue)' : 'rgba(0,217,255,0.7)'}" stroke="${isLast ? 'rgba(255,255,255,0.8)' : 'none'}" stroke-width="${isLast ? 1 : 0}"/>`;
+            // 마지막 포인트에 값 표시
+            if (isLast && cumulative[i].km > 0) {
+                svgContent += `<text x="${p.x}" y="${p.y - 7}" fill="var(--neon-blue)" font-size="8" font-weight="bold" text-anchor="middle">${cumulative[i].km.toFixed(1)}km</text>`;
+            }
+        });
+    }
+
+    svg.innerHTML = svgContent;
+}
+
+/**
+ * 러닝 마일리지 UI 업데이트 (걸음수 카드 아래에 배치)
+ */
+function updateRunningMileageUI() {
+    const card = document.getElementById('running-mileage-card');
+    if (!card) return;
+
+    // 편집기에서 숨김 처리된 경우 표시하지 않음
+    const hiddenCards = getHiddenCards();
+    if (hiddenCards.includes('running-mileage')) {
+        card.style.display = 'none';
+        return;
+    }
+
+    const lang = i18n[AppState.currentLang] || {};
+    const totalEl = document.getElementById('running-total-value');
+    const reqPanel = document.getElementById('running-req-panel');
+
+    card.style.display = '';
+
+    if (!AppState.user.syncEnabled) {
+        // 동기화 비활성 → 요구사항 패널 표시
+        totalEl.textContent = '-';
+        document.getElementById('running-chart-container').style.display = 'none';
+
+        if (reqPanel) {
+            reqPanel.style.display = '';
+            const titleEl = document.getElementById('running-req-title');
+            const listEl = document.getElementById('running-req-list');
+            if (titleEl) titleEl.textContent = lang.running_req_title || '러닝 마일리지 연동 조건';
+            if (listEl) {
+                const googleFitUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.fitness';
+                const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
+                const req1Text = lang.running_req_1 || 'Google Fit 또는 Health Connect 앱에서 러닝/걷기 활동이 기록되어야 합니다';
+                const req1Html = req1Text
+                    .replace('Google Fit', `<a href="${googleFitUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Google Fit</a>`)
+                    .replace('Health Connect', `<a href="${healthConnectUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
+                const req2Text = lang.running_req_2 || '내 정보 → 구글 피트니스 앱 동기화 활성화';
+                const myInfoLabels = ['내 정보', 'My Info', 'マイ情報'];
+                let req2Html = req2Text;
+                for (const label of myInfoLabels) {
+                    if (req2Text.includes(label)) {
+                        req2Html = req2Text.replace(label, `<a href="javascript:void(0)" onclick="document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active'));document.getElementById('settings').classList.add('active');document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));" style="color:inherit;text-decoration:underline;">${label}</a>`);
+                        break;
+                    }
+                }
+                // 동의 설명 + Google Fit 데이터 정책 링크
+                const consentText = lang.running_consent_desc || '러닝 마일리지는 Google Fit의 거리 데이터를 활용합니다. 자세한 내용은 {link}을 참고하세요.';
+                const consentLinkText = lang.running_consent_link_text || 'Google Fit 데이터 정책';
+                const consentHtml = consentText.replace('{link}', `<a href="https://support.google.com/fit/answer/6075067" target="_blank" style="color:var(--neon-blue);text-decoration:underline;">${consentLinkText}</a>`);
+
+                const items = [
+                    { icon: '📲', html: req1Html },
+                    { icon: '⚙️', html: req2Html },
+                    { icon: '🔑', html: lang.running_req_3 || 'Google 계정의 활동 및 거리 데이터 권한 허용 필요' },
+                    { icon: 'ℹ️', html: `<span style="font-size:0.65rem; color:var(--text-sub);">${consentHtml}</span>` }
+                ];
+                listEl.innerHTML = items.map(r =>
+                    `<li style="margin-bottom:2px;">${r.icon} ${r.html}</li>`
+                ).join('');
+            }
+        }
+        return;
+    }
+
+    // 동기화 활성 → 차트 표시
+    if (reqPanel) reqPanel.style.display = 'none';
+    document.getElementById('running-chart-container').style.display = '';
+
+    // 캐시된 데이터가 있으면 먼저 렌더링
+    const cached = AppState.user.runningMileageData;
+    if (cached && cached.days && cached.days.length > 0) {
+        const totalKm = cached.days.reduce((sum, d) => sum + (d.distanceMeters || 0), 0) / 1000;
+        totalEl.textContent = totalKm.toFixed(1);
+        drawRunningMileageChart(cached.days);
+    } else {
+        totalEl.textContent = '0.0';
+        // 데이터 없을 때 빈 차트 (7일 0km)
+        const emptyDays = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            emptyDays.push({ date: d.toISOString().split('T')[0], distanceMeters: 0 });
+        }
+        drawRunningMileageChart(emptyDays);
+    }
+}
+
+/**
+ * 러닝 마일리지 데이터 동기화 (syncHealthData 후 호출)
+ */
+async function syncRunningMileageData() {
+    if (!AppState.user.syncEnabled) {
+        updateRunningMileageUI();
+        return;
+    }
+
+    const days = await fetchWeeklyDistance();
+    if (days && days.length > 0) {
+        AppState.user.runningMileageData = { days, lastSync: new Date().toISOString() };
+        saveUserData();
+    }
+    updateRunningMileageUI();
 }
 
 // --- 푸시 알림 (FCM) ---
