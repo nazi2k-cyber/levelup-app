@@ -3431,6 +3431,7 @@ function changeLanguage(langCode) {
         updateDungeonStatus();
         loadPlayerName();
         updateReelsResetTimer(); // i18n 업데이트 후 버튼 쿨다운 상태 재적용
+        updateStepCountUI();
         if (document.querySelector('.quest-tab-btn[data-quest-tab="stats"].active')) renderQuestStats();
     }
 }
