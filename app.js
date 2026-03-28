@@ -7980,8 +7980,14 @@ async function showPermissionPrompts() {
             if (fitnessGranted) {
                 AppState.user.syncEnabled = true;
                 document.getElementById('sync-toggle').checked = true;
+                updateStepCountUI(); // 권한 승인 즉시 상태창 UI 반영
                 saveUserData();
-                syncHealthData(true);
+                syncHealthData(true).then(() => {
+                    // 권한 직후 SDK 초기화 지연으로 데이터 조회 실패 시 재시도
+                    if (!AppState.user.stepData || AppState.user.stepData.totalSteps === 0) {
+                        setTimeout(() => syncHealthData(true), 2000);
+                    }
+                });
             }
         } catch (e) {
             if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
@@ -8265,6 +8271,7 @@ async function syncHealthData(showMsg = false) {
     if (dataSource === 'none') {
         if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
         if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
+        updateStepCountUI(); // syncEnabled 상태를 UI에 즉시 반영
         return;
     }
 
@@ -8503,6 +8510,7 @@ async function syncToggleWithOSPermissions() {
                 AppState.user.syncEnabled = true;
                 const syncToggle = document.getElementById('sync-toggle');
                 if (syncToggle) syncToggle.checked = true;
+                updateStepCountUI(); // 상태창 UI 즉시 반영
                 syncHealthData(true);
                 changed = true;
                 if (window.AppLogger) AppLogger.info('[SyncPerm] Fitness enabled: OS permission granted');
