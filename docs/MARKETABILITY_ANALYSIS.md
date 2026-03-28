@@ -1,7 +1,7 @@
 # LEVEL UP: REBOOT — 상품성 분석 보고서
 
 **작성일:** 2026-03-13
-**앱 버전:** 1.0.0
+**앱 버전:** 1.0.1
 **개발사:** BRAVECAT STUDIOS
 
 ---
@@ -272,4 +272,4 @@
 ---
 
 *본 보고서는 코드베이스 분석과 시장 조사를 기반으로 작성되었습니다.*
-*BRAVECAT STUDIOS — LEVEL UP: REBOOT v1.0.0*
+*BRAVECAT STUDIOS — LEVEL UP: REBOOT v1.0.1*

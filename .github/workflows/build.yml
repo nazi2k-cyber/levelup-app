@@ -65,6 +65,19 @@ jobs:
       - name: 버전 동기화
         run: bash scripts/version-bump.sh
 
+      # 4-4. Gradle versionName 주입 (APK 내부 버전을 VERSION 파일과 일치)
+      - name: Gradle 버전 정보 주입
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUILD_GRADLE="android/app/build.gradle"
+          if [ -f "$BUILD_GRADLE" ]; then
+            sed -i "s/versionName \"[^\"]*\"/versionName \"${VERSION}\"/" "$BUILD_GRADLE"
+            echo "✅ versionName → ${VERSION}"
+            grep -E "versionName" "$BUILD_GRADLE"
+          else
+            echo "ℹ️ android/app/build.gradle 아직 없음 (cap add 이후 적용)"
+          fi
+
       # 5. 루트 ↔ www/ 양방향 동기화 (git 타임스탬프 기반 최신 파일 판별)
       - name: 루트 ↔ www/ 양방향 동기화
         run: |
@@ -191,7 +204,16 @@ jobs:
         env:
           CI: true
 
-      # 8-0. AndroidManifest.xml 권한 자동 주입 (GPS + 피트니스)
+      # 8-0. Gradle versionName 주입 (cap sync 이후 확정)
+      - name: Gradle 버전 정보 주입 (cap sync 이후)
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUILD_GRADLE="android/app/build.gradle"
+          sed -i "s/versionName \"[^\"]*\"/versionName \"${VERSION}\"/" "$BUILD_GRADLE"
+          echo "✅ versionName → ${VERSION}"
+          grep -E "versionCode|versionName" "$BUILD_GRADLE"
+
+      # 8-1. AndroidManifest.xml 권한 자동 주입 (GPS + 피트니스)
       - name: Android 권한 자동 주입
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"

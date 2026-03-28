@@ -185,8 +185,8 @@ Play Console → 데이터 보안에서 아래 항목 신고:
 > **전제조건**: 1단계 키스토어 준비 및 GitHub Secrets 등록 완료 필요
 
 1. GitHub Actions → `릴리즈 AAB 빌드 (플레이스토어 제출용)` 워크플로우 실행
-   - `version_name`: `1.0.0`
-   - `version_code`: `1`
+   - `version_name`: `1.0.1`
+   - `version_code`: `2`
 2. 빌드 완료 대기 (약 10~15분 소요)
 3. Artifacts에서 `app-release.aab` 다운로드
 4. Play Console → 프로덕션 → 새 릴리즈 만들기 → AAB 업로드
@@ -195,7 +195,7 @@ Play Console → 데이터 보안에서 아래 항목 신고:
 - GitHub Actions 워크플로우: `.github/workflows/release-aab.yml` ✅ 준비됨
 - 20+ 빌드 단계 자동화 (키스토어 복원, 빌드, 서명, 아티팩트 업로드)
 - Target SDK: 34 | Min SDK: 26 (Health Connect 요구사항 충족)
-- 앱 버전: `package.json` → `1.0.0`
+- 앱 버전: `package.json` → `1.0.1`
 
 ### 할 일
 - [ ] GitHub Secrets 등록 완료 확인 (1단계)
