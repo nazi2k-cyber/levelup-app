@@ -6534,61 +6534,33 @@ window.confirmCopyPlanner = function() {
     });
 
     // 2. plannerTasks 생성 (시간표 순서 = 우선순위 순서)
-    plannerTasks = uniqueTasks.map((text, i) => ({ text, ranked: true, rankOrder: i + 1 }));
-    while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    const newTasks = uniqueTasks.map((text, i) => ({ text, ranked: true, rankOrder: i + 1 }));
+    while (newTasks.length < 6) newTasks.push({ text: '', ranked: false, rankOrder: 0 });
 
-    // 3. 태스크 렌더링 (타임박스 옵션도 업데이트됨)
-    renderPlannerTasks();
+    // 3. localStorage diary_entries에 먼저 저장 (switchTab → loadPlannerForDate에서 읽힘)
+    const dateStr = diarySelectedDate;
+    let diaries;
+    try { diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}'); } catch(e) { diaries = {}; }
 
-    // 4. 타임박스 그리드에 blocks 반영
-    const grid = document.getElementById('planner-timebox-grid');
-    if (grid) {
-        const options = getTaskOptions();
-        const isFuture = isSelectedDateFuture();
-        const optTexts = new Set(options.map(o => o.text));
-        const extraVals = [...new Set(Object.values(post.blocks))].filter(v => v && !optTexts.has(v));
+    const existingEntry = diaries[dateStr] || {};
+    diaries[dateStr] = {
+        ...existingEntry,
+        blocks: post.blocks,
+        tasks: newTasks,
+        priorities: newTasks.filter(t => t.ranked && t.text).sort((a, b) => a.rankOrder - b.rankOrder).map(t => t.text),
+        brainDump: existingEntry.brainDump || '',
+        text: Object.entries(post.blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500),
+        timestamp: Date.now()
+    };
+    localStorage.setItem('diary_entries', JSON.stringify(diaries));
 
-        const emptyLabel = i18n[lang]?.timebox_empty || '-- 없음 --';
-        const makeOpts = (currentVal) => {
-            return [`<option value="">${emptyLabel}</option>`,
-                ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`),
-                ...extraVals.map(v => `<option value="${v.replace(/"/g,'&quot;')}"${v === currentVal ? ' selected' : ''}>${v}</option>`)
-            ].join('');
-        };
-
-        const rows = [];
-        for (let h = 5; h < 24; h++) rows.push(h);
-
-        grid.innerHTML = rows.map(h => {
-            const t00 = `${String(h).padStart(2,'0')}:00`;
-            const t30 = `${String(h).padStart(2,'0')}:30`;
-            const val00 = post.blocks[t00] || '';
-            const val30 = post.blocks[t30] || '';
-            return `<div class="timebox-row">
-                <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
-                <select class="timebox-select${val00 ? ' has-content' : ''}"
-                        data-time="${t00}"
-                        ${isFuture ? 'disabled' : ''}
-                        onchange="this.classList.toggle('has-content', this.value.length > 0)">
-                    ${makeOpts(val00)}
-                </select>
-                <select class="timebox-select${val30 ? ' has-content' : ''}"
-                        data-time="${t30}"
-                        ${isFuture ? 'disabled' : ''}
-                        onchange="this.classList.toggle('has-content', this.value.length > 0)">
-                    ${makeOpts(val30)}
-                </select>
-            </div>`;
-        }).join('');
-    }
-
-    // 5. 모달 닫기
+    // 4. 모달 닫기
     window.closeCopyPlannerModal();
 
-    // 6. diary 탭으로 전환
+    // 5. diary 탭으로 전환 (loadPlannerForDate가 localStorage에서 저장된 데이터를 읽어 렌더링)
     switchTab('diary', document.querySelector('.nav-item[data-tab="diary"]'));
 
-    // 7. 성공 알림
+    // 6. 성공 알림
     alert(i18n[lang]?.reels_copy_success || '플래너에 복사되었습니다. 플래너 탭에서 확인하세요.');
 };
 
