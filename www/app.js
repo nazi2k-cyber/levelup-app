@@ -790,7 +790,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -904,6 +904,300 @@ function initStatusCardReorder() {
         card.addEventListener('touchmove', onTouchMove, { passive: false });
         card.addEventListener('touchend', onTouchEnd);
         card.addEventListener('touchcancel', onTouchEnd);
+    });
+}
+
+// --- 햄버거 메뉴 & 상태창 편집 ---
+const STATUS_CARD_LABELS = {
+    'step-count': { name: '걸음수', icon: '🚶' },
+    'stat-radar': { name: 'STAT RADAR', icon: '📊' },
+    'bonus-exp': { name: '보너스 EXP', icon: '🎬' },
+    'pomodoro': { name: 'POMODORO', icon: '🍅' },
+    'life-status': { name: 'LIFE STATUS', icon: '📅' },
+    'dday': { name: 'D-DAY', icon: '⏰' },
+    'dday-caption': { name: '목표/좌우명', icon: '💬' },
+    'daily-quote': { name: '오늘의 명언', icon: '❝' }
+};
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+// 삭제 불가 카드 (이동만 가능)
+const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
+
+function getHiddenCards() {
+    try {
+        const saved = localStorage.getItem('statusCardHidden');
+        return saved ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
+}
+
+function saveHiddenCards(hiddenIds) {
+    // 삭제 불가 카드는 숨김 목록에서 제외
+    const filtered = hiddenIds.filter(id => !NON_REMOVABLE_CARDS.includes(id));
+    localStorage.setItem('statusCardHidden', JSON.stringify(filtered));
+}
+
+function applyCardVisibility() {
+    const hidden = getHiddenCards();
+    ALL_CARD_IDS.forEach(cardId => {
+        const card = document.querySelector(`#status .status-reorderable[data-card-id="${cardId}"]`);
+        if (!card) return;
+        if (hidden.includes(cardId)) {
+            card.style.display = 'none';
+        } else {
+            // 숨김 해제 시 표시 복원 (step-count 포함)
+            card.style.display = '';
+        }
+    });
+}
+
+function getVisibleCardIds() {
+    const hidden = getHiddenCards();
+    const section = document.getElementById('status');
+    const cards = Array.from(section.querySelectorAll('.status-reorderable'));
+    return cards.map(c => c.dataset.cardId).filter(id => !hidden.includes(id));
+}
+
+function initHamburgerMenu() {
+    const btn = document.getElementById('btn-hamburger-menu');
+    const popup = document.getElementById('hamburger-menu-popup');
+    const backdrop = document.getElementById('hamburger-menu-backdrop');
+    if (!btn || !popup || !backdrop) return;
+
+    function closePopup() {
+        popup.classList.add('d-none');
+        backdrop.classList.add('d-none');
+    }
+    function openPopup() {
+        popup.classList.remove('d-none');
+        backdrop.classList.remove('d-none');
+    }
+
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (popup.classList.contains('d-none')) {
+            openPopup();
+        } else {
+            closePopup();
+        }
+    });
+
+    backdrop.addEventListener('click', closePopup);
+
+    document.getElementById('btn-goto-settings').addEventListener('click', function() {
+        closePopup();
+        document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('settings').classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    });
+
+    document.getElementById('btn-edit-status-cards').addEventListener('click', function() {
+        closePopup();
+        openStatusCardEditor();
+    });
+}
+
+// --- Status Card Editor ---
+function openStatusCardEditor() {
+    const editor = document.getElementById('status-card-editor');
+    editor.classList.remove('d-none');
+    renderEditorCardList();
+    initEditorDragReorder();
+}
+
+function closeStatusCardEditor() {
+    const editor = document.getElementById('status-card-editor');
+    editor.classList.add('d-none');
+    // Apply changes to main view
+    applyCardVisibility();
+    saveStatusCardOrder();
+}
+
+function renderEditorCardList() {
+    const list = document.getElementById('editor-card-list');
+    const hidden = getHiddenCards();
+    const section = document.getElementById('status');
+    const cards = Array.from(section.querySelectorAll('.status-reorderable'));
+    const visibleCards = cards.filter(c => !hidden.includes(c.dataset.cardId));
+
+    list.innerHTML = '';
+    visibleCards.forEach(card => {
+        const cardId = card.dataset.cardId;
+        const info = STATUS_CARD_LABELS[cardId] || { name: cardId, icon: '📦' };
+        const isFixed = NON_REMOVABLE_CARDS.includes(cardId);
+        const item = document.createElement('div');
+        item.className = 'editor-card-item';
+        item.dataset.cardId = cardId;
+        item.innerHTML = `
+            <span class="editor-card-drag-handle">⋮⋮</span>
+            <div class="editor-card-icon">${info.icon}</div>
+            <div class="editor-card-info">
+                <div class="editor-card-name">${info.name}</div>
+            </div>
+            ${isFixed ? '' : `<button class="editor-card-remove-btn" data-remove-card="${cardId}">−</button>`}
+        `;
+        list.appendChild(item);
+    });
+
+    // Bind remove buttons
+    list.querySelectorAll('.editor-card-remove-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const cardId = this.dataset.removeCard;
+            const hidden = getHiddenCards();
+            if (!hidden.includes(cardId)) {
+                hidden.push(cardId);
+                saveHiddenCards(hidden);
+            }
+            // Remove from editor list with animation
+            const item = this.closest('.editor-card-item');
+            item.style.transition = 'opacity 0.2s, transform 0.2s';
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(30px)';
+            setTimeout(() => {
+                item.remove();
+            }, 200);
+        });
+    });
+}
+
+function initEditorDragReorder() {
+    const list = document.getElementById('editor-card-list');
+    let dragItem = null;
+    let isDragging = false;
+    let longPressTimer = null;
+    let startY = 0;
+
+    function getItems() {
+        return Array.from(list.querySelectorAll('.editor-card-item'));
+    }
+
+    list.addEventListener('touchstart', function(e) {
+        const item = e.target.closest('.editor-card-item');
+        if (!item) return;
+        startY = e.touches[0].clientY;
+        longPressTimer = setTimeout(() => {
+            isDragging = true;
+            dragItem = item;
+            item.classList.add('dragging');
+            if (navigator.vibrate) navigator.vibrate(50);
+        }, 400);
+    }, { passive: true });
+
+    list.addEventListener('touchmove', function(e) {
+        if (!isDragging && longPressTimer) {
+            const dy = Math.abs(e.touches[0].clientY - startY);
+            if (dy > 10) { clearTimeout(longPressTimer); longPressTimer = null; }
+            return;
+        }
+        if (!isDragging || !dragItem) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        const items = getItems();
+        let targetIndex = items.length - 1;
+        for (let i = 0; i < items.length; i++) {
+            const rect = items[i].getBoundingClientRect();
+            if (touch.clientY < rect.top + rect.height / 2) { targetIndex = i; break; }
+        }
+        const currentIndex = items.indexOf(dragItem);
+        if (targetIndex !== currentIndex) {
+            if (targetIndex > currentIndex) {
+                const ref = items[targetIndex].nextSibling;
+                list.insertBefore(dragItem, ref);
+            } else {
+                list.insertBefore(dragItem, items[targetIndex]);
+            }
+        }
+    }, { passive: false });
+
+    list.addEventListener('touchend', function() {
+        clearTimeout(longPressTimer); longPressTimer = null;
+        if (isDragging && dragItem) {
+            dragItem.classList.remove('dragging');
+            // Sync editor order back to main status section
+            syncEditorOrderToDOM();
+        }
+        isDragging = false; dragItem = null;
+    });
+
+    list.addEventListener('touchcancel', function() {
+        clearTimeout(longPressTimer); longPressTimer = null;
+        if (dragItem) dragItem.classList.remove('dragging');
+        isDragging = false; dragItem = null;
+    });
+}
+
+function syncEditorOrderToDOM() {
+    const editorItems = Array.from(document.querySelectorAll('#editor-card-list .editor-card-item'));
+    const section = document.getElementById('status');
+    const btnMyinfo = document.getElementById('btn-myinfo');
+    editorItems.forEach(item => {
+        const cardId = item.dataset.cardId;
+        const card = section.querySelector(`.status-reorderable[data-card-id="${cardId}"]`);
+        if (card) section.insertBefore(card, btnMyinfo);
+    });
+    // Also move hidden cards after visible ones
+    const hidden = getHiddenCards();
+    hidden.forEach(cardId => {
+        const card = section.querySelector(`.status-reorderable[data-card-id="${cardId}"]`);
+        if (card) section.insertBefore(card, btnMyinfo);
+    });
+    saveStatusCardOrder();
+}
+
+// --- Card Selection Modal ---
+function openCardSelectModal() {
+    const modal = document.getElementById('card-select-modal');
+    const list = document.getElementById('card-select-list');
+    const selectAll = document.getElementById('card-select-all');
+    const hidden = getHiddenCards();
+
+    if (hidden.length === 0) {
+        // No hidden cards to add
+        return;
+    }
+
+    list.innerHTML = '';
+    selectAll.checked = false;
+
+    hidden.forEach(cardId => {
+        const info = STATUS_CARD_LABELS[cardId] || { name: cardId, icon: '📦' };
+        const item = document.createElement('label');
+        item.className = 'card-select-item';
+        item.innerHTML = `
+            <input type="checkbox" value="${cardId}">
+            <span class="card-select-item-label">${info.name}</span>
+        `;
+        list.appendChild(item);
+    });
+
+    modal.classList.remove('d-none');
+
+    selectAll.onchange = function() {
+        list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = selectAll.checked;
+        });
+    };
+}
+
+function closeCardSelectModal() {
+    document.getElementById('card-select-modal').classList.add('d-none');
+}
+
+function initCardSelectModal() {
+    document.getElementById('btn-editor-add').addEventListener('click', openCardSelectModal);
+    document.getElementById('btn-editor-back').addEventListener('click', closeStatusCardEditor);
+
+    document.getElementById('btn-card-select-cancel').addEventListener('click', closeCardSelectModal);
+    document.getElementById('btn-card-select-done').addEventListener('click', function() {
+        const list = document.getElementById('card-select-list');
+        const selected = Array.from(list.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        if (selected.length > 0) {
+            let hidden = getHiddenCards();
+            hidden = hidden.filter(id => !selected.includes(id));
+            saveHiddenCards(hidden);
+            applyCardVisibility();
+            renderEditorCardList();
+            initEditorDragReorder();
+        }
+        closeCardSelectModal();
     });
 }
 
@@ -1053,6 +1347,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadNavOrder();
     loadStatusCardOrder();
+    applyCardVisibility();
+    initHamburgerMenu();
+    initCardSelectModal();
     initTheme();
     bindEvents();
     // 로그인 화면 언어 적용 (저장된 언어 설정 기반)

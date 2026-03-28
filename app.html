@@ -204,6 +204,11 @@
                             <div style="font-size: 0.65rem; color: var(--text-sub);" data-i18n="tot_score">종합 스코어</div>
                             <div class="compact-score-val" id="totalScore">0</div>
                         </div>
+                        <button id="btn-hamburger-menu" class="btn-hamburger-menu" aria-label="메뉴">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                            </svg>
+                        </button>
                     </div>
 
                     <div class="levelup-panel-compact">
@@ -341,7 +346,8 @@
                     </button>
                 </div>
 
-                <button class="btn-myinfo" id="btn-myinfo" data-i18n="btn_myinfo">&#9881; 내 정보</button>
+                <!-- btn-myinfo removed: replaced by hamburger menu -->
+                <button class="btn-myinfo" id="btn-myinfo" data-i18n="btn_myinfo" style="display:none;">&#9881; 내 정보</button>
 
             </section>
 
@@ -771,6 +777,50 @@
             <div class="nav-item" data-tab="social"><span class="nav-icon">🏆</span><span data-i18n="nav_social">소셜</span></div>
             <div class="nav-item" data-tab="settings" style="display:none;"><span class="nav-icon">⚙️</span><span data-i18n="nav_settings">설정</span></div>
         </nav>
+    </div>
+
+    <!-- Hamburger Menu Popup -->
+    <div id="hamburger-menu-backdrop" class="hamburger-menu-backdrop d-none"></div>
+    <div id="hamburger-menu-popup" class="hamburger-menu-popup d-none">
+        <button id="btn-edit-status-cards" class="hamburger-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
+            상태창 편집
+        </button>
+        <button id="btn-goto-settings" class="hamburger-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/></svg>
+            설정
+        </button>
+    </div>
+
+    <!-- Status Card Editor (Fullscreen Overlay) -->
+    <div id="status-card-editor" class="status-card-editor d-none">
+        <div class="editor-header">
+            <button id="btn-editor-back" class="editor-nav-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+            </button>
+            <h2 class="editor-title">홈 화면 편집</h2>
+            <button id="btn-editor-add" class="editor-nav-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
+            </button>
+        </div>
+        <div id="editor-card-list" class="editor-card-list"></div>
+    </div>
+
+    <!-- Card Selection Modal (추가할 카드 선택) -->
+    <div id="card-select-modal" class="card-select-overlay d-none">
+        <div class="card-select-content">
+            <div class="card-select-header">
+                <label class="card-select-check-all">
+                    <input type="checkbox" id="card-select-all"> <span>전체</span>
+                </label>
+                <h3 class="card-select-title">추가할 카드 선택</h3>
+            </div>
+            <div id="card-select-list" class="card-select-list"></div>
+            <div class="card-select-actions">
+                <button id="btn-card-select-cancel" class="card-select-btn">취소</button>
+                <button id="btn-card-select-done" class="card-select-btn card-select-btn-done">완료</button>
+            </div>
+        </div>
     </div>
 
     <div class="modal-overlay d-none" id="titleModal" onclick="if(event.target===this){document.getElementById('titleModal').classList.add('d-none');document.getElementById('titleModal').classList.remove('d-flex');}">
