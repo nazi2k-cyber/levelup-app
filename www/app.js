@@ -8594,6 +8594,20 @@ async function requestFitnessScope() {
         // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
         const { GoogleFit } = window.Capacitor.Plugins;
         if (GoogleFit) {
+            // 이미 권한이 있으면 가이드 없이 바로 진행
+            const avail = await GoogleFit.isAvailable();
+            if (avail.hasPermissions) {
+                if (window.AppLogger) AppLogger.info('[GoogleFit] 이미 권한 있음');
+                return true;
+            }
+
+            // Google 미인증 앱 경고 사전 안내 모달 표시
+            const userConfirmed = await showFitnessPreAuthGuide();
+            if (!userConfirmed) {
+                if (window.AppLogger) AppLogger.info('[GoogleFit] 사용자가 사전 안내에서 취소');
+                return false;
+            }
+
             await GoogleFit.requestPermissions();
             if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
             return true;
@@ -8607,6 +8621,46 @@ async function requestFitnessScope() {
         AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
         return false;
     }
+}
+
+/**
+ * Google Fit OAuth 진행 전 미인증 앱 경고 안내 모달
+ * @returns {Promise<boolean>} 사용자가 계속 진행을 선택하면 true
+ */
+function showFitnessPreAuthGuide() {
+    return new Promise((resolve) => {
+        const lang = i18n[AppState.currentLang] || {};
+        const title = lang.fitness_preauth_title || 'Google 피트니스 연동 안내';
+        const desc = lang.fitness_preauth_desc || 'Google 로그인 화면이 나타납니다.\n\n\'Google에서 확인하지 않은 앱\' 경고가 표시되면:\n1. [고급]을 탭하세요\n2. [LevelUp: Reboot(으)로 이동]을 탭하세요\n3. 권한을 허용하세요';
+        const btnContinue = lang.fitness_preauth_continue || '계속하기';
+        const btnCancel = lang.fitness_preauth_cancel || '취소';
+
+        const modal = document.getElementById('infoModal');
+        document.getElementById('info-modal-title').innerText = title;
+        const body = document.getElementById('info-modal-body');
+        body.innerHTML = `
+            <div style="background:rgba(0,217,255,0.06); border:1px solid var(--neon-purple, #b388ff); padding:16px; border-radius:8px; text-align:left;">
+                <div style="font-size:1.5rem; text-align:center; margin-bottom:10px;">🔐</div>
+                <p style="font-size:0.82rem; color:var(--text-sub); line-height:1.7; margin:0; white-space:pre-line;">${desc}</p>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+                <button id="preauth-cancel-btn" style="flex:1; padding:10px; border:1px solid var(--border-color, #333); border-radius:6px; background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">${btnCancel}</button>
+                <button id="preauth-continue-btn" style="flex:1; padding:10px; border:none; border-radius:6px; background:var(--neon-purple, #b388ff); color:#fff; font-size:0.85rem; font-weight:bold; cursor:pointer;">${btnContinue}</button>
+            </div>
+        `;
+
+        modal.classList.remove('d-none');
+        modal.classList.add('d-flex');
+
+        const cleanup = (result) => {
+            modal.classList.remove('d-flex');
+            modal.classList.add('d-none');
+            resolve(result);
+        };
+
+        document.getElementById('preauth-cancel-btn').addEventListener('click', () => cleanup(false), { once: true });
+        document.getElementById('preauth-continue-btn').addEventListener('click', () => cleanup(true), { once: true });
+    });
 }
 
 /**
