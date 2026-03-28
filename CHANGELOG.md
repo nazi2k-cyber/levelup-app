@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.8] - 2026-03-28
+
+### 변경
+- fix: stat-radar/bonus-exp 삭제 불가 처리 및 걸음수 복원 시 표시 문제 수정
+- feat: 프로필카드 햄버거 메뉴 및 상태창 편집 기능 추가
+
 ## [1.0.7] - 2026-03-28
 
 ### 변경
