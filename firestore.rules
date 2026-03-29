@@ -55,7 +55,8 @@ service cloud.firestore {
         'hasActiveReels', '_profileUploadFailed',
         'ddaysStr', 'ddayCaption',
         'lastBonusExpDate',
-        'lifeStatusStr'
+        'lifeStatusStr',
+        'libraryStr'
       ];
     }
 
@@ -127,7 +128,8 @@ service cloud.firestore {
         && (!('ddaysStr' in d) || (d.ddaysStr is string && d.ddaysStr.size() <= 50000))
         && (!('ddayCaption' in d) || (d.ddayCaption is string && d.ddayCaption.size() <= 200))
         && (!('lastBonusExpDate' in d) || (d.lastBonusExpDate is string && d.lastBonusExpDate.size() <= 10))
-        && (!('lifeStatusStr' in d) || (d.lifeStatusStr is string && d.lifeStatusStr.size() <= 1000));
+        && (!('lifeStatusStr' in d) || (d.lifeStatusStr is string && d.lifeStatusStr.size() <= 1000))
+        && (!('libraryStr' in d) || (d.libraryStr is string && d.libraryStr.size() <= 50000));
     }
 
     // ──────────────────────────────────────────────
