@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.14] - 2026-03-29
+
+### 변경
+- fix: ISBN 스캔 결과를 스캔화면 내부에 표시 + 카메라 인식률 개선
+
 ## [1.0.13] - 2026-03-29
 
 ### 변경
