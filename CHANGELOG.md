@@ -5,6 +5,14 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.20] - 2026-03-29
+
+### 변경
+- fix: use uncompressed traineddata and make OCR a delayed fallback
+- fix: add missing LSTM WASM core variants for tesseract OCR
+- fix: bundle tesseract.js worker, WASM core, and language data locally
+- fix: bundle tesseract.js locally to fix CDN loading failure in Android WebView
+
 ## [1.0.19] - 2026-03-29
 
 ### 변경
