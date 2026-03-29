@@ -5,6 +5,15 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.9] - 2026-03-29
+
+### 변경
+- fix: auto-version 원격 태그 충돌 감지 및 커밋/태그 push 분리
+- fix: auto-version 태그 충돌 시 기존 태그 삭제 후 재생성
+- refactor: 내 서재 진입경로를 상태창 카드로 변경 및 카메라 권한 추가
+- feat: ISBN 바코드 스캔 및 내 서재(My Library) 기능 추가
+- Revert "Merge pull request #355 from nazi2k-cyber/claude/add-running-mileage-chart-K8LUv"
+
 ## [1.0.8] - 2026-03-28
 
 ### 변경
