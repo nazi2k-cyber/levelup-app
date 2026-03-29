@@ -10668,6 +10668,25 @@ window.renderLifeStatus = renderLifeStatus;
 (function() {
     let _html5QrCode = null;
     let _pendingBook = null;
+
+    function _scannerConfig() {
+        return {
+            fps: 10,
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                var w = Math.floor(viewfinderWidth * 0.8);
+                var h = Math.floor(w * 0.35);
+                return { width: w, height: h };
+            },
+            aspectRatio: 1.7778,
+            disableFlip: true,
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.CODE_128
+            ],
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+        };
+    }
     let _libCurrentTab = 'reading';
     let _libCurrentPeriod = 'total';
     let _libCurrentView = 'tower';
@@ -10918,7 +10937,7 @@ window.renderLifeStatus = renderLifeStatus;
     window.openIsbnScanner = async function() {
         // Request camera permission
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
             stream.getTracks().forEach(track => track.stop());
             AppState.user.cameraEnabled = true;
             saveUserData();
@@ -10948,15 +10967,7 @@ window.renderLifeStatus = renderLifeStatus;
             _html5QrCode = new Html5Qrcode('isbn-scanner-reader');
             await _html5QrCode.start(
                 { facingMode: 'environment' },
-                {
-                    fps: 10,
-                    qrbox: { width: 280, height: 120 },
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.CODE_128
-                    ]
-                },
+                _scannerConfig(),
                 async (decodedText) => {
                     // ISBN detected
                     if (statusEl) statusEl.textContent = 'ISBN: ' + decodedText;
@@ -11006,7 +11017,7 @@ window.renderLifeStatus = renderLifeStatus;
                 if (_html5QrCode) {
                     await _html5QrCode.start(
                         { facingMode: 'environment' },
-                        { fps: 10, qrbox: { width: 280, height: 120 }, formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8, Html5QrcodeSupportedFormats.CODE_128] },
+                        _scannerConfig(),
                         async (text) => { try { await _html5QrCode.stop(); } catch(e) {} await onIsbnScanned(text); },
                         () => {}
                     );
