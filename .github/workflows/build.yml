@@ -265,6 +265,14 @@ jobs:
             echo "ℹ️ BODY_SENSORS 권한이 이미 존재합니다"
           fi
 
+          # 카메라 권한 (ISBN 바코드 스캔용)
+          if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.CAMERA" />' "$MANIFEST"
+            echo "✅ CAMERA 권한 주입 완료"
+          else
+            echo "ℹ️ CAMERA 권한이 이미 존재합니다"
+          fi
+
           # Health Connect intent-filter 주입 (앱이 Health Connect에 연동되도록)
           if ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST"; then
             sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"

@@ -153,6 +153,9 @@ jobs:
           if ! grep -q "health.permission.read.Steps" "$MANIFEST"; then
             sed -i '/<manifest/a\    <uses-permission android:name="android.permission.health.READ_STEPS" />' "$MANIFEST"
           fi
+          if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.CAMERA" />' "$MANIFEST"
+          fi
           if ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST"; then
             sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"
           fi
@@ -454,6 +457,9 @@ jobs:
           fi
           if ! grep -q "health.permission.read.Steps" "$MANIFEST"; then
             sed -i '/<manifest/a\    <uses-permission android:name="android.permission.health.READ_STEPS" />' "$MANIFEST"
+          fi
+          if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.CAMERA" />' "$MANIFEST"
           fi
           if ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST"; then
             sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"

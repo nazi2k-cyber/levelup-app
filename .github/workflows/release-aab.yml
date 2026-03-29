@@ -231,6 +231,8 @@ jobs:
             sed -i '/<manifest/a\    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />' "$MANIFEST"
           ! grep -q "health.permission.read.Steps" "$MANIFEST" && \
             sed -i '/<manifest/a\    <uses-permission android:name="android.permission.health.READ_STEPS" />' "$MANIFEST"
+          ! grep -q "android.permission.CAMERA" "$MANIFEST" && \
+            sed -i '/<manifest/a\    <uses-permission android:name="android.permission.CAMERA" />' "$MANIFEST"
           ! grep -q "ACTION_SHOW_PERMISSIONS_RATIONALE" "$MANIFEST" && \
             sed -i '/<\/activity>/i\            <intent-filter>\n                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />\n            </intent-filter>' "$MANIFEST"
           echo "✅ 권한 주입 완료"

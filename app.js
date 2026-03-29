@@ -1645,6 +1645,11 @@ function bindEvents() {
     document.getElementById('push-toggle').addEventListener('change', togglePushNotifications);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
+    document.getElementById('camera-toggle').addEventListener('change', toggleCamera);
+    document.getElementById('btn-settings-camera-guide').addEventListener('click', function() {
+        const lang = i18n[AppState.currentLang];
+        alert(lang.cam_guide || 'ISBN 바코드 스캔을 위해 카메라 권한이 필요합니다.\n내 서재에서 책을 스캔할 때 사용됩니다.');
+    });
     document.getElementById('btn-logout').addEventListener('click', logout);
     document.getElementById('btn-delete-account').addEventListener('click', deleteMyAccount);
 
@@ -1995,6 +2000,7 @@ async function loadUserDataFromDB(user) {
             }
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
+            updateCameraToggleUI();
             const loadedName = data.name || user.displayName || "신규 헌터";
             // ── 기존 유저 닉네임 마이그레이션: usernames 컬렉션에 예약 ──
             if (window.AppLogger) AppLogger.info(`[NameMigration] 시작: "${loadedName}" (uid: ${user.uid.substring(0, 8)}...)`);
@@ -8453,9 +8459,11 @@ async function showPermissionPrompts() {
             stream.getTracks().forEach(track => track.stop());
             AppState.user.cameraEnabled = true;
             saveUserData();
+            updateCameraToggleUI();
             if (window.AppLogger) AppLogger.info('[PermPrompt] Camera permission granted');
         } catch (e) {
             if (window.AppLogger) AppLogger.warn('[PermPrompt] Camera permission denied or unavailable: ' + (e.message || e));
+            updateCameraToggleUI();
         }
     }
 
@@ -8590,6 +8598,63 @@ async function toggleHealthSync() {
                 openAppSettings();
             }
         }
+    }
+}
+
+// --- 카메라 권한 토글 (ISBN 바코드 스캔용) ---
+async function toggleCamera() {
+    const toggle = document.getElementById('camera-toggle');
+    const statusDiv = document.getElementById('camera-status');
+    const lang = i18n[AppState.currentLang];
+    statusDiv.style.display = 'flex';
+
+    if (toggle.checked) {
+        // ON: 카메라 권한 요청
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            stream.getTracks().forEach(track => track.stop());
+            AppState.user.cameraEnabled = true;
+            saveUserData();
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.cam_granted || '카메라 권한 활성화됨'}</span>`;
+            if (window.AppLogger) AppLogger.info('[Camera] Permission granted via settings toggle');
+        } catch (e) {
+            toggle.checked = false;
+            AppState.user.cameraEnabled = false;
+            saveUserData();
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.cam_denied || '카메라 권한이 거부되었습니다.'}</span>`;
+            if (window.AppLogger) AppLogger.warn('[Camera] Permission denied: ' + (e.message || e));
+            const msg = lang.cam_denied_go_settings || '카메라 권한이 거부되었습니다.\n앱 설정에서 카메라 권한을 허용하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
+        }
+    } else {
+        // OFF: 앱 설정으로 이동 안내
+        AppState.user.cameraEnabled = false;
+        saveUserData();
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.cam_off || '카메라 권한 해제됨'}</span>`;
+
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (isNative) {
+            const msg = lang.cam_revoke_confirm || '카메라 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
+        }
+    }
+}
+
+function updateCameraToggleUI() {
+    const toggle = document.getElementById('camera-toggle');
+    const statusDiv = document.getElementById('camera-status');
+    if (!toggle || !statusDiv) return;
+    const lang = i18n[AppState.currentLang];
+    toggle.checked = AppState.user.cameraEnabled;
+    statusDiv.style.display = 'flex';
+    if (AppState.user.cameraEnabled) {
+        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.cam_granted || '카메라 권한 활성화됨'}</span>`;
+    } else {
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.cam_off || '카메라 권한 해제됨'}</span>`;
     }
 }
 
@@ -10855,8 +10920,18 @@ window.renderLifeStatus = renderLifeStatus;
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             stream.getTracks().forEach(track => track.stop());
+            AppState.user.cameraEnabled = true;
+            saveUserData();
+            updateCameraToggleUI();
         } catch(e) {
-            alert(t('lib_camera_denied'));
+            AppState.user.cameraEnabled = false;
+            saveUserData();
+            updateCameraToggleUI();
+            const lang = i18n[AppState.currentLang];
+            const msg = lang.cam_denied_go_settings || '카메라 권한이 거부되었습니다.\n앱 설정에서 카메라 권한을 허용하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
             return;
         }
 
