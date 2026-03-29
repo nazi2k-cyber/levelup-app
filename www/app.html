@@ -858,6 +858,35 @@
         </div>
     </div>
 
+    <!-- Manual Book Entry Modal -->
+    <div id="manual-book-overlay" class="modal-overlay d-none">
+        <div class="modal-content" style="max-width:340px;">
+            <div style="font-size:1rem; font-weight:bold; color:var(--text-main); text-align:center; margin-bottom:12px;" data-i18n="lib_manual_title">직접 입력</div>
+            <input type="hidden" id="manual-book-isbn">
+            <div style="margin-bottom:8px;">
+                <input type="text" id="manual-book-title" data-i18n-placeholder="lib_manual_book_title" placeholder="책 제목" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; outline:none;">
+            </div>
+            <div style="margin-bottom:8px;">
+                <input type="text" id="manual-book-author" data-i18n-placeholder="lib_manual_book_author" placeholder="저자" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; outline:none;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <input type="text" id="manual-book-publisher" data-i18n-placeholder="lib_manual_book_publisher" placeholder="출판사" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; outline:none;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:6px;" data-i18n="lib_select_category">카테고리 선택</label>
+                <div class="book-category-selector">
+                    <button class="book-cat-btn active" data-cat="reading" data-i18n="lib_reading">읽고있는책</button>
+                    <button class="book-cat-btn" data-cat="read" data-i18n="lib_read">읽은책</button>
+                    <button class="book-cat-btn" data-cat="wantToRead" data-i18n="lib_want_to_read">읽고싶은책</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button onclick="window.cancelManualBook()" class="btn-primary" style="background:var(--border-color); padding:10px 24px;" data-i18n="btn_cancel">취소</button>
+                <button onclick="window.confirmManualBook()" class="btn-primary" style="padding:10px 24px;" data-i18n="lib_save">저장</button>
+            </div>
+        </div>
+    </div>
+
     <!-- My Library Fullscreen Overlay -->
     <div id="library-overlay" class="library-overlay d-none">
         <div class="library-header">

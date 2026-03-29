@@ -992,6 +992,72 @@ async function handleGetUserAnalytics(request) {
     };
 }
 
+// ─── ISBN 도서 검색 (한국 도서 API 프록시) ───
+async function handleLookupIsbn(request) {
+    const isbn = (request.data?.isbn || "").replace(/[-\s]/g, "");
+    if (!isbn || (isbn.length !== 10 && isbn.length !== 13)) {
+        throw new HttpsError("invalid-argument", "유효한 ISBN을 입력해주세요 (10자리 또는 13자리)");
+    }
+
+    // 1) 알라딘 API
+    const aladinKey = process.env.ALADIN_TTB_KEY;
+    if (aladinKey) {
+        try {
+            const idType = isbn.length === 13 ? "ISBN13" : "ISBN";
+            const url = `http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${aladinKey}&itemIdType=${idType}&ItemId=${isbn}&output=js&Version=20131101`;
+            const res = await fetch(url);
+            let text = await res.text();
+            // 알라딘 output=js는 JSONP 형태일 수 있음 — callback wrapper 제거
+            text = text.replace(/^[^({]*\(/, "").replace(/\);?\s*$/, "");
+            const data = JSON.parse(text);
+            if (data.item && data.item.length > 0) {
+                const item = data.item[0];
+                return {
+                    source: "aladin",
+                    book: {
+                        isbn: isbn,
+                        title: item.title || "",
+                        author: item.author || "",
+                        publisher: item.publisher || "",
+                        thumbnail: item.cover || ""
+                    }
+                };
+            }
+        } catch (e) {
+            console.warn("[lookupIsbn] Aladin error:", e.message);
+        }
+    }
+
+    // 2) 카카오 책 검색 API
+    const kakaoKey = process.env.KAKAO_REST_API_KEY;
+    if (kakaoKey) {
+        try {
+            const url = `https://dapi.kakao.com/v3/search/book?query=${isbn}&target=isbn`;
+            const res = await fetch(url, {
+                headers: { "Authorization": `KakaoAK ${kakaoKey}` }
+            });
+            const data = await res.json();
+            if (data.documents && data.documents.length > 0) {
+                const doc = data.documents[0];
+                return {
+                    source: "kakao",
+                    book: {
+                        isbn: isbn,
+                        title: doc.title || "",
+                        author: (doc.authors || []).join(", "),
+                        publisher: doc.publisher || "",
+                        thumbnail: doc.thumbnail || ""
+                    }
+                };
+            }
+        } catch (e) {
+            console.warn("[lookupIsbn] Kakao error:", e.message);
+        }
+    }
+
+    return { source: null, book: null };
+}
+
 exports.ping = onCall(pingCallableOpts, async (request) => {
     // ── Action router: handle admin actions via ping ──
     const action = request.data?.action;
@@ -1055,6 +1121,9 @@ exports.ping = onCall(pingCallableOpts, async (request) => {
                     return await handleUpdateScreeningConfig(request);
                 case "getScreeningStats":
                     return await handleGetScreeningStats(request);
+                // ─── ISBN 도서 검색 ───
+                case "lookupIsbn":
+                    return await handleLookupIsbn(request);
                 default:
                     throw new HttpsError("invalid-argument", "Unknown action: " + action);
             }

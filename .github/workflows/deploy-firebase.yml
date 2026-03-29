@@ -135,6 +135,8 @@ jobs:
           MASTER_EMAILS=${{ secrets.MASTER_EMAILS }}
           AZURE_CS_ENDPOINT=${{ secrets.AZURE_CS_ENDPOINT }}
           AZURE_CS_KEY=${{ secrets.AZURE_CS_KEY }}
+          ALADIN_TTB_KEY=${{ secrets.ALADIN_TTB_KEY }}
+          KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}
           EOF
           # 각 줄 앞의 공백 제거 (HEREDOC 들여쓰기)
           sed -i 's/^[[:space:]]*//' functions/.env
