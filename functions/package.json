@@ -1,7 +1,7 @@
 {
   "name": "levelup-reboot-functions",
   "description": "LEVEL UP: REBOOT — Firebase Cloud Functions (푸시 알림 발송)",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "main": "index.js",
   "engines": {
     "node": "20"
