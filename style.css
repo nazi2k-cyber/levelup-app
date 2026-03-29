@@ -1580,6 +1580,18 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .isbn-scanner-reader {
     width: 90%; max-width: 400px; aspect-ratio: 4/3;
     border-radius: 12px; overflow: hidden; background: #111;
+    position: relative;
+}
+.isbn-scanner-reader::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%; height: 2px;
+    background: rgba(0, 217, 255, 0.5);
+    pointer-events: none;
+    z-index: 1;
+    box-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
 }
 .isbn-scanner-status {
     margin-top: 16px; font-size: 0.85rem; color: var(--neon-blue);
@@ -1595,6 +1607,26 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     color: var(--text-main); font-size: 0.85rem; outline: none;
 }
 .isbn-manual-input input:focus { border-color: var(--neon-blue); }
+
+/* ── ISBN Scan Result Panel (inside scanner overlay) ── */
+.isbn-scan-result {
+    width: 100%; max-width: 400px; padding: 16px 20px;
+    background: var(--panel-bg); border-top: 1px solid var(--border-color);
+    border-radius: 16px 16px 0 0;
+    margin-top: auto;
+    animation: slideUpResult 0.3s ease-out;
+}
+.isbn-scan-result.d-none { display: none !important; }
+.isbn-scan-result-inner { text-align: center; margin-bottom: 12px; }
+.isbn-result-thumb { width: 80px; height: auto; border-radius: 4px; margin-bottom: 8px; display: none; }
+.isbn-result-title { font-size: 1rem; font-weight: bold; color: var(--text-main); }
+.isbn-result-author { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
+.isbn-result-publisher { font-size: 0.75rem; color: var(--text-sub); margin-top: 2px; }
+
+@keyframes slideUpResult {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
 
 /* ── Book Confirm Modal ── */
 .book-category-selector {

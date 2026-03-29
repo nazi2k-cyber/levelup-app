@@ -831,6 +831,27 @@
                 <input type="text" id="isbn-manual-field" placeholder="ISBN 직접 입력" maxlength="13" inputmode="numeric">
                 <button onclick="window.manualIsbnLookup()" class="btn-primary" style="padding:8px 16px; font-size:0.8rem;">검색</button>
             </div>
+            <!-- Embedded scan result panel (shown inside scanner overlay) -->
+            <div id="isbn-scan-result" class="isbn-scan-result d-none">
+                <div class="isbn-scan-result-inner">
+                    <img id="isbn-result-thumb" src="" alt="" class="isbn-result-thumb">
+                    <div id="isbn-result-title" class="isbn-result-title"></div>
+                    <div id="isbn-result-author" class="isbn-result-author"></div>
+                    <div id="isbn-result-publisher" class="isbn-result-publisher"></div>
+                </div>
+                <div style="margin:12px 0;">
+                    <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:6px;" data-i18n="lib_select_category">카테고리 선택</label>
+                    <div class="book-category-selector" id="isbn-result-cat-selector">
+                        <button class="book-cat-btn active" data-cat="reading" data-i18n="lib_reading">읽고있는책</button>
+                        <button class="book-cat-btn" data-cat="read" data-i18n="lib_read">읽은책</button>
+                        <button class="book-cat-btn" data-cat="wantToRead" data-i18n="lib_want_to_read">읽고싶은책</button>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="window.cancelScanResult()" class="btn-primary" style="background:var(--border-color); padding:10px 24px;" data-i18n="btn_cancel">취소</button>
+                    <button onclick="window.confirmScanResult()" class="btn-primary" style="padding:10px 24px;" data-i18n="lib_save">저장</button>
+                </div>
+            </div>
         </div>
     </div>
 

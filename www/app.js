@@ -10674,15 +10674,17 @@ window.renderLifeStatus = renderLifeStatus;
             fps: 10,
             qrbox: function(viewfinderWidth, viewfinderHeight) {
                 var w = Math.floor(viewfinderWidth * 0.8);
-                var h = Math.floor(w * 0.35);
+                var h = Math.floor(viewfinderHeight * 0.55);
                 return { width: w, height: h };
             },
-            aspectRatio: 1.7778,
+            aspectRatio: 1.3333,
             disableFlip: true,
             formatsToSupport: [
                 Html5QrcodeSupportedFormats.EAN_13,
                 Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.CODE_128
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E
             ],
             experimentalFeatures: { useBarCodeDetectorIfSupported: true }
         };
@@ -10991,7 +10993,12 @@ window.renderLifeStatus = renderLifeStatus;
         if (overlay) overlay.classList.add('d-none');
         // Clear reader
         const reader = document.getElementById('isbn-scanner-reader');
-        if (reader) reader.innerHTML = '';
+        if (reader) { reader.innerHTML = ''; reader.style.display = ''; }
+        // Reset embedded result panel
+        const resultPanel = document.getElementById('isbn-scan-result');
+        if (resultPanel) resultPanel.classList.add('d-none');
+        const manualInput = document.getElementById('isbn-manual-input');
+        if (manualInput) manualInput.style.display = '';
     };
 
     window.manualIsbnLookup = async function() {
@@ -11068,14 +11075,23 @@ window.renderLifeStatus = renderLifeStatus;
     }
 
     function showBookConfirm(bookInfo) {
-        const overlay = document.getElementById('book-confirm-overlay');
-        if (!overlay) return;
+        // Hide camera and manual input areas
+        const reader = document.getElementById('isbn-scanner-reader');
+        const manualInput = document.getElementById('isbn-manual-input');
+        const statusEl = document.getElementById('isbn-scanner-status');
+        if (reader) reader.style.display = 'none';
+        if (manualInput) manualInput.style.display = 'none';
+        if (statusEl) statusEl.textContent = '';
 
-        document.getElementById('book-confirm-title').textContent = bookInfo.title;
-        document.getElementById('book-confirm-author').textContent = bookInfo.author;
-        document.getElementById('book-confirm-publisher').textContent = bookInfo.publisher;
+        // Populate embedded result panel inside scanner overlay
+        const panel = document.getElementById('isbn-scan-result');
+        if (!panel) return;
 
-        const thumb = document.getElementById('book-confirm-thumb');
+        document.getElementById('isbn-result-title').textContent = bookInfo.title;
+        document.getElementById('isbn-result-author').textContent = bookInfo.author;
+        document.getElementById('isbn-result-publisher').textContent = bookInfo.publisher;
+
+        const thumb = document.getElementById('isbn-result-thumb');
         if (bookInfo.thumbnail) {
             thumb.src = bookInfo.thumbnail;
             thumb.style.display = 'block';
@@ -11083,33 +11099,33 @@ window.renderLifeStatus = renderLifeStatus;
             thumb.style.display = 'none';
         }
 
-        // Reset category selection
-        document.querySelectorAll('.book-cat-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.cat === 'reading');
-        });
-        document.querySelectorAll('.book-cat-btn').forEach(b => {
-            b.onclick = function() {
-                document.querySelectorAll('.book-cat-btn').forEach(x => x.classList.remove('active'));
-                this.classList.add('active');
-            };
-        });
+        // Reset category buttons scoped to embedded panel
+        const selector = document.getElementById('isbn-result-cat-selector');
+        if (selector) {
+            selector.querySelectorAll('.book-cat-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.cat === 'reading');
+                b.onclick = function() {
+                    selector.querySelectorAll('.book-cat-btn').forEach(x => x.classList.remove('active'));
+                    this.classList.add('active');
+                };
+            });
+        }
 
-        overlay.classList.remove('d-none');
-        overlay.classList.add('d-flex');
+        panel.classList.remove('d-none');
+        // Apply i18n
+        if (typeof changeLanguage === 'function') changeLanguage(AppState.currentLang);
     }
 
-    window.confirmAddBook = function() {
+    window.confirmScanResult = function() {
         if (!_pendingBook) return;
-        const activeBtn = document.querySelector('.book-cat-btn.active');
+        const selector = document.getElementById('isbn-result-cat-selector');
+        const activeBtn = selector ? selector.querySelector('.book-cat-btn.active') : null;
         const category = activeBtn ? activeBtn.dataset.cat : 'reading';
 
         const added = window.addBookToLibrary(_pendingBook, category);
         if (added) {
-            // Close confirm and scanner
-            const confirmOverlay = document.getElementById('book-confirm-overlay');
-            if (confirmOverlay) { confirmOverlay.classList.add('d-none'); confirmOverlay.classList.remove('d-flex'); }
-            window.closeIsbnScanner();
             _pendingBook = null;
+            window.closeIsbnScanner();
 
             // Refresh library view if open
             const libOverlay = document.getElementById('library-overlay');
@@ -11119,7 +11135,45 @@ window.renderLifeStatus = renderLifeStatus;
                 updateLibraryCounts();
                 renderLibrary();
             }
-            // Toast
+            showLibToast(t('lib_book_added'));
+        }
+    };
+
+    window.cancelScanResult = function() {
+        _pendingBook = null;
+        // Hide result panel, restore camera/manual input
+        const panel = document.getElementById('isbn-scan-result');
+        if (panel) panel.classList.add('d-none');
+
+        const reader = document.getElementById('isbn-scanner-reader');
+        const manualInput = document.getElementById('isbn-manual-input');
+        if (reader) reader.style.display = '';
+        if (manualInput) manualInput.style.display = '';
+
+        // Restart scanner
+        window.openIsbnScanner();
+    };
+
+    // Keep legacy functions for book-confirm-overlay (used outside scanner flow)
+    window.confirmAddBook = function() {
+        if (!_pendingBook) return;
+        const overlay = document.getElementById('book-confirm-overlay');
+        const activeBtn = overlay ? overlay.querySelector('.book-cat-btn.active') : null;
+        const category = activeBtn ? activeBtn.dataset.cat : 'reading';
+
+        const added = window.addBookToLibrary(_pendingBook, category);
+        if (added) {
+            if (overlay) { overlay.classList.add('d-none'); overlay.classList.remove('d-flex'); }
+            window.closeIsbnScanner();
+            _pendingBook = null;
+
+            const libOverlay = document.getElementById('library-overlay');
+            if (libOverlay && !libOverlay.classList.contains('d-none')) {
+                _libCurrentTab = category;
+                updateLibraryTabs();
+                updateLibraryCounts();
+                renderLibrary();
+            }
             showLibToast(t('lib_book_added'));
         }
     };
@@ -11128,7 +11182,6 @@ window.renderLifeStatus = renderLifeStatus;
         _pendingBook = null;
         const overlay = document.getElementById('book-confirm-overlay');
         if (overlay) { overlay.classList.add('d-none'); overlay.classList.remove('d-flex'); }
-        // Restart scanner
         window.openIsbnScanner();
     };
 
