@@ -1561,11 +1561,12 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: var(--bg-dark); z-index: 200;
     display: flex; flex-direction: column; align-items: center;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .isbn-scanner-overlay.d-none { display: none !important; }
 .isbn-scanner-content {
     width: 100%; max-width: 500px; display: flex; flex-direction: column;
-    align-items: center; padding: 0;
+    align-items: center; padding: 0; padding-bottom: 40px;
 }
 .isbn-scanner-header {
     display: flex; align-items: center; justify-content: center;

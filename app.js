@@ -10755,8 +10755,12 @@ window.renderLifeStatus = renderLifeStatus;
 
     async function initOcrWorker() {
         if (_ocrWorker) return _ocrWorker;
-        if (typeof Tesseract === 'undefined') return null;
+        if (typeof Tesseract === 'undefined') {
+            if (window.AppLogger) AppLogger.warn('[ISBN] Tesseract.js not loaded');
+            return null;
+        }
         try {
+            if (window.AppLogger) AppLogger.info('[ISBN] Initializing OCR worker');
             _ocrWorker = await Tesseract.createWorker('eng', 1, {
                 logger: function() {}
             });
@@ -10764,8 +10768,10 @@ window.renderLifeStatus = renderLifeStatus;
                 tessedit_char_whitelist: '0123456789ISBNisbn-Xx ',
                 tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK
             });
+            if (window.AppLogger) AppLogger.info('[ISBN] OCR worker ready');
             return _ocrWorker;
         } catch(e) {
+            if (window.AppLogger) AppLogger.error('[ISBN] OCR worker init error', { message: e.message });
             console.warn('OCR worker init error:', e);
             _ocrWorker = null;
             return null;
@@ -10796,8 +10802,16 @@ window.renderLifeStatus = renderLifeStatus;
             if (!worker) { _ocrProcessing = false; return; }
 
             var result = await worker.recognize(canvas);
-            var isbn = extractIsbnFromText(result.data.text);
+            var ocrText = result.data.text;
+            var isbn = extractIsbnFromText(ocrText);
+            if (window.AppLogger && ocrText && ocrText.trim()) {
+                AppLogger.debug('[ISBN] OCR text: ' + ocrText.trim().substring(0, 100), {
+                    extractedIsbn: isbn || 'none',
+                    confidence: result.data.confidence
+                });
+            }
             if (isbn && isValidIsbn(isbn)) {
+                if (window.AppLogger) AppLogger.info('[ISBN] OCR detected valid ISBN: ' + isbn);
                 stopOcrInterval();
                 var statusEl = document.getElementById('isbn-scanner-status');
                 if (statusEl) statusEl.textContent = 'ISBN (OCR): ' + isbn;
@@ -10806,8 +10820,11 @@ window.renderLifeStatus = renderLifeStatus;
                 if (field) field.value = isbn;
                 try { if (_html5QrCode) await _html5QrCode.stop(); } catch(e) {}
                 await onIsbnScanned(isbn);
+            } else if (isbn) {
+                if (window.AppLogger) AppLogger.debug('[ISBN] OCR found ISBN-like but invalid checksum: ' + isbn);
             }
         } catch(e) {
+            if (window.AppLogger) AppLogger.error('[ISBN] OCR frame error', { message: e.message });
             console.warn('OCR frame error:', e);
         }
         _ocrProcessing = false;
@@ -11218,13 +11235,51 @@ window.renderLifeStatus = renderLifeStatus;
         window.updateLibraryCardCount();
     };
 
+    // ── ISBN Manual Input Keyboard Handling ──
+    var _isbnKeyboardSetup = false;
+    function setupIsbnKeyboardHandling() {
+        if (_isbnKeyboardSetup) return;
+        _isbnKeyboardSetup = true;
+        var field = document.getElementById('isbn-manual-field');
+        if (!field) return;
+
+        field.addEventListener('focus', function() {
+            // Scroll input into view after keyboard appears
+            setTimeout(function() {
+                field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        });
+
+        // Handle visualViewport resize (keyboard show/hide)
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', function() {
+                var overlay = document.getElementById('isbn-scanner-overlay');
+                if (!overlay || overlay.classList.contains('d-none')) return;
+                // Set overlay height to visual viewport height to avoid keyboard overlap
+                overlay.style.height = window.visualViewport.height + 'px';
+            });
+            window.visualViewport.addEventListener('scroll', function() {
+                var overlay = document.getElementById('isbn-scanner-overlay');
+                if (!overlay || overlay.classList.contains('d-none')) return;
+                overlay.style.height = window.visualViewport.height + 'px';
+            });
+        }
+    }
+
     // ── ISBN Scanner ──
     window.openIsbnScanner = async function() {
+        if (window.AppLogger) AppLogger.info('[ISBN] Scanner opened');
         const overlay = document.getElementById('isbn-scanner-overlay');
-        if (overlay) overlay.classList.remove('d-none');
+        if (overlay) {
+            overlay.classList.remove('d-none');
+            // Reset height in case keyboard changed it previously
+            overlay.style.height = '100%';
+        }
 
         const statusEl = document.getElementById('isbn-scanner-status');
         if (statusEl) statusEl.textContent = t('lib_scan_hint');
+
+        setupIsbnKeyboardHandling();
 
         try {
             if (_html5QrCode) {
@@ -11232,20 +11287,29 @@ window.renderLifeStatus = renderLifeStatus;
                 _html5QrCode = null;
             }
             _html5QrCode = new Html5Qrcode('isbn-scanner-reader');
+            if (window.AppLogger) AppLogger.info('[ISBN] Html5Qrcode instance created');
 
             var _scanHandled = false;
+            var _scanAttemptCount = 0;
             await _html5QrCode.start(
                 { facingMode: 'environment' },
                 _scannerConfig(),
                 async (decodedText) => {
+                    _scanAttemptCount++;
                     if (_scanHandled) return;
                     // Validate barcode: reject garbage reads
                     var barcode = (decodedText || '').replace(/[-\s]/g, '');
                     if (!isValidIsbn(barcode)) {
-                        console.log('Barcode rejected (invalid ISBN):', decodedText);
+                        if (window.AppLogger) AppLogger.debug('[ISBN] Barcode rejected (invalid): ' + decodedText, {
+                            raw: decodedText,
+                            cleaned: barcode,
+                            length: barcode.length,
+                            attemptNum: _scanAttemptCount
+                        });
                         return;
                     }
                     _scanHandled = true;
+                    if (window.AppLogger) AppLogger.info('[ISBN] Barcode accepted: ' + barcode, { attemptNum: _scanAttemptCount });
                     stopOcrInterval();
                     if (statusEl) statusEl.textContent = 'ISBN: ' + barcode;
                     try { await _html5QrCode.stop(); } catch(e) {}
@@ -11254,9 +11318,16 @@ window.renderLifeStatus = renderLifeStatus;
                     await onIsbnScanned(barcode);
                     _scanHandled = false;
                 },
-                () => {} // ignore scan failures
+                function(errorMessage) {
+                    // Log scan failures periodically (every 50th failure to avoid spam)
+                    _scanAttemptCount++;
+                    if (_scanAttemptCount % 50 === 1) {
+                        if (window.AppLogger) AppLogger.debug('[ISBN] Scan attempt #' + _scanAttemptCount + ' no match', { error: errorMessage });
+                    }
+                }
             );
 
+            if (window.AppLogger) AppLogger.info('[ISBN] Camera started successfully');
             AppState.user.cameraEnabled = true;
             saveUserData();
             updateCameraToggleUI();
@@ -11264,6 +11335,7 @@ window.renderLifeStatus = renderLifeStatus;
             // Start OCR immediately (primary detection method)
             startOcrInterval();
         } catch(e) {
+            if (window.AppLogger) AppLogger.error('[ISBN] Scanner start error', { name: e.name, message: e.message });
             console.error('Scanner start error:', e);
             // Camera permission denied or other error
             if (e && (e.name === 'NotAllowedError' || (e.message && e.message.indexOf('Permission') >= 0))) {
@@ -11283,13 +11355,17 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     window.closeIsbnScanner = async function() {
+        if (window.AppLogger) AppLogger.info('[ISBN] Scanner closed');
         stopOcrInterval();
         if (_html5QrCode) {
             try { await _html5QrCode.stop(); } catch(e) {}
             _html5QrCode = null;
         }
         const overlay = document.getElementById('isbn-scanner-overlay');
-        if (overlay) overlay.classList.add('d-none');
+        if (overlay) {
+            overlay.classList.add('d-none');
+            overlay.style.height = '';
+        }
         // Clear reader
         const reader = document.getElementById('isbn-scanner-reader');
         if (reader) { reader.innerHTML = ''; reader.style.display = ''; }
@@ -11303,6 +11379,7 @@ window.renderLifeStatus = renderLifeStatus;
     window.manualIsbnLookup = async function() {
         const input = document.getElementById('isbn-manual-field');
         const isbn = (input ? input.value : '').trim().replace(/[-\s]/g, '');
+        if (window.AppLogger) AppLogger.info('[ISBN] Manual lookup: ' + isbn);
         if (!isbn || isbn.length < 10) {
             alert('ISBN을 정확히 입력해주세요 (10자리 또는 13자리)');
             return;
@@ -11311,11 +11388,13 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     async function onIsbnScanned(isbn) {
+        if (window.AppLogger) AppLogger.info('[ISBN] Processing ISBN: ' + isbn, { valid: isValidIsbn(isbn) });
         const statusEl = document.getElementById('isbn-scanner-status');
         if (statusEl) statusEl.textContent = '검색 중...';
 
         const bookInfo = await lookupBookByIsbn(isbn);
         if (!bookInfo) {
+            if (window.AppLogger) AppLogger.warn('[ISBN] Book not found for ISBN: ' + isbn);
             // Ask user if they want to enter manually
             if (confirm(t('lib_not_found'))) {
                 window.closeIsbnScanner();
@@ -11348,23 +11427,29 @@ window.renderLifeStatus = renderLifeStatus;
     }
 
     async function lookupBookByIsbn(isbn) {
+        if (window.AppLogger) AppLogger.info('[ISBN] Looking up ISBN: ' + isbn);
         // 1) Server-side Korean book API proxy (알라딘 → 카카오 → 구글북스)
         try {
             const _ping = httpsCallable(functions, 'ping');
             const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
             if (result.data && result.data.book) {
+                if (window.AppLogger) AppLogger.info('[ISBN] Server lookup success', { title: result.data.book.title, source: result.data.source || 'server' });
                 return result.data.book;
             }
+            if (window.AppLogger) AppLogger.warn('[ISBN] Server returned no book data', { response: JSON.stringify(result.data).substring(0, 200) });
         } catch(e) {
+            if (window.AppLogger) AppLogger.error('[ISBN] Server lookup error', { message: e.message, code: e.code });
             console.warn('Server ISBN lookup error:', e);
         }
 
         // 2) Google Books API (client-side emergency fallback — 서버 장애 시)
         try {
+            if (window.AppLogger) AppLogger.info('[ISBN] Trying Google Books fallback');
             const res = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + encodeURIComponent(isbn) + '&maxResults=1');
             const data = await res.json();
             if (data.items && data.items.length > 0) {
                 const vol = data.items[0].volumeInfo;
+                if (window.AppLogger) AppLogger.info('[ISBN] Google Books found', { title: vol.title });
                 return {
                     isbn: isbn,
                     title: vol.title || 'Unknown',
@@ -11376,7 +11461,9 @@ window.renderLifeStatus = renderLifeStatus;
                     pages: vol.pageCount || 0
                 };
             }
+            if (window.AppLogger) AppLogger.warn('[ISBN] Google Books returned no results');
         } catch(e) {
+            if (window.AppLogger) AppLogger.error('[ISBN] Google Books lookup error', { message: e.message });
             console.error('Google Books lookup error:', e);
         }
 
