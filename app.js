@@ -1365,6 +1365,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 앱 시작 즉시 네이티브 푸시 알림 클릭 리스너 등록 (콜드 스타트 대응)
     registerEarlyPushListeners();
 
+    // 안드로이드 뒤로가기(하드웨어) 버튼 핸들러 등록
+    registerBackButtonHandler();
+
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             if (_initializedUid === user.uid) return; // 토큰 갱신 등 재발화 시 중복 초기화 방지
@@ -9358,6 +9361,82 @@ function registerEarlyPushListeners() {
     }
 
     console.log('[FCM] 얼리 푸시 리스너 등록 완료');
+}
+
+// --- Android 뒤로가기 버튼 처리 ---
+function registerBackButtonHandler() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+    if (!cap.Plugins || !cap.Plugins.App) return;
+
+    cap.Plugins.App.addListener('backButton', () => {
+        // 1) 열린 모달/오버레이가 있으면 닫기
+        const modalIds = [
+            'hamburger-menu-popup',
+            'isbn-scanner-overlay',
+            'book-confirm-overlay',
+            'manual-book-overlay',
+            'library-overlay',
+            'card-select-modal',
+            'titleModal',
+            'logViewerModal',
+            'infoModal',
+            'legalModal',
+            'diyQuestModal',
+            'lootModal',
+            'shareModal',
+            'copyPlannerModal',
+            'location-search-modal'
+        ];
+
+        for (const id of modalIds) {
+            const el = document.getElementById(id);
+            if (!el) continue;
+            const isVisible = !el.classList.contains('d-none') &&
+                              (el.offsetParent !== null || el.classList.contains('d-flex'));
+            if (isVisible) {
+                el.classList.add('d-none');
+                el.classList.remove('d-flex');
+                // 햄버거 메뉴 백드롭도 닫기
+                if (id === 'hamburger-menu-popup') {
+                    const backdrop = document.getElementById('hamburger-backdrop');
+                    if (backdrop) backdrop.classList.add('d-none');
+                }
+                return;
+            }
+        }
+
+        // 2) 카드 에디터가 열려있으면 닫기
+        const cardEditor = document.getElementById('card-editor-fullscreen');
+        if (cardEditor && !cardEditor.classList.contains('d-none')) {
+            cardEditor.classList.add('d-none');
+            return;
+        }
+
+        // 3) 현재 탭이 status(홈)가 아니면 홈으로 이동
+        const activeSection = document.querySelector('.view-section.active');
+        if (activeSection && activeSection.id !== 'status') {
+            const statusNav = document.querySelector('.nav-item[onclick*="status"]');
+            if (statusNav) {
+                switchTab('status', statusNav);
+            } else {
+                // nav-item을 찾지 못한 경우 직접 전환
+                document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+                document.getElementById('status').classList.add('active');
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                const firstNav = document.querySelector('.nav-item');
+                if (firstNav) firstNav.classList.add('active');
+            }
+            return;
+        }
+
+        // 4) 이미 홈 탭이면 앱 최소화
+        if (cap.Plugins.App.minimizeApp) {
+            cap.Plugins.App.minimizeApp();
+        }
+    });
+
+    console.log('[BackButton] 안드로이드 뒤로가기 버튼 핸들러 등록 완료');
 }
 
 /** 앱 초기화 완료 후 대기 중인 알림 데이터 처리 */
