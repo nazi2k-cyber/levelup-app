@@ -157,18 +157,22 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "chore: v${NEW_VERSION} 자동 버전 업데이트 [skip ci]"
 
-            # 기존 태그가 있으면 삭제 후 재생성 (롤백 등으로 인한 태그 충돌 방지)
-            if git tag -l "v${NEW_VERSION}" | grep -q .; then
-              git tag -d "v${NEW_VERSION}"
-              git push origin ":refs/tags/v${NEW_VERSION}" 2>/dev/null || true
-              echo "⚠️ 기존 v${NEW_VERSION} 태그 삭제 (충돌 방지)"
-            fi
-            git tag -a "v${NEW_VERSION}" -m "릴리즈 v${NEW_VERSION}"
-
-            # Race condition 대비 rebase 후 push
+            # 1) 커밋을 먼저 push (태그 충돌이 커밋 push를 막지 않도록 분리)
             git pull --rebase origin main || true
-            git push origin main --follow-tags
-            echo "✅ v${NEW_VERSION} 커밋 및 태그 생성 완료"
+            git push origin main
+            echo "✅ v${NEW_VERSION} 커밋 push 완료"
+
+            # 2) 원격에 동일 태그가 있으면 삭제 (롤백 등으로 인한 태그 충돌 방지)
+            if git ls-remote --tags origin "refs/tags/v${NEW_VERSION}" | grep -q .; then
+              git push origin ":refs/tags/v${NEW_VERSION}" 2>/dev/null || true
+              echo "⚠️ 원격의 기존 v${NEW_VERSION} 태그 삭제 (충돌 방지)"
+            fi
+            git tag -d "v${NEW_VERSION}" 2>/dev/null || true
+
+            # 3) 새 태그 생성 및 push
+            git tag -a "v${NEW_VERSION}" -m "릴리즈 v${NEW_VERSION}"
+            git push origin "v${NEW_VERSION}"
+            echo "✅ v${NEW_VERSION} 태그 생성 및 push 완료"
           else
             echo "ℹ️ 버전 관련 변경사항 없음 — 스킵"
           fi
