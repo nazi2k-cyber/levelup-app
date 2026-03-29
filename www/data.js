@@ -262,6 +262,8 @@ const i18n = {
         lib_search_no_result: "검색 결과가 없습니다.",
         lib_add_book: "추가",
         lib_search_more: "더보기",
+        lib_read_reward: "📚 독서 완료! +10P & INT +0.5",
+        btn_library_info: "가이드",
         btn_cancel: "취소"
     },
     en: {
@@ -523,6 +525,8 @@ const i18n = {
         lib_search_no_result: "No results found.",
         lib_add_book: "Add",
         lib_search_more: "More",
+        lib_read_reward: "📚 Book completed! +10P & INT +0.5",
+        btn_library_info: "Guide",
         btn_cancel: "Cancel"
     },
     ja: {
@@ -784,6 +788,8 @@ const i18n = {
         lib_search_no_result: "検索結果がありません。",
         lib_add_book: "追加",
         lib_search_more: "もっと見る",
+        lib_read_reward: "📚 読了！ +10P & INT +0.5",
+        btn_library_info: "ガイド",
         btn_cancel: "キャンセル"
     }
 };

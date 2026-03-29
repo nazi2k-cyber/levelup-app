@@ -4840,6 +4840,60 @@ function openPlannerInfoModal() {
     m.classList.add('d-flex');
 }
 
+// --- ★ 내 서재 가이드 모달 ★ ---
+window.openLibraryInfoModal = function() {
+    const lang = AppState.currentLang;
+    const guideData = {
+        ko: {
+            title: '내 서재 가이드',
+            sections: [
+                { icon: '📚', title: '책 등록', desc: '📷 버튼으로 ISBN 바코드를 스캔하거나, 검색창에서 직접 책을 검색하여 추가하세요.' },
+                { icon: '📖', title: '카테고리', desc: '읽고있는책, 읽은책, 읽고싶은책 3가지 카테고리로 관리할 수 있습니다.' },
+                { icon: '🏆', title: '독서 보상', desc: '책을 읽은책으로 등록하면 +10P & INT +0.5 보상을 받습니다! (책 당 1회)' },
+                { icon: '📊', title: '통계', desc: '전체, 연간, 월간 독서량을 확인할 수 있습니다.' },
+                { icon: '🗼', title: '바벨의 도서관', desc: '읽은 책을 쌓아서 바벨탑을 만들어보세요!' }
+            ]
+        },
+        en: {
+            title: 'Library Guide',
+            sections: [
+                { icon: '📚', title: 'Add Books', desc: 'Scan ISBN barcodes with the 📷 button or search for books directly.' },
+                { icon: '📖', title: 'Categories', desc: 'Organize books into Reading, Read, and Want to Read.' },
+                { icon: '🏆', title: 'Reading Reward', desc: 'Mark a book as Read to earn +10P & INT +0.5! (Once per book)' },
+                { icon: '📊', title: 'Statistics', desc: 'View your reading stats by total, yearly, and monthly.' },
+                { icon: '🗼', title: 'Tower of Babel', desc: 'Stack your read books to build your own Tower of Babel!' }
+            ]
+        },
+        ja: {
+            title: '書斎ガイド',
+            sections: [
+                { icon: '📚', title: '本の登録', desc: '📷ボタンでISBNバーコードをスキャンするか、検索で直接本を追加できます。' },
+                { icon: '📖', title: 'カテゴリ', desc: '読書中、読了、読みたいの3つのカテゴリで管理できます。' },
+                { icon: '🏆', title: '読書報酬', desc: '本を読了に登録すると+10P & INT +0.5の報酬！（本ごとに1回）' },
+                { icon: '📊', title: '統計', desc: '全体、年間、月間の読書量を確認できます。' },
+                { icon: '🗼', title: 'バベルの図書館', desc: '読んだ本を積み上げてバベルの塔を作りましょう！' }
+            ]
+        }
+    };
+
+    const g = guideData[lang] || guideData.ko;
+    document.getElementById('info-modal-title').innerText = g.title;
+    const body = document.getElementById('info-modal-body');
+    body.innerHTML = g.sections.map(s => `
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color);">
+            <span style="font-size:1.3rem; flex-shrink:0;">${s.icon}</span>
+            <div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:3px;">${s.title}</div>
+                <div style="font-size:0.75rem; color:var(--text-sub); line-height:1.5; word-break:keep-all;">${s.desc}</div>
+            </div>
+        </div>
+    `).join('');
+
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+};
+
 // --- ★ 설정 가이드 모달 (푸시/GPS/피트니스) ★ ---
 function openSettingsGuideModal(type) {
     const lang = AppState.currentLang;
@@ -11512,6 +11566,18 @@ window.renderLifeStatus = renderLifeStatus;
         }
     }
 
+    // ── Library Read Reward ──
+    function grantReadReward(book) {
+        if (book.rewardGranted) return;
+        book.rewardGranted = true;
+        AppState.user.points += 10;
+        AppState.user.pendingStats.int += 0.5;
+        updatePointUI();
+        drawRadarChart();
+        const lang = AppState.currentLang;
+        alert(i18n[lang].lib_read_reward || '📚 독서 완료! +10P & INT +0.5');
+    }
+
     // ── Library CRUD ──
     window.addBookToLibrary = function(bookInfo, category) {
         if (!AppState.library) AppState.library = { books: [] };
@@ -11536,6 +11602,9 @@ window.renderLifeStatus = renderLifeStatus;
             addedDate: getTodayStr(),
             finishedDate: category === 'read' ? getTodayStr() : null
         });
+        if (category === 'read') {
+            grantReadReward(AppState.library.books[AppState.library.books.length - 1]);
+        }
         saveUserData();
         window.updateLibraryCardCount();
         return true;
@@ -11556,6 +11625,9 @@ window.renderLifeStatus = renderLifeStatus;
         if (!book) return;
         book.category = newCategory;
         if (newCategory === 'read' && !book.finishedDate) book.finishedDate = getTodayStr();
+        if (newCategory === 'read') {
+            grantReadReward(book);
+        }
         saveUserData();
         updateLibraryCounts();
         renderLibrary();
