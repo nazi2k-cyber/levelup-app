@@ -1004,7 +1004,7 @@ async function handleLookupIsbn(request) {
     if (aladinKey) {
         try {
             const idType = isbn.length === 13 ? "ISBN13" : "ISBN";
-            const url = `http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${aladinKey}&itemIdType=${idType}&ItemId=${isbn}&output=js&Version=20131101`;
+            const url = `http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${aladinKey}&itemIdType=${idType}&ItemId=${isbn}&output=js&Version=20131101&OptResult=packing`;
             const res = await fetch(url);
             let text = await res.text();
             // 알라딘 output=js는 JSONP 형태일 수 있음 — callback wrapper 제거
@@ -1023,7 +1023,7 @@ async function handleLookupIsbn(request) {
                         description: item.description || "",
                         pubDate: item.pubDate || "",
                         price: item.priceStandard || 0,
-                        pages: item.itemPage || 0,
+                        pages: (item.subInfo && item.subInfo.itemPage) || item.itemPage || 0,
                         url: item.link || ""
                     }
                 };
