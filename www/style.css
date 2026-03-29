@@ -1726,32 +1726,32 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     -webkit-overflow-scrolling: touch;
 }
 
-/* ── Book Tower (Infinite Tower) ── */
+/* ── Book Tower (Reboot – thin spines, varying widths) ── */
 .library-tower {
     display: flex; flex-direction: column-reverse;
     align-items: center; min-height: 100%;
     justify-content: flex-start; padding-bottom: 20px;
 }
 .book-tower-base {
-    width: 90%; max-width: 380px; height: 18px;
+    width: 92%; max-width: 390px; height: 14px;
     background: linear-gradient(180deg, #4a4a5a, #2a2a3a);
     border-radius: 0 0 6px 6px; margin-top: -2px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
 .book-tower-item {
-    width: 85%; max-width: 360px; padding: 14px 16px;
-    text-align: center; font-size: 0.8rem; font-weight: 600;
+    padding: 6px 14px;
+    text-align: center; font-size: 0.72rem; font-weight: 600;
     color: #3a2a2a; margin: 0; cursor: pointer;
     overflow: hidden;
     transition: transform 0.15s; position: relative;
     border-left: 3px solid rgba(0,0,0,0.15);
     border-right: 3px solid rgba(0,0,0,0.15);
     border-top: 1px solid rgba(255,255,255,0.2);
-    display: flex; align-items: center; justify-content: center; gap: 6px;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 .book-tower-item:first-child {
-    border-radius: 8px 8px 0 0;
+    border-radius: 6px 6px 0 0;
 }
 .book-tower-item:active { transform: scale(0.97); }
 .book-tower-title {
@@ -1759,29 +1759,33 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     flex: 1; min-width: 0;
 }
 .book-tower-pages {
-    font-size: 0.6rem; opacity: 0.6; flex-shrink: 0;
+    font-size: 0.55rem; opacity: 0.6; flex-shrink: 0;
     white-space: nowrap;
+}
+.book-tower-source {
+    font-size: 0.5rem; opacity: 0.5; flex-shrink: 0;
+    white-space: nowrap; margin-left: 2px;
 }
 .book-tower-floor {
     position: absolute; left: -38px; top: 50%; transform: translateY(-50%);
-    font-size: 0.6rem; color: var(--text-sub); font-weight: 700;
+    font-size: 0.55rem; color: var(--text-sub); font-weight: 700;
     white-space: nowrap; min-width: 30px; text-align: right;
 }
 .book-tower-top {
-    width: 70%; max-width: 300px; text-align: center;
+    width: 60%; max-width: 280px; text-align: center;
     margin-bottom: 8px; position: relative;
 }
 .book-tower-top-roof {
     width: 0; height: 0;
-    border-left: 60px solid transparent;
-    border-right: 60px solid transparent;
-    border-bottom: 30px solid #4a4a5a;
+    border-left: 50px solid transparent;
+    border-right: 50px solid transparent;
+    border-bottom: 24px solid #4a4a5a;
     margin: 0 auto 0;
 }
 .book-tower-top-label {
     background: linear-gradient(180deg, #4a4a5a, #3a3a4a);
-    color: var(--neon-blue); font-size: 0.75rem; font-weight: 900;
-    padding: 6px 16px; text-align: center;
+    color: var(--neon-blue); font-size: 0.72rem; font-weight: 900;
+    padding: 5px 14px; text-align: center;
     letter-spacing: 1px;
 }
 
@@ -1821,6 +1825,17 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .book-tower-item:nth-child(8n+6) { background: linear-gradient(180deg, #f0c0b4, #ecaca0); }
 .book-tower-item:nth-child(8n+7) { background: linear-gradient(180deg, #f8d4c8, #f4c0b4); color: #5a3a3a; }
 .book-tower-item:nth-child(8n+8) { background: linear-gradient(180deg, #ecb0a0, #e8a090); }
+
+/* ── Source badges ── */
+.source-badge {
+    display: inline-block; font-size: 0.55rem; font-weight: 700;
+    padding: 1px 5px; border-radius: 6px; letter-spacing: 0.3px;
+    vertical-align: middle; margin-left: 4px;
+}
+.source-aladin { background: #e74c3c; color: #fff; }
+.source-kakao { background: #fee500; color: #3a1d1d; }
+.source-google { background: #4285f4; color: #fff; }
+.book-detail-source { margin-top: 4px; }
 
 .library-empty {
     text-align: center; padding: 40px 20px; color: var(--text-sub);
