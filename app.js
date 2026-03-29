@@ -11035,7 +11035,7 @@ window.renderLifeStatus = renderLifeStatus;
     }
 
     async function lookupBookByIsbn(isbn) {
-        // 1) Server-side Korean book API proxy (알라딘 → 카카오)
+        // 1) Server-side Korean book API proxy (카카오 → 알라딘 → 구글북스)
         try {
             const _ping = httpsCallable(functions, 'ping');
             const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
@@ -11046,7 +11046,7 @@ window.renderLifeStatus = renderLifeStatus;
             console.warn('Server ISBN lookup error:', e);
         }
 
-        // 2) Google Books API (client-side fallback)
+        // 2) Google Books API (client-side emergency fallback — 서버 장애 시)
         try {
             const res = await fetch('https://www.googleapis.com/books/v1/volumes?q=isbn:' + encodeURIComponent(isbn) + '&maxResults=1');
             const data = await res.json();
@@ -11062,34 +11062,6 @@ window.renderLifeStatus = renderLifeStatus;
             }
         } catch(e) {
             console.error('Google Books lookup error:', e);
-        }
-
-        // 3) Open Library API fallback
-        try {
-            const res = await fetch('https://openlibrary.org/isbn/' + encodeURIComponent(isbn) + '.json');
-            if (res.ok) {
-                const data = await res.json();
-                let authorName = '';
-                if (data.authors && data.authors.length > 0) {
-                    try {
-                        const authorRes = await fetch('https://openlibrary.org' + data.authors[0].key + '.json');
-                        if (authorRes.ok) {
-                            const authorData = await authorRes.json();
-                            authorName = authorData.name || '';
-                        }
-                    } catch(e) {}
-                }
-                const coverId = data.covers && data.covers[0];
-                return {
-                    isbn: isbn,
-                    title: data.title || 'Unknown',
-                    author: authorName,
-                    publisher: (data.publishers && data.publishers[0]) || '',
-                    thumbnail: coverId ? 'https://covers.openlibrary.org/b/id/' + coverId + '-M.jpg' : ''
-                };
-            }
-        } catch(e) {
-            console.error('Open Library lookup error:', e);
         }
 
         return null;
