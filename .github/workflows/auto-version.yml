@@ -156,6 +156,13 @@ jobs:
           # 변경사항이 있을 때만 커밋
           if ! git diff --cached --quiet; then
             git commit -m "chore: v${NEW_VERSION} 자동 버전 업데이트 [skip ci]"
+
+            # 기존 태그가 있으면 삭제 후 재생성 (롤백 등으로 인한 태그 충돌 방지)
+            if git tag -l "v${NEW_VERSION}" | grep -q .; then
+              git tag -d "v${NEW_VERSION}"
+              git push origin ":refs/tags/v${NEW_VERSION}" 2>/dev/null || true
+              echo "⚠️ 기존 v${NEW_VERSION} 태그 삭제 (충돌 방지)"
+            fi
             git tag -a "v${NEW_VERSION}" -m "릴리즈 v${NEW_VERSION}"
 
             # Race condition 대비 rebase 후 push
