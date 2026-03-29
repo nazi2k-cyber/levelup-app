@@ -11100,15 +11100,35 @@ window.renderLifeStatus = renderLifeStatus;
     }
 
     function getBookThickness(pages) {
-        // Map page count to padding (thickness): min 10px, max 28px
-        if (!pages || pages <= 0) return 14; // default
-        if (pages < 100) return 10;
-        if (pages < 200) return 12;
-        if (pages < 300) return 14;
-        if (pages < 400) return 17;
-        if (pages < 500) return 20;
-        if (pages < 700) return 24;
-        return 28;
+        // Reboot: thinner spines – min 4px, max 14px
+        if (!pages || pages <= 0) return 6;
+        if (pages < 100) return 4;
+        if (pages < 200) return 5;
+        if (pages < 300) return 6;
+        if (pages < 400) return 8;
+        if (pages < 500) return 10;
+        if (pages < 700) return 12;
+        return 14;
+    }
+
+    function getBookWidth(pages, index) {
+        // Varying widths based on page count + slight per-book variation
+        var base;
+        if (!pages || pages <= 0) base = 72;
+        else if (pages < 150) base = 60;
+        else if (pages < 250) base = 68;
+        else if (pages < 350) base = 75;
+        else if (pages < 500) base = 82;
+        else base = 88;
+        // Add deterministic variation using index
+        var offset = ((index * 7 + 3) % 11) - 5; // -5 to +5
+        return Math.min(92, Math.max(55, base + offset));
+    }
+
+    function getSourceLabel(source) {
+        if (!source) return '';
+        var labels = { aladin: '알라딘', kakao: '카카오', google: '구글' };
+        return labels[source] || source;
     }
 
     function renderTowerView(container, books) {
@@ -11118,13 +11138,16 @@ window.renderLifeStatus = renderLifeStatus;
         // Books stacked from bottom (floor 1) to top
         books.forEach((book, i) => {
             const floor = i + 1;
-            const title = book.title.length > 25 ? book.title.substring(0, 23) + '...' : book.title;
+            const title = book.title.length > 20 ? book.title.substring(0, 18) + '…' : book.title;
             const thickness = getBookThickness(book.pages);
-            const pageLabel = book.pages ? ' (' + book.pages + 'p)' : '';
-            html += '<div class="book-tower-item" style="padding-top:' + thickness + 'px; padding-bottom:' + thickness + 'px;" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">'
+            const widthPct = getBookWidth(book.pages, i);
+            const pageLabel = book.pages ? book.pages + 'p' : '';
+            const srcLabel = getSourceLabel(book.source);
+            html += '<div class="book-tower-item" style="width:' + widthPct + '%; max-width:360px; padding-top:' + thickness + 'px; padding-bottom:' + thickness + 'px;" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">'
                 + '<span class="book-tower-floor">' + floor + '층</span>'
                 + '<span class="book-tower-title">' + escapeHtml(title) + '</span>'
-                + '<span class="book-tower-pages">' + escapeHtml(pageLabel) + '</span>'
+                + (pageLabel ? '<span class="book-tower-pages">' + escapeHtml(pageLabel) + '</span>' : '')
+                + (srcLabel ? '<span class="book-tower-source">' + escapeHtml(srcLabel) + '</span>' : '')
                 + '</div>';
         });
         // Tower top
@@ -11144,7 +11167,7 @@ window.renderLifeStatus = renderLifeStatus;
                 + '<img class="book-list-thumb" src="' + escapeHtml(thumbSrc) + '" alt="" onerror="this.style.display=\'none\'">'
                 + '<div class="book-list-info">'
                 + '<div class="book-list-title">' + escapeHtml(book.title) + '</div>'
-                + '<div class="book-list-author">' + escapeHtml(book.author || '') + '</div>'
+                + '<div class="book-list-author">' + escapeHtml(book.author || '') + (book.source ? ' <span class="source-badge source-' + escapeHtml(book.source) + '">' + escapeHtml({aladin:'알라딘',kakao:'카카오',google:'구글'}[book.source] || book.source) + '</span>' : '') + '</div>'
                 + '<div class="book-list-date">' + escapeHtml(book.addedDate || '') + '</div>'
                 + '</div>'
                 + '<button class="book-list-delete" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">⋯</button>'
@@ -11204,6 +11227,7 @@ window.renderLifeStatus = renderLifeStatus;
             + '<div class="book-detail-publisher">' + escapeHtml(book.publisher || '') + '</div>'
             + '<div class="book-detail-isbn">ISBN: ' + escapeHtml(book.isbn) + '</div>'
             + '<div class="book-detail-date">📅 ' + escapeHtml(book.addedDate || '') + ' 등록</div>'
+            + (book.source ? '<div class="book-detail-source"><span class="source-badge source-' + escapeHtml(book.source) + '">' + escapeHtml({aladin:'알라딘',kakao:'카카오',google:'구글'}[book.source] || book.source) + '</span></div>' : '')
             + '</div></div>';
 
         // Description
@@ -11255,6 +11279,7 @@ window.renderLifeStatus = renderLifeStatus;
                     if (apiBook.pages && !book.pages) book.pages = apiBook.pages;
                     if (apiBook.price && !book.price) book.price = apiBook.price;
                     if (apiBook.url && !book.url) book.url = apiBook.url;
+                    if (!book.source && result.data.source) book.source = result.data.source;
                     saveUserData();
 
                     // Update the currently open detail overlay if it's still showing this book
@@ -11302,6 +11327,7 @@ window.renderLifeStatus = renderLifeStatus;
             pages: bookInfo.pages || 0,
             price: bookInfo.price || 0,
             url: bookInfo.url || '',
+            source: bookInfo._source || bookInfo.source || null,
             category: category,
             addedDate: getTodayStr(),
             finishedDate: category === 'read' ? getTodayStr() : null
@@ -11531,6 +11557,7 @@ window.renderLifeStatus = renderLifeStatus;
             const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
             if (result.data && result.data.book) {
                 if (window.AppLogger) AppLogger.info('[ISBN] Server lookup success', { title: result.data.book.title, source: result.data.source || 'server' });
+                result.data.book._source = result.data.source || null;
                 return result.data.book;
             }
             if (window.AppLogger) AppLogger.warn('[ISBN] Server returned no book data', { response: JSON.stringify(result.data).substring(0, 200) });
@@ -11555,7 +11582,8 @@ window.renderLifeStatus = renderLifeStatus;
                     thumbnail: (vol.imageLinks && (vol.imageLinks.thumbnail || vol.imageLinks.smallThumbnail)) || '',
                     description: vol.description || '',
                     pubDate: vol.publishedDate || '',
-                    pages: vol.pageCount || 0
+                    pages: vol.pageCount || 0,
+                    _source: 'google'
                 };
             }
             if (window.AppLogger) AppLogger.warn('[ISBN] Google Books returned no results');
