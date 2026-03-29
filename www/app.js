@@ -10671,6 +10671,7 @@ window.renderLifeStatus = renderLifeStatus;
     let _ocrInterval = null;
     let _ocrProcessing = false;
     let _ocrWorker = null;
+    let _ocrInitFailed = false;
 
     function _scannerConfig() {
         return {
@@ -10755,14 +10756,21 @@ window.renderLifeStatus = renderLifeStatus;
 
     async function initOcrWorker() {
         if (_ocrWorker) return _ocrWorker;
+        if (_ocrInitFailed) return null;
         if (typeof Tesseract === 'undefined') {
             if (window.AppLogger) AppLogger.warn('[ISBN] Tesseract.js not loaded');
+            _ocrInitFailed = true;
             return null;
         }
         try {
             if (window.AppLogger) AppLogger.info('[ISBN] Initializing OCR worker');
             _ocrWorker = await Tesseract.createWorker('eng', 1, {
-                logger: function() {}
+                logger: function() {},
+                workerPath: 'worker.min.js',
+                corePath: 'tesseract-core/',
+                langPath: 'tesseract-lang/',
+                gzip: false,
+                workerBlobURL: false
             });
             await _ocrWorker.setParameters({
                 tessedit_char_whitelist: '0123456789ISBNisbn-Xx ',
@@ -10774,6 +10782,8 @@ window.renderLifeStatus = renderLifeStatus;
             if (window.AppLogger) AppLogger.error('[ISBN] OCR worker init error', { message: e.message });
             console.warn('OCR worker init error:', e);
             _ocrWorker = null;
+            _ocrInitFailed = true;
+            stopOcrInterval();
             return null;
         }
     }
@@ -10830,13 +10840,21 @@ window.renderLifeStatus = renderLifeStatus;
         _ocrProcessing = false;
     }
 
+    let _ocrDelayTimer = null;
+
     function startOcrInterval() {
         stopOcrInterval();
-        // Run OCR every 1.5 seconds (primary detection method)
-        _ocrInterval = setInterval(ocrCaptureFrame, 1500);
+        _ocrInitFailed = false;
+        // Delay OCR start: barcode scanner is primary, OCR is fallback after 5s
+        _ocrDelayTimer = setTimeout(function() {
+            _ocrDelayTimer = null;
+            if (window.AppLogger) AppLogger.info('[ISBN] OCR fallback starting (barcode not detected)');
+            _ocrInterval = setInterval(ocrCaptureFrame, 1500);
+        }, 5000);
     }
 
     function stopOcrInterval() {
+        if (_ocrDelayTimer) { clearTimeout(_ocrDelayTimer); _ocrDelayTimer = null; }
         if (_ocrInterval) { clearInterval(_ocrInterval); _ocrInterval = null; }
     }
     let _libCurrentTab = 'reading';
@@ -11332,7 +11350,7 @@ window.renderLifeStatus = renderLifeStatus;
             saveUserData();
             updateCameraToggleUI();
 
-            // Start OCR immediately (primary detection method)
+            // Start OCR as fallback (activates after 5s if barcode not detected)
             startOcrInterval();
         } catch(e) {
             if (window.AppLogger) AppLogger.error('[ISBN] Scanner start error', { name: e.name, message: e.message });
