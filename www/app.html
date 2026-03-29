@@ -6,14 +6,14 @@
     <title>LEVEL UP: REBOOT</title>
     <meta name="google-site-verification" content="F-GCFsin3A6JKiAqstN1j7Zw9KhKIJbJSSnB9GVeL8o" />
 
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseapp.com https://*.firebaseio.com https://*.firebasestorage.app https://*.cloudfunctions.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.gstatic.com https://*.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https: wss:; font-src 'self' data:; media-src 'self' blob:; frame-src https://*.google.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.googleapis.com https://*.gstatic.com https://*.firebaseapp.com https://*.firebaseio.com https://*.firebasestorage.app https://*.cloudfunctions.net https://unpkg.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.gstatic.com https://*.googleapis.com https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https: wss:; font-src 'self' data:; media-src 'self' blob: https:; frame-src https://*.google.com;">
     <meta name="theme-color" content="#00d9ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="play_store_512.png">
     <link rel="stylesheet" href="style.css">
-
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 </head>
 <body>
@@ -204,6 +204,7 @@
                             <div style="font-size: 0.65rem; color: var(--text-sub);" data-i18n="tot_score">종합 스코어</div>
                             <div class="compact-score-val" id="totalScore">0</div>
                         </div>
+                        <button id="btn-my-library" class="btn-my-library" aria-label="내 서재" onclick="window.openLibraryView()">📚</button>
                         <button id="btn-hamburger-menu" class="btn-hamburger-menu" aria-label="메뉴">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
                                 <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
@@ -790,6 +791,79 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/></svg>
             설정
         </button>
+    </div>
+
+    <!-- ISBN Scanner Modal -->
+    <div id="isbn-scanner-overlay" class="isbn-scanner-overlay d-none">
+        <div class="isbn-scanner-content">
+            <div class="isbn-scanner-header">
+                <button class="isbn-scanner-close" onclick="window.closeIsbnScanner()">&times;</button>
+                <span data-i18n="lib_scan">ISBN 스캔</span>
+            </div>
+            <div id="isbn-scanner-reader" class="isbn-scanner-reader"></div>
+            <div id="isbn-scanner-status" class="isbn-scanner-status" data-i18n="lib_scan_hint">바코드를 카메라에 비춰주세요</div>
+            <div id="isbn-manual-input" class="isbn-manual-input">
+                <input type="text" id="isbn-manual-field" placeholder="ISBN 직접 입력" maxlength="13" inputmode="numeric">
+                <button onclick="window.manualIsbnLookup()" class="btn-primary" style="padding:8px 16px; font-size:0.8rem;">검색</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Book Confirm Modal (after scan) -->
+    <div id="book-confirm-overlay" class="modal-overlay d-none">
+        <div class="modal-content" style="max-width:340px;">
+            <div style="text-align:center; margin-bottom:12px;">
+                <img id="book-confirm-thumb" src="" alt="" style="width:80px; height:auto; border-radius:4px; margin-bottom:8px; display:none;">
+                <div id="book-confirm-title" style="font-size:1rem; font-weight:bold; color:var(--text-main);"></div>
+                <div id="book-confirm-author" style="font-size:0.8rem; color:var(--text-sub); margin-top:4px;"></div>
+                <div id="book-confirm-publisher" style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;"></div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:6px;" data-i18n="lib_select_category">카테고리 선택</label>
+                <div class="book-category-selector">
+                    <button class="book-cat-btn active" data-cat="reading" data-i18n="lib_reading">읽고있는책</button>
+                    <button class="book-cat-btn" data-cat="read" data-i18n="lib_read">읽은책</button>
+                    <button class="book-cat-btn" data-cat="wantToRead" data-i18n="lib_want_to_read">읽고싶은책</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button onclick="window.cancelBookConfirm()" class="btn-primary" style="background:var(--border-color); padding:10px 24px;" data-i18n="btn_cancel">취소</button>
+                <button onclick="window.confirmAddBook()" class="btn-primary" style="padding:10px 24px;" data-i18n="lib_save">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Library Fullscreen Overlay -->
+    <div id="library-overlay" class="library-overlay d-none">
+        <div class="library-header">
+            <button class="library-back-btn" onclick="window.closeLibraryView()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+            </button>
+            <span data-i18n="lib_title">내 서재</span>
+            <button class="library-scan-btn" onclick="window.openIsbnScanner()">📷</button>
+        </div>
+        <div class="library-search-bar">
+            <input type="text" id="library-search-input" data-i18n-placeholder="lib_search" placeholder="책 검색하기" oninput="window.filterLibraryBooks(this.value)">
+        </div>
+        <div class="library-count-bar">
+            <div class="library-count-toggle">
+                <button class="lib-count-btn active" data-period="total" onclick="window.switchLibraryPeriod('total')"><span data-i18n="lib_total">전체</span> <span id="lib-count-total" class="lib-count-num">0</span></button>
+                <button class="lib-count-btn" data-period="yearly" onclick="window.switchLibraryPeriod('yearly')"><span data-i18n="lib_yearly">연간</span> <span id="lib-count-yearly" class="lib-count-num">0</span></button>
+                <button class="lib-count-btn" data-period="monthly" onclick="window.switchLibraryPeriod('monthly')"><span data-i18n="lib_monthly">월간</span> <span id="lib-count-monthly" class="lib-count-num">0</span></button>
+            </div>
+        </div>
+        <div class="library-tabs">
+            <button class="lib-tab active" data-cat="reading" onclick="window.switchLibraryTab('reading')"><span data-i18n="lib_reading">읽고있는책</span></button>
+            <button class="lib-tab" data-cat="read" onclick="window.switchLibraryTab('read')"><span data-i18n="lib_read">읽은책</span></button>
+            <button class="lib-tab" data-cat="wantToRead" onclick="window.switchLibraryTab('wantToRead')"><span data-i18n="lib_want_to_read">읽고싶은책</span></button>
+        </div>
+        <div class="library-view-toggle">
+            <button class="lib-view-btn active" data-view="tower" onclick="window.switchLibraryViewMode('tower')" data-i18n="lib_stack_view">쌓아보기</button>
+            <button class="lib-view-btn" data-view="list" onclick="window.switchLibraryViewMode('list')" data-i18n="lib_list_view">리스트형 보기</button>
+        </div>
+        <div id="library-content" class="library-content">
+            <div id="library-tower" class="library-tower"></div>
+        </div>
     </div>
 
     <!-- Status Card Editor (Fullscreen Overlay) -->
