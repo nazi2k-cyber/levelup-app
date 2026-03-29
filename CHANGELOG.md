@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.12] - 2026-03-29
+
+### 변경
+- fix: add libraryStr to Firestore allowed fields to fix permission-denied errors
+
 ## [1.0.11] - 2026-03-29
 
 ### 변경
