@@ -10668,13 +10668,16 @@ window.renderLifeStatus = renderLifeStatus;
 (function() {
     let _html5QrCode = null;
     let _pendingBook = null;
+    let _ocrInterval = null;
+    let _ocrProcessing = false;
+    let _ocrWorker = null;
 
     function _scannerConfig() {
         return {
-            fps: 10,
+            fps: 15,
             qrbox: function(viewfinderWidth, viewfinderHeight) {
-                var w = Math.floor(viewfinderWidth * 0.8);
-                var h = Math.floor(viewfinderHeight * 0.55);
+                var w = Math.floor(viewfinderWidth * 0.85);
+                var h = Math.floor(viewfinderHeight * 0.5);
                 return { width: w, height: h };
             },
             aspectRatio: 1.3333,
@@ -10688,6 +10691,102 @@ window.renderLifeStatus = renderLifeStatus;
             ],
             experimentalFeatures: { useBarCodeDetectorIfSupported: true }
         };
+    }
+
+    // ── OCR ISBN Detection (Tesseract.js fallback) ──
+    function extractIsbnFromText(text) {
+        if (!text) return null;
+        // Remove spaces/newlines, normalize
+        var cleaned = text.replace(/\s+/g, ' ');
+        // Pattern 1: "ISBN" followed by digits (with optional hyphens/spaces)
+        var m = cleaned.match(/ISBN[\s:\-]*(?:97[89][\s\-]*(?:\d[\s\-]*){9}\d|\d[\s\-]*(?:\d[\s\-]*){8}[\dXx])/i);
+        if (m) {
+            var digits = m[0].replace(/[^0-9Xx]/g, '');
+            if (digits.length === 13 || digits.length === 10) return digits;
+        }
+        // Pattern 2: Standalone 13-digit starting with 978/979
+        m = cleaned.match(/\b(97[89][\s\-]*(?:\d[\s\-]*){9}\d)\b/);
+        if (m) {
+            var digits = m[1].replace(/[^0-9]/g, '');
+            if (digits.length === 13) return digits;
+        }
+        // Pattern 3: Hyphenated ISBN pattern like 979-11-5784-629-0
+        m = cleaned.match(/\b(\d{3}[\-\s]\d{1,5}[\-\s]\d{1,7}[\-\s]\d{1,7}[\-\s]\d)\b/);
+        if (m) {
+            var digits = m[1].replace(/[^0-9]/g, '');
+            if (digits.length === 13 || digits.length === 10) return digits;
+        }
+        return null;
+    }
+
+    async function initOcrWorker() {
+        if (_ocrWorker) return _ocrWorker;
+        if (typeof Tesseract === 'undefined') return null;
+        try {
+            _ocrWorker = await Tesseract.createWorker('eng', 1, {
+                logger: function() {}
+            });
+            await _ocrWorker.setParameters({
+                tessedit_char_whitelist: '0123456789ISBNisbn-Xx ',
+                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK
+            });
+            return _ocrWorker;
+        } catch(e) {
+            console.warn('OCR worker init error:', e);
+            _ocrWorker = null;
+            return null;
+        }
+    }
+
+    async function ocrCaptureFrame() {
+        if (_ocrProcessing) return;
+        _ocrProcessing = true;
+        try {
+            var videoEl = document.querySelector('#isbn-scanner-reader video');
+            if (!videoEl || videoEl.readyState < 2) { _ocrProcessing = false; return; }
+
+            var canvas = document.createElement('canvas');
+            var w = videoEl.videoWidth;
+            var h = videoEl.videoHeight;
+            // Capture lower half of video where ISBN text typically appears
+            var cropY = Math.floor(h * 0.35);
+            var cropH = Math.floor(h * 0.4);
+            canvas.width = w;
+            canvas.height = cropH;
+            var ctx = canvas.getContext('2d');
+            // Apply sharpening: increase contrast
+            ctx.filter = 'contrast(1.5) brightness(1.1)';
+            ctx.drawImage(videoEl, 0, cropY, w, cropH, 0, 0, w, cropH);
+
+            var worker = await initOcrWorker();
+            if (!worker) { _ocrProcessing = false; return; }
+
+            var result = await worker.recognize(canvas);
+            var isbn = extractIsbnFromText(result.data.text);
+            if (isbn) {
+                stopOcrInterval();
+                var statusEl = document.getElementById('isbn-scanner-status');
+                if (statusEl) statusEl.textContent = 'ISBN (OCR): ' + isbn;
+                // Auto-fill and auto-process
+                var field = document.getElementById('isbn-manual-field');
+                if (field) field.value = isbn;
+                try { if (_html5QrCode) await _html5QrCode.stop(); } catch(e) {}
+                await onIsbnScanned(isbn);
+            }
+        } catch(e) {
+            console.warn('OCR frame error:', e);
+        }
+        _ocrProcessing = false;
+    }
+
+    function startOcrInterval() {
+        stopOcrInterval();
+        // Run OCR every 2 seconds as fallback
+        _ocrInterval = setInterval(ocrCaptureFrame, 2000);
+    }
+
+    function stopOcrInterval() {
+        if (_ocrInterval) { clearInterval(_ocrInterval); _ocrInterval = null; }
     }
     let _libCurrentTab = 'reading';
     let _libCurrentPeriod = 'total';
@@ -10704,11 +10803,11 @@ window.renderLifeStatus = renderLifeStatus;
         return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     }
 
-    // ── Library Card Count (status screen) ──
+    // ── Library Card Count (status screen) — 읽은책 기준 ──
     window.updateLibraryCardCount = function() {
         const books = (AppState.library && AppState.library.books) || [];
         const year = new Date().getFullYear();
-        const yearlyCount = books.filter(b => new Date(b.addedDate).getFullYear() === year).length;
+        const yearlyCount = books.filter(b => b.category === 'read' && new Date(b.addedDate).getFullYear() === year).length;
         const el = document.getElementById('lib-yearly-card-count');
         if (el) el.textContent = yearlyCount;
     };
@@ -10718,12 +10817,14 @@ window.renderLifeStatus = renderLifeStatus;
         const overlay = document.getElementById('library-overlay');
         if (!overlay) return;
         overlay.classList.remove('d-none');
-        _libCurrentTab = 'reading';
+        _libCurrentTab = 'read';
         _libCurrentPeriod = 'total';
+        _libCurrentView = (_libCurrentTab === 'read') ? 'tower' : 'list';
         _libSearchQuery = '';
         const searchInput = document.getElementById('library-search-input');
         if (searchInput) searchInput.value = '';
         updateLibraryTabs();
+        updateLibraryViewToggle();
         updateLibraryCounts();
         renderLibrary();
         window.updateLibraryCardCount();
@@ -10738,7 +10839,12 @@ window.renderLifeStatus = renderLifeStatus;
 
     window.switchLibraryTab = function(cat) {
         _libCurrentTab = cat;
+        // Only 읽은책 (read) tab supports tower view
+        if (cat !== 'read') {
+            _libCurrentView = 'list';
+        }
         updateLibraryTabs();
+        updateLibraryViewToggle();
         renderLibrary();
     };
 
@@ -10750,12 +10856,22 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     window.switchLibraryViewMode = function(mode) {
+        // Only allow tower view for 읽은책 tab
+        if (mode === 'tower' && _libCurrentTab !== 'read') return;
         _libCurrentView = mode;
-        document.querySelectorAll('.lib-view-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.view === mode);
-        });
+        updateLibraryViewToggle();
         renderLibrary();
     };
+
+    function updateLibraryViewToggle() {
+        document.querySelectorAll('.lib-view-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.view === _libCurrentView);
+            // Disable tower button for non-read tabs
+            if (b.dataset.view === 'tower') {
+                b.classList.toggle('disabled', _libCurrentTab !== 'read');
+            }
+        });
+    }
 
     window.filterLibraryBooks = function(query) {
         _libSearchQuery = (query || '').trim().toLowerCase();
@@ -10835,13 +10951,39 @@ window.renderLifeStatus = renderLifeStatus;
         }
     }
 
+    function getBookThickness(pages) {
+        // Map page count to padding (thickness): min 10px, max 28px
+        if (!pages || pages <= 0) return 14; // default
+        if (pages < 100) return 10;
+        if (pages < 200) return 12;
+        if (pages < 300) return 14;
+        if (pages < 400) return 17;
+        if (pages < 500) return 20;
+        if (pages < 700) return 24;
+        return 28;
+    }
+
     function renderTowerView(container, books) {
         container.className = 'library-tower';
-        let html = '<div class="library-tower-device">📱</div>';
+        // Tower base
+        let html = '<div class="book-tower-base"></div>';
+        // Books stacked from bottom (floor 1) to top
         books.forEach((book, i) => {
-            const title = book.title.length > 30 ? book.title.substring(0, 28) + '...' : book.title;
-            html += '<div class="book-tower-item" onclick="window.openBookAction(\'' + encodeURIComponent(book.isbn) + '\')">' + escapeHtml(title) + '</div>';
+            const floor = i + 1;
+            const title = book.title.length > 25 ? book.title.substring(0, 23) + '...' : book.title;
+            const thickness = getBookThickness(book.pages);
+            const pageLabel = book.pages ? ' (' + book.pages + 'p)' : '';
+            html += '<div class="book-tower-item" style="padding-top:' + thickness + 'px; padding-bottom:' + thickness + 'px;" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">'
+                + '<span class="book-tower-floor">' + floor + '층</span>'
+                + '<span class="book-tower-title">' + escapeHtml(title) + '</span>'
+                + '<span class="book-tower-pages">' + escapeHtml(pageLabel) + '</span>'
+                + '</div>';
         });
+        // Tower top
+        html += '<div class="book-tower-top">'
+            + '<div class="book-tower-top-label">' + books.length + '층 도달</div>'
+            + '<div class="book-tower-top-roof"></div>'
+            + '</div>';
         container.innerHTML = html;
     }
 
@@ -10857,7 +10999,7 @@ window.renderLifeStatus = renderLifeStatus;
                 + '<div class="book-list-author">' + escapeHtml(book.author || '') + '</div>'
                 + '<div class="book-list-date">' + escapeHtml(book.addedDate || '') + '</div>'
                 + '</div>'
-                + '<button class="book-list-delete" onclick="window.openBookAction(\'' + encodeURIComponent(book.isbn) + '\')">⋯</button>'
+                + '<button class="book-list-delete" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">⋯</button>'
                 + '</div>';
         });
         container.innerHTML = html;
@@ -10891,6 +11033,108 @@ window.renderLifeStatus = renderLifeStatus;
         document.body.insertAdjacentHTML('beforeend', html);
     };
 
+    // ── Book Detail View (click on book) ──
+    window.openBookDetail = function(encodedIsbn) {
+        const isbn = decodeURIComponent(encodedIsbn);
+        const book = (AppState.library.books || []).find(b => b.isbn === isbn);
+        if (!book) return;
+
+        const cats = ['reading', 'read', 'wantToRead'].filter(c => c !== book.category);
+        const moveLabels = { reading: 'lib_move_reading', read: 'lib_move_read', wantToRead: 'lib_move_want' };
+        const catLabels = { reading: '읽고있는책', read: '읽은책', wantToRead: '읽고싶은책' };
+
+        const thumbSrc = book.thumbnail || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'90\' height=\'130\' fill=\'%23555\'%3E%3Crect width=\'90\' height=\'130\' fill=\'%23222\' rx=\'6\'/%3E%3Ctext x=\'45\' y=\'70\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'14\'%3E📖%3C/text%3E%3C/svg%3E';
+
+        let html = '<div class="book-detail-overlay" onclick="this.remove()">'
+            + '<div class="book-detail-sheet" onclick="event.stopPropagation()">'
+            + '<button class="book-detail-close" onclick="this.closest(\'.book-detail-overlay\').remove()">✕</button>'
+            + '<div class="book-detail-header">'
+            + '<img class="book-detail-thumb" src="' + escapeHtml(thumbSrc) + '" alt="" onerror="this.style.visibility=\'hidden\'">'
+            + '<div class="book-detail-meta">'
+            + '<div class="book-detail-title">' + escapeHtml(book.title) + '</div>'
+            + '<div class="book-detail-author">' + escapeHtml(book.author || '저자 미상') + '</div>'
+            + '<div class="book-detail-publisher">' + escapeHtml(book.publisher || '') + '</div>'
+            + '<div class="book-detail-isbn">ISBN: ' + escapeHtml(book.isbn) + '</div>'
+            + '<div class="book-detail-date">📅 ' + escapeHtml(book.addedDate || '') + ' 등록</div>'
+            + '</div></div>';
+
+        // Description
+        if (book.description) {
+            html += '<div class="book-detail-description">' + escapeHtml(book.description) + '</div>';
+        }
+
+        // Info grid
+        html += '<div class="book-detail-info-grid">';
+        html += '<div class="book-detail-info-item"><div class="book-detail-info-label">분류</div><div class="book-detail-info-value">' + (catLabels[book.category] || book.category) + '</div></div>';
+        if (book.pubDate) {
+            html += '<div class="book-detail-info-item"><div class="book-detail-info-label">출판일</div><div class="book-detail-info-value">' + escapeHtml(book.pubDate) + '</div></div>';
+        }
+        if (book.pages) {
+            html += '<div class="book-detail-info-item"><div class="book-detail-info-label">페이지</div><div class="book-detail-info-value">' + book.pages + 'p</div></div>';
+        }
+        if (book.finishedDate) {
+            html += '<div class="book-detail-info-item"><div class="book-detail-info-label">완독일</div><div class="book-detail-info-value">' + escapeHtml(book.finishedDate) + '</div></div>';
+        }
+        html += '</div>';
+
+        // Actions
+        html += '<div class="book-detail-actions">';
+        cats.forEach(cat => {
+            html += '<button class="book-action-btn" onclick="window.changeBookCategory(\'' + isbn + '\',\'' + cat + '\'); this.closest(\'.book-detail-overlay\').remove(); renderLibrary();">' + t(moveLabels[cat]) + '</button>';
+        });
+        html += '<button class="book-action-btn danger" onclick="window.removeBookFromLibrary(\'' + isbn + '\'); this.closest(\'.book-detail-overlay\').remove();">' + t('lib_delete') + '</button>';
+        html += '</div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+
+        // Try to fetch additional details from API if not already loaded
+        if (!book.description && book.isbn) {
+            fetchBookDetails(book.isbn);
+        }
+    };
+
+    async function fetchBookDetails(isbn) {
+        try {
+            const _ping = httpsCallable(functions, 'ping');
+            const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
+            if (result.data && result.data.book) {
+                const apiBook = result.data.book;
+                // Update stored book with additional details
+                const book = (AppState.library.books || []).find(b => b.isbn === isbn);
+                if (book) {
+                    if (apiBook.description && !book.description) book.description = apiBook.description;
+                    if (apiBook.pubDate && !book.pubDate) book.pubDate = apiBook.pubDate;
+                    if (apiBook.pages && !book.pages) book.pages = apiBook.pages;
+                    if (apiBook.price && !book.price) book.price = apiBook.price;
+                    if (apiBook.url && !book.url) book.url = apiBook.url;
+                    saveUserData();
+
+                    // Update the currently open detail overlay if it's still showing this book
+                    const overlay = document.querySelector('.book-detail-overlay');
+                    if (overlay) {
+                        const descEl = overlay.querySelector('.book-detail-description');
+                        if (!descEl && book.description) {
+                            const header = overlay.querySelector('.book-detail-header');
+                            if (header) {
+                                header.insertAdjacentHTML('afterend', '<div class="book-detail-description">' + escapeHtml(book.description) + '</div>');
+                            }
+                        }
+                        // Update info grid with new data
+                        const grid = overlay.querySelector('.book-detail-info-grid');
+                        if (grid && book.pubDate && !grid.querySelector('[data-field="pubDate"]')) {
+                            grid.insertAdjacentHTML('beforeend', '<div class="book-detail-info-item" data-field="pubDate"><div class="book-detail-info-label">출판일</div><div class="book-detail-info-value">' + escapeHtml(book.pubDate) + '</div></div>');
+                        }
+                        if (grid && book.pages && !grid.querySelector('[data-field="pages"]')) {
+                            grid.insertAdjacentHTML('beforeend', '<div class="book-detail-info-item" data-field="pages"><div class="book-detail-info-label">페이지</div><div class="book-detail-info-value">' + book.pages + 'p</div></div>');
+                        }
+                    }
+                }
+            }
+        } catch(e) {
+            console.warn('fetchBookDetails error:', e);
+        }
+    }
+
     // ── Library CRUD ──
     window.addBookToLibrary = function(bookInfo, category) {
         if (!AppState.library) AppState.library = { books: [] };
@@ -10905,6 +11149,11 @@ window.renderLifeStatus = renderLifeStatus;
             author: bookInfo.author || '',
             publisher: bookInfo.publisher || '',
             thumbnail: bookInfo.thumbnail || '',
+            description: bookInfo.description || '',
+            pubDate: bookInfo.pubDate || '',
+            pages: bookInfo.pages || 0,
+            price: bookInfo.price || 0,
+            url: bookInfo.url || '',
             category: category,
             addedDate: getTodayStr(),
             finishedDate: category === 'read' ? getTodayStr() : null
@@ -10971,13 +11220,19 @@ window.renderLifeStatus = renderLifeStatus;
                 { facingMode: 'environment' },
                 _scannerConfig(),
                 async (decodedText) => {
-                    // ISBN detected
+                    // ISBN detected via barcode
+                    stopOcrInterval();
                     if (statusEl) statusEl.textContent = 'ISBN: ' + decodedText;
                     try { await _html5QrCode.stop(); } catch(e) {}
+                    // Auto-fill manual field
+                    var field = document.getElementById('isbn-manual-field');
+                    if (field) field.value = decodedText;
                     await onIsbnScanned(decodedText);
                 },
                 () => {} // ignore scan failures
             );
+            // Start OCR fallback after a short delay
+            setTimeout(function() { startOcrInterval(); }, 3000);
         } catch(e) {
             console.error('Scanner start error:', e);
             if (statusEl) statusEl.textContent = 'Scanner error: ' + (e.message || e);
@@ -10985,6 +11240,7 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     window.closeIsbnScanner = async function() {
+        stopOcrInterval();
         if (_html5QrCode) {
             try { await _html5QrCode.stop(); } catch(e) {}
             _html5QrCode = null;
@@ -11023,15 +11279,16 @@ window.renderLifeStatus = renderLifeStatus;
                 showManualBookEntry(isbn);
             } else {
                 if (statusEl) statusEl.textContent = t('lib_scan_hint');
-                // Restart scanner
+                // Restart scanner + OCR
                 try {
                     if (_html5QrCode) {
                         await _html5QrCode.start(
                             { facingMode: 'environment' },
                             _scannerConfig(),
-                            async (text) => { try { await _html5QrCode.stop(); } catch(e) {} await onIsbnScanned(text); },
+                            async (text) => { stopOcrInterval(); try { await _html5QrCode.stop(); } catch(e) {} await onIsbnScanned(text); },
                             () => {}
                         );
+                        setTimeout(function() { startOcrInterval(); }, 3000);
                     }
                 } catch(e) {}
             }
@@ -11064,7 +11321,10 @@ window.renderLifeStatus = renderLifeStatus;
                     title: vol.title || 'Unknown',
                     author: (vol.authors || []).join(', '),
                     publisher: vol.publisher || '',
-                    thumbnail: (vol.imageLinks && (vol.imageLinks.thumbnail || vol.imageLinks.smallThumbnail)) || ''
+                    thumbnail: (vol.imageLinks && (vol.imageLinks.thumbnail || vol.imageLinks.smallThumbnail)) || '',
+                    description: vol.description || '',
+                    pubDate: vol.publishedDate || '',
+                    pages: vol.pageCount || 0
                 };
             }
         } catch(e) {

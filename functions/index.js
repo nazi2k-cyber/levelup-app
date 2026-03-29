@@ -1017,7 +1017,11 @@ async function handleLookupIsbn(request) {
                         title: doc.title || "",
                         author: (doc.authors || []).join(", "),
                         publisher: doc.publisher || "",
-                        thumbnail: doc.thumbnail || ""
+                        thumbnail: doc.thumbnail || "",
+                        description: doc.contents || "",
+                        pubDate: doc.datetime ? doc.datetime.substring(0, 10) : "",
+                        price: doc.price || 0,
+                        url: doc.url || ""
                     }
                 };
             }
@@ -1046,7 +1050,12 @@ async function handleLookupIsbn(request) {
                         title: item.title || "",
                         author: item.author || "",
                         publisher: item.publisher || "",
-                        thumbnail: item.cover || ""
+                        thumbnail: item.cover || "",
+                        description: item.description || "",
+                        pubDate: item.pubDate || "",
+                        price: item.priceStandard || 0,
+                        pages: item.itemPage || 0,
+                        url: item.link || ""
                     }
                 };
             }
@@ -1069,7 +1078,10 @@ async function handleLookupIsbn(request) {
                     title: vol.title || "",
                     author: (vol.authors || []).join(", "),
                     publisher: vol.publisher || "",
-                    thumbnail: (vol.imageLinks && (vol.imageLinks.thumbnail || vol.imageLinks.smallThumbnail)) || ""
+                    thumbnail: (vol.imageLinks && (vol.imageLinks.thumbnail || vol.imageLinks.smallThumbnail)) || "",
+                    description: vol.description || "",
+                    pubDate: vol.publishedDate || "",
+                    pages: vol.pageCount || 0
                 }
             };
         }
