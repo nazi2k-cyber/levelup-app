@@ -5,6 +5,13 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.11] - 2026-03-29
+
+### 변경
+- feat: 한국 도서 ISBN 검색을 위한 알라딘/카카오 API 서버 프록시 추가
+- fix: 한국 도서 ISBN 검색 실패 시 Open Library 폴백 및 직접 입력 기능 추가
+- fix: ISBN 바코드 인식률 개선 - HD 카메라, 반응형 스캔 영역, 네이티브 BarcodeDetector 활용
+
 ## [1.0.10] - 2026-03-29
 
 ### 변경
