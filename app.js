@@ -10668,13 +10668,16 @@ window.renderLifeStatus = renderLifeStatus;
 (function() {
     let _html5QrCode = null;
     let _pendingBook = null;
+    let _ocrInterval = null;
+    let _ocrProcessing = false;
+    let _ocrWorker = null;
 
     function _scannerConfig() {
         return {
-            fps: 10,
+            fps: 15,
             qrbox: function(viewfinderWidth, viewfinderHeight) {
-                var w = Math.floor(viewfinderWidth * 0.8);
-                var h = Math.floor(viewfinderHeight * 0.55);
+                var w = Math.floor(viewfinderWidth * 0.85);
+                var h = Math.floor(viewfinderHeight * 0.5);
                 return { width: w, height: h };
             },
             aspectRatio: 1.3333,
@@ -10688,6 +10691,102 @@ window.renderLifeStatus = renderLifeStatus;
             ],
             experimentalFeatures: { useBarCodeDetectorIfSupported: true }
         };
+    }
+
+    // ── OCR ISBN Detection (Tesseract.js fallback) ──
+    function extractIsbnFromText(text) {
+        if (!text) return null;
+        // Remove spaces/newlines, normalize
+        var cleaned = text.replace(/\s+/g, ' ');
+        // Pattern 1: "ISBN" followed by digits (with optional hyphens/spaces)
+        var m = cleaned.match(/ISBN[\s:\-]*(?:97[89][\s\-]*(?:\d[\s\-]*){9}\d|\d[\s\-]*(?:\d[\s\-]*){8}[\dXx])/i);
+        if (m) {
+            var digits = m[0].replace(/[^0-9Xx]/g, '');
+            if (digits.length === 13 || digits.length === 10) return digits;
+        }
+        // Pattern 2: Standalone 13-digit starting with 978/979
+        m = cleaned.match(/\b(97[89][\s\-]*(?:\d[\s\-]*){9}\d)\b/);
+        if (m) {
+            var digits = m[1].replace(/[^0-9]/g, '');
+            if (digits.length === 13) return digits;
+        }
+        // Pattern 3: Hyphenated ISBN pattern like 979-11-5784-629-0
+        m = cleaned.match(/\b(\d{3}[\-\s]\d{1,5}[\-\s]\d{1,7}[\-\s]\d{1,7}[\-\s]\d)\b/);
+        if (m) {
+            var digits = m[1].replace(/[^0-9]/g, '');
+            if (digits.length === 13 || digits.length === 10) return digits;
+        }
+        return null;
+    }
+
+    async function initOcrWorker() {
+        if (_ocrWorker) return _ocrWorker;
+        if (typeof Tesseract === 'undefined') return null;
+        try {
+            _ocrWorker = await Tesseract.createWorker('eng', 1, {
+                logger: function() {}
+            });
+            await _ocrWorker.setParameters({
+                tessedit_char_whitelist: '0123456789ISBNisbn-Xx ',
+                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK
+            });
+            return _ocrWorker;
+        } catch(e) {
+            console.warn('OCR worker init error:', e);
+            _ocrWorker = null;
+            return null;
+        }
+    }
+
+    async function ocrCaptureFrame() {
+        if (_ocrProcessing) return;
+        _ocrProcessing = true;
+        try {
+            var videoEl = document.querySelector('#isbn-scanner-reader video');
+            if (!videoEl || videoEl.readyState < 2) { _ocrProcessing = false; return; }
+
+            var canvas = document.createElement('canvas');
+            var w = videoEl.videoWidth;
+            var h = videoEl.videoHeight;
+            // Capture lower half of video where ISBN text typically appears
+            var cropY = Math.floor(h * 0.35);
+            var cropH = Math.floor(h * 0.4);
+            canvas.width = w;
+            canvas.height = cropH;
+            var ctx = canvas.getContext('2d');
+            // Apply sharpening: increase contrast
+            ctx.filter = 'contrast(1.5) brightness(1.1)';
+            ctx.drawImage(videoEl, 0, cropY, w, cropH, 0, 0, w, cropH);
+
+            var worker = await initOcrWorker();
+            if (!worker) { _ocrProcessing = false; return; }
+
+            var result = await worker.recognize(canvas);
+            var isbn = extractIsbnFromText(result.data.text);
+            if (isbn) {
+                stopOcrInterval();
+                var statusEl = document.getElementById('isbn-scanner-status');
+                if (statusEl) statusEl.textContent = 'ISBN (OCR): ' + isbn;
+                // Auto-fill and auto-process
+                var field = document.getElementById('isbn-manual-field');
+                if (field) field.value = isbn;
+                try { if (_html5QrCode) await _html5QrCode.stop(); } catch(e) {}
+                await onIsbnScanned(isbn);
+            }
+        } catch(e) {
+            console.warn('OCR frame error:', e);
+        }
+        _ocrProcessing = false;
+    }
+
+    function startOcrInterval() {
+        stopOcrInterval();
+        // Run OCR every 2 seconds as fallback
+        _ocrInterval = setInterval(ocrCaptureFrame, 2000);
+    }
+
+    function stopOcrInterval() {
+        if (_ocrInterval) { clearInterval(_ocrInterval); _ocrInterval = null; }
     }
     let _libCurrentTab = 'reading';
     let _libCurrentPeriod = 'total';
@@ -10852,6 +10951,18 @@ window.renderLifeStatus = renderLifeStatus;
         }
     }
 
+    function getBookThickness(pages) {
+        // Map page count to padding (thickness): min 10px, max 28px
+        if (!pages || pages <= 0) return 14; // default
+        if (pages < 100) return 10;
+        if (pages < 200) return 12;
+        if (pages < 300) return 14;
+        if (pages < 400) return 17;
+        if (pages < 500) return 20;
+        if (pages < 700) return 24;
+        return 28;
+    }
+
     function renderTowerView(container, books) {
         container.className = 'library-tower';
         // Tower base
@@ -10860,9 +10971,12 @@ window.renderLifeStatus = renderLifeStatus;
         books.forEach((book, i) => {
             const floor = i + 1;
             const title = book.title.length > 25 ? book.title.substring(0, 23) + '...' : book.title;
-            html += '<div class="book-tower-item" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">'
+            const thickness = getBookThickness(book.pages);
+            const pageLabel = book.pages ? ' (' + book.pages + 'p)' : '';
+            html += '<div class="book-tower-item" style="padding-top:' + thickness + 'px; padding-bottom:' + thickness + 'px;" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">'
                 + '<span class="book-tower-floor">' + floor + '층</span>'
-                + escapeHtml(title)
+                + '<span class="book-tower-title">' + escapeHtml(title) + '</span>'
+                + '<span class="book-tower-pages">' + escapeHtml(pageLabel) + '</span>'
                 + '</div>';
         });
         // Tower top
@@ -11106,13 +11220,19 @@ window.renderLifeStatus = renderLifeStatus;
                 { facingMode: 'environment' },
                 _scannerConfig(),
                 async (decodedText) => {
-                    // ISBN detected
+                    // ISBN detected via barcode
+                    stopOcrInterval();
                     if (statusEl) statusEl.textContent = 'ISBN: ' + decodedText;
                     try { await _html5QrCode.stop(); } catch(e) {}
+                    // Auto-fill manual field
+                    var field = document.getElementById('isbn-manual-field');
+                    if (field) field.value = decodedText;
                     await onIsbnScanned(decodedText);
                 },
                 () => {} // ignore scan failures
             );
+            // Start OCR fallback after a short delay
+            setTimeout(function() { startOcrInterval(); }, 3000);
         } catch(e) {
             console.error('Scanner start error:', e);
             if (statusEl) statusEl.textContent = 'Scanner error: ' + (e.message || e);
@@ -11120,6 +11240,7 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     window.closeIsbnScanner = async function() {
+        stopOcrInterval();
         if (_html5QrCode) {
             try { await _html5QrCode.stop(); } catch(e) {}
             _html5QrCode = null;
@@ -11158,15 +11279,16 @@ window.renderLifeStatus = renderLifeStatus;
                 showManualBookEntry(isbn);
             } else {
                 if (statusEl) statusEl.textContent = t('lib_scan_hint');
-                // Restart scanner
+                // Restart scanner + OCR
                 try {
                     if (_html5QrCode) {
                         await _html5QrCode.start(
                             { facingMode: 'environment' },
                             _scannerConfig(),
-                            async (text) => { try { await _html5QrCode.stop(); } catch(e) {} await onIsbnScanned(text); },
+                            async (text) => { stopOcrInterval(); try { await _html5QrCode.stop(); } catch(e) {} await onIsbnScanned(text); },
                             () => {}
                         );
+                        setTimeout(function() { startOcrInterval(); }, 3000);
                     }
                 } catch(e) {}
             }
