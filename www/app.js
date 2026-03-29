@@ -10674,12 +10674,12 @@ window.renderLifeStatus = renderLifeStatus;
 
     function _scannerConfig() {
         return {
-            fps: 10,
+            fps: 15,
             qrbox: function(viewfinderWidth, viewfinderHeight) {
-                // Barcode-optimized: wide and short scan area
-                var w = Math.floor(viewfinderWidth * 0.9);
-                var h = Math.floor(viewfinderHeight * 0.35);
-                if (h < 80) h = 80;
+                // Barcode-optimized: wide scan area covering more of the frame
+                var w = Math.floor(viewfinderWidth * 0.92);
+                var h = Math.floor(viewfinderHeight * 0.45);
+                if (h < 100) h = 100;
                 return { width: w, height: h };
             },
             disableFlip: true,
@@ -10717,6 +10717,11 @@ window.renderLifeStatus = renderLifeStatus;
             var digits = m[1].replace(/[^0-9]/g, '');
             if (digits.length === 13 || digits.length === 10) return digits;
         }
+        // Pattern 4: Standalone 10-digit ISBN (less common, last resort)
+        m = cleaned.match(/\b(\d{9}[\dXx])\b/);
+        if (m) {
+            return m[1].replace(/x/i, 'X');
+        }
         return null;
     }
 
@@ -10749,9 +10754,9 @@ window.renderLifeStatus = renderLifeStatus;
             var canvas = document.createElement('canvas');
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
-            // Capture lower half of video where ISBN text typically appears
-            var cropY = Math.floor(h * 0.35);
-            var cropH = Math.floor(h * 0.4);
+            // Capture lower 60% of video (ISBN text appears on back cover, lower area)
+            var cropY = Math.floor(h * 0.2);
+            var cropH = Math.floor(h * 0.6);
             canvas.width = w;
             canvas.height = cropH;
             var ctx = canvas.getContext('2d');
@@ -11226,7 +11231,7 @@ window.renderLifeStatus = renderLifeStatus;
             updateCameraToggleUI();
 
             // Start OCR fallback after a short delay
-            setTimeout(function() { startOcrInterval(); }, 3000);
+            setTimeout(function() { startOcrInterval(); }, 2000);
         } catch(e) {
             console.error('Scanner start error:', e);
             // Camera permission denied or other error
@@ -11295,7 +11300,7 @@ window.renderLifeStatus = renderLifeStatus;
                             async (text) => { stopOcrInterval(); try { await _html5QrCode.stop(); } catch(e) {} await onIsbnScanned(text); },
                             () => {}
                         );
-                        setTimeout(function() { startOcrInterval(); }, 3000);
+                        setTimeout(function() { startOcrInterval(); }, 2000);
                     }
                 } catch(e) {}
             }
@@ -11306,7 +11311,7 @@ window.renderLifeStatus = renderLifeStatus;
     }
 
     async function lookupBookByIsbn(isbn) {
-        // 1) Server-side Korean book API proxy (카카오 → 알라딘 → 구글북스)
+        // 1) Server-side Korean book API proxy (알라딘 → 카카오 → 구글북스)
         try {
             const _ping = httpsCallable(functions, 'ping');
             const result = await _ping({ action: 'lookupIsbn', isbn: isbn });

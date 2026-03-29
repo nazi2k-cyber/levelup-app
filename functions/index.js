@@ -999,38 +999,7 @@ async function handleLookupIsbn(request) {
         throw new HttpsError("invalid-argument", "유효한 ISBN을 입력해주세요 (10자리 또는 13자리)");
     }
 
-    // 1) 카카오 책 검색 API
-    const kakaoKey = process.env.KAKAO_REST_API_KEY;
-    if (kakaoKey) {
-        try {
-            const url = `https://dapi.kakao.com/v3/search/book?query=${isbn}&target=isbn`;
-            const res = await fetch(url, {
-                headers: { "Authorization": `KakaoAK ${kakaoKey}` }
-            });
-            const data = await res.json();
-            if (data.documents && data.documents.length > 0) {
-                const doc = data.documents[0];
-                return {
-                    source: "kakao",
-                    book: {
-                        isbn: isbn,
-                        title: doc.title || "",
-                        author: (doc.authors || []).join(", "),
-                        publisher: doc.publisher || "",
-                        thumbnail: doc.thumbnail || "",
-                        description: doc.contents || "",
-                        pubDate: doc.datetime ? doc.datetime.substring(0, 10) : "",
-                        price: doc.price || 0,
-                        url: doc.url || ""
-                    }
-                };
-            }
-        } catch (e) {
-            console.warn("[lookupIsbn] Kakao error:", e.message);
-        }
-    }
-
-    // 2) 알라딘 API
+    // 1) 알라딘 API (한국 도서 검색 최우선)
     const aladinKey = process.env.ALADIN_TTB_KEY;
     if (aladinKey) {
         try {
@@ -1061,6 +1030,37 @@ async function handleLookupIsbn(request) {
             }
         } catch (e) {
             console.warn("[lookupIsbn] Aladin error:", e.message);
+        }
+    }
+
+    // 2) 카카오 책 검색 API
+    const kakaoKey = process.env.KAKAO_REST_API_KEY;
+    if (kakaoKey) {
+        try {
+            const url = `https://dapi.kakao.com/v3/search/book?query=${isbn}&target=isbn`;
+            const res = await fetch(url, {
+                headers: { "Authorization": `KakaoAK ${kakaoKey}` }
+            });
+            const data = await res.json();
+            if (data.documents && data.documents.length > 0) {
+                const doc = data.documents[0];
+                return {
+                    source: "kakao",
+                    book: {
+                        isbn: isbn,
+                        title: doc.title || "",
+                        author: (doc.authors || []).join(", "),
+                        publisher: doc.publisher || "",
+                        thumbnail: doc.thumbnail || "",
+                        description: doc.contents || "",
+                        pubDate: doc.datetime ? doc.datetime.substring(0, 10) : "",
+                        price: doc.price || 0,
+                        url: doc.url || ""
+                    }
+                };
+            }
+        } catch (e) {
+            console.warn("[lookupIsbn] Kakao error:", e.message);
         }
     }
 

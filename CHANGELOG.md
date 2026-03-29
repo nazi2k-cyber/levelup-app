@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.17] - 2026-03-29
+
+### 변경
+- fix: ISBN API 폴백 순서를 알라딘>카카오>구글북스로 변경
+- fix: 카메라 바코드 인식률 개선 — 스캔 영역 확대, OCR 캡처 범위 확장, ISBN-10 패턴 추가
+
 ## [1.0.16] - 2026-03-29
 
 ### 변경
