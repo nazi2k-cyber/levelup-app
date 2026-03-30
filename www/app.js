@@ -9459,6 +9459,16 @@ function registerBackButtonHandler() {
             const isVisible = !el.classList.contains('d-none') &&
                               (el.offsetParent !== null || el.classList.contains('d-flex'));
             if (isVisible) {
+                // ISBN 스캐너는 전용 close 함수 호출 (카메라 정리 + 입력 초기화 + 내 서재로 이동)
+                if (id === 'isbn-scanner-overlay') {
+                    window.closeIsbnScanner();
+                    return;
+                }
+                // 내 서재는 전용 close 함수 호출 (상태창으로 이동)
+                if (id === 'library-overlay') {
+                    window.closeLibraryView();
+                    return;
+                }
                 el.classList.add('d-none');
                 el.classList.remove('d-flex');
                 // 햄버거 메뉴 백드롭도 닫기
@@ -11548,6 +11558,11 @@ window.renderLifeStatus = renderLifeStatus;
     window.closeLibraryView = function() {
         const overlay = document.getElementById('library-overlay');
         if (overlay) overlay.classList.add('d-none');
+        // 뒤로가기 시 상태창으로 이동
+        const statusNav = document.querySelector('.nav-item[data-tab="status"]');
+        if (statusNav) {
+            switchTab('status', statusNav);
+        }
     };
 
     window.switchLibraryTab = function(cat) {
@@ -12431,6 +12446,14 @@ window.renderLifeStatus = renderLifeStatus;
         if (resultPanel) resultPanel.classList.add('d-none');
         const manualInput = document.getElementById('isbn-manual-input');
         if (manualInput) manualInput.style.display = '';
+        // ISBN 입력 필드 초기화
+        const manualField = document.getElementById('isbn-manual-field');
+        if (manualField) manualField.value = '';
+        // 내 서재로 이동 (library-overlay가 열려있으면 유지)
+        const libraryOverlay = document.getElementById('library-overlay');
+        if (!libraryOverlay || libraryOverlay.classList.contains('d-none')) {
+            window.openLibraryView();
+        }
     };
 
     window.manualIsbnLookup = async function() {
