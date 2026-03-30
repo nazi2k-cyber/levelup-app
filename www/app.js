@@ -5943,6 +5943,9 @@ let _admobInitialized = false;
 let _rewardedAdReady = false;
 let _rewardedAdListenersRegistered = false;
 let _rewardEarned = false; // 광고 시청 완료 시 true
+let _rewardedAdContext = 'bonusExp'; // 'bonusExp' | 'libraryImage'
+let _rewardedAdOnSuccess = null; // 광고 시청 완료 후 콜백
+let _rewardedAdOnFail = null; // 광고 중도 이탈/실패 시 콜백
 
 async function initAdMob() {
     if (_admobInitialized) return;
@@ -5988,8 +5991,8 @@ async function initAdMob() {
 
             // 광고 닫힘 (시청 완료 또는 중도 이탈 모두)
             AdMob.addListener('onRewardedVideoAdDismissed', () => {
-                console.log('[AdMob] 광고 닫힘, 보상 획득 여부:', _rewardEarned);
-                if (window.AppLogger) AppLogger.info('[AdMob] 광고 닫힘, rewarded=' + _rewardEarned);
+                console.log('[AdMob] 광고 닫힘, 보상 획득 여부:', _rewardEarned, '컨텍스트:', _rewardedAdContext);
+                if (window.AppLogger) AppLogger.info('[AdMob] 광고 닫힘, rewarded=' + _rewardEarned + ', ctx=' + _rewardedAdContext);
 
                 _rewardedAdReady = false;
                 preloadRewardedAd._retryCount = 0;
@@ -5997,31 +6000,49 @@ async function initAdMob() {
 
                 if (_rewardEarned) {
                     _rewardEarned = false;
-                    applyBonusExpReward();
+                    if (_rewardedAdOnSuccess) {
+                        _rewardedAdOnSuccess();
+                    } else {
+                        applyBonusExpReward();
+                    }
                 } else {
-                    // 중도 이탈 — 선점 마킹 롤백, 보상 미지급
-                    localStorage.removeItem(_bonusExpKey());
-                    _bonusExpInProgress = false;
-                    const lang = AppState.currentLang;
-                    alert(i18n[lang].bonus_exp_fail);
-                    renderBonusExp();
+                    if (_rewardedAdOnFail) {
+                        _rewardedAdOnFail();
+                    } else {
+                        // 기본: 보너스 EXP 중도 이탈 처리
+                        localStorage.removeItem(_bonusExpKey());
+                        _bonusExpInProgress = false;
+                        const lang = AppState.currentLang;
+                        alert(i18n[lang].bonus_exp_fail);
+                        renderBonusExp();
+                    }
                 }
+                _rewardedAdContext = 'bonusExp';
+                _rewardedAdOnSuccess = null;
+                _rewardedAdOnFail = null;
             });
 
             // 광고 표시 실패
             AdMob.addListener('onRewardedVideoAdFailedToShow', (error) => {
                 console.warn('[AdMob] 광고 표시 실패:', error);
                 if (window.AppLogger) AppLogger.warn('[AdMob] 표시 실패: ' + JSON.stringify(error));
-                // 선점 마킹 롤백
-                localStorage.removeItem(_bonusExpKey());
                 _rewardedAdReady = false;
                 _rewardEarned = false;
-                _bonusExpInProgress = false;
                 preloadRewardedAd._retryCount = 0;
                 preloadRewardedAd();
-                const lang = AppState.currentLang;
-                alert(i18n[lang].bonus_exp_not_ready);
-                renderBonusExp();
+                if (_rewardedAdOnFail) {
+                    _rewardedAdOnFail();
+                } else {
+                    // 기본: 보너스 EXP 실패 처리
+                    localStorage.removeItem(_bonusExpKey());
+                    _bonusExpInProgress = false;
+                    const lang = AppState.currentLang;
+                    alert(i18n[lang].bonus_exp_not_ready);
+                    renderBonusExp();
+                }
+                _rewardedAdContext = 'bonusExp';
+                _rewardedAdOnSuccess = null;
+                _rewardedAdOnFail = null;
             });
 
             // 광고 로드 완료
@@ -11847,15 +11868,14 @@ window.renderLifeStatus = renderLifeStatus;
         window.updateLibraryCardCount();
         // Trigger i18n re-apply for dynamically shown overlay
         if (typeof changeLanguage === 'function') changeLanguage(AppState.currentLang);
-        // 내 서재 배너 광고 표시 (검색바 바로 위)
-        showBannerAd();
+        // 보상형 광고 프리로드 (이미지 저장 시 사용)
+        preloadRewardedAd();
     };
 
     window.closeLibraryView = function() {
         const overlay = document.getElementById('library-overlay');
         if (overlay) overlay.classList.add('d-none');
-        // 배너 광고 숨김
-        hideBannerAd();
+        // (배너 광고 제거됨 — 보상형 광고로 전환)
         // 뒤로가기 시 상태창으로 이동
         const statusNav = document.querySelector('.nav-item[data-tab="status"]');
         if (statusNav) {
@@ -12305,11 +12325,77 @@ window.renderLifeStatus = renderLifeStatus;
     }
     window.renderLibrary = renderLibrary;
 
-    // 서재 타워를 이미지로 저장 (Canvas API 직접 생성, Firebase 미경유)
+    // 서재 타워를 이미지로 저장 (보상형 광고 시청 후 다운로드)
     window.shareLibraryAsImage = async function() {
         const lang = AppState.currentLang;
         const books = getFilteredBooks();
         if (books.length === 0) return;
+
+        var isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+        // 네이티브 앱에서만 보상형 광고 필수
+        if (isNative && _admobInitialized) {
+            if (!_rewardedAdReady) {
+                // 광고가 아직 로드되지 않았으면 로드 시도
+                alert(i18n[lang].lib_ad_loading || i18n[lang].bonus_exp_loading);
+                try {
+                    const { AdMob } = window.Capacitor.Plugins;
+                    if (AdMob) {
+                        await AdMob.prepareRewardVideoAd({
+                            adId: REWARDED_AD_UNIT_ID,
+                            isTesting: false,
+                        });
+                        _rewardedAdReady = true;
+                    }
+                } catch (e) {
+                    alert(i18n[lang].lib_ad_not_ready || i18n[lang].bonus_exp_not_ready);
+                    return;
+                }
+            }
+
+            // 광고 시청 확인
+            if (!confirm(i18n[lang].lib_ad_prompt)) return;
+
+            // 콜백 설정: 광고 시청 완료 시 이미지 저장 실행
+            _rewardedAdContext = 'libraryImage';
+            _rewardEarned = false;
+            _rewardedAdOnSuccess = function() {
+                _executeLibraryImageSave(lang, books);
+            };
+            _rewardedAdOnFail = function() {
+                const failLang = AppState.currentLang;
+                alert(i18n[failLang].lib_ad_fail || i18n[failLang].bonus_exp_fail);
+            };
+
+            try {
+                const { AdMob } = window.Capacitor.Plugins;
+                await AdMob.showRewardVideoAd();
+                // 이후 처리는 onRewardedVideoAdDismissed 리스너에서 콜백으로 수행
+            } catch (e) {
+                console.warn('[AdMob] 보상형 광고 표시 실패:', e);
+                _rewardedAdReady = false;
+                _rewardEarned = false;
+                _rewardedAdContext = 'bonusExp';
+                _rewardedAdOnSuccess = null;
+                _rewardedAdOnFail = null;
+                preloadRewardedAd._retryCount = 0;
+                preloadRewardedAd();
+                alert(i18n[lang].lib_ad_not_ready || i18n[lang].bonus_exp_not_ready);
+            }
+            return;
+        }
+
+        // 웹(비네이티브) 환경: 광고 없이 바로 저장
+        _executeLibraryImageSave(lang, books);
+    };
+
+    // 실제 이미지 생성 및 저장 로직 (보상형 광고 완료 후 호출)
+    window._executeLibraryImageSave = function(lang, books) {
+        _doLibraryImageSave(lang, books);
+    };
+
+    async function _doLibraryImageSave(lang, books) {
+        if (!books || books.length === 0) return;
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -12555,7 +12641,7 @@ window.renderLifeStatus = renderLifeStatus;
                 alert(failMsgs[lang] || failMsgs.ko);
             }
         }
-    };
+    }
 
     function getBookThickness(pages) {
         // Reboot: thinner spines – min 4px, max 14px

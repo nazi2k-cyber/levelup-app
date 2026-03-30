@@ -979,12 +979,11 @@
             <div style="display:flex; align-items:center; gap:8px;">
                 <button class="library-info-btn btn-info-sm" onclick="window.openLibraryInfoModal()" data-i18n="btn_library_info">가이드</button>
                 <button id="library-share-btn" class="library-share-btn d-none" onclick="window.shareLibraryAsImage()">
-                    📥 <span data-i18n="lib_save_image">이미지 저장</span>
+                    🎬 <span data-i18n="lib_save_image">이미지 저장</span>
                 </button>
                 <button class="library-scan-btn" onclick="window.openIsbnScanner()">📷</button>
             </div>
         </div>
-        <div id="library-banner-spacer" class="library-banner-spacer d-none"></div>
         <div class="library-search-bar">
             <div class="library-search-row">
                 <input type="text" id="library-search-input" data-i18n-placeholder="lib_search" placeholder="책 검색하기" oninput="window.filterLibraryBooks(this.value)">
