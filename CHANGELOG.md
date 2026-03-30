@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.36] - 2026-03-30
+
+### 변경
+- feat: ISBN 정밀 트래킹 기능 추가 (회전 바코드/파편 누적/영역 고정)
+
 ## [1.0.35] - 2026-03-30
 
 ### 변경
