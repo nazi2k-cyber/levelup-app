@@ -11588,11 +11588,23 @@ window.renderLifeStatus = renderLifeStatus;
         window.updateLibraryCardCount();
         // Trigger i18n re-apply for dynamically shown overlay
         if (typeof changeLanguage === 'function') changeLanguage(AppState.currentLang);
+        // 내 서재 하단 배너 광고 표시
+        showBannerAd().then(function() {
+            var libContent = document.getElementById('library-content');
+            if (libContent && _bannerAdVisible) {
+                var bannerMargin = _getBannerMargin();
+                libContent.style.paddingBottom = (bannerMargin + 70) + 'px';
+            }
+        });
     };
 
     window.closeLibraryView = function() {
         const overlay = document.getElementById('library-overlay');
         if (overlay) overlay.classList.add('d-none');
+        // 배너 광고 숨김 및 하단 여백 복원
+        var libContent = document.getElementById('library-content');
+        if (libContent) libContent.style.paddingBottom = '';
+        hideBannerAd();
         // 뒤로가기 시 상태창으로 이동
         const statusNav = document.querySelector('.nav-item[data-tab="status"]');
         if (statusNav) {
@@ -12070,7 +12082,7 @@ window.renderLifeStatus = renderLifeStatus;
         });
 
         // 레이아웃 높이 계산
-        var hexH = 40;
+        var hexH = 48;
         var hexGap = 8;
         var baseH = 14;
         var baseGap = 4;
@@ -12104,12 +12116,15 @@ window.renderLifeStatus = renderLifeStatus;
         ctx.fillStyle = hexGrad;
         ctx.fill();
         ctx.restore();
-        // 육각형 텍스트
+        // 육각형 텍스트 (2줄: 바벨의 도서관 / N층)
         ctx.fillStyle = '#00d9ff';
         ctx.font = 'bold 11px Pretendard, sans-serif';
-        var hexText = (t('lib_babel_tower') || '바벨의 도서관') + ' ' + books.length + '층';
-        var hexTextW = ctx.measureText(hexText).width;
-        ctx.fillText(hexText, centerX - hexTextW / 2, y + hexH / 2 + 4);
+        var hexLine1 = t('lib_babel_tower') || '바벨의 도서관';
+        var hexLine2 = books.length + '층';
+        var hexLine1W = ctx.measureText(hexLine1).width;
+        var hexLine2W = ctx.measureText(hexLine2).width;
+        ctx.fillText(hexLine1, centerX - hexLine1W / 2, y + hexH / 2 - 2);
+        ctx.fillText(hexLine2, centerX - hexLine2W / 2, y + hexH / 2 + 12);
         y += hexH + hexGap;
 
         // --- 책 스파인 육각형 (맨 위층부터 아래로) ---
@@ -12337,7 +12352,7 @@ window.renderLifeStatus = renderLifeStatus;
         });
         // Tower top
         html += '<div class="book-tower-top">'
-            + '<div class="book-tower-top-label">' + t('lib_babel_tower') + ' ' + books.length + '층</div>'
+            + '<div class="book-tower-top-label">' + t('lib_babel_tower') + '<br>' + books.length + '층</div>'
             + '</div>';
         container.innerHTML = html;
     }

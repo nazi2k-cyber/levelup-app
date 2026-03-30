@@ -1929,8 +1929,8 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .book-tower-top-label {
     background: linear-gradient(180deg, #4a4a5a, #3a3a4a);
     color: var(--neon-blue); font-size: 0.72rem; font-weight: 900;
-    padding: 10px 28px; text-align: center;
-    letter-spacing: 1px;
+    padding: 8px 28px; text-align: center;
+    letter-spacing: 1px; line-height: 1.4;
     clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
 }
 
