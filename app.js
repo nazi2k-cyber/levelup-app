@@ -11481,6 +11481,11 @@ window.renderLifeStatus = renderLifeStatus;
     let _libCurrentView = 'tower';
     let _libSearchQuery = '';
     let _libLocalSearch = false;  // false = API search, true = local filter
+    let _libSelectedYear = new Date().getFullYear();
+    let _libSelectedMonth = new Date().getMonth() + 1; // 1-12
+    let _libDatePickerMode = 'yearly'; // 'yearly' or 'monthly'
+    let _libPickerYear = new Date().getFullYear();
+    let _libPickerMonth = new Date().getMonth() + 1;
     let _apiSearchTimer = null;
     let _apiSearchPage = 1;
     let _apiSearchHasMore = false;
@@ -11526,10 +11531,14 @@ window.renderLifeStatus = renderLifeStatus;
         if (localCheckbox) localCheckbox.checked = false;
         const searchResults = document.getElementById('library-search-results');
         if (searchResults) { searchResults.classList.add('d-none'); searchResults.innerHTML = ''; }
+        _libSelectedYear = new Date().getFullYear();
+        _libSelectedMonth = new Date().getMonth() + 1;
         showLibraryMainContent(true);
         updateLibraryTabs();
         updateLibraryViewToggle();
         updateLibraryCounts();
+        updateLibraryPeriodLabels();
+        updateLibraryPeriodBtns();
         renderLibrary();
         window.updateLibraryCardCount();
         // Trigger i18n re-apply for dynamically shown overlay
@@ -11549,6 +11558,7 @@ window.renderLifeStatus = renderLifeStatus;
         }
         updateLibraryTabs();
         updateLibraryViewToggle();
+        updateLibraryCounts();
         renderLibrary();
     };
 
@@ -11556,8 +11566,135 @@ window.renderLifeStatus = renderLifeStatus;
         _libCurrentPeriod = period;
         updateLibraryPeriodBtns();
         updateLibraryCounts();
+        updateLibraryPeriodLabels();
         renderLibrary();
     };
+
+    window.openLibraryDatePicker = function(mode) {
+        // If already active on this period, open picker; otherwise just switch to it
+        if (_libCurrentPeriod !== (mode === 'monthly' ? 'monthly' : 'yearly')) {
+            _libCurrentPeriod = (mode === 'monthly') ? 'monthly' : 'yearly';
+            updateLibraryPeriodBtns();
+            updateLibraryCounts();
+            updateLibraryPeriodLabels();
+            renderLibrary();
+            return;
+        }
+        _libDatePickerMode = mode;
+        _libPickerYear = _libSelectedYear;
+        _libPickerMonth = _libSelectedMonth;
+        renderLibraryDatePicker();
+        const overlay = document.getElementById('lib-date-picker-overlay');
+        if (overlay) overlay.classList.remove('d-none');
+    };
+
+    window.closeLibraryDatePicker = function(e) {
+        if (e && e.target && !e.target.classList.contains('lib-date-picker-overlay')) return;
+        const overlay = document.getElementById('lib-date-picker-overlay');
+        if (overlay) overlay.classList.add('d-none');
+    };
+
+    window.confirmLibraryDatePicker = function() {
+        _libSelectedYear = _libPickerYear;
+        _libSelectedMonth = _libPickerMonth;
+        _libCurrentPeriod = _libDatePickerMode;
+        updateLibraryPeriodBtns();
+        updateLibraryCounts();
+        updateLibraryPeriodLabels();
+        renderLibrary();
+        const overlay = document.getElementById('lib-date-picker-overlay');
+        if (overlay) overlay.classList.add('d-none');
+    };
+
+    function getAvailableYears() {
+        const books = (AppState.library && AppState.library.books) || [];
+        const years = new Set();
+        books.forEach(b => {
+            if (b.addedDate) years.add(new Date(b.addedDate).getFullYear());
+        });
+        // Always include current year
+        years.add(new Date().getFullYear());
+        return Array.from(years).sort((a, b) => b - a);
+    }
+
+    function getAvailableMonths(year) {
+        const books = (AppState.library && AppState.library.books) || [];
+        const months = new Set();
+        books.forEach(b => {
+            if (b.addedDate) {
+                const d = new Date(b.addedDate);
+                if (d.getFullYear() === year) months.add(d.getMonth() + 1);
+            }
+        });
+        // If selected year is current year, include current month
+        const now = new Date();
+        if (year === now.getFullYear()) months.add(now.getMonth() + 1);
+        return Array.from(months).sort((a, b) => a - b);
+    }
+
+    function renderLibraryDatePicker() {
+        const yearsContainer = document.getElementById('lib-date-picker-years');
+        const monthsContainer = document.getElementById('lib-date-picker-months');
+        if (!yearsContainer || !monthsContainer) return;
+
+        const years = getAvailableYears();
+        yearsContainer.innerHTML = years.map(y =>
+            '<div class="lib-date-picker-item' + (y === _libPickerYear ? ' selected' : '') +
+            '" onclick="window.selectLibraryPickerYear(' + y + ')">' + y + '년</div>'
+        ).join('');
+
+        updateLibraryPickerMonths();
+    }
+
+    function updateLibraryPickerMonths() {
+        const monthsContainer = document.getElementById('lib-date-picker-months');
+        if (!monthsContainer) return;
+
+        if (_libDatePickerMode === 'yearly') {
+            monthsContainer.innerHTML = '<div style="text-align:center;color:var(--text-sub);font-size:0.8rem;padding:16px;">연도별 필터</div>';
+            return;
+        }
+
+        const allMonths = [1,2,3,4,5,6,7,8,9,10,11,12];
+        const availableMonths = new Set(getAvailableMonths(_libPickerYear));
+        monthsContainer.innerHTML = allMonths.map(m => {
+            const available = availableMonths.has(m);
+            return '<div class="lib-date-picker-item' +
+                (m === _libPickerMonth ? ' selected' : '') +
+                (!available ? ' disabled' : '') +
+                '" ' + (available ? 'onclick="window.selectLibraryPickerMonth(' + m + ')"' : '') +
+                ' style="' + (!available ? 'opacity:0.3;cursor:default;' : '') + '">' +
+                m + '월</div>';
+        }).join('');
+    }
+
+    window.selectLibraryPickerYear = function(y) {
+        _libPickerYear = y;
+        // If currently selected month has no data in new year, pick first available
+        const availMonths = getAvailableMonths(y);
+        if (availMonths.length > 0 && !availMonths.includes(_libPickerMonth)) {
+            _libPickerMonth = availMonths[availMonths.length - 1]; // latest month
+        }
+        renderLibraryDatePicker();
+    };
+
+    window.selectLibraryPickerMonth = function(m) {
+        _libPickerMonth = m;
+        updateLibraryPickerMonths();
+        // Update selection visual
+        document.querySelectorAll('#lib-date-picker-months .lib-date-picker-item').forEach(el => {
+            el.classList.toggle('selected', parseInt(el.textContent) === m);
+        });
+    };
+
+    function updateLibraryPeriodLabels() {
+        const yearLabel = document.getElementById('lib-label-yearly');
+        const monthLabel = document.getElementById('lib-label-monthly');
+        const totalLabel = document.getElementById('lib-label-total');
+        if (totalLabel) totalLabel.textContent = t('lib_total');
+        if (yearLabel) yearLabel.textContent = _libSelectedYear + (AppState.currentLang === 'en' ? '' : '년');
+        if (monthLabel) monthLabel.textContent = _libSelectedYear + '-' + String(_libSelectedMonth).padStart(2, '0');
+    }
 
     window.switchLibraryViewMode = function(mode) {
         // Only allow tower view for 읽은책 tab
@@ -11787,14 +11924,15 @@ window.renderLifeStatus = renderLifeStatus;
         let filtered = books.filter(b => b.category === _libCurrentTab);
 
         // Period filter
-        if (_libCurrentPeriod !== 'total') {
-            const now = new Date();
+        if (_libCurrentPeriod === 'yearly') {
             filtered = filtered.filter(b => {
                 const d = new Date(b.addedDate);
-                if (_libCurrentPeriod === 'monthly') {
-                    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-                }
-                return d.getFullYear() === now.getFullYear();
+                return d.getFullYear() === _libSelectedYear;
+            });
+        } else if (_libCurrentPeriod === 'monthly') {
+            filtered = filtered.filter(b => {
+                const d = new Date(b.addedDate);
+                return d.getFullYear() === _libSelectedYear && (d.getMonth() + 1) === _libSelectedMonth;
             });
         }
 
@@ -11811,17 +11949,16 @@ window.renderLifeStatus = renderLifeStatus;
     function updateLibraryCounts() {
         const books = (AppState.library && AppState.library.books) || [];
         const catBooks = books.filter(b => b.category === _libCurrentTab);
-        const now = new Date();
 
         const totalEl = document.getElementById('lib-count-total');
         const yearlyEl = document.getElementById('lib-count-yearly');
         const monthlyEl = document.getElementById('lib-count-monthly');
 
         if (totalEl) totalEl.textContent = catBooks.length;
-        if (yearlyEl) yearlyEl.textContent = catBooks.filter(b => new Date(b.addedDate).getFullYear() === now.getFullYear()).length;
+        if (yearlyEl) yearlyEl.textContent = catBooks.filter(b => new Date(b.addedDate).getFullYear() === _libSelectedYear).length;
         if (monthlyEl) monthlyEl.textContent = catBooks.filter(b => {
             const d = new Date(b.addedDate);
-            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+            return d.getFullYear() === _libSelectedYear && (d.getMonth() + 1) === _libSelectedMonth;
         }).length;
     }
 

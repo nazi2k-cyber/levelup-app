@@ -228,7 +228,7 @@ const i18n = {
 
         lib_title: "내 서재", lib_scan: "ISBN 스캔", lib_scan_hint: "바코드를 카메라에 비춰주세요",
         lib_reading: "읽고있는책", lib_read: "읽은책", lib_want_to_read: "읽고싶은책",
-        lib_monthly: "월간", lib_yearly: "연간", lib_total: "전체",
+        lib_monthly: "월간", lib_yearly: "연간", lib_total: "전체", lib_date_select: "날짜 선택", lib_date_year_filter: "연도별 필터", lib_confirm: "확인",
         lib_stack_view: "쌓아보기", lib_list_view: "리스트형 보기",
         lib_save: "저장", lib_search: "책 검색하기",
         lib_select_category: "카테고리 선택",
@@ -491,7 +491,7 @@ const i18n = {
 
         lib_title: "My Library", lib_scan: "ISBN Scan", lib_scan_hint: "Point the camera at the barcode",
         lib_reading: "Reading", lib_read: "Read", lib_want_to_read: "Want to Read",
-        lib_monthly: "Monthly", lib_yearly: "Yearly", lib_total: "Total",
+        lib_monthly: "Monthly", lib_yearly: "Yearly", lib_total: "Total", lib_date_select: "Select Date", lib_date_year_filter: "Year filter", lib_confirm: "Confirm",
         lib_stack_view: "Stack View", lib_list_view: "List View",
         lib_save: "Save", lib_search: "Search books",
         lib_select_category: "Select category",
@@ -754,7 +754,7 @@ const i18n = {
 
         lib_title: "私の書斎", lib_scan: "ISBNスキャン", lib_scan_hint: "バーコードをカメラに向けてください",
         lib_reading: "読書中", lib_read: "読了", lib_want_to_read: "読みたい",
-        lib_monthly: "月間", lib_yearly: "年間", lib_total: "全体",
+        lib_monthly: "月間", lib_yearly: "年間", lib_total: "全体", lib_date_select: "日付選択", lib_date_year_filter: "年別フィルター", lib_confirm: "確認",
         lib_stack_view: "積み上げ表示", lib_list_view: "リスト表示",
         lib_save: "保存", lib_search: "本を検索",
         lib_select_category: "カテゴリ選択",
