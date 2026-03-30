@@ -10816,6 +10816,12 @@ window.renderLifeStatus = renderLifeStatus;
     let _ocrWorker = null;
     let _ocrInitFailed = false;
 
+    // ── ISBN Precision Tracking State ──
+    var _isbnFragments = [];         // Recent OCR digit fragments for accumulation
+    var _lockedCropIndex = -1;       // Region lock-on: locked crop region index (-1 = none)
+    var _lockMissCount = 0;          // Consecutive misses since lock
+    var _lockSubIndex = 0;           // Sub-index for cycling locked region + neighbors
+
     function _scannerConfig() {
         return {
             fps: 10,
@@ -10953,6 +10959,58 @@ window.renderLifeStatus = renderLifeStatus;
         return null;
     }
 
+    // ── ISBN Fragment Accumulation ──
+    // Accumulate OCR digit fragments across frames and try to reconstruct a full ISBN
+    function addIsbnFragment(ocrText) {
+        if (!ocrText) return;
+        var corrected = ocrCorrectDigits(ocrText);
+        // Extract all digit sequences (3+ digits) from the OCR text
+        var digitRuns = corrected.match(/\d{3,}/g);
+        if (!digitRuns || digitRuns.length === 0) return;
+        _isbnFragments.push({ digits: digitRuns, raw: corrected, time: Date.now() });
+        // Keep only last 15 fragments (sliding window ~10.5s at 700ms interval)
+        if (_isbnFragments.length > 15) _isbnFragments.shift();
+    }
+
+    function extractIsbnFromFragments() {
+        if (_isbnFragments.length < 2) return null;
+        // Collect all digit runs from recent fragments
+        var allDigits = '';
+        for (var i = 0; i < _isbnFragments.length; i++) {
+            allDigits += _isbnFragments[i].digits.join('') + ' ';
+        }
+        // Also merge all raw corrected text
+        var allRaw = '';
+        for (var i = 0; i < _isbnFragments.length; i++) {
+            allRaw += _isbnFragments[i].raw + ' ';
+        }
+        // Try extracting ISBN from merged raw text first
+        var isbn = extractIsbnFromText(allRaw);
+        if (isbn && isValidIsbn(isbn)) return isbn;
+        if (isbn) {
+            var corrected = tryCorrectIsbn(isbn);
+            if (corrected) return corrected;
+        }
+        // Try building 13-digit ISBN from all accumulated digits
+        var pureDigits = allDigits.replace(/[^0-9]/g, '');
+        // Search for 978/979 prefix in the digit stream
+        for (var start = 0; start <= pureDigits.length - 13; start++) {
+            var candidate = pureDigits.substring(start, start + 13);
+            if (/^97[89]/.test(candidate) && isValidIsbn13(candidate)) {
+                return candidate;
+            }
+        }
+        // Try with single-digit correction
+        for (var start = 0; start <= pureDigits.length - 13; start++) {
+            var candidate = pureDigits.substring(start, start + 13);
+            if (/^97[89]/.test(candidate)) {
+                var corrected = tryCorrectIsbn(candidate);
+                if (corrected) return corrected;
+            }
+        }
+        return null;
+    }
+
     async function initOcrWorker() {
         if (_ocrWorker) return _ocrWorker;
         if (_ocrInitFailed) return null;
@@ -10999,11 +11057,34 @@ window.renderLifeStatus = renderLifeStatus;
         // Orange bg: R=high → max=high → white; Dark text: all low → max=low → dark
         var histogram = new Array(256).fill(0);
         var minGray = 255, maxGray = 0;
+        var graySum = 0;
         for (var i = 0; i < data.length; i += 4) {
             var gray = Math.max(data[i], data[i + 1], data[i + 2]);
             data[i] = data[i + 1] = data[i + 2] = gray;
+            graySum += gray;
             if (gray < minGray) minGray = gray;
             if (gray > maxGray) maxGray = gray;
+        }
+
+        // Step 1a: Adaptive dark background handling
+        // If mean brightness < 100, image is likely white text on dark bg → invert early
+        var totalPixels = w * h;
+        var meanGray = graySum / totalPixels;
+        if (meanGray < 100) {
+            for (var i = 0; i < data.length; i += 4) {
+                var inv = 255 - data[i];
+                data[i] = data[i + 1] = data[i + 2] = inv;
+            }
+            // Recompute min/max after inversion
+            minGray = 255 - maxGray;
+            maxGray = 255 - (meanGray < 50 ? 0 : minGray);
+            if (minGray > maxGray) { var tmp = minGray; minGray = maxGray; maxGray = tmp; }
+            // Recalc actual min/max from inverted data
+            minGray = 255; maxGray = 0;
+            for (var i = 0; i < data.length; i += 4) {
+                if (data[i] < minGray) minGray = data[i];
+                if (data[i] > maxGray) maxGray = data[i];
+            }
         }
 
         // Step 1b: Contrast stretching (normalize gray range to 0-255)
@@ -11025,7 +11106,6 @@ window.renderLifeStatus = renderLifeStatus;
         }
 
         // Step 2: Otsu thresholding
-        var totalPixels = w * h;
         var sumAll = 0;
         for (var t = 0; t < 256; t++) sumAll += t * histogram[t];
         var sumBg = 0, weightBg = 0, maxVariance = 0, bestThreshold = 128;
@@ -11099,6 +11179,61 @@ window.renderLifeStatus = renderLifeStatus;
         return rotCanvas;
     }
 
+    // ── Rotated Barcode Detection ──
+    // Html5Qrcode only detects horizontal barcodes; Korean books often have vertical barcodes
+    var _rotatedScanCounter = 0;
+    async function tryRotatedBarcodeScan(videoEl) {
+        var w = videoEl.videoWidth;
+        var h = videoEl.videoHeight;
+        if (!w || !h) return null;
+
+        var canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(videoEl, 0, 0, w, h);
+
+        // Try CW and CCW rotations (skip original — Html5Qrcode live scan handles that)
+        var rotations = [
+            { canvas: rotateCanvas90CW(canvas), label: '90CW' },
+            { canvas: rotateCanvas90CCW(canvas), label: '90CCW' }
+        ];
+
+        var scanConfig = {
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E
+            ]
+        };
+
+        for (var ri = 0; ri < rotations.length; ri++) {
+            try {
+                var rotCanvas = rotations[ri].canvas;
+                var blob = await new Promise(function(resolve) {
+                    rotCanvas.toBlob(function(b) { resolve(b); }, 'image/jpeg', 0.85);
+                });
+                if (!blob) continue;
+                var file = new File([blob], 'rotated.jpg', { type: 'image/jpeg' });
+                var scanner = new Html5Qrcode('isbn-rotated-scan-' + Date.now(), /* verbose= */ false);
+                var result = await scanner.scanFileV2(file, /* showImage= */ false, scanConfig);
+                scanner.clear();
+                if (result && result.decodedText) {
+                    var barcode = result.decodedText.replace(/[-\s]/g, '');
+                    if (isValidIsbn(barcode)) {
+                        if (window.AppLogger) AppLogger.info('[ISBN] Rotated barcode detected (' + rotations[ri].label + '): ' + barcode);
+                        return barcode;
+                    }
+                }
+            } catch(e) {
+                // scanFileV2 throws when no barcode found — expected, ignore
+            }
+        }
+        return null;
+    }
+
     var _ocrFrameIndex = 0;
 
     function hasIsbnLikeSignal(text) {
@@ -11106,8 +11241,9 @@ window.renderLifeStatus = renderLifeStatus;
         var compact = text.replace(/\s+/g, '');
         // e.g. ISBN..., SBN..., or long numeric sequences often seen in OCR output
         if (/I?SBN/i.test(compact)) return true;
+        // Lower threshold: 5+ digits is a signal (was 8 — too strict for dark backgrounds)
         var digitCount = (compact.match(/\d/g) || []).length;
-        return digitCount >= 8;
+        return digitCount >= 5;
     }
 
     async function ocrCaptureFrame() {
@@ -11120,48 +11256,68 @@ window.renderLifeStatus = renderLifeStatus;
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
 
-            // Rotate through 10 crop regions with rotation variants
-            // Books can be held at any angle; ISBN may be on spine/bottom/edge
+            // ── Rotated barcode detection (every 3rd frame ≈ 2.1s) ──
+            _rotatedScanCounter++;
+            if (_rotatedScanCounter % 3 === 0) {
+                var rotatedIsbn = await tryRotatedBarcodeScan(videoEl);
+                if (rotatedIsbn) {
+                    stopOcrInterval();
+                    var statusEl = document.getElementById('isbn-scanner-status');
+                    if (statusEl) statusEl.textContent = 'ISBN: ' + rotatedIsbn;
+                    var field = document.getElementById('isbn-manual-field');
+                    if (field) field.value = rotatedIsbn;
+                    try { if (_html5QrCode) await _html5QrCode.stop(); } catch(e) {}
+                    _ocrProcessing = false;
+                    await onIsbnScanned(rotatedIsbn);
+                    return;
+                }
+            }
+
+            // ── Region selection with lock-on support ──
             var cropY, cropH, cropX, cropW, psmMode, rotation;
-            var cropIndex = _ocrFrameIndex % 10;
+            var cropIndex;
+
+            if (_lockedCropIndex >= 0) {
+                // Lock-on mode: cycle through locked region + 2 neighbors
+                var neighbors = [_lockedCropIndex, (_lockedCropIndex + 1) % 10, (_lockedCropIndex + 9) % 10];
+                cropIndex = neighbors[_lockSubIndex % 3];
+                _lockSubIndex++;
+            } else {
+                cropIndex = _ocrFrameIndex % 10;
+            }
+
             cropX = 0;
             cropW = w;
             cropY = 0;
             cropH = h;
             rotation = 0; // 0 = none, 1 = 90° CW, -1 = 90° CCW
             if (cropIndex === 0) {
-                // Bottom strip: (78%-98%) — ISBN/barcode at very bottom (most common)
                 cropY = Math.floor(h * 0.78);
                 cropH = Math.floor(h * 0.20);
-                psmMode = '7';  // SINGLE_LINE
+                psmMode = '7';
             } else if (cropIndex === 1) {
-                // Bottom center focused: ISBN text block near barcode (2nd most common)
                 cropX = Math.floor(w * 0.20);
                 cropW = Math.floor(w * 0.60);
                 cropY = Math.floor(h * 0.80);
                 cropH = Math.floor(h * 0.16);
                 psmMode = '7';
             } else if (cropIndex === 2) {
-                // Full-width lower strip (wider catch) for tilted covers
                 cropY = Math.floor(h * 0.72);
                 cropH = Math.floor(h * 0.24);
                 psmMode = '6';
             } else if (cropIndex === 3) {
-                // Right edge narrow: (right 15%) — ISBN on spine/side band
                 cropX = Math.floor(w * 0.85);
                 cropW = Math.floor(w * 0.15);
                 cropY = Math.floor(h * 0.05);
                 cropH = Math.floor(h * 0.90);
-                rotation = -1; // rotate 90° CCW so vertical text becomes horizontal
+                rotation = -1;
                 psmMode = '6';
             } else if (cropIndex === 4) {
-                // Bottom strip rotated 90° CW — catches sideways ISBN
                 cropY = Math.floor(h * 0.70);
                 cropH = Math.floor(h * 0.28);
                 rotation = 1;
                 psmMode = '6';
             } else if (cropIndex === 5) {
-                // Right edge wider: (right 25%) rotated — wider catch for spine
                 cropX = Math.floor(w * 0.75);
                 cropW = Math.floor(w * 0.25);
                 cropY = Math.floor(h * 0.10);
@@ -11169,28 +11325,24 @@ window.renderLifeStatus = renderLifeStatus;
                 rotation = -1;
                 psmMode = '7';
             } else if (cropIndex === 6) {
-                // Left edge narrow: (left 15%) — ISBN on spine (book flipped)
                 cropX = 0;
                 cropW = Math.floor(w * 0.15);
                 cropY = Math.floor(h * 0.05);
                 cropH = Math.floor(h * 0.90);
-                rotation = 1; // rotate 90° CW so vertical text becomes horizontal
+                rotation = 1;
                 psmMode = '6';
             } else if (cropIndex === 7) {
-                // Center band: (30%-60%)
                 cropY = Math.floor(h * 0.30);
                 cropH = Math.floor(h * 0.30);
                 psmMode = '6';
             } else if (cropIndex === 8) {
-                // Lower band: (50%-80%)
                 cropY = Math.floor(h * 0.50);
                 cropH = Math.floor(h * 0.30);
                 psmMode = '6';
             } else {
-                // Full scan: entire frame (5%-95%) — catches any position
                 cropY = Math.floor(h * 0.05);
                 cropH = Math.floor(h * 0.90);
-                psmMode = '11'; // SPARSE_TEXT
+                psmMode = '11';
             }
             _ocrFrameIndex++;
 
@@ -11200,20 +11352,17 @@ window.renderLifeStatus = renderLifeStatus;
             var ctx = canvas.getContext('2d');
             ctx.drawImage(videoEl, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
-            // Apply rotation if needed (for vertical text on spines/edges)
             if (rotation === 1) {
                 canvas = rotateCanvas90CW(canvas);
             } else if (rotation === -1) {
                 canvas = rotateCanvas90CCW(canvas);
             }
 
-            // Preprocess: grayscale → Otsu binarization → 3x upscale
             var processed = preprocessForOcr(canvas);
 
             var worker = await initOcrWorker();
             if (!worker) { _ocrProcessing = false; return; }
 
-            // Set PSM mode dynamically per crop region (preserve whitelist)
             await worker.setParameters({
                 tessedit_pageseg_mode: psmMode,
                 tessedit_char_whitelist: '0123456789ISBNisbn-Xx:. '
@@ -11221,21 +11370,44 @@ window.renderLifeStatus = renderLifeStatus;
 
             var result = await worker.recognize(processed);
             var ocrText = result.data.text;
-            // Skip clear garbage results with very low confidence
-            // but keep potentially useful ISBN-like text even at low confidence.
             var confidence = Math.round(result.data.confidence || 0);
-            if (confidence < 8 && !hasIsbnLikeSignal(ocrText)) {
-                if (window.AppLogger) AppLogger.debug('[ISBN] OCR skipped (low confidence: ' + Math.round(result.data.confidence) + '%)');
+
+            // ── Region lock-on management ──
+            var hasSignal = hasIsbnLikeSignal(ocrText);
+            if (hasSignal && _lockedCropIndex < 0) {
+                _lockedCropIndex = cropIndex;
+                _lockMissCount = 0;
+                _lockSubIndex = 0;
+                if (window.AppLogger) AppLogger.info('[ISBN] Region lock-on: cropIndex=' + cropIndex);
+            } else if (hasSignal && _lockedCropIndex >= 0) {
+                _lockMissCount = 0;
+            } else if (!hasSignal && _lockedCropIndex >= 0) {
+                _lockMissCount++;
+                if (_lockMissCount >= 5) {
+                    if (window.AppLogger) AppLogger.info('[ISBN] Region lock released (5 misses)');
+                    _lockedCropIndex = -1;
+                    _lockMissCount = 0;
+                    _lockSubIndex = 0;
+                }
+            }
+
+            if (confidence < 8 && !hasSignal) {
+                if (window.AppLogger) AppLogger.debug('[ISBN] OCR skipped (low confidence: ' + confidence + '%)');
                 _ocrProcessing = false;
                 return;
             }
+
+            // ── Fragment accumulation (always, even for low-confidence results with digits) ──
+            addIsbnFragment(ocrText);
+
             var isbn = extractIsbnFromText(ocrText);
             if (window.AppLogger && ocrText && ocrText.trim()) {
                 AppLogger.debug('[ISBN] OCR text: ' + ocrText.trim().substring(0, 100), {
                     extractedIsbn: isbn || 'none',
                     confidence: confidence,
-                    cropIndex: (_ocrFrameIndex - 1) % 10,
-                    rotation: rotation || 0
+                    cropIndex: cropIndex,
+                    rotation: rotation || 0,
+                    locked: _lockedCropIndex >= 0
                 });
             }
             // Try checksum correction if ISBN-like but invalid
@@ -11246,6 +11418,16 @@ window.renderLifeStatus = renderLifeStatus;
                     isbn = corrected;
                 }
             }
+
+            // ── Try fragment accumulation if single-frame extraction failed ──
+            if (!isbn || !isValidIsbn(isbn)) {
+                var fragIsbn = extractIsbnFromFragments();
+                if (fragIsbn) {
+                    if (window.AppLogger) AppLogger.info('[ISBN] Fragment accumulation found ISBN: ' + fragIsbn, { fragmentCount: _isbnFragments.length });
+                    isbn = fragIsbn;
+                }
+            }
+
             if (isbn && isValidIsbn(isbn)) {
                 if (window.AppLogger) AppLogger.info('[ISBN] OCR detected valid ISBN: ' + isbn);
                 stopOcrInterval();
@@ -11270,6 +11452,12 @@ window.renderLifeStatus = renderLifeStatus;
     function startOcrInterval() {
         stopOcrInterval();
         _ocrInitFailed = false;
+        // Reset precision tracking state
+        _isbnFragments = [];
+        _lockedCropIndex = -1;
+        _lockMissCount = 0;
+        _lockSubIndex = 0;
+        _rotatedScanCounter = 0;
         // Delay OCR start: barcode scanner is primary, OCR is fallback after a short delay
         _ocrDelayTimer = setTimeout(function() {
             _ocrDelayTimer = null;
@@ -11282,6 +11470,11 @@ window.renderLifeStatus = renderLifeStatus;
     function stopOcrInterval() {
         if (_ocrDelayTimer) { clearTimeout(_ocrDelayTimer); _ocrDelayTimer = null; }
         if (_ocrInterval) { clearInterval(_ocrInterval); _ocrInterval = null; }
+        // Clear tracking state on stop
+        _isbnFragments = [];
+        _lockedCropIndex = -1;
+        _lockMissCount = 0;
+        _lockSubIndex = 0;
     }
     let _libCurrentTab = 'reading';
     let _libCurrentPeriod = 'total';
