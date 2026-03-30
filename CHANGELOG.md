@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.32] - 2026-03-30
+
+### 변경
+- fix: ISBN OCR 인식률 개선 — 문자 화이트리스트 + 신뢰도 필터 + ISBN 위치 특화 크롭
+
 ## [1.0.31] - 2026-03-30
 
 ### 변경
