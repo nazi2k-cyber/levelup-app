@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.41] - 2026-03-30
+
+### 변경
+- feat: 서재 이미지 다운로드 기능 추가 및 바벨탑 육각형 변경
+
 ## [1.0.40] - 2026-03-30
 
 ### 변경
