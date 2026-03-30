@@ -4408,13 +4408,17 @@ function buildRareTitleCollectionHTML(lang) {
         renderItem(rt, `steps_${rt.steps}`, `${rt.steps.toLocaleString()}${li18n.rare_title_step_unit || '보'}`)
     ).join('');
 
+    const readingHTML = rareReadingTitles.map(rt =>
+        renderItem(rt, `reading_${rt.books}`, `${rt.books}${li18n.rare_title_reading_unit || '권'}`)
+    ).join('');
+
     return `
         <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
             <div style="font-size:0.9rem; font-weight:bold; color:var(--neon-gold); margin-bottom:10px;">
                 ${li18n.rare_title_guide || '희귀 호칭 가이드'}
             </div>
             <div style="font-size:0.75rem; color:var(--text-sub); margin-bottom:12px; line-height:1.4;">
-                ${li18n.rare_title_guide_desc || '스트릭 달성 및 랭킹 상위권 진입 시 특별한 희귀 호칭이 부여됩니다.'}
+                ${li18n.rare_title_guide_desc || '스트릭 달성, 랭킹 상위권 진입, 걸음수·독서 마일스톤 달성 시 특별한 희귀 호칭이 부여됩니다.'}
             </div>
             <div style="font-size:0.8rem; font-weight:bold; color:var(--neon-blue); margin:10px 0 6px;">
                 👑 ${li18n.rare_title_rank_section || '랭킹 호칭'} — ${li18n.rare_title_global_rank || '종합 순위'}
@@ -4432,6 +4436,10 @@ function buildRareTitleCollectionHTML(lang) {
                 🚶 ${li18n.rare_title_step_section || '걸음수 달성 호칭'}
             </div>
             ${stepHTML}
+            <div style="font-size:0.8rem; font-weight:bold; color:var(--neon-blue); margin:15px 0 6px;">
+                📚 ${li18n.rare_title_reading_section || '독서 달성 호칭'}
+            </div>
+            ${readingHTML}
         </div>
     `;
 }
