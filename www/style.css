@@ -1927,17 +1927,14 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     margin-bottom: 8px; position: relative;
 }
 .book-tower-top-roof {
-    width: 0; height: 0;
-    border-left: 50px solid transparent;
-    border-right: 50px solid transparent;
-    border-bottom: 24px solid #4a4a5a;
-    margin: 0 auto 0;
+    display: none;
 }
 .book-tower-top-label {
     background: linear-gradient(180deg, #4a4a5a, #3a3a4a);
     color: var(--neon-blue); font-size: 0.72rem; font-weight: 900;
-    padding: 5px 14px; text-align: center;
+    padding: 10px 28px; text-align: center;
     letter-spacing: 1px;
+    clip-path: polygon(10% 0%, 90% 0%, 100% 50%, 90% 100%, 10% 100%, 0% 50%);
 }
 
 /* ── Book List View ── */
@@ -1976,6 +1973,24 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .book-tower-item:nth-child(8n+6) { background: linear-gradient(180deg, #f0c0b4, #ecaca0); }
 .book-tower-item:nth-child(8n+7) { background: linear-gradient(180deg, #f8d4c8, #f4c0b4); color: #5a3a3a; }
 .book-tower-item:nth-child(8n+8) { background: linear-gradient(180deg, #ecb0a0, #e8a090); }
+
+/* ── Library Share Bar ── */
+.library-share-bar {
+    padding: 10px 16px 14px;
+    text-align: center;
+    background: var(--bg-main);
+    border-top: 1px solid var(--border-color);
+}
+.library-share-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 24px;
+    background: rgba(0, 217, 255, 0.12);
+    color: var(--neon-blue);
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    border-radius: 8px;
+    font-size: 0.85rem; font-weight: 700; cursor: pointer;
+}
+.library-share-btn:active { transform: scale(0.96); }
 
 /* ── Source badges ── */
 .source-badge {

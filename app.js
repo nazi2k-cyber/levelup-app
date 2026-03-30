@@ -12016,10 +12016,12 @@ window.renderLifeStatus = renderLifeStatus;
         const container = document.getElementById('library-tower');
         if (!container) return;
         const books = getFilteredBooks();
+        const shareBar = document.getElementById('library-share-bar');
 
         if (books.length === 0) {
             container.innerHTML = '<div class="library-empty"><div class="library-empty-icon">📚</div><div>' + t('lib_empty').replace(/\n/g, '<br>') + '</div></div>';
             container.className = 'library-tower';
+            if (shareBar) shareBar.classList.add('d-none');
             return;
         }
 
@@ -12028,8 +12030,256 @@ window.renderLifeStatus = renderLifeStatus;
         } else {
             renderListView(container, books);
         }
+        if (shareBar) shareBar.classList.remove('d-none');
     }
     window.renderLibrary = renderLibrary;
+
+    // 서재 타워를 이미지로 저장 (Canvas API 직접 생성, Firebase 미경유)
+    window.shareLibraryAsImage = async function() {
+        const lang = AppState.currentLang;
+        const books = getFilteredBooks();
+        if (books.length === 0) return;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const W = 540;
+        const pad = 20;
+        const innerW = W - pad * 2;
+        const centerX = W / 2;
+
+        // 스파인 색상 팔레트 (style.css nth-child 패턴과 동일)
+        const spineColors = [
+            ['#f2b4a8', '#eea090'], ['#f5c4b8', '#f0b0a0'],
+            ['#f8d0c4', '#f4bcae'], ['#eea898', '#e89888'],
+            ['#f5bcae', '#f0a898'], ['#f0c0b4', '#ecaca0'],
+            ['#f8d4c8', '#f4c0b4'], ['#ecb0a0', '#e8a090']
+        ];
+        const darkTextIndices = [2, 6]; // color: #5a3a3a
+
+        // 각 책 스파인 메트릭 계산
+        var totalBooksH = 0;
+        var bookMetrics = books.map(function(book, i) {
+            var thickness = getBookThickness(book.pages);
+            var paddingV = thickness * 2;
+            var textH = 14;
+            var itemH = paddingV + textH;
+            var widthPct = getBookWidth(book.pages, i);
+            var itemW = Math.min(360, (innerW * widthPct / 100));
+            totalBooksH += itemH;
+            return { book: book, itemH: itemH, itemW: itemW, floor: i + 1 };
+        });
+
+        // 레이아웃 높이 계산
+        var hexH = 40;
+        var hexGap = 8;
+        var baseH = 14;
+        var baseGap = 4;
+        var footerH = 36;
+        var totalH = pad + hexH + hexGap + totalBooksH + baseGap + baseH + 20 + footerH + pad;
+
+        canvas.width = W;
+        canvas.height = totalH;
+
+        // 배경
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(0, 0, W, totalH);
+
+        var y = pad;
+
+        // --- 육각형 탑 꼭대기 ---
+        var hexW = innerW * 0.6;
+        var hexX = centerX - hexW / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(hexX + hexW * 0.1, y);
+        ctx.lineTo(hexX + hexW * 0.9, y);
+        ctx.lineTo(hexX + hexW, y + hexH / 2);
+        ctx.lineTo(hexX + hexW * 0.9, y + hexH);
+        ctx.lineTo(hexX + hexW * 0.1, y + hexH);
+        ctx.lineTo(hexX, y + hexH / 2);
+        ctx.closePath();
+        var hexGrad = ctx.createLinearGradient(0, y, 0, y + hexH);
+        hexGrad.addColorStop(0, '#4a4a5a');
+        hexGrad.addColorStop(1, '#3a3a4a');
+        ctx.fillStyle = hexGrad;
+        ctx.fill();
+        ctx.restore();
+        // 육각형 텍스트
+        ctx.fillStyle = '#00d9ff';
+        ctx.font = 'bold 11px Pretendard, sans-serif';
+        var hexText = (t('lib_babel_tower') || '바벨의 도서관') + ' ' + books.length + '층';
+        var hexTextW = ctx.measureText(hexText).width;
+        ctx.fillText(hexText, centerX - hexTextW / 2, y + hexH / 2 + 4);
+        y += hexH + hexGap;
+
+        // --- 책 스파인 (맨 위층부터 아래로) ---
+        for (var i = bookMetrics.length - 1; i >= 0; i--) {
+            var m = bookMetrics[i];
+            var colorIdx = i % 8;
+            var c = spineColors[colorIdx];
+            var itemX = centerX - m.itemW / 2;
+
+            // 스파인 배경 그라디언트
+            var spineGrad = ctx.createLinearGradient(0, y, 0, y + m.itemH);
+            spineGrad.addColorStop(0, c[0]);
+            spineGrad.addColorStop(1, c[1]);
+            ctx.fillStyle = spineGrad;
+            ctx.fillRect(itemX, y, m.itemW, m.itemH);
+
+            // 좌/우 테두리
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fillRect(itemX, y, 3, m.itemH);
+            ctx.fillRect(itemX + m.itemW - 3, y, 3, m.itemH);
+
+            // 상단 하이라이트
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect(itemX, y, m.itemW, 1);
+
+            // 제목 텍스트
+            var textColor = darkTextIndices.indexOf(colorIdx) >= 0 ? '#5a3a3a' : '#3a2a2a';
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 10px Pretendard, sans-serif';
+            var title = m.book.title.length > 20 ? m.book.title.substring(0, 18) + '…' : m.book.title;
+            var titleW = ctx.measureText(title).width;
+            ctx.fillText(title, centerX - titleW / 2, y + m.itemH / 2 + 3);
+
+            // 층수 라벨 (좌측)
+            ctx.fillStyle = '#888';
+            ctx.font = 'bold 8px Pretendard, sans-serif';
+            ctx.fillText(m.floor + '층', itemX - 32, y + m.itemH / 2 + 3);
+
+            // 페이지수 (우측)
+            if (m.book.pages) {
+                ctx.fillStyle = textColor;
+                ctx.globalAlpha = 0.6;
+                ctx.font = '8px Pretendard, sans-serif';
+                ctx.fillText(m.book.pages + 'p', centerX + titleW / 2 + 6, y + m.itemH / 2 + 3);
+                ctx.globalAlpha = 1.0;
+            }
+
+            y += m.itemH;
+        }
+
+        // --- 받침대 ---
+        y += baseGap;
+        var baseW = Math.min(390, innerW * 0.92);
+        var baseX = centerX - baseW / 2;
+        var baseGrad = ctx.createLinearGradient(0, y, 0, y + baseH);
+        baseGrad.addColorStop(0, '#4a4a5a');
+        baseGrad.addColorStop(1, '#2a2a3a');
+        ctx.fillStyle = baseGrad;
+        ctx.beginPath();
+        ctx.roundRect(baseX, y, baseW, baseH, [0, 0, 6, 6]);
+        ctx.fill();
+        y += baseH + 20;
+
+        // --- 푸터 ---
+        ctx.fillStyle = '#444';
+        ctx.font = '10px Pretendard, sans-serif';
+        var today = new Date().toISOString().slice(0, 10);
+        var footerText = 'LEVEL UP: REBOOT | ' + today;
+        ctx.fillText(footerText, pad + 6, y + 12);
+
+        // --- 저장/공유 파이프라인 (sharePlannerAsImage 패턴 재사용) ---
+        var userName = (AppState.user && AppState.user.name) ? AppState.user.name.replace(/[^a-zA-Z0-9가-힣]/g, '') : '';
+        var saveCountKey = 'library_save_count_' + userName;
+        var saveCount = parseInt(localStorage.getItem(saveCountKey) || '0', 10) + 1;
+        localStorage.setItem(saveCountKey, String(saveCount));
+        var countSuffix = saveCount > 1 ? String(saveCount) : '';
+        var fileName = 'library_tower_' + userName + countSuffix + '.png';
+        var msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+        var failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
+
+        try {
+            var isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+            var blob = await new Promise(function(resolve) { canvas.toBlob(resolve, 'image/png'); });
+            if (!blob) throw new Error('toBlob failed');
+
+            var saved = false;
+
+            // 네이티브 앱: Capacitor Filesystem
+            if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+                var Filesystem = window.Capacitor.Plugins.Filesystem;
+                var dataUrl = canvas.toDataURL('image/png');
+                var base64Data = dataUrl.split(',')[1];
+                try {
+                    var savedPath = null;
+                    var dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
+                    for (var d = 0; d < dirs.length; d++) {
+                        try {
+                            var result = await Filesystem.writeFile({
+                                path: fileName, data: base64Data,
+                                directory: dirs[d], recursive: true
+                            });
+                            savedPath = result.uri;
+                            break;
+                        } catch(dirErr) {
+                            AppLogger.warn('[Library] Filesystem write failed for dir ' + dirs[d] + ': ' + dirErr.message);
+                        }
+                    }
+                    if (savedPath) {
+                        AppLogger.info('[Library] Image saved: ' + savedPath);
+                        saved = true;
+                    }
+                } catch(fsErr) {
+                    AppLogger.warn('[Library] Filesystem save failed: ' + fsErr.message);
+                }
+            }
+
+            // Web Share API
+            if (!saved && navigator.share && navigator.canShare) {
+                try {
+                    var file = new File([blob], fileName, { type: 'image/png' });
+                    var shareData = { files: [file] };
+                    if (navigator.canShare(shareData)) {
+                        await navigator.share(shareData);
+                        saved = true;
+                    }
+                } catch(shareErr) {
+                    if (shareErr.name === 'AbortError') {
+                        saved = true;
+                    } else {
+                        AppLogger.warn('[Library] Share API failed: ' + shareErr.message);
+                    }
+                }
+            }
+
+            // 인앱 오버레이 (네이티브 폴백)
+            if (!saved && isNative) {
+                showImageOverlay(canvas.toDataURL('image/png'), lang);
+                saved = true;
+            }
+
+            // <a> 다운로드 (데스크톱 폴백)
+            if (!saved && !isNative) {
+                var url = URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                setTimeout(function() {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 1000);
+                saved = true;
+            }
+
+            if (saved) {
+                alert(msgs[lang] || msgs.ko);
+            } else {
+                throw new Error('All save methods failed');
+            }
+        } catch(e) {
+            AppLogger.error('[Library] Image save error: ' + e.message);
+            try {
+                showImageOverlay(canvas.toDataURL('image/png'), lang);
+            } catch(e2) {
+                alert(failMsgs[lang] || failMsgs.ko);
+            }
+        }
+    };
 
     function getBookThickness(pages) {
         // Reboot: thinner spines – min 4px, max 14px
@@ -12085,7 +12335,6 @@ window.renderLifeStatus = renderLifeStatus;
         // Tower top
         html += '<div class="book-tower-top">'
             + '<div class="book-tower-top-label">' + t('lib_babel_tower') + ' ' + books.length + '층</div>'
-            + '<div class="book-tower-top-roof"></div>'
             + '</div>';
         container.innerHTML = html;
     }
