@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.27] - 2026-03-30
+
+### 변경
+- fix: 책 삭제 후 재추가 시 중복보상 방지 및 renderLibrary 미정의 오류 수정
+
 ## [1.0.26] - 2026-03-30
 
 ### 변경
