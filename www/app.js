@@ -11075,6 +11075,30 @@ window.renderLifeStatus = renderLifeStatus;
         return upCanvas;
     }
 
+    // ── Rotate canvas 90° clockwise ──
+    function rotateCanvas90CW(srcCanvas) {
+        var rotCanvas = document.createElement('canvas');
+        rotCanvas.width = srcCanvas.height;
+        rotCanvas.height = srcCanvas.width;
+        var rotCtx = rotCanvas.getContext('2d');
+        rotCtx.translate(rotCanvas.width, 0);
+        rotCtx.rotate(Math.PI / 2);
+        rotCtx.drawImage(srcCanvas, 0, 0);
+        return rotCanvas;
+    }
+
+    // ── Rotate canvas 90° counter-clockwise ──
+    function rotateCanvas90CCW(srcCanvas) {
+        var rotCanvas = document.createElement('canvas');
+        rotCanvas.width = srcCanvas.height;
+        rotCanvas.height = srcCanvas.width;
+        var rotCtx = rotCanvas.getContext('2d');
+        rotCtx.translate(0, rotCanvas.height);
+        rotCtx.rotate(-Math.PI / 2);
+        rotCtx.drawImage(srcCanvas, 0, 0);
+        return rotCanvas;
+    }
+
     var _ocrFrameIndex = 0;
 
     async function ocrCaptureFrame() {
@@ -11087,42 +11111,64 @@ window.renderLifeStatus = renderLifeStatus;
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
 
-            // Rotate through 6 crop regions targeting different ISBN positions
-            var cropY, cropH, cropX, cropW, psmMode;
-            var cropIndex = _ocrFrameIndex % 6;
+            // Rotate through 8 crop regions with rotation variants
+            // Books can be held at any angle; ISBN may be on spine/bottom/edge
+            var cropY, cropH, cropX, cropW, psmMode, rotation;
+            var cropIndex = _ocrFrameIndex % 8;
             cropX = 0;
             cropW = w;
+            cropY = 0;
+            cropH = h;
+            rotation = 0; // 0 = none, 1 = 90° CW, -1 = 90° CCW
             if (cropIndex === 0) {
-                // Bottom strip: (75%-95%) — ISBN/barcode at very bottom of back cover
-                cropY = Math.floor(h * 0.75);
+                // Bottom strip: (78%-98%) — ISBN/barcode at very bottom
+                cropY = Math.floor(h * 0.78);
                 cropH = Math.floor(h * 0.20);
-                psmMode = '7';  // SINGLE_LINE — narrow strip likely has one ISBN line
+                psmMode = '7';  // SINGLE_LINE
             } else if (cropIndex === 1) {
-                // Center band: middle area (30%-60%) — barcode often centered in viewfinder
+                // Right edge narrow: (right 15%) — ISBN on spine/side band
+                cropX = Math.floor(w * 0.85);
+                cropW = Math.floor(w * 0.15);
+                cropY = Math.floor(h * 0.05);
+                cropH = Math.floor(h * 0.90);
+                rotation = -1; // rotate 90° CCW so vertical text becomes horizontal
+                psmMode = '6';
+            } else if (cropIndex === 2) {
+                // Center band: (30%-60%)
                 cropY = Math.floor(h * 0.30);
                 cropH = Math.floor(h * 0.30);
-                psmMode = '6';  // SINGLE_BLOCK
-            } else if (cropIndex === 2) {
-                // Right edge strip: (right 30%) — ISBN on spine/side band
-                cropX = Math.floor(w * 0.70);
-                cropW = Math.floor(w * 0.30);
+                psmMode = '6';
+            } else if (cropIndex === 3) {
+                // Left edge narrow: (left 15%) — ISBN on spine (book flipped)
+                cropX = 0;
+                cropW = Math.floor(w * 0.15);
+                cropY = Math.floor(h * 0.05);
+                cropH = Math.floor(h * 0.90);
+                rotation = 1; // rotate 90° CW so vertical text becomes horizontal
+                psmMode = '6';
+            } else if (cropIndex === 4) {
+                // Bottom strip rotated 90° CW — catches sideways ISBN
+                cropY = Math.floor(h * 0.70);
+                cropH = Math.floor(h * 0.28);
+                rotation = 1;
+                psmMode = '6';
+            } else if (cropIndex === 5) {
+                // Right edge wider: (right 25%) rotated — wider catch for spine
+                cropX = Math.floor(w * 0.75);
+                cropW = Math.floor(w * 0.25);
                 cropY = Math.floor(h * 0.10);
                 cropH = Math.floor(h * 0.80);
-                psmMode = '6';  // SINGLE_BLOCK
-            } else if (cropIndex === 3) {
-                // Upper-mid band: (20%-50%) — barcode in upper portion
-                cropY = Math.floor(h * 0.20);
-                cropH = Math.floor(h * 0.30);
-                psmMode = '6';  // SINGLE_BLOCK
-            } else if (cropIndex === 4) {
-                // Lower band: (50%-80%) — ISBN near bottom of back cover
+                rotation = -1;
+                psmMode = '7';
+            } else if (cropIndex === 6) {
+                // Lower band: (50%-80%)
                 cropY = Math.floor(h * 0.50);
                 cropH = Math.floor(h * 0.30);
-                psmMode = '6';  // SINGLE_BLOCK
+                psmMode = '6';
             } else {
-                // Full scan: entire frame (10%-90%) — catches any position
-                cropY = Math.floor(h * 0.10);
-                cropH = Math.floor(h * 0.80);
+                // Full scan: entire frame (5%-95%) — catches any position
+                cropY = Math.floor(h * 0.05);
+                cropH = Math.floor(h * 0.90);
                 psmMode = '11'; // SPARSE_TEXT
             }
             _ocrFrameIndex++;
@@ -11133,7 +11179,14 @@ window.renderLifeStatus = renderLifeStatus;
             var ctx = canvas.getContext('2d');
             ctx.drawImage(videoEl, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
-            // Preprocess: grayscale → Otsu binarization → 2x upscale
+            // Apply rotation if needed (for vertical text on spines/edges)
+            if (rotation === 1) {
+                canvas = rotateCanvas90CW(canvas);
+            } else if (rotation === -1) {
+                canvas = rotateCanvas90CCW(canvas);
+            }
+
+            // Preprocess: grayscale → Otsu binarization → 3x upscale
             var processed = preprocessForOcr(canvas);
 
             var worker = await initOcrWorker();
@@ -11158,7 +11211,8 @@ window.renderLifeStatus = renderLifeStatus;
                 AppLogger.debug('[ISBN] OCR text: ' + ocrText.trim().substring(0, 100), {
                     extractedIsbn: isbn || 'none',
                     confidence: Math.round(result.data.confidence),
-                    cropRegion: _ocrFrameIndex % 2 === 1 ? 'narrow' : 'medium'
+                    cropIndex: (_ocrFrameIndex - 1) % 8,
+                    rotation: rotation || 0
                 });
             }
             // Try checksum correction if ISBN-like but invalid
