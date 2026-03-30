@@ -10818,7 +10818,7 @@ window.renderLifeStatus = renderLifeStatus;
 
     function _scannerConfig() {
         return {
-            fps: 5,
+            fps: 10,
             qrbox: function(viewfinderWidth, viewfinderHeight) {
                 // Barcode-optimized: wide scan area covering more of the frame
                 var w = Math.floor(viewfinderWidth * 0.92);
@@ -10834,8 +10834,27 @@ window.renderLifeStatus = renderLifeStatus;
                 Html5QrcodeSupportedFormats.UPC_A,
                 Html5QrcodeSupportedFormats.UPC_E
             ],
-            experimentalFeatures: { useBarCodeDetectorIfSupported: false }
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
         };
+    }
+
+    // ── OCR Error Correction ──
+    function ocrCorrectDigits(text) {
+        if (!text) return text;
+        // Normalize common OCR misreads of "ISBN" prefix
+        var result = text.replace(/[I1l|][S5][B8][Nn]/g, 'ISBN');
+        // Replace common letter↔digit confusions in numeric contexts
+        // O/o → 0, l/I/| → 1, S/s → 5, B → 8, Z → 2, G → 6, q → 9
+        result = result.replace(/(?<=[0-9])([OoQD])(?=[0-9\-\s])/g, '0');
+        result = result.replace(/([OoQD])(?=[0-9]{2})/g, '0');
+        result = result.replace(/(?<=[0-9])([Il|])(?=[0-9\-\s])/g, '1');
+        result = result.replace(/([Il|])(?=[0-9]{2})/g, '1');
+        result = result.replace(/(?<=[0-9])([Ss])(?=[0-9\-\s])/g, '5');
+        result = result.replace(/(?<=[0-9])([B])(?=[0-9\-\s])/g, '8');
+        result = result.replace(/(?<=[0-9])([Z])(?=[0-9\-\s])/g, '2');
+        result = result.replace(/(?<=[0-9])([G])(?=[0-9\-\s])/g, '6');
+        result = result.replace(/(?<=[0-9])([q])(?=[0-9\-\s])/g, '9');
+        return result;
     }
 
     // ── OCR ISBN Detection (Tesseract.js fallback) ──
@@ -10843,6 +10862,8 @@ window.renderLifeStatus = renderLifeStatus;
         if (!text) return null;
         // Remove spaces/newlines, normalize
         var cleaned = text.replace(/\s+/g, ' ');
+        // Apply OCR error correction
+        cleaned = ocrCorrectDigits(cleaned);
         // Pattern 1: "ISBN" followed by digits (with optional hyphens/spaces)
         var m = cleaned.match(/ISBN[\s:\-]*(?:97[89][\s\-]*(?:\d[\s\-]*){9}\d|\d[\s\-]*(?:\d[\s\-]*){8}[\dXx])/i);
         if (m) {
@@ -10897,6 +10918,23 @@ window.renderLifeStatus = renderLifeStatus;
         return false;
     }
 
+    // ── Single-digit ISBN checksum correction ──
+    function tryCorrectIsbn(isbn) {
+        if (!isbn) return null;
+        var digits = isbn.replace(/[^0-9Xx]/g, '');
+        if (digits.length !== 13 && digits.length !== 10) return null;
+        // Try substituting each digit position with 0-9
+        for (var i = 0; i < digits.length; i++) {
+            for (var d = 0; d <= 9; d++) {
+                var candidate = digits.substring(0, i) + d + digits.substring(i + 1);
+                if (candidate !== digits && isValidIsbn(candidate)) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
+    }
+
     async function initOcrWorker() {
         if (_ocrWorker) return _ocrWorker;
         if (_ocrInitFailed) return null;
@@ -10917,7 +10955,7 @@ window.renderLifeStatus = renderLifeStatus;
             });
             await _ocrWorker.setParameters({
                 tessedit_char_whitelist: '0123456789ISBNisbn-Xx ',
-                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK
+                tessedit_pageseg_mode: '11'
             });
             if (window.AppLogger) AppLogger.info('[ISBN] OCR worker ready');
             return _ocrWorker;
@@ -10931,6 +10969,67 @@ window.renderLifeStatus = renderLifeStatus;
         }
     }
 
+    // ── OCR Image Preprocessing (grayscale → Otsu binarization → upscale) ──
+    function preprocessForOcr(srcCanvas) {
+        var w = srcCanvas.width;
+        var h = srcCanvas.height;
+        var ctx = srcCanvas.getContext('2d');
+        var imgData = ctx.getImageData(0, 0, w, h);
+        var data = imgData.data;
+
+        // Step 1: Grayscale conversion
+        var histogram = new Array(256).fill(0);
+        for (var i = 0; i < data.length; i += 4) {
+            var gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+            data[i] = data[i + 1] = data[i + 2] = gray;
+            histogram[gray]++;
+        }
+
+        // Step 2: Otsu thresholding
+        var totalPixels = w * h;
+        var sumAll = 0;
+        for (var t = 0; t < 256; t++) sumAll += t * histogram[t];
+        var sumBg = 0, weightBg = 0, maxVariance = 0, bestThreshold = 128;
+        for (var t = 0; t < 256; t++) {
+            weightBg += histogram[t];
+            if (weightBg === 0) continue;
+            var weightFg = totalPixels - weightBg;
+            if (weightFg === 0) break;
+            sumBg += t * histogram[t];
+            var meanBg = sumBg / weightBg;
+            var meanFg = (sumAll - sumBg) / weightFg;
+            var variance = weightBg * weightFg * (meanBg - meanFg) * (meanBg - meanFg);
+            if (variance > maxVariance) {
+                maxVariance = variance;
+                bestThreshold = t;
+            }
+        }
+        // Guard against extreme thresholds (glossy reflections)
+        if (bestThreshold < 30) bestThreshold = 30;
+        if (bestThreshold > 225) bestThreshold = 225;
+
+        // Apply binarization
+        for (var i = 0; i < data.length; i += 4) {
+            var val = data[i] >= bestThreshold ? 255 : 0;
+            data[i] = data[i + 1] = data[i + 2] = val;
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        // Step 3: 2x upscale (cap width at 2000px)
+        var scale = Math.min(2, 2000 / w);
+        var upW = Math.floor(w * scale);
+        var upH = Math.floor(h * scale);
+        var upCanvas = document.createElement('canvas');
+        upCanvas.width = upW;
+        upCanvas.height = upH;
+        var upCtx = upCanvas.getContext('2d');
+        upCtx.imageSmoothingEnabled = false;
+        upCtx.drawImage(srcCanvas, 0, 0, upW, upH);
+        return upCanvas;
+    }
+
+    var _ocrFrameIndex = 0;
+
     async function ocrCaptureFrame() {
         if (_ocrProcessing) return;
         _ocrProcessing = true;
@@ -10938,37 +11037,62 @@ window.renderLifeStatus = renderLifeStatus;
             var videoEl = document.querySelector('#isbn-scanner-reader video');
             if (!videoEl || videoEl.readyState < 2) { _ocrProcessing = false; return; }
 
-            var canvas = document.createElement('canvas');
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
-            // Capture lower 60% of video (ISBN text appears on back cover, lower area)
-            var cropY = Math.floor(h * 0.2);
-            var cropH = Math.floor(h * 0.6);
+
+            // Alternate crop regions: narrow band (ISBN line) vs medium band
+            var cropY, cropH, psmMode;
+            if (_ocrFrameIndex % 2 === 0) {
+                // Narrow band: bottom 20% of frame (65%-85%) — targets ISBN line
+                cropY = Math.floor(h * 0.65);
+                cropH = Math.floor(h * 0.20);
+                psmMode = '7';  // SINGLE_LINE
+            } else {
+                // Medium band: middle-lower 40% (40%-80%) — catches ISBNs placed higher
+                cropY = Math.floor(h * 0.40);
+                cropH = Math.floor(h * 0.40);
+                psmMode = '11'; // SPARSE_TEXT
+            }
+            _ocrFrameIndex++;
+
+            var canvas = document.createElement('canvas');
             canvas.width = w;
             canvas.height = cropH;
             var ctx = canvas.getContext('2d');
-            // Apply sharpening: increase contrast
-            ctx.filter = 'contrast(1.5) brightness(1.1)';
             ctx.drawImage(videoEl, 0, cropY, w, cropH, 0, 0, w, cropH);
+
+            // Preprocess: grayscale → Otsu binarization → 2x upscale
+            var processed = preprocessForOcr(canvas);
 
             var worker = await initOcrWorker();
             if (!worker) { _ocrProcessing = false; return; }
 
-            var result = await worker.recognize(canvas);
+            // Set PSM mode dynamically per crop region
+            await worker.setParameters({ tessedit_pageseg_mode: psmMode });
+
+            var result = await worker.recognize(processed);
             var ocrText = result.data.text;
             var isbn = extractIsbnFromText(ocrText);
             if (window.AppLogger && ocrText && ocrText.trim()) {
                 AppLogger.debug('[ISBN] OCR text: ' + ocrText.trim().substring(0, 100), {
                     extractedIsbn: isbn || 'none',
-                    confidence: result.data.confidence
+                    confidence: result.data.confidence,
+                    cropRegion: _ocrFrameIndex % 2 === 1 ? 'narrow' : 'medium'
                 });
+            }
+            // Try checksum correction if ISBN-like but invalid
+            if (isbn && !isValidIsbn(isbn)) {
+                var corrected = tryCorrectIsbn(isbn);
+                if (corrected) {
+                    if (window.AppLogger) AppLogger.info('[ISBN] OCR checksum-corrected: ' + isbn + ' → ' + corrected);
+                    isbn = corrected;
+                }
             }
             if (isbn && isValidIsbn(isbn)) {
                 if (window.AppLogger) AppLogger.info('[ISBN] OCR detected valid ISBN: ' + isbn);
                 stopOcrInterval();
                 var statusEl = document.getElementById('isbn-scanner-status');
                 if (statusEl) statusEl.textContent = 'ISBN (OCR): ' + isbn;
-                // Auto-fill and auto-process
                 var field = document.getElementById('isbn-manual-field');
                 if (field) field.value = isbn;
                 try { if (_html5QrCode) await _html5QrCode.stop(); } catch(e) {}
@@ -10988,12 +11112,13 @@ window.renderLifeStatus = renderLifeStatus;
     function startOcrInterval() {
         stopOcrInterval();
         _ocrInitFailed = false;
-        // Delay OCR start: barcode scanner is primary, OCR is fallback after 5s
+        // Delay OCR start: barcode scanner is primary, OCR is fallback after 3s
         _ocrDelayTimer = setTimeout(function() {
             _ocrDelayTimer = null;
+            _ocrFrameIndex = 0;
             if (window.AppLogger) AppLogger.info('[ISBN] OCR fallback starting (barcode not detected)');
-            _ocrInterval = setInterval(ocrCaptureFrame, 1500);
-        }, 5000);
+            _ocrInterval = setInterval(ocrCaptureFrame, 1200);
+        }, 3000);
     }
 
     function stopOcrInterval() {
