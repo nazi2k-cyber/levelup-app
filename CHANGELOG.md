@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.50] - 2026-03-30
+
+### 변경
+- fix: 서재 타워/리스트 뷰를 하단 정렬하고 스크롤을 최하단으로 초기화
+
 ## [1.0.49] - 2026-03-30
 
 ### 변경
