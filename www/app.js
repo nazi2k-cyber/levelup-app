@@ -10972,7 +10972,6 @@ window.renderLifeStatus = renderLifeStatus;
                 workerBlobURL: false
             });
             await _ocrWorker.setParameters({
-                tessedit_char_whitelist: '0123456789ISBNisbn-Xx ',
                 tessedit_pageseg_mode: '11'
             });
             if (window.AppLogger) AppLogger.info('[ISBN] OCR worker ready');
@@ -10995,11 +10994,12 @@ window.renderLifeStatus = renderLifeStatus;
         var imgData = ctx.getImageData(0, 0, w, h);
         var data = imgData.data;
 
-        // Step 1: Grayscale conversion
+        // Step 1: Grayscale using max(R,G,B) — better for colored backgrounds
+        // Orange bg: R=high → max=high → white; Dark text: all low → max=low → dark
         var histogram = new Array(256).fill(0);
         var minGray = 255, maxGray = 0;
         for (var i = 0; i < data.length; i += 4) {
-            var gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+            var gray = Math.max(data[i], data[i + 1], data[i + 2]);
             data[i] = data[i + 1] = data[i + 2] = gray;
             if (gray < minGray) minGray = gray;
             if (gray > maxGray) maxGray = gray;
@@ -11061,8 +11061,8 @@ window.renderLifeStatus = renderLifeStatus;
         }
         ctx.putImageData(imgData, 0, 0);
 
-        // Step 3: 2x upscale (cap width at 2000px)
-        var scale = Math.min(2, 2000 / w);
+        // Step 3: 3x upscale (cap width at 3000px)
+        var scale = Math.min(3, 3000 / w);
         var upW = Math.floor(w * scale);
         var upH = Math.floor(h * scale);
         var upCanvas = document.createElement('canvas');
@@ -11086,23 +11086,28 @@ window.renderLifeStatus = renderLifeStatus;
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
 
-            // Rotate through 3 crop regions targeting different ISBN positions
+            // Rotate through 4 crop regions targeting different ISBN positions
             var cropY, cropH, psmMode;
-            var cropIndex = _ocrFrameIndex % 3;
+            var cropIndex = _ocrFrameIndex % 4;
             if (cropIndex === 0) {
-                // Narrow band: barcode/ISBN label area (55%-80%)
-                cropY = Math.floor(h * 0.55);
-                cropH = Math.floor(h * 0.25);
-                psmMode = '11'; // SPARSE_TEXT
-            } else if (cropIndex === 1) {
-                // Bottom band: very bottom area (70%-95%) — ISBN often near bottom edge
-                cropY = Math.floor(h * 0.70);
-                cropH = Math.floor(h * 0.25);
-                psmMode = '11'; // SPARSE_TEXT
-            } else {
-                // Medium band: middle-lower 50% (30%-80%) — catches ISBNs placed higher
+                // Center band: middle area (30%-60%) — barcode often centered in viewfinder
                 cropY = Math.floor(h * 0.30);
-                cropH = Math.floor(h * 0.50);
+                cropH = Math.floor(h * 0.30);
+                psmMode = '6';  // SINGLE_BLOCK
+            } else if (cropIndex === 1) {
+                // Upper-mid band: (20%-50%) — barcode in upper portion
+                cropY = Math.floor(h * 0.20);
+                cropH = Math.floor(h * 0.30);
+                psmMode = '6';  // SINGLE_BLOCK
+            } else if (cropIndex === 2) {
+                // Lower band: (50%-80%) — ISBN near bottom of back cover
+                cropY = Math.floor(h * 0.50);
+                cropH = Math.floor(h * 0.30);
+                psmMode = '6';  // SINGLE_BLOCK
+            } else {
+                // Full scan: entire frame (10%-90%) — catches any position
+                cropY = Math.floor(h * 0.10);
+                cropH = Math.floor(h * 0.80);
                 psmMode = '11'; // SPARSE_TEXT
             }
             _ocrFrameIndex++;
