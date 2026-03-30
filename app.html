@@ -1042,7 +1042,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
             </button>
             <span class="rc-header-title">러닝 계산기</span>
-            <div style="width:24px;"></div>
+            <div class="rc-unit-toggle" id="rc-unit-toggle" onclick="window.toggleRcDisplayUnit()">
+                <span class="rc-unit-toggle-btn active" data-unit="km">km</span>
+                <span class="rc-unit-toggle-btn" data-unit="mi">mi</span>
+            </div>
         </div>
 
         <!-- Main Tabs: 페이스 계산기 / VDOT 계산기 -->
@@ -1066,13 +1069,15 @@
                 <!-- 거리 입력 -->
                 <div class="rc-input-group" id="rc-pace-distance-group">
                     <label class="rc-label">거리</label>
-                    <div class="rc-input-row">
-                        <input type="number" id="rc-pace-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.calcPace()">
-                        <select id="rc-pace-dist-unit" class="rc-select" onchange="window.calcPace()">
-                            <option value="km">km</option>
-                            <option value="mi">mi</option>
-                            <option value="m">m</option>
-                        </select>
+                    <div class="rc-preset-row">
+                        <button class="rc-preset-btn" data-dist="5" onclick="window.selectPaceDist(5)">5</button>
+                        <button class="rc-preset-btn active" data-dist="10" onclick="window.selectPaceDist(10)">10</button>
+                        <button class="rc-preset-btn" data-dist="21.0975" onclick="window.selectPaceDist(21.0975)">하프</button>
+                        <button class="rc-preset-btn" data-dist="42.195" onclick="window.selectPaceDist(42.195)">풀</button>
+                    </div>
+                    <div class="rc-input-row" style="margin-top:8px;">
+                        <input type="number" id="rc-pace-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.onPaceDistInput()">
+                        <span class="rc-unit-label">km</span>
                     </div>
                 </div>
 
@@ -1118,7 +1123,7 @@
                 <!-- 결과 -->
                 <div class="rc-results" id="rc-pace-results">
                     <div class="rc-result-row">
-                        <span class="rc-result-label">km 페이스</span>
+                        <span class="rc-result-label">페이스</span>
                         <span class="rc-result-value" id="rc-res-pace">6:00 <span class="rc-result-unit">/km</span></span>
                     </div>
                     <div class="rc-result-row">
@@ -1143,7 +1148,7 @@
                     </div>
                     <div class="rc-results" id="rc-treadmill-results" style="margin-top:12px;">
                         <div class="rc-result-row">
-                            <span class="rc-result-label">km 페이스</span>
+                            <span class="rc-result-label">페이스</span>
                             <span class="rc-result-value" id="rc-tm-pace">6:07 <span class="rc-result-unit">/km</span></span>
                         </div>
                         <div class="rc-result-row">
@@ -1165,13 +1170,15 @@
                 <!-- 거리 입력 -->
                 <div class="rc-input-group">
                     <label class="rc-label">거리</label>
-                    <div class="rc-input-row">
-                        <input type="number" id="rc-vdot-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.calcVDOT()">
-                        <select id="rc-vdot-dist-unit" class="rc-select" onchange="window.calcVDOT()">
-                            <option value="km">km</option>
-                            <option value="mi">mi</option>
-                            <option value="m">m</option>
-                        </select>
+                    <div class="rc-preset-row">
+                        <button class="rc-preset-btn" data-vdist="5" onclick="window.selectVdotDist(5)">5</button>
+                        <button class="rc-preset-btn active" data-vdist="10" onclick="window.selectVdotDist(10)">10</button>
+                        <button class="rc-preset-btn" data-vdist="21.0975" onclick="window.selectVdotDist(21.0975)">하프</button>
+                        <button class="rc-preset-btn" data-vdist="42.195" onclick="window.selectVdotDist(42.195)">풀</button>
+                    </div>
+                    <div class="rc-input-row" style="margin-top:8px;">
+                        <input type="number" id="rc-vdot-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.onVdotDistInput()">
+                        <span class="rc-unit-label">km</span>
                     </div>
                 </div>
 
