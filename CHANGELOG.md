@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.49] - 2026-03-30
+
+### 변경
+- STAT RADAR 가이드 버튼 우측 상단으로 이동
+
 ## [1.0.48] - 2026-03-30
 
 ### 변경
