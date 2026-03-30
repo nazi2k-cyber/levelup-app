@@ -13476,13 +13476,70 @@ window.renderLifeStatus = renderLifeStatus;
         window.calcTreadmill();
     };
 
-    // --- Helper: distance in km ---
-    function getDistKm(inputId, unitId) {
-        var dist = parseFloat(document.getElementById(inputId).value) || 0;
-        var unit = document.getElementById(unitId).value;
-        if (unit === 'mi') dist *= 1.60934;
-        else if (unit === 'm') dist /= 1000;
-        return dist;
+    // --- Display unit state (km or mi) ---
+    var _rcDisplayUnit = 'km';
+
+    window.toggleRcDisplayUnit = function() {
+        _rcDisplayUnit = (_rcDisplayUnit === 'km') ? 'mi' : 'km';
+        var toggleBtns = document.querySelectorAll('#rc-unit-toggle .rc-unit-toggle-btn');
+        toggleBtns.forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-unit') === _rcDisplayUnit);
+        });
+        // Recalculate to update display
+        window.calcPace();
+        window.calcTreadmill();
+        window.calcVDOT();
+    };
+
+    // --- Preset distance selection ---
+    window.selectPaceDist = function(dist) {
+        document.getElementById('rc-pace-distance').value = dist;
+        document.querySelectorAll('.rc-preset-btn[data-dist]').forEach(function(btn) {
+            btn.classList.toggle('active', parseFloat(btn.getAttribute('data-dist')) === dist);
+        });
+        window.calcPace();
+    };
+
+    window.onPaceDistInput = function() {
+        var val = parseFloat(document.getElementById('rc-pace-distance').value);
+        document.querySelectorAll('.rc-preset-btn[data-dist]').forEach(function(btn) {
+            btn.classList.toggle('active', parseFloat(btn.getAttribute('data-dist')) === val);
+        });
+        window.calcPace();
+    };
+
+    window.selectVdotDist = function(dist) {
+        document.getElementById('rc-vdot-distance').value = dist;
+        document.querySelectorAll('.rc-preset-btn[data-vdist]').forEach(function(btn) {
+            btn.classList.toggle('active', parseFloat(btn.getAttribute('data-vdist')) === dist);
+        });
+        window.calcVDOT();
+    };
+
+    window.onVdotDistInput = function() {
+        var val = parseFloat(document.getElementById('rc-vdot-distance').value);
+        document.querySelectorAll('.rc-preset-btn[data-vdist]').forEach(function(btn) {
+            btn.classList.toggle('active', parseFloat(btn.getAttribute('data-vdist')) === val);
+        });
+        window.calcVDOT();
+    };
+
+    // --- Helper: distance in km (input is always km now) ---
+    function getDistKm(inputId) {
+        return parseFloat(document.getElementById(inputId).value) || 0;
+    }
+
+    // --- Helper: format pace with display unit ---
+    function formatPaceWithUnit(secPerKm) {
+        if (_rcDisplayUnit === 'mi') {
+            var secPerMi = secPerKm * 1.60934;
+            return formatPace(secPerMi) + ' <span class="rc-result-unit">/mi</span>';
+        }
+        return formatPace(secPerKm) + ' <span class="rc-result-unit">/km</span>';
+    }
+
+    function paceUnitLabel() {
+        return _rcDisplayUnit === 'mi' ? '/mi' : '/km';
     }
 
     // --- Helper: format pace ---
@@ -13511,7 +13568,7 @@ window.renderLifeStatus = renderLifeStatus;
 
         if (_paceMode === 'pace') {
             // Calculate pace from distance + time
-            distKm = getDistKm('rc-pace-distance', 'rc-pace-dist-unit');
+            distKm = getDistKm('rc-pace-distance');
             var hr = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
             var min = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
             var sec = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
@@ -13533,7 +13590,7 @@ window.renderLifeStatus = renderLifeStatus;
             speedKmh = distKm / (totalSec / 3600);
             document.getElementById('rc-pace-distance').value = Math.round(distKm * 100) / 100;
         } else { // time
-            distKm = getDistKm('rc-pace-distance', 'rc-pace-dist-unit');
+            distKm = getDistKm('rc-pace-distance');
             var pMin2 = parseInt(document.getElementById('rc-pace-min').textContent) || 0;
             var pSec2 = parseInt(document.getElementById('rc-pace-sec').textContent) || 0;
             paceSecPerKm = pMin2 * 60 + pSec2;
@@ -13550,9 +13607,14 @@ window.renderLifeStatus = renderLifeStatus;
         }
 
         var lap400 = Math.round(paceSecPerKm * 0.4);
-        document.getElementById('rc-res-pace').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
+        document.getElementById('rc-res-pace').innerHTML = formatPaceWithUnit(paceSecPerKm);
         document.getElementById('rc-res-lap').innerHTML = lap400 + ' <span class="rc-result-unit">초</span>';
-        document.getElementById('rc-res-speed').innerHTML = speedKmh.toFixed(1) + ' <span class="rc-result-unit">km/h</span>';
+        if (_rcDisplayUnit === 'mi') {
+            var speedMph = speedKmh / 1.60934;
+            document.getElementById('rc-res-speed').innerHTML = speedMph.toFixed(1) + ' <span class="rc-result-unit">mi/h</span>';
+        } else {
+            document.getElementById('rc-res-speed').innerHTML = speedKmh.toFixed(1) + ' <span class="rc-result-unit">km/h</span>';
+        }
     };
 
     // --- Treadmill Calculator ---
@@ -13562,7 +13624,7 @@ window.renderLifeStatus = renderLifeStatus;
         var paceSecPerKm = 3600 / speed;
         var time10k = paceSecPerKm * 10;
         var timeHalf = paceSecPerKm * 21.0975;
-        document.getElementById('rc-tm-pace').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
+        document.getElementById('rc-tm-pace').innerHTML = formatPaceWithUnit(paceSecPerKm);
         document.getElementById('rc-tm-10k').textContent = formatTime(time10k);
         document.getElementById('rc-tm-half').textContent = formatTime(timeHalf);
     };
@@ -13615,7 +13677,7 @@ window.renderLifeStatus = renderLifeStatus;
     }
 
     window.calcVDOT = function() {
-        var distKm = getDistKm('rc-vdot-distance', 'rc-vdot-dist-unit');
+        var distKm = getDistKm('rc-vdot-distance');
         var hr = parseInt(document.getElementById('rc-vdot-hr').textContent) || 0;
         var min = parseInt(document.getElementById('rc-vdot-min').textContent) || 0;
         var sec = parseInt(document.getElementById('rc-vdot-sec').textContent) || 0;
@@ -13639,7 +13701,11 @@ window.renderLifeStatus = renderLifeStatus;
         zones.forEach(function(z) {
             var paceLo = paceFromVDOT(vdot, z.hi); // faster pace from higher %
             var paceHi = paceFromVDOT(vdot, z.lo); // slower pace from lower %
-            document.getElementById(z.id).innerHTML = formatPace(paceLo) + ' - ' + formatPace(paceHi) + ' <span class="rc-result-unit">/km</span>';
+            if (_rcDisplayUnit === 'mi') {
+                document.getElementById(z.id).innerHTML = formatPace(paceLo * 1.60934) + ' - ' + formatPace(paceHi * 1.60934) + ' <span class="rc-result-unit">/mi</span>';
+            } else {
+                document.getElementById(z.id).innerHTML = formatPace(paceLo) + ' - ' + formatPace(paceHi) + ' <span class="rc-result-unit">/km</span>';
+            }
         });
 
         // Race predictions
@@ -13648,27 +13714,29 @@ window.renderLifeStatus = renderLifeStatus;
         var predFull = predictRaceTime(vdot, 42195);
 
         document.getElementById('rc-vdot-pred-10k').textContent = formatTime(pred10k * 60);
-        document.getElementById('rc-vdot-pred-10k-pace').textContent = formatPace(pred10k * 60 / 10) + '/km';
+        var pace10k = pred10k * 60 / 10;
+        document.getElementById('rc-vdot-pred-10k-pace').textContent = (_rcDisplayUnit === 'mi' ? formatPace(pace10k * 1.60934) + '/mi' : formatPace(pace10k) + '/km');
         document.getElementById('rc-vdot-pred-half').textContent = formatTime(predHalf * 60);
-        document.getElementById('rc-vdot-pred-half-pace').textContent = formatPace(predHalf * 60 / 21.0975) + '/km';
+        var paceHalf = predHalf * 60 / 21.0975;
+        document.getElementById('rc-vdot-pred-half-pace').textContent = (_rcDisplayUnit === 'mi' ? formatPace(paceHalf * 1.60934) + '/mi' : formatPace(paceHalf) + '/km');
         document.getElementById('rc-vdot-pred-full').textContent = formatTime(predFull * 60);
-        document.getElementById('rc-vdot-pred-full-pace').textContent = formatPace(predFull * 60 / 42.195) + '/km';
+        var paceFull = predFull * 60 / 42.195;
+        document.getElementById('rc-vdot-pred-full-pace').textContent = (_rcDisplayUnit === 'mi' ? formatPace(paceFull * 1.60934) + '/mi' : formatPace(paceFull) + '/km');
     };
 
     // --- Update summary card on status screen ---
     function updateSummaryCard() {
-        var distKm = getDistKm('rc-pace-distance', 'rc-pace-dist-unit');
+        var distKm = getDistKm('rc-pace-distance');
         var hr = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
         var min = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
         var sec = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
         var totalSec = hr * 3600 + min * 60 + sec;
-        var unit = document.getElementById('rc-pace-dist-unit').value;
         var distDisplay = parseFloat(document.getElementById('rc-pace-distance').value) || 0;
 
         var el1 = document.getElementById('rc-summary-dist');
         var el2 = document.getElementById('rc-summary-time');
         var el3 = document.getElementById('rc-summary-pace');
-        if (el1) el1.textContent = distDisplay + ' ' + unit;
+        if (el1) el1.textContent = distDisplay + ' km';
         if (el2) el2.textContent = formatTime(totalSec);
         if (distKm > 0 && totalSec > 0) {
             var pace = totalSec / distKm;
