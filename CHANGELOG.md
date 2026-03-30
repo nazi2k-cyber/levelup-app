@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.51] - 2026-03-30
+
+### 변경
+- 배너광고를 검색바 위로 이동, 바벨의 도서관 이미지를 최하단으로 이동
+
 ## [1.0.50] - 2026-03-30
 
 ### 변경
