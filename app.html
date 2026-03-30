@@ -935,9 +935,29 @@
         <div id="library-search-results" class="library-search-results d-none"></div>
         <div class="library-count-bar">
             <div class="library-count-toggle">
-                <button class="lib-count-btn active" data-period="total" onclick="window.switchLibraryPeriod('total')"><span data-i18n="lib_total">전체</span> <span id="lib-count-total" class="lib-count-num">0</span></button>
-                <button class="lib-count-btn" data-period="yearly" onclick="window.switchLibraryPeriod('yearly')"><span data-i18n="lib_yearly">연간</span> <span id="lib-count-yearly" class="lib-count-num">0</span></button>
-                <button class="lib-count-btn" data-period="monthly" onclick="window.switchLibraryPeriod('monthly')"><span data-i18n="lib_monthly">월간</span> <span id="lib-count-monthly" class="lib-count-num">0</span></button>
+                <button class="lib-count-btn active" data-period="total" onclick="window.switchLibraryPeriod('total')"><span id="lib-label-total">전체</span>(<span id="lib-count-total" class="lib-count-num">0</span>)</button>
+                <button class="lib-count-btn" data-period="yearly" onclick="window.openLibraryDatePicker('yearly')"><span id="lib-label-yearly">2026년</span>(<span id="lib-count-yearly" class="lib-count-num">0</span>)<span class="lib-dropdown-arrow">▾</span></button>
+                <button class="lib-count-btn" data-period="monthly" onclick="window.openLibraryDatePicker('monthly')"><span id="lib-label-monthly">2026-03</span>(<span id="lib-count-monthly" class="lib-count-num">0</span>)<span class="lib-dropdown-arrow">▾</span></button>
+            </div>
+        </div>
+        <!-- Library Date Picker Dialog -->
+        <div id="lib-date-picker-overlay" class="lib-date-picker-overlay d-none" onclick="window.closeLibraryDatePicker(event)">
+            <div class="lib-date-picker-dialog" onclick="event.stopPropagation()">
+                <div class="lib-date-picker-title">날짜 선택</div>
+                <div class="lib-date-picker-columns">
+                    <div class="lib-date-picker-col">
+                        <div class="lib-date-picker-col-title">연도</div>
+                        <div id="lib-date-picker-years" class="lib-date-picker-list"></div>
+                    </div>
+                    <div class="lib-date-picker-col">
+                        <div class="lib-date-picker-col-title">월</div>
+                        <div id="lib-date-picker-months" class="lib-date-picker-list"></div>
+                    </div>
+                </div>
+                <div class="lib-date-picker-actions">
+                    <button class="lib-date-picker-btn" onclick="window.closeLibraryDatePicker()"  data-i18n="btn_cancel">취소</button>
+                    <button class="lib-date-picker-btn primary" onclick="window.confirmLibraryDatePicker()">확인</button>
+                </div>
             </div>
         </div>
         <div class="library-tabs">

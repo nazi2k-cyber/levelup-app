@@ -1790,6 +1790,59 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     border-color: var(--neon-blue); font-weight: bold;
 }
 .lib-count-num { font-weight: 900; font-size: 0.85rem; }
+.lib-dropdown-arrow { font-size: 0.6rem; margin-left: 2px; opacity: 0.7; }
+/* Library Date Picker Dialog */
+.lib-date-picker-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+}
+.lib-date-picker-overlay.d-none { display: none; }
+.lib-date-picker-dialog {
+    background: var(--card-bg, #2a2a2a); border-radius: 16px;
+    padding: 20px; width: 300px; max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.lib-date-picker-title {
+    text-align: center; font-size: 1rem; font-weight: bold;
+    margin-bottom: 16px; color: var(--text-main, #fff);
+}
+.lib-date-picker-columns {
+    display: flex; gap: 12px; margin-bottom: 16px;
+}
+.lib-date-picker-col {
+    flex: 1; display: flex; flex-direction: column;
+}
+.lib-date-picker-col-title {
+    font-size: 0.75rem; color: var(--text-sub, #aaa);
+    margin-bottom: 8px; text-align: center;
+}
+.lib-date-picker-list {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 200px; overflow-y: auto;
+}
+.lib-date-picker-item {
+    padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    text-align: center; font-size: 0.85rem;
+    color: var(--text-main, #fff); background: transparent;
+    border: 1px solid transparent; transition: all 0.15s;
+}
+.lib-date-picker-item:hover { background: rgba(255,255,255,0.08); }
+.lib-date-picker-item.selected {
+    background: var(--neon-blue); color: #fff;
+    border-color: var(--neon-blue); font-weight: bold;
+}
+.lib-date-picker-actions {
+    display: flex; justify-content: flex-end; gap: 12px;
+}
+.lib-date-picker-btn {
+    background: transparent; border: none; color: var(--text-sub, #aaa);
+    font-size: 0.85rem; cursor: pointer; padding: 6px 16px;
+    border-radius: 8px;
+}
+.lib-date-picker-btn.primary {
+    color: var(--neon-blue, #00bfff); font-weight: bold;
+}
 .library-tabs {
     display: flex; border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
