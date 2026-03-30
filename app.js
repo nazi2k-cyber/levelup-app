@@ -12016,12 +12016,12 @@ window.renderLifeStatus = renderLifeStatus;
         const container = document.getElementById('library-tower');
         if (!container) return;
         const books = getFilteredBooks();
-        const shareBar = document.getElementById('library-share-bar');
+        const shareBtn = document.getElementById('library-share-btn');
 
         if (books.length === 0) {
             container.innerHTML = '<div class="library-empty"><div class="library-empty-icon">📚</div><div>' + t('lib_empty').replace(/\n/g, '<br>') + '</div></div>';
             container.className = 'library-tower';
-            if (shareBar) shareBar.classList.add('d-none');
+            if (shareBtn) shareBtn.classList.add('d-none');
             return;
         }
 
@@ -12030,7 +12030,7 @@ window.renderLifeStatus = renderLifeStatus;
         } else {
             renderListView(container, books);
         }
-        if (shareBar) shareBar.classList.remove('d-none');
+        if (shareBtn) shareBtn.classList.remove('d-none');
     }
     window.renderLibrary = renderLibrary;
 
@@ -12112,28 +12112,31 @@ window.renderLifeStatus = renderLifeStatus;
         ctx.fillText(hexText, centerX - hexTextW / 2, y + hexH / 2 + 4);
         y += hexH + hexGap;
 
-        // --- 책 스파인 (맨 위층부터 아래로) ---
+        // --- 책 스파인 육각형 (맨 위층부터 아래로) ---
         for (var i = bookMetrics.length - 1; i >= 0; i--) {
             var m = bookMetrics[i];
             var colorIdx = i % 8;
             var c = spineColors[colorIdx];
             var itemX = centerX - m.itemW / 2;
+            var iw = m.itemW, ih = m.itemH;
+            var inset = iw * 0.04; // 4% inset matching CSS clip-path
+
+            // 육각형 경로
+            ctx.beginPath();
+            ctx.moveTo(itemX + inset, y);
+            ctx.lineTo(itemX + iw - inset, y);
+            ctx.lineTo(itemX + iw, y + ih / 2);
+            ctx.lineTo(itemX + iw - inset, y + ih);
+            ctx.lineTo(itemX + inset, y + ih);
+            ctx.lineTo(itemX, y + ih / 2);
+            ctx.closePath();
 
             // 스파인 배경 그라디언트
-            var spineGrad = ctx.createLinearGradient(0, y, 0, y + m.itemH);
+            var spineGrad = ctx.createLinearGradient(0, y, 0, y + ih);
             spineGrad.addColorStop(0, c[0]);
             spineGrad.addColorStop(1, c[1]);
             ctx.fillStyle = spineGrad;
-            ctx.fillRect(itemX, y, m.itemW, m.itemH);
-
-            // 좌/우 테두리
-            ctx.fillStyle = 'rgba(0,0,0,0.15)';
-            ctx.fillRect(itemX, y, 3, m.itemH);
-            ctx.fillRect(itemX + m.itemW - 3, y, 3, m.itemH);
-
-            // 상단 하이라이트
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            ctx.fillRect(itemX, y, m.itemW, 1);
+            ctx.fill();
 
             // 제목 텍스트
             var textColor = darkTextIndices.indexOf(colorIdx) >= 0 ? '#5a3a3a' : '#3a2a2a';
@@ -12141,23 +12144,23 @@ window.renderLifeStatus = renderLifeStatus;
             ctx.font = 'bold 10px Pretendard, sans-serif';
             var title = m.book.title.length > 20 ? m.book.title.substring(0, 18) + '…' : m.book.title;
             var titleW = ctx.measureText(title).width;
-            ctx.fillText(title, centerX - titleW / 2, y + m.itemH / 2 + 3);
+            ctx.fillText(title, centerX - titleW / 2, y + ih / 2 + 3);
 
             // 층수 라벨 (좌측)
             ctx.fillStyle = '#888';
             ctx.font = 'bold 8px Pretendard, sans-serif';
-            ctx.fillText(m.floor + '층', itemX - 32, y + m.itemH / 2 + 3);
+            ctx.fillText(m.floor + '층', itemX - 32, y + ih / 2 + 3);
 
             // 페이지수 (우측)
             if (m.book.pages) {
                 ctx.fillStyle = textColor;
                 ctx.globalAlpha = 0.6;
                 ctx.font = '8px Pretendard, sans-serif';
-                ctx.fillText(m.book.pages + 'p', centerX + titleW / 2 + 6, y + m.itemH / 2 + 3);
+                ctx.fillText(m.book.pages + 'p', centerX + titleW / 2 + 6, y + ih / 2 + 3);
                 ctx.globalAlpha = 1.0;
             }
 
-            y += m.itemH;
+            y += ih;
         }
 
         // --- 받침대 ---

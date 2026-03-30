@@ -970,13 +970,11 @@
             <button class="lib-view-btn active" data-view="tower" onclick="window.switchLibraryViewMode('tower')" data-i18n="lib_stack_view">쌓아보기</button>
             <button class="lib-view-btn" data-view="list" onclick="window.switchLibraryViewMode('list')" data-i18n="lib_list_view">리스트형 보기</button>
         </div>
-        <div id="library-content" class="library-content">
-            <div id="library-tower" class="library-tower"></div>
-        </div>
-        <div id="library-share-bar" class="library-share-bar d-none">
-            <button class="library-share-btn" onclick="window.shareLibraryAsImage()">
-                <span>📥</span> <span data-i18n="lib_save_image">이미지 저장</span>
+        <div id="library-content" class="library-content" style="position:relative;">
+            <button id="library-share-btn" class="library-share-btn d-none" onclick="window.shareLibraryAsImage()">
+                📥 <span data-i18n="lib_save_image">이미지 저장</span>
             </button>
+            <div id="library-tower" class="library-tower"></div>
         </div>
     </div>
 

@@ -1892,17 +1892,14 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .book-tower-item {
     padding: 6px 14px;
     text-align: center; font-size: 0.72rem; font-weight: 600;
-    color: #3a2a2a; margin: 0; cursor: pointer;
-    overflow: hidden;
+    color: #3a2a2a; margin: -1px 0; cursor: pointer;
+    overflow: visible;
     transition: transform 0.15s; position: relative;
-    border-left: 3px solid rgba(0,0,0,0.15);
-    border-right: 3px solid rgba(0,0,0,0.15);
-    border-top: 1px solid rgba(255,255,255,0.2);
     display: flex; align-items: center; justify-content: center; gap: 5px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    clip-path: polygon(4% 0%, 96% 0%, 100% 50%, 96% 100%, 4% 100%, 0% 50%);
 }
 .book-tower-item:first-child {
-    border-radius: 6px 6px 0 0;
+    clip-path: polygon(4% 0%, 96% 0%, 100% 50%, 96% 100%, 4% 100%, 0% 50%);
 }
 .book-tower-item:active { transform: scale(0.97); }
 .book-tower-title {
@@ -1974,21 +1971,19 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .book-tower-item:nth-child(8n+7) { background: linear-gradient(180deg, #f8d4c8, #f4c0b4); color: #5a3a3a; }
 .book-tower-item:nth-child(8n+8) { background: linear-gradient(180deg, #ecb0a0, #e8a090); }
 
-/* ── Library Share Bar ── */
-.library-share-bar {
-    padding: 10px 16px 14px;
-    text-align: center;
-    background: var(--bg-main);
-    border-top: 1px solid var(--border-color);
-}
+/* ── Library Share Button (top-right) ── */
 .library-share-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 10px 24px;
+    position: sticky; top: 4px; right: 0;
+    z-index: 10; float: right;
+    margin: 4px 6px 0 0;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px;
     background: rgba(0, 217, 255, 0.12);
     color: var(--neon-blue);
     border: 1px solid rgba(0, 217, 255, 0.3);
     border-radius: 8px;
-    font-size: 0.85rem; font-weight: 700; cursor: pointer;
+    font-size: 0.72rem; font-weight: 700; cursor: pointer;
+    backdrop-filter: blur(6px);
 }
 .library-share-btn:active { transform: scale(0.96); }
 
