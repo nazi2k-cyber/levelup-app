@@ -314,6 +314,38 @@
                     </div>
                 </div>
 
+                <!-- 1RM 계산기 카드 -->
+                <div class="system-card status-reorderable" data-card-id="orm-calc" style="margin-top:10px; margin-bottom:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2 style="margin:0; font-size:0.95rem; color:var(--neon-red);">🏋️ 1RM 계산기</h2>
+                        <button class="btn-info-sm" onclick="window.openOrmCalcView()">상세</button>
+                    </div>
+                    <div id="orm-calc-summary" style="margin-top:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(255,60,60,0.05); border-radius:8px; border:1px solid rgba(255,60,60,0.15);">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.6rem; color:var(--text-sub);">스쿼트</div>
+                                    <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="orm-summary-squat">- kg</div>
+                                </div>
+                                <div style="color:var(--text-sub); font-size:0.7rem;">+</div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.6rem; color:var(--text-sub);">벤치프레스</div>
+                                    <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="orm-summary-bench">- kg</div>
+                                </div>
+                                <div style="color:var(--text-sub); font-size:0.7rem;">+</div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.6rem; color:var(--text-sub);">데드리프트</div>
+                                    <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="orm-summary-dead">- kg</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:0.6rem; color:var(--text-sub);">3대 합산</div>
+                                <div style="font-size:1.1rem; font-weight:900; color:var(--neon-red);" id="orm-summary-total">- kg</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 뽀모도로 타이머 -->
                 <div class="system-card status-reorderable" data-card-id="pomodoro" style="margin-top:10px; margin-bottom:0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -1213,6 +1245,186 @@
                             <span class="rc-result-value"><span id="rc-vdot-pred-full">4:32:55</span> <span class="rc-result-unit" id="rc-vdot-pred-full-pace">6:28/km</span></span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1RM Calculator Overlay -->
+    <div id="orm-calc-overlay" class="running-calc-overlay d-none">
+        <div class="rc-header">
+            <button class="library-back-btn" onclick="window.closeOrmCalcView()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+            </button>
+            <span class="rc-header-title">1RM 계산기</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <div class="rc-content">
+            <!-- 목차 -->
+            <div class="orm-toc">
+                <h3 style="margin:0 0 10px 0; font-size:0.85rem; color:var(--text-main);">목차</h3>
+                <ol style="margin:0; padding-left:20px; font-size:0.8rem; line-height:2;">
+                    <li><a href="#orm-section-calc" class="orm-toc-link">1RM 계산하기</a></li>
+                    <li><a href="#orm-section-what" class="orm-toc-link">1RM이란?</a></li>
+                    <li><a href="#orm-section-method" class="orm-toc-link">계산 방법</a></li>
+                    <li><a href="#orm-section-guide" class="orm-toc-link">1RM 기반 훈련 가이드</a></li>
+                    <li><a href="#orm-section-faq" class="orm-toc-link">자주 묻는 질문</a></li>
+                </ol>
+            </div>
+
+            <!-- 1RM 계산하기 -->
+            <div id="orm-section-calc" style="margin-top:24px;">
+                <h2 class="orm-section-heading">1RM 계산하기</h2>
+
+                <div class="rc-input-group">
+                    <label class="rc-label">종목 선택</label>
+                    <select id="orm-exercise" class="rc-select" style="width:100%;">
+                        <option value="squat">스쿼트</option>
+                        <option value="bench">벤치프레스</option>
+                        <option value="deadlift">데드리프트</option>
+                    </select>
+                </div>
+
+                <div class="rc-input-group">
+                    <label class="rc-label">반복 횟수 (12회 이하)</label>
+                    <select id="orm-reps" class="rc-select" style="width:100%;">
+                        <option value="1">1회</option>
+                        <option value="2">2회</option>
+                        <option value="3">3회</option>
+                        <option value="4">4회</option>
+                        <option value="5" selected>5회</option>
+                        <option value="6">6회</option>
+                        <option value="7">7회</option>
+                        <option value="8">8회</option>
+                        <option value="9">9회</option>
+                        <option value="10">10회</option>
+                        <option value="11">11회</option>
+                        <option value="12">12회</option>
+                    </select>
+                </div>
+
+                <div class="rc-input-group">
+                    <label class="rc-label">무게 (kg)</label>
+                    <input type="number" id="orm-weight" class="rc-input" placeholder="무게 (kg)" min="1" step="0.5" style="width:100%; box-sizing:border-box;">
+                </div>
+
+                <button class="orm-calc-btn" onclick="window.calcOneRM()">계산하기</button>
+
+                <!-- 결과 -->
+                <div class="rc-results d-none" id="orm-results" style="margin-top:16px;">
+                    <div class="rc-result-row rc-result-highlight">
+                        <span class="rc-result-label" style="font-weight:700;">예상 1RM</span>
+                        <span class="rc-result-value rc-vdot-score" id="orm-result-1rm" style="color:var(--neon-red);">0 kg</span>
+                    </div>
+                    <div class="rc-result-divider"></div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Epley</span>
+                        <span class="rc-result-value" id="orm-res-epley">-</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Brzycki</span>
+                        <span class="rc-result-value" id="orm-res-brzycki">-</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Lander</span>
+                        <span class="rc-result-value" id="orm-res-lander">-</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Lombardi</span>
+                        <span class="rc-result-value" id="orm-res-lombardi">-</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">O'Conner</span>
+                        <span class="rc-result-value" id="orm-res-oconner">-</span>
+                    </div>
+                </div>
+
+                <!-- RM 비율표 -->
+                <div class="rc-section-card d-none" id="orm-pct-table" style="margin-top:16px;">
+                    <h3 class="rc-section-title">RM 비율표</h3>
+                    <div class="rc-section-desc">1RM 기준 반복 횟수별 예상 무게</div>
+                    <div class="rc-results" id="orm-pct-rows"></div>
+                </div>
+            </div>
+
+            <!-- 3대 운동 합산 -->
+            <div class="rc-section-card" style="margin-top:24px;">
+                <h3 class="rc-section-title">3대 운동 1RM 합산</h3>
+                <div class="rc-section-desc">각 종목 계산 결과가 자동으로 반영됩니다</div>
+                <div class="rc-results">
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">🏋️ 스쿼트</span>
+                        <span class="rc-result-value" id="orm-total-squat" style="color:var(--neon-blue);">- kg</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">🏋️ 벤치프레스</span>
+                        <span class="rc-result-value" id="orm-total-bench" style="color:var(--neon-blue);">- kg</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">🏋️ 데드리프트</span>
+                        <span class="rc-result-value" id="orm-total-dead" style="color:var(--neon-blue);">- kg</span>
+                    </div>
+                    <div class="rc-result-divider"></div>
+                    <div class="rc-result-row rc-result-highlight">
+                        <span class="rc-result-label" style="font-weight:700;">합산 총 무게</span>
+                        <span class="rc-result-value rc-vdot-score" id="orm-total-sum" style="color:var(--neon-red);">- kg</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1RM이란? -->
+            <div id="orm-section-what" style="margin-top:28px;">
+                <h2 class="orm-section-heading">1RM이란?</h2>
+                <div class="orm-info-text">
+                    <p><strong>1RM(One-Repetition Maximum)</strong>은 특정 운동에서 올바른 자세로 단 <strong>1회</strong> 들어올릴 수 있는 최대 무게를 의미합니다.</p>
+                    <p>근력 수준을 객관적으로 평가하고, 훈련 프로그램의 강도를 설정하는 데 가장 널리 사용되는 지표입니다.</p>
+                </div>
+            </div>
+
+            <!-- 계산 방법 -->
+            <div id="orm-section-method" style="margin-top:28px;">
+                <h2 class="orm-section-heading">계산 방법</h2>
+                <div class="orm-info-text">
+                    <p>본 계산기는 여러 공인 공식의 <strong>평균값</strong>을 사용합니다:</p>
+                    <ul>
+                        <li><strong>Epley:</strong> 무게 × (1 + 반복횟수 / 30)</li>
+                        <li><strong>Brzycki:</strong> 무게 × 36 / (37 − 반복횟수)</li>
+                        <li><strong>Lander:</strong> 100 × 무게 / (101.3 − 2.67123 × 반복횟수)</li>
+                        <li><strong>Lombardi:</strong> 무게 × 반복횟수^0.10</li>
+                        <li><strong>O'Conner:</strong> 무게 × (1 + 반복횟수 / 40)</li>
+                    </ul>
+                    <p>반복 횟수가 <strong>1~6회</strong>일 때 가장 정확하며, 10회 이상에서는 오차가 커질 수 있습니다.</p>
+                </div>
+            </div>
+
+            <!-- 1RM 기반 훈련 가이드 -->
+            <div id="orm-section-guide" style="margin-top:28px;">
+                <h2 class="orm-section-heading">1RM 기반 훈련 가이드</h2>
+                <div class="orm-info-text">
+                    <table class="orm-guide-table">
+                        <thead>
+                            <tr><th>목표</th><th>1RM %</th><th>반복</th><th>세트</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>근력</td><td>85-100%</td><td>1-5</td><td>3-5</td></tr>
+                            <tr><td>근비대</td><td>65-85%</td><td>6-12</td><td>3-5</td></tr>
+                            <tr><td>근지구력</td><td>50-65%</td><td>12-20</td><td>2-4</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 자주 묻는 질문 -->
+            <div id="orm-section-faq" style="margin-top:28px; padding-bottom:40px;">
+                <h2 class="orm-section-heading">자주 묻는 질문</h2>
+                <div class="orm-info-text">
+                    <p><strong>Q. 1RM을 직접 측정하는 것이 위험한가요?</strong></p>
+                    <p>A. 경험이 부족한 경우 부상 위험이 있으므로, 계산기를 활용한 <strong>간접 추정</strong>을 권장합니다. 직접 측정 시 반드시 보조자와 함께 진행하세요.</p>
+                    <p style="margin-top:12px;"><strong>Q. 어떤 공식이 가장 정확한가요?</strong></p>
+                    <p>A. Brzycki와 Epley 공식이 가장 널리 검증되었습니다. 본 계산기는 여러 공식의 평균을 사용하여 정확도를 높입니다.</p>
+                    <p style="margin-top:12px;"><strong>Q. 3대 운동 합산 기준은?</strong></p>
+                    <p>A. 일반적으로 체중의 <strong>3배 이상</strong>이면 중급, <strong>5배 이상</strong>이면 상급으로 분류됩니다.</p>
                 </div>
             </div>
         </div>

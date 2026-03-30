@@ -13323,3 +13323,135 @@ window.renderLifeStatus = renderLifeStatus;
         window.calcTreadmill();
     });
 })();
+
+// ========== 1RM Calculator ==========
+(function() {
+    'use strict';
+
+    var _ormData = { squat: null, bench: null, deadlift: null };
+
+    // Load saved data
+    try {
+        var saved = localStorage.getItem('orm_data');
+        if (saved) _ormData = JSON.parse(saved);
+    } catch(e) {}
+
+    function saveOrmData() {
+        try { localStorage.setItem('orm_data', JSON.stringify(_ormData)); } catch(e) {}
+    }
+
+    // --- Overlay open/close ---
+    window.openOrmCalcView = function() {
+        var overlay = document.getElementById('orm-calc-overlay');
+        if (overlay) overlay.classList.remove('d-none');
+        updateTotalDisplay();
+    };
+    window.closeOrmCalcView = function() {
+        var overlay = document.getElementById('orm-calc-overlay');
+        if (overlay) overlay.classList.add('d-none');
+        updateSummaryCard();
+    };
+
+    // --- 1RM Formulas ---
+    function calcEpley(w, r) { return r === 1 ? w : w * (1 + r / 30); }
+    function calcBrzycki(w, r) { return r === 1 ? w : w * 36 / (37 - r); }
+    function calcLander(w, r) { return r === 1 ? w : (100 * w) / (101.3 - 2.67123 * r); }
+    function calcLombardi(w, r) { return w * Math.pow(r, 0.10); }
+    function calcOconner(w, r) { return r === 1 ? w : w * (1 + r / 40); }
+
+    function calcAverage(w, r) {
+        var vals = [calcEpley(w,r), calcBrzycki(w,r), calcLander(w,r), calcLombardi(w,r), calcOconner(w,r)];
+        return vals.reduce(function(a,b){ return a+b; }, 0) / vals.length;
+    }
+
+    // RM percentage table (rep -> % of 1RM)
+    var rmPct = [
+        {reps:1, pct:100}, {reps:2, pct:97}, {reps:3, pct:94}, {reps:4, pct:92},
+        {reps:5, pct:89}, {reps:6, pct:86}, {reps:7, pct:83}, {reps:8, pct:81},
+        {reps:9, pct:78}, {reps:10, pct:75}, {reps:11, pct:73}, {reps:12, pct:71}
+    ];
+
+    // --- Main calculation ---
+    window.calcOneRM = function() {
+        var exercise = document.getElementById('orm-exercise').value;
+        var reps = parseInt(document.getElementById('orm-reps').value) || 5;
+        var weight = parseFloat(document.getElementById('orm-weight').value);
+        if (!weight || weight <= 0) return;
+
+        var epley = calcEpley(weight, reps);
+        var brzycki = calcBrzycki(weight, reps);
+        var lander = calcLander(weight, reps);
+        var lombardi = calcLombardi(weight, reps);
+        var oconner = calcOconner(weight, reps);
+        var avg = (epley + brzycki + lander + lombardi + oconner) / 5;
+
+        // Round to 1 decimal
+        function r1(v) { return Math.round(v * 10) / 10; }
+
+        document.getElementById('orm-result-1rm').textContent = r1(avg) + ' kg';
+        document.getElementById('orm-res-epley').textContent = r1(epley) + ' kg';
+        document.getElementById('orm-res-brzycki').textContent = r1(brzycki) + ' kg';
+        document.getElementById('orm-res-lander').textContent = r1(lander) + ' kg';
+        document.getElementById('orm-res-lombardi').textContent = r1(lombardi) + ' kg';
+        document.getElementById('orm-res-oconner').textContent = r1(oconner) + ' kg';
+
+        // Show results
+        document.getElementById('orm-results').classList.remove('d-none');
+
+        // Build RM percentage table
+        var pctContainer = document.getElementById('orm-pct-rows');
+        pctContainer.innerHTML = '';
+        rmPct.forEach(function(item) {
+            var estWeight = r1(avg * item.pct / 100);
+            var row = document.createElement('div');
+            row.className = 'rc-result-row';
+            row.innerHTML = '<span class="rc-result-label">' + item.reps + 'RM (' + item.pct + '%)</span>' +
+                '<span class="rc-result-value">' + estWeight + ' <span class="rc-result-unit">kg</span></span>';
+            pctContainer.appendChild(row);
+        });
+        document.getElementById('orm-pct-table').classList.remove('d-none');
+
+        // Save to exercise data
+        _ormData[exercise] = r1(avg);
+        saveOrmData();
+        updateTotalDisplay();
+    };
+
+    // --- Update total display in overlay ---
+    function updateTotalDisplay() {
+        var sq = _ormData.squat;
+        var bp = _ormData.bench;
+        var dl = _ormData.deadlift;
+
+        document.getElementById('orm-total-squat').textContent = sq ? sq + ' kg' : '- kg';
+        document.getElementById('orm-total-bench').textContent = bp ? bp + ' kg' : '- kg';
+        document.getElementById('orm-total-dead').textContent = dl ? dl + ' kg' : '- kg';
+
+        var total = (sq || 0) + (bp || 0) + (dl || 0);
+        document.getElementById('orm-total-sum').textContent = (sq || bp || dl) ? Math.round(total * 10) / 10 + ' kg' : '- kg';
+    }
+
+    // --- Update summary card on status screen ---
+    function updateSummaryCard() {
+        var sq = _ormData.squat;
+        var bp = _ormData.bench;
+        var dl = _ormData.deadlift;
+
+        var el1 = document.getElementById('orm-summary-squat');
+        var el2 = document.getElementById('orm-summary-bench');
+        var el3 = document.getElementById('orm-summary-dead');
+        var el4 = document.getElementById('orm-summary-total');
+
+        if (el1) el1.textContent = sq ? sq + ' kg' : '- kg';
+        if (el2) el2.textContent = bp ? bp + ' kg' : '- kg';
+        if (el3) el3.textContent = dl ? dl + ' kg' : '- kg';
+
+        var total = (sq || 0) + (bp || 0) + (dl || 0);
+        if (el4) el4.textContent = (sq || bp || dl) ? Math.round(total * 10) / 10 + ' kg' : '- kg';
+    }
+
+    // Init on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateSummaryCard();
+    });
+})();
