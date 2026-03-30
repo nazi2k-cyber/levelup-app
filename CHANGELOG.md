@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.54] - 2026-03-30
+
+### 변경
+- 페이스/VDOT 계산기: 거리 프리셋 버튼 + km/mi 디스플레이 토글 추가
+
 ## [1.0.53] - 2026-03-30
 
 ### 변경
