@@ -2183,7 +2183,7 @@ function renderStreakBadge() {
 // --- ★ 희귀 호칭 시스템 ★ ---
 
 // 우선순위: rank_global > rank_stat > streak > steps (높을수록 우선)
-const _rarePriority = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10 };
+const _rarePriority = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10 };
 
 // 우선순위에 따라 자동으로 가장 높은 희귀 호칭 반환
 function getBestRareTitle() {
@@ -2233,6 +2233,29 @@ function checkStepRareTitles() {
             });
             newUnlock = true;
             AppLogger.info(`[RareTitle] 걸음수 희귀 호칭 해금: ${rt.title.ko} (${rt.steps}보)`);
+        }
+    });
+    if (newUnlock) {
+        saveUserData();
+        updatePointUI();
+        const newest = AppState.user.rareTitle.unlocked[AppState.user.rareTitle.unlocked.length - 1];
+        showRareTitleNotification(newest);
+    }
+}
+
+// 독서 마일스톤 달성 시 희귀 호칭 해금 체크
+function checkReadingRareTitles() {
+    const readCount = (AppState.library?.books || []).filter(b => b.category === 'read').length;
+    let newUnlock = false;
+    rareReadingTitles.forEach(rt => {
+        const titleId = `reading_${rt.books}`;
+        if (readCount >= rt.books && !AppState.user.rareTitle.unlocked.find(u => u.id === titleId)) {
+            AppState.user.rareTitle.unlocked.push({
+                id: titleId, type: 'reading', rarity: rt.rarity, icon: rt.icon,
+                title: rt.title, unlockedAt: new Date().toISOString()
+            });
+            newUnlock = true;
+            AppLogger.info(`[RareTitle] 독서 희귀 호칭 해금: ${rt.title.ko} (${rt.books}권)`);
         }
     });
     if (newUnlock) {
@@ -3857,12 +3880,16 @@ async function fetchSocialData() {
                     const ul = rt.unlocked || [];
                     if (ul.length > 0) {
                         const ro = ['uncommon', 'rare', 'epic', 'legendary'];
-                        const pp = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10 };
+                        const pp = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10 };
                         rareTitle = [...ul].sort((a, b) => { const pd = (pp[b.type]||0) - (pp[a.type]||0); return pd !== 0 ? pd : ro.indexOf(b.rarity) - ro.indexOf(a.rarity); })[0];
                     }
                 } catch(e) {}
             }
-            return { id: d.id, ...data, title, rareTitle, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
+            let readBooks = 0;
+            if (data.libraryStr) {
+                try { const lib = JSON.parse(data.libraryStr); readBooks = (lib.books || []).filter(b => b.category === 'read').length; } catch(e) {}
+            }
+            return { id: d.id, ...data, title, rareTitle, books: readBooks, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isMe: auth.currentUser?.uid === d.id };
         });
         renderUsers(AppState.social.sortCriteria);
         // 랭킹 기반 희귀 호칭 평가
@@ -3888,7 +3915,7 @@ function renderUsers(criteria, btn = null) {
         const s = u.stats;
         const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
         const steps = Number(u.stepData?.totalSteps) || 0;
-        return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps };
+        return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps, books: u.books || 0 };
     });
 
     if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
@@ -12251,6 +12278,7 @@ window.renderLifeStatus = renderLifeStatus;
         });
         if (category === 'read') {
             grantReadReward(AppState.library.books[AppState.library.books.length - 1]);
+            checkReadingRareTitles();
         }
         saveUserData();
         window.updateLibraryCardCount();
@@ -12274,6 +12302,7 @@ window.renderLifeStatus = renderLifeStatus;
         if (newCategory === 'read' && !book.finishedDate) book.finishedDate = getTodayStr();
         if (newCategory === 'read') {
             grantReadReward(book);
+            checkReadingRareTitles();
         }
         saveUserData();
         updateLibraryCounts();
