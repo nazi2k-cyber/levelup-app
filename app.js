@@ -13624,9 +13624,11 @@ window.renderLifeStatus = renderLifeStatus;
         var paceSecPerKm = 3600 / speed;
         var time10k = paceSecPerKm * 10;
         var timeHalf = paceSecPerKm * 21.0975;
+        var timeFull = paceSecPerKm * 42.195;
         document.getElementById('rc-tm-pace').innerHTML = formatPaceWithUnit(paceSecPerKm);
         document.getElementById('rc-tm-10k').textContent = formatTime(time10k);
         document.getElementById('rc-tm-half').textContent = formatTime(timeHalf);
+        document.getElementById('rc-tm-full').textContent = formatTime(timeFull);
     };
 
     // --- VDOT Calculator (Jack Daniels' Running Formula) ---
