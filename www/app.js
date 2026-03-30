@@ -10864,6 +10864,8 @@ window.renderLifeStatus = renderLifeStatus;
         var cleaned = text.replace(/\s+/g, ' ');
         // Apply OCR error correction
         cleaned = ocrCorrectDigits(cleaned);
+        // Normalize partial "ISBN" prefixes (OCR may drop the leading I)
+        cleaned = cleaned.replace(/\bSBN\b/g, 'ISBN');
         // Pattern 1: "ISBN" followed by digits (with optional hyphens/spaces)
         var m = cleaned.match(/ISBN[\s:\-]*(?:97[89][\s\-]*(?:\d[\s\-]*){9}\d|\d[\s\-]*(?:\d[\s\-]*){8}[\dXx])/i);
         if (m) {
@@ -10886,6 +10888,22 @@ window.renderLifeStatus = renderLifeStatus;
         m = cleaned.match(/\b(\d{9}[\dXx])\b/);
         if (m) {
             return m[1].replace(/x/i, 'X');
+        }
+        // Pattern 5: Aggressive — collect all digits near "ISBN"/"SBN" keyword
+        // For cases where OCR fragments digits with noise characters
+        var isbnIdx = cleaned.search(/ISBN/i);
+        if (isbnIdx >= 0) {
+            var after = cleaned.substring(isbnIdx + 4);
+            var allDigits = after.replace(/[^0-9Xx]/g, '');
+            // Try to extract 13-digit or 10-digit ISBN from the collected digits
+            if (allDigits.length >= 13) {
+                var candidate = allDigits.substring(0, 13);
+                if (/^97[89]/.test(candidate)) return candidate;
+            }
+            if (allDigits.length >= 10) {
+                var candidate = allDigits.substring(0, 10);
+                return candidate.replace(/x/i, 'X');
+            }
         }
         return null;
     }
@@ -10979,10 +10997,30 @@ window.renderLifeStatus = renderLifeStatus;
 
         // Step 1: Grayscale conversion
         var histogram = new Array(256).fill(0);
+        var minGray = 255, maxGray = 0;
         for (var i = 0; i < data.length; i += 4) {
             var gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
             data[i] = data[i + 1] = data[i + 2] = gray;
-            histogram[gray]++;
+            if (gray < minGray) minGray = gray;
+            if (gray > maxGray) maxGray = gray;
+        }
+
+        // Step 1b: Contrast stretching (normalize gray range to 0-255)
+        // Critical for colored backgrounds (e.g. orange ISBN band)
+        var grayRange = maxGray - minGray;
+        if (grayRange > 0 && grayRange < 200) {
+            for (var i = 0; i < data.length; i += 4) {
+                var stretched = Math.round(((data[i] - minGray) / grayRange) * 255);
+                if (stretched < 0) stretched = 0;
+                if (stretched > 255) stretched = 255;
+                data[i] = data[i + 1] = data[i + 2] = stretched;
+            }
+        }
+
+        // Recompute histogram after stretching
+        histogram.fill(0);
+        for (var i = 0; i < data.length; i += 4) {
+            histogram[data[i]]++;
         }
 
         // Step 2: Otsu thresholding
@@ -11009,9 +11047,17 @@ window.renderLifeStatus = renderLifeStatus;
         if (bestThreshold > 225) bestThreshold = 225;
 
         // Apply binarization
+        var blackCount = 0;
         for (var i = 0; i < data.length; i += 4) {
             var val = data[i] >= bestThreshold ? 255 : 0;
             data[i] = data[i + 1] = data[i + 2] = val;
+            if (val === 0) blackCount++;
+        }
+        // If majority is black, invert (Tesseract expects dark text on white bg)
+        if (blackCount > totalPixels * 0.6) {
+            for (var i = 0; i < data.length; i += 4) {
+                data[i] = data[i + 1] = data[i + 2] = data[i] === 0 ? 255 : 0;
+            }
         }
         ctx.putImageData(imgData, 0, 0);
 
@@ -11040,17 +11086,23 @@ window.renderLifeStatus = renderLifeStatus;
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
 
-            // Alternate crop regions: narrow band (ISBN line) vs medium band
+            // Rotate through 3 crop regions targeting different ISBN positions
             var cropY, cropH, psmMode;
-            if (_ocrFrameIndex % 2 === 0) {
-                // Narrow band: bottom 20% of frame (65%-85%) — targets ISBN line
-                cropY = Math.floor(h * 0.65);
-                cropH = Math.floor(h * 0.20);
-                psmMode = '7';  // SINGLE_LINE
+            var cropIndex = _ocrFrameIndex % 3;
+            if (cropIndex === 0) {
+                // Narrow band: barcode/ISBN label area (55%-80%)
+                cropY = Math.floor(h * 0.55);
+                cropH = Math.floor(h * 0.25);
+                psmMode = '11'; // SPARSE_TEXT
+            } else if (cropIndex === 1) {
+                // Bottom band: very bottom area (70%-95%) — ISBN often near bottom edge
+                cropY = Math.floor(h * 0.70);
+                cropH = Math.floor(h * 0.25);
+                psmMode = '11'; // SPARSE_TEXT
             } else {
-                // Medium band: middle-lower 40% (40%-80%) — catches ISBNs placed higher
-                cropY = Math.floor(h * 0.40);
-                cropH = Math.floor(h * 0.40);
+                // Medium band: middle-lower 50% (30%-80%) — catches ISBNs placed higher
+                cropY = Math.floor(h * 0.30);
+                cropH = Math.floor(h * 0.50);
                 psmMode = '11'; // SPARSE_TEXT
             }
             _ocrFrameIndex++;
