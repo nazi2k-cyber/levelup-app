@@ -11572,6 +11572,7 @@ window.renderLifeStatus = renderLifeStatus;
         book.rewardGranted = true;
         AppState.user.points += 10;
         AppState.user.pendingStats.int += 0.5;
+        if (window.AppLogger) AppLogger.info('[Library] 독서 보상 지급: +10P, INT +0.5');
         updatePointUI();
         drawRadarChart();
         const lang = AppState.currentLang;

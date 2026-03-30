@@ -331,7 +331,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 #status.status-reorder-mode .status-reorderable .card-drag-handle { display: block; }
 
 /* 팝업창 및 가이드 표 */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 250; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
 .modal-content { background: var(--panel-bg); border: 1px solid var(--neon-blue); padding: 20px; border-radius: 10px; width: 85%; max-height: 70vh; display: flex; flex-direction: column; }
 .modal-header { font-size: 1.1rem; font-weight: bold; color: var(--neon-blue); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
 .modal-close { background: none; border: none; color: var(--text-sub); font-size: 1.5rem; cursor: pointer; }
