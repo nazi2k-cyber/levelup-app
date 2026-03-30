@@ -10972,7 +10972,8 @@ window.renderLifeStatus = renderLifeStatus;
                 workerBlobURL: false
             });
             await _ocrWorker.setParameters({
-                tessedit_pageseg_mode: '11'
+                tessedit_pageseg_mode: '11',
+                tessedit_char_whitelist: '0123456789ISBNisbn-Xx:. '
             });
             if (window.AppLogger) AppLogger.info('[ISBN] OCR worker ready');
             return _ocrWorker;
@@ -11086,20 +11087,34 @@ window.renderLifeStatus = renderLifeStatus;
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
 
-            // Rotate through 4 crop regions targeting different ISBN positions
-            var cropY, cropH, psmMode;
-            var cropIndex = _ocrFrameIndex % 4;
+            // Rotate through 6 crop regions targeting different ISBN positions
+            var cropY, cropH, cropX, cropW, psmMode;
+            var cropIndex = _ocrFrameIndex % 6;
+            cropX = 0;
+            cropW = w;
             if (cropIndex === 0) {
+                // Bottom strip: (75%-95%) — ISBN/barcode at very bottom of back cover
+                cropY = Math.floor(h * 0.75);
+                cropH = Math.floor(h * 0.20);
+                psmMode = '7';  // SINGLE_LINE — narrow strip likely has one ISBN line
+            } else if (cropIndex === 1) {
                 // Center band: middle area (30%-60%) — barcode often centered in viewfinder
                 cropY = Math.floor(h * 0.30);
                 cropH = Math.floor(h * 0.30);
                 psmMode = '6';  // SINGLE_BLOCK
-            } else if (cropIndex === 1) {
+            } else if (cropIndex === 2) {
+                // Right edge strip: (right 30%) — ISBN on spine/side band
+                cropX = Math.floor(w * 0.70);
+                cropW = Math.floor(w * 0.30);
+                cropY = Math.floor(h * 0.10);
+                cropH = Math.floor(h * 0.80);
+                psmMode = '6';  // SINGLE_BLOCK
+            } else if (cropIndex === 3) {
                 // Upper-mid band: (20%-50%) — barcode in upper portion
                 cropY = Math.floor(h * 0.20);
                 cropH = Math.floor(h * 0.30);
                 psmMode = '6';  // SINGLE_BLOCK
-            } else if (cropIndex === 2) {
+            } else if (cropIndex === 4) {
                 // Lower band: (50%-80%) — ISBN near bottom of back cover
                 cropY = Math.floor(h * 0.50);
                 cropH = Math.floor(h * 0.30);
@@ -11113,10 +11128,10 @@ window.renderLifeStatus = renderLifeStatus;
             _ocrFrameIndex++;
 
             var canvas = document.createElement('canvas');
-            canvas.width = w;
+            canvas.width = cropW;
             canvas.height = cropH;
             var ctx = canvas.getContext('2d');
-            ctx.drawImage(videoEl, 0, cropY, w, cropH, 0, 0, w, cropH);
+            ctx.drawImage(videoEl, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
             // Preprocess: grayscale → Otsu binarization → 2x upscale
             var processed = preprocessForOcr(canvas);
@@ -11124,16 +11139,25 @@ window.renderLifeStatus = renderLifeStatus;
             var worker = await initOcrWorker();
             if (!worker) { _ocrProcessing = false; return; }
 
-            // Set PSM mode dynamically per crop region
-            await worker.setParameters({ tessedit_pageseg_mode: psmMode });
+            // Set PSM mode dynamically per crop region (preserve whitelist)
+            await worker.setParameters({
+                tessedit_pageseg_mode: psmMode,
+                tessedit_char_whitelist: '0123456789ISBNisbn-Xx:. '
+            });
 
             var result = await worker.recognize(processed);
             var ocrText = result.data.text;
+            // Skip garbage results with very low confidence
+            if (result.data.confidence < 15) {
+                if (window.AppLogger) AppLogger.debug('[ISBN] OCR skipped (low confidence: ' + Math.round(result.data.confidence) + '%)');
+                _ocrProcessing = false;
+                return;
+            }
             var isbn = extractIsbnFromText(ocrText);
             if (window.AppLogger && ocrText && ocrText.trim()) {
                 AppLogger.debug('[ISBN] OCR text: ' + ocrText.trim().substring(0, 100), {
                     extractedIsbn: isbn || 'none',
-                    confidence: result.data.confidence,
+                    confidence: Math.round(result.data.confidence),
                     cropRegion: _ocrFrameIndex % 2 === 1 ? 'narrow' : 'medium'
                 });
             }
