@@ -9425,13 +9425,21 @@ function registerBackButtonHandler() {
     if (!cap.Plugins || !cap.Plugins.App) return;
 
     cap.Plugins.App.addListener('backButton', () => {
+        // 0) 동적 생성 오버레이 먼저 처리 (book-detail, book-action)
+        const dynamicOverlay = document.querySelector('.book-detail-overlay, .book-action-overlay');
+        if (dynamicOverlay) {
+            dynamicOverlay.remove();
+            return;
+        }
+
         // 1) 열린 모달/오버레이가 있으면 닫기
+        //    topmost 모달이 배열 앞쪽에 위치하도록 정렬
+        //    library-overlay는 맨 뒤로 이동하여 내부 모달이 먼저 닫히도록 함
         const modalIds = [
             'hamburger-menu-popup',
             'isbn-scanner-overlay',
             'book-confirm-overlay',
             'manual-book-overlay',
-            'library-overlay',
             'card-select-modal',
             'titleModal',
             'logViewerModal',
@@ -9441,7 +9449,8 @@ function registerBackButtonHandler() {
             'lootModal',
             'shareModal',
             'copyPlannerModal',
-            'location-search-modal'
+            'location-search-modal',
+            'library-overlay'
         ];
 
         for (const id of modalIds) {
