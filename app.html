@@ -287,6 +287,33 @@
                     <button id="btn-bonus-exp" class="btn-primary" style="max-width:220px; margin:0 auto; background:linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));" onclick="window.claimBonusExp()">🎬 광고 보고 EXP 받기</button>
                 </div>
 
+                <!-- 러닝 계산기 카드 -->
+                <div class="system-card status-reorderable" data-card-id="running-calc" style="margin-top:10px; margin-bottom:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h2 style="margin:0; font-size:0.95rem; color:var(--neon-blue);">🏃 러닝 계산기</h2>
+                        <button class="btn-info-sm" onclick="window.openRunningCalcView()">상세</button>
+                    </div>
+                    <div id="running-calc-summary" style="margin-top:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div>
+                                    <div style="font-size:0.65rem; color:var(--text-sub);">거리</div>
+                                    <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="rc-summary-dist">10 km</div>
+                                </div>
+                                <div style="color:var(--text-sub);">|</div>
+                                <div>
+                                    <div style="font-size:0.65rem; color:var(--text-sub);">시간</div>
+                                    <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="rc-summary-time">1:00:00</div>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:0.65rem; color:var(--text-sub);">km 페이스</div>
+                                <div style="font-size:1.1rem; font-weight:900; color:var(--neon-green, #00e676);" id="rc-summary-pace">6:00 /km</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 뽀모도로 타이머 -->
                 <div class="system-card status-reorderable" data-card-id="pomodoro" style="margin-top:10px; margin-bottom:0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -975,6 +1002,219 @@
         </div>
         <div id="library-content" class="library-content" style="position:relative;">
             <div id="library-tower" class="library-tower"></div>
+        </div>
+    </div>
+
+    <!-- Running Calculator Overlay -->
+    <div id="running-calc-overlay" class="running-calc-overlay d-none">
+        <div class="rc-header">
+            <button class="library-back-btn" onclick="window.closeRunningCalcView()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+            </button>
+            <span class="rc-header-title">러닝 계산기</span>
+            <div style="width:24px;"></div>
+        </div>
+
+        <!-- Main Tabs: 페이스 계산기 / VDOT 계산기 -->
+        <div class="rc-main-tabs">
+            <button class="rc-main-tab active" data-rc-tab="pace" onclick="window.switchRunningCalcTab('pace')">페이스 계산기</button>
+            <button class="rc-main-tab" data-rc-tab="vdot" onclick="window.switchRunningCalcTab('vdot')">VDOT 계산기</button>
+        </div>
+
+        <div class="rc-content" id="rc-content">
+            <!-- ===== 페이스 계산기 탭 ===== -->
+            <div class="rc-tab-panel active" id="rc-panel-pace">
+                <div class="rc-section-desc">입력된 값을 기준으로 페이스, 거리, 시간을 계산</div>
+
+                <!-- 계산 모드 서브탭: 페이스/거리/시간 -->
+                <div class="rc-sub-tabs">
+                    <button class="rc-sub-tab active" data-calc-mode="pace" onclick="window.switchPaceMode('pace')">페이스</button>
+                    <button class="rc-sub-tab" data-calc-mode="distance" onclick="window.switchPaceMode('distance')">거리</button>
+                    <button class="rc-sub-tab" data-calc-mode="time" onclick="window.switchPaceMode('time')">시간</button>
+                </div>
+
+                <!-- 거리 입력 -->
+                <div class="rc-input-group" id="rc-pace-distance-group">
+                    <label class="rc-label">거리</label>
+                    <div class="rc-input-row">
+                        <input type="number" id="rc-pace-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.calcPace()">
+                        <select id="rc-pace-dist-unit" class="rc-select" onchange="window.calcPace()">
+                            <option value="km">km</option>
+                            <option value="mi">mi</option>
+                            <option value="m">m</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 페이스 입력 (거리/시간 모드에서 표시) -->
+                <div class="rc-input-group d-none" id="rc-pace-pace-group">
+                    <label class="rc-label">페이스</label>
+                    <div class="rc-time-input-row">
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-pace-min">6</span><span class="rc-time-unit">분</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min',-1)">−</button>
+                        </div>
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-pace-sec">0</span><span class="rc-time-unit">초</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec',-1)">−</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 시간 입력 -->
+                <div class="rc-input-group" id="rc-pace-time-group">
+                    <label class="rc-label">시간</label>
+                    <div class="rc-time-input-row">
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-hr',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-pace-hr">1</span><span class="rc-time-unit">시간</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-hr',-1)">−</button>
+                        </div>
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min-t',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-pace-min-t">0</span><span class="rc-time-unit">분</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min-t',-1)">−</button>
+                        </div>
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec-t',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-pace-sec-t">0</span><span class="rc-time-unit">초</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec-t',-1)">−</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 결과 -->
+                <div class="rc-results" id="rc-pace-results">
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">km 페이스</span>
+                        <span class="rc-result-value" id="rc-res-pace">6:00 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">400m 랩타임</span>
+                        <span class="rc-result-value" id="rc-res-lap">144 <span class="rc-result-unit">초</span></span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">시속</span>
+                        <span class="rc-result-value" id="rc-res-speed">10.0 <span class="rc-result-unit">km/h</span></span>
+                    </div>
+                </div>
+
+                <!-- 트레드밀 계산기 -->
+                <div class="rc-section-card" style="margin-top:20px;">
+                    <h3 class="rc-section-title">트레드밀 계산기</h3>
+                    <div class="rc-section-desc">트레드밀 속도를 페이스로 계산</div>
+                    <div class="rc-input-row" style="margin-top:10px;">
+                        <input type="number" id="rc-treadmill-speed" class="rc-input" value="9.8" min="0.1" step="0.1" oninput="window.calcTreadmill()">
+                        <span class="rc-unit-label">km/h</span>
+                        <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(-0.1)">−</button>
+                        <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(0.1)">+</button>
+                    </div>
+                    <div class="rc-results" id="rc-treadmill-results" style="margin-top:12px;">
+                        <div class="rc-result-row">
+                            <span class="rc-result-label">km 페이스</span>
+                            <span class="rc-result-value" id="rc-tm-pace">6:07 <span class="rc-result-unit">/km</span></span>
+                        </div>
+                        <div class="rc-result-row">
+                            <span class="rc-result-label">10K 완주 시간</span>
+                            <span class="rc-result-value" id="rc-tm-10k">1:01:13</span>
+                        </div>
+                        <div class="rc-result-row">
+                            <span class="rc-result-label">하프 완주 시간</span>
+                            <span class="rc-result-value" id="rc-tm-half">2:09:10</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== VDOT 계산기 탭 ===== -->
+            <div class="rc-tab-panel" id="rc-panel-vdot">
+                <div class="rc-section-desc">PB를 기준으로 VDOT과 적합한 훈련 페이스를 계산하며 입력 거리가 길어질수록 정확도가 향상</div>
+
+                <!-- 거리 입력 -->
+                <div class="rc-input-group">
+                    <label class="rc-label">거리</label>
+                    <div class="rc-input-row">
+                        <input type="number" id="rc-vdot-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.calcVDOT()">
+                        <select id="rc-vdot-dist-unit" class="rc-select" onchange="window.calcVDOT()">
+                            <option value="km">km</option>
+                            <option value="mi">mi</option>
+                            <option value="m">m</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 시간 입력 -->
+                <div class="rc-input-group">
+                    <label class="rc-label">시간</label>
+                    <div class="rc-time-input-row">
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-hr',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-vdot-hr">1</span><span class="rc-time-unit">시간</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-hr',-1)">−</button>
+                        </div>
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-min',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-vdot-min">0</span><span class="rc-time-unit">분</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-min',-1)">−</button>
+                        </div>
+                        <div class="rc-time-block">
+                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-sec',1)">+</button>
+                            <div class="rc-time-value"><span id="rc-vdot-sec">0</span><span class="rc-time-unit">초</span></div>
+                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-sec',-1)">−</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VDOT 결과 -->
+                <div class="rc-results" id="rc-vdot-results">
+                    <div class="rc-result-row rc-result-highlight">
+                        <span class="rc-result-label" style="font-weight:700;">VDOT</span>
+                        <span class="rc-result-value rc-vdot-score" id="rc-vdot-value">32.3</span>
+                    </div>
+                    <div class="rc-result-divider"></div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Easy</span>
+                        <span class="rc-result-value" id="rc-vdot-easy">7:21 - 9:13 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Marathon</span>
+                        <span class="rc-result-value" id="rc-vdot-marathon">6:28 - 7:15 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Threshold</span>
+                        <span class="rc-result-value" id="rc-vdot-threshold">6:11 - 6:33 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Interval</span>
+                        <span class="rc-result-value" id="rc-vdot-interval">5:26 - 5:43 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label">Repetition</span>
+                        <span class="rc-result-value" id="rc-vdot-repetition">4:56 - 5:11 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                </div>
+
+                <!-- 예상 기록 -->
+                <div class="rc-section-card" style="margin-top:16px;">
+                    <h3 class="rc-section-title">예상 기록</h3>
+                    <div class="rc-results">
+                        <div class="rc-result-row">
+                            <span class="rc-result-label">10K 예상</span>
+                            <span class="rc-result-value"><span id="rc-vdot-pred-10k">1:00:00</span> <span class="rc-result-unit" id="rc-vdot-pred-10k-pace">6:00/km</span></span>
+                        </div>
+                        <div class="rc-result-row">
+                            <span class="rc-result-label">하프 예상</span>
+                            <span class="rc-result-value"><span id="rc-vdot-pred-half">2:12:55</span> <span class="rc-result-unit" id="rc-vdot-pred-half-pace">6:18/km</span></span>
+                        </div>
+                        <div class="rc-result-row">
+                            <span class="rc-result-label">풀 예상</span>
+                            <span class="rc-result-value"><span id="rc-vdot-pred-full">4:32:55</span> <span class="rc-result-unit" id="rc-vdot-pred-full-pace">6:28/km</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

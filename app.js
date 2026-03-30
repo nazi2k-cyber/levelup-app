@@ -792,7 +792,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'my-library', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'my-library', 'bonus-exp', 'running-calc', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -919,9 +919,10 @@ const STATUS_CARD_LABELS = {
     'dday': { name: 'D-DAY', icon: '⏰' },
     'dday-caption': { name: '목표/좌우명', icon: '💬' },
     'daily-quote': { name: '오늘의 명언', icon: '❝' },
-    'my-library': { name: '내 서재', icon: '📚' }
+    'my-library': { name: '내 서재', icon: '📚' },
+    'running-calc': { name: '러닝 계산기', icon: '🏃' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'my-library', 'bonus-exp', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'my-library', 'bonus-exp', 'running-calc', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp', 'my-library'];
 
@@ -13032,4 +13033,293 @@ window.renderLifeStatus = renderLifeStatus;
         document.body.appendChild(toast);
         setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 2000);
     }
+})();
+
+// ========== Running Calculator ==========
+(function() {
+    'use strict';
+
+    let _paceMode = 'pace'; // 'pace' | 'distance' | 'time'
+
+    // --- Overlay open/close ---
+    window.openRunningCalcView = function() {
+        const overlay = document.getElementById('running-calc-overlay');
+        if (overlay) overlay.classList.remove('d-none');
+        window.calcPace();
+        window.calcTreadmill();
+    };
+    window.closeRunningCalcView = function() {
+        const overlay = document.getElementById('running-calc-overlay');
+        if (overlay) overlay.classList.add('d-none');
+        updateSummaryCard();
+    };
+
+    // --- Main tab switching ---
+    window.switchRunningCalcTab = function(tab) {
+        document.querySelectorAll('.rc-main-tab').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.rcTab === tab);
+        });
+        document.querySelectorAll('.rc-tab-panel').forEach(function(panel) {
+            panel.classList.remove('active');
+        });
+        var panel = document.getElementById('rc-panel-' + tab);
+        if (panel) panel.classList.add('active');
+        if (tab === 'vdot') window.calcVDOT();
+    };
+
+    // --- Pace sub-tab switching ---
+    window.switchPaceMode = function(mode) {
+        _paceMode = mode;
+        document.querySelectorAll('.rc-sub-tab').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.calcMode === mode);
+        });
+        var distGroup = document.getElementById('rc-pace-distance-group');
+        var timeGroup = document.getElementById('rc-pace-time-group');
+        var paceGroup = document.getElementById('rc-pace-pace-group');
+        // Show/hide inputs based on mode
+        if (mode === 'pace') {
+            distGroup.classList.remove('d-none');
+            timeGroup.classList.remove('d-none');
+            paceGroup.classList.add('d-none');
+        } else if (mode === 'distance') {
+            distGroup.classList.add('d-none');
+            timeGroup.classList.remove('d-none');
+            paceGroup.classList.remove('d-none');
+        } else { // time
+            distGroup.classList.remove('d-none');
+            timeGroup.classList.add('d-none');
+            paceGroup.classList.remove('d-none');
+        }
+        window.calcPace();
+    };
+
+    // --- Adjust +/- buttons ---
+    window.rcAdjust = function(field, delta) {
+        var el = document.getElementById('rc-' + field);
+        if (!el) return;
+        var val = parseInt(el.textContent) + delta;
+        // Clamp values
+        if (field.indexOf('hr') !== -1) val = Math.max(0, Math.min(99, val));
+        else if (field.indexOf('min') !== -1) val = Math.max(0, Math.min(59, val));
+        else if (field.indexOf('sec') !== -1) val = Math.max(0, Math.min(59, val));
+        el.textContent = val;
+        // Trigger calc
+        if (field.indexOf('vdot') !== -1) window.calcVDOT();
+        else window.calcPace();
+    };
+
+    window.rcAdjustTreadmill = function(delta) {
+        var el = document.getElementById('rc-treadmill-speed');
+        if (!el) return;
+        var val = parseFloat(el.value) + delta;
+        val = Math.max(0.1, Math.round(val * 10) / 10);
+        el.value = val;
+        window.calcTreadmill();
+    };
+
+    // --- Helper: distance in km ---
+    function getDistKm(inputId, unitId) {
+        var dist = parseFloat(document.getElementById(inputId).value) || 0;
+        var unit = document.getElementById(unitId).value;
+        if (unit === 'mi') dist *= 1.60934;
+        else if (unit === 'm') dist /= 1000;
+        return dist;
+    }
+
+    // --- Helper: format pace ---
+    function formatPace(totalSeconds) {
+        if (!isFinite(totalSeconds) || totalSeconds <= 0) return '--:--';
+        var min = Math.floor(totalSeconds / 60);
+        var sec = Math.round(totalSeconds % 60);
+        if (sec === 60) { min++; sec = 0; }
+        return min + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    // --- Helper: format time HH:MM:SS ---
+    function formatTime(totalSeconds) {
+        if (!isFinite(totalSeconds) || totalSeconds <= 0) return '--:--:--';
+        var h = Math.floor(totalSeconds / 3600);
+        var m = Math.floor((totalSeconds % 3600) / 60);
+        var s = Math.round(totalSeconds % 60);
+        if (s === 60) { m++; s = 0; }
+        if (m === 60) { h++; m = 0; }
+        return h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
+    // --- Pace Calculator ---
+    window.calcPace = function() {
+        var distKm, totalSec, paceSecPerKm, speedKmh;
+
+        if (_paceMode === 'pace') {
+            // Calculate pace from distance + time
+            distKm = getDistKm('rc-pace-distance', 'rc-pace-dist-unit');
+            var hr = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
+            var min = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
+            var sec = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
+            totalSec = hr * 3600 + min * 60 + sec;
+            if (distKm <= 0 || totalSec <= 0) return;
+            paceSecPerKm = totalSec / distKm;
+            speedKmh = distKm / (totalSec / 3600);
+        } else if (_paceMode === 'distance') {
+            // Calculate distance from pace + time
+            var pMin = parseInt(document.getElementById('rc-pace-min').textContent) || 0;
+            var pSec = parseInt(document.getElementById('rc-pace-sec').textContent) || 0;
+            paceSecPerKm = pMin * 60 + pSec;
+            var hr2 = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
+            var min2 = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
+            var sec2 = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
+            totalSec = hr2 * 3600 + min2 * 60 + sec2;
+            if (paceSecPerKm <= 0 || totalSec <= 0) return;
+            distKm = totalSec / paceSecPerKm;
+            speedKmh = distKm / (totalSec / 3600);
+            document.getElementById('rc-pace-distance').value = Math.round(distKm * 100) / 100;
+        } else { // time
+            distKm = getDistKm('rc-pace-distance', 'rc-pace-dist-unit');
+            var pMin2 = parseInt(document.getElementById('rc-pace-min').textContent) || 0;
+            var pSec2 = parseInt(document.getElementById('rc-pace-sec').textContent) || 0;
+            paceSecPerKm = pMin2 * 60 + pSec2;
+            if (distKm <= 0 || paceSecPerKm <= 0) return;
+            totalSec = paceSecPerKm * distKm;
+            speedKmh = distKm / (totalSec / 3600);
+            // Update time display
+            var th = Math.floor(totalSec / 3600);
+            var tm = Math.floor((totalSec % 3600) / 60);
+            var ts = Math.round(totalSec % 60);
+            document.getElementById('rc-pace-hr').textContent = th;
+            document.getElementById('rc-pace-min-t').textContent = tm;
+            document.getElementById('rc-pace-sec-t').textContent = ts;
+        }
+
+        var lap400 = Math.round(paceSecPerKm * 0.4);
+        document.getElementById('rc-res-pace').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
+        document.getElementById('rc-res-lap').innerHTML = lap400 + ' <span class="rc-result-unit">초</span>';
+        document.getElementById('rc-res-speed').innerHTML = speedKmh.toFixed(1) + ' <span class="rc-result-unit">km/h</span>';
+    };
+
+    // --- Treadmill Calculator ---
+    window.calcTreadmill = function() {
+        var speed = parseFloat(document.getElementById('rc-treadmill-speed').value) || 0;
+        if (speed <= 0) return;
+        var paceSecPerKm = 3600 / speed;
+        var time10k = paceSecPerKm * 10;
+        var timeHalf = paceSecPerKm * 21.0975;
+        document.getElementById('rc-tm-pace').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
+        document.getElementById('rc-tm-10k').textContent = formatTime(time10k);
+        document.getElementById('rc-tm-half').textContent = formatTime(timeHalf);
+    };
+
+    // --- VDOT Calculator (Jack Daniels' Running Formula) ---
+    function calcVO2(velocityMPerMin) {
+        // Oxygen cost of running (ml/kg/min)
+        return -4.60 + 0.182258 * velocityMPerMin + 0.000104 * velocityMPerMin * velocityMPerMin;
+    }
+
+    function calcPctVO2max(timeMin) {
+        // Percent of VO2max sustained for given duration
+        return 0.8 + 0.1894393 * Math.exp(-0.012778 * timeMin) + 0.2989558 * Math.exp(-0.1932605 * timeMin);
+    }
+
+    function calcVDOTFromRace(distMeters, timeMin) {
+        var velocity = distMeters / timeMin; // m/min
+        var vo2 = calcVO2(velocity);
+        var pctMax = calcPctVO2max(timeMin);
+        if (pctMax <= 0) return 0;
+        return vo2 / pctMax;
+    }
+
+    function velocityFromVO2(vo2) {
+        // Solve: vo2 = -4.60 + 0.182258*v + 0.000104*v^2
+        // 0.000104*v^2 + 0.182258*v + (-4.60 - vo2) = 0
+        var a = 0.000104, b = 0.182258, c = -4.60 - vo2;
+        var disc = b * b - 4 * a * c;
+        if (disc < 0) return 0;
+        return (-b + Math.sqrt(disc)) / (2 * a);
+    }
+
+    function paceFromVDOT(vdot, pctVO2max) {
+        var targetVO2 = vdot * pctVO2max;
+        var velocity = velocityFromVO2(targetVO2); // m/min
+        if (velocity <= 0) return 0;
+        return 1000 / velocity * 60; // sec/km
+    }
+
+    function predictRaceTime(vdot, distMeters) {
+        // Binary search for time where VDOT matches
+        var lo = 1, hi = 600; // minutes
+        for (var i = 0; i < 50; i++) {
+            var mid = (lo + hi) / 2;
+            var v = calcVDOTFromRace(distMeters, mid);
+            if (v > vdot) hi = mid;
+            else lo = mid;
+        }
+        return (lo + hi) / 2; // minutes
+    }
+
+    window.calcVDOT = function() {
+        var distKm = getDistKm('rc-vdot-distance', 'rc-vdot-dist-unit');
+        var hr = parseInt(document.getElementById('rc-vdot-hr').textContent) || 0;
+        var min = parseInt(document.getElementById('rc-vdot-min').textContent) || 0;
+        var sec = parseInt(document.getElementById('rc-vdot-sec').textContent) || 0;
+        var totalMin = hr * 60 + min + sec / 60;
+        if (distKm <= 0 || totalMin <= 0) return;
+
+        var distM = distKm * 1000;
+        var vdot = calcVDOTFromRace(distM, totalMin);
+        if (vdot <= 0 || !isFinite(vdot)) return;
+
+        document.getElementById('rc-vdot-value').textContent = vdot.toFixed(1);
+
+        // Training paces (% of VO2max ranges)
+        var zones = [
+            { id: 'rc-vdot-easy', lo: 0.59, hi: 0.74 },
+            { id: 'rc-vdot-marathon', lo: 0.75, hi: 0.84 },
+            { id: 'rc-vdot-threshold', lo: 0.83, hi: 0.88 },
+            { id: 'rc-vdot-interval', lo: 0.95, hi: 1.00 },
+            { id: 'rc-vdot-repetition', lo: 1.05, hi: 1.10 }
+        ];
+        zones.forEach(function(z) {
+            var paceLo = paceFromVDOT(vdot, z.hi); // faster pace from higher %
+            var paceHi = paceFromVDOT(vdot, z.lo); // slower pace from lower %
+            document.getElementById(z.id).innerHTML = formatPace(paceLo) + ' - ' + formatPace(paceHi) + ' <span class="rc-result-unit">/km</span>';
+        });
+
+        // Race predictions
+        var pred10k = predictRaceTime(vdot, 10000);
+        var predHalf = predictRaceTime(vdot, 21097.5);
+        var predFull = predictRaceTime(vdot, 42195);
+
+        document.getElementById('rc-vdot-pred-10k').textContent = formatTime(pred10k * 60);
+        document.getElementById('rc-vdot-pred-10k-pace').textContent = formatPace(pred10k * 60 / 10) + '/km';
+        document.getElementById('rc-vdot-pred-half').textContent = formatTime(predHalf * 60);
+        document.getElementById('rc-vdot-pred-half-pace').textContent = formatPace(predHalf * 60 / 21.0975) + '/km';
+        document.getElementById('rc-vdot-pred-full').textContent = formatTime(predFull * 60);
+        document.getElementById('rc-vdot-pred-full-pace').textContent = formatPace(predFull * 60 / 42.195) + '/km';
+    };
+
+    // --- Update summary card on status screen ---
+    function updateSummaryCard() {
+        var distKm = getDistKm('rc-pace-distance', 'rc-pace-dist-unit');
+        var hr = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
+        var min = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
+        var sec = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
+        var totalSec = hr * 3600 + min * 60 + sec;
+        var unit = document.getElementById('rc-pace-dist-unit').value;
+        var distDisplay = parseFloat(document.getElementById('rc-pace-distance').value) || 0;
+
+        var el1 = document.getElementById('rc-summary-dist');
+        var el2 = document.getElementById('rc-summary-time');
+        var el3 = document.getElementById('rc-summary-pace');
+        if (el1) el1.textContent = distDisplay + ' ' + unit;
+        if (el2) el2.textContent = formatTime(totalSec);
+        if (distKm > 0 && totalSec > 0) {
+            var pace = totalSec / distKm;
+            if (el3) el3.textContent = formatPace(pace) + ' /km';
+        }
+    }
+
+    // Init on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        window.calcPace();
+        window.calcTreadmill();
+    });
 })();
