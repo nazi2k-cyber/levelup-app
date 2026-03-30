@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.40] - 2026-03-30
+
+### 변경
+- feat: 호칭 시스템 가이드에 독서 달성 호칭 섹션 추가
+
 ## [1.0.39] - 2026-03-30
 
 ### 변경
