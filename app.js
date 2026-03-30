@@ -11101,6 +11101,15 @@ window.renderLifeStatus = renderLifeStatus;
 
     var _ocrFrameIndex = 0;
 
+    function hasIsbnLikeSignal(text) {
+        if (!text) return false;
+        var compact = text.replace(/\s+/g, '');
+        // e.g. ISBN..., SBN..., or long numeric sequences often seen in OCR output
+        if (/I?SBN/i.test(compact)) return true;
+        var digitCount = (compact.match(/\d/g) || []).length;
+        return digitCount >= 8;
+    }
+
     async function ocrCaptureFrame() {
         if (_ocrProcessing) return;
         _ocrProcessing = true;
@@ -11111,10 +11120,10 @@ window.renderLifeStatus = renderLifeStatus;
             var w = videoEl.videoWidth;
             var h = videoEl.videoHeight;
 
-            // Rotate through 8 crop regions with rotation variants
+            // Rotate through 10 crop regions with rotation variants
             // Books can be held at any angle; ISBN may be on spine/bottom/edge
             var cropY, cropH, cropX, cropW, psmMode, rotation;
-            var cropIndex = _ocrFrameIndex % 8;
+            var cropIndex = _ocrFrameIndex % 10;
             cropX = 0;
             cropW = w;
             cropY = 0;
@@ -11165,11 +11174,23 @@ window.renderLifeStatus = renderLifeStatus;
                 cropY = Math.floor(h * 0.50);
                 cropH = Math.floor(h * 0.30);
                 psmMode = '6';
-            } else {
+            } else if (cropIndex === 7) {
                 // Full scan: entire frame (5%-95%) — catches any position
                 cropY = Math.floor(h * 0.05);
                 cropH = Math.floor(h * 0.90);
                 psmMode = '11'; // SPARSE_TEXT
+            } else if (cropIndex === 8) {
+                // Bottom center focused: catches ISBN text block left of barcode
+                cropX = Math.floor(w * 0.20);
+                cropW = Math.floor(w * 0.60);
+                cropY = Math.floor(h * 0.80);
+                cropH = Math.floor(h * 0.16);
+                psmMode = '7';
+            } else {
+                // Full-width lower strip (wider than crop #0) for tilted covers
+                cropY = Math.floor(h * 0.72);
+                cropH = Math.floor(h * 0.24);
+                psmMode = '6';
             }
             _ocrFrameIndex++;
 
@@ -11200,8 +11221,10 @@ window.renderLifeStatus = renderLifeStatus;
 
             var result = await worker.recognize(processed);
             var ocrText = result.data.text;
-            // Skip garbage results with very low confidence
-            if (result.data.confidence < 15) {
+            // Skip clear garbage results with very low confidence
+            // but keep potentially useful ISBN-like text even at low confidence.
+            var confidence = Math.round(result.data.confidence || 0);
+            if (confidence < 8 && !hasIsbnLikeSignal(ocrText)) {
                 if (window.AppLogger) AppLogger.debug('[ISBN] OCR skipped (low confidence: ' + Math.round(result.data.confidence) + '%)');
                 _ocrProcessing = false;
                 return;
@@ -11210,8 +11233,8 @@ window.renderLifeStatus = renderLifeStatus;
             if (window.AppLogger && ocrText && ocrText.trim()) {
                 AppLogger.debug('[ISBN] OCR text: ' + ocrText.trim().substring(0, 100), {
                     extractedIsbn: isbn || 'none',
-                    confidence: Math.round(result.data.confidence),
-                    cropIndex: (_ocrFrameIndex - 1) % 8,
+                    confidence: confidence,
+                    cropIndex: (_ocrFrameIndex - 1) % 10,
                     rotation: rotation || 0
                 });
             }
@@ -11247,13 +11270,13 @@ window.renderLifeStatus = renderLifeStatus;
     function startOcrInterval() {
         stopOcrInterval();
         _ocrInitFailed = false;
-        // Delay OCR start: barcode scanner is primary, OCR is fallback after 3s
+        // Delay OCR start: barcode scanner is primary, OCR is fallback after a short delay
         _ocrDelayTimer = setTimeout(function() {
             _ocrDelayTimer = null;
             _ocrFrameIndex = 0;
             if (window.AppLogger) AppLogger.info('[ISBN] OCR fallback starting (barcode not detected)');
-            _ocrInterval = setInterval(ocrCaptureFrame, 1200);
-        }, 3000);
+            _ocrInterval = setInterval(ocrCaptureFrame, 900);
+        }, 1800);
     }
 
     function stopOcrInterval() {
