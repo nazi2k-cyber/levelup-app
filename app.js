@@ -10820,9 +10820,9 @@ window.renderLifeStatus = renderLifeStatus;
         return {
             fps: 10,
             qrbox: function(viewfinderWidth, viewfinderHeight) {
-                // Barcode-optimized: wide scan area covering more of the frame
+                // Barcode-optimized: wide & tall scan area to catch edge-positioned barcodes
                 var w = Math.floor(viewfinderWidth * 0.92);
-                var h = Math.floor(viewfinderHeight * 0.45);
+                var h = Math.floor(viewfinderHeight * 0.65);
                 if (h < 100) h = 100;
                 return { width: w, height: h };
             },
@@ -11130,30 +11130,29 @@ window.renderLifeStatus = renderLifeStatus;
             cropH = h;
             rotation = 0; // 0 = none, 1 = 90° CW, -1 = 90° CCW
             if (cropIndex === 0) {
-                // Bottom strip: (78%-98%) — ISBN/barcode at very bottom
+                // Bottom strip: (78%-98%) — ISBN/barcode at very bottom (most common)
                 cropY = Math.floor(h * 0.78);
                 cropH = Math.floor(h * 0.20);
                 psmMode = '7';  // SINGLE_LINE
             } else if (cropIndex === 1) {
+                // Bottom center focused: ISBN text block near barcode (2nd most common)
+                cropX = Math.floor(w * 0.20);
+                cropW = Math.floor(w * 0.60);
+                cropY = Math.floor(h * 0.80);
+                cropH = Math.floor(h * 0.16);
+                psmMode = '7';
+            } else if (cropIndex === 2) {
+                // Full-width lower strip (wider catch) for tilted covers
+                cropY = Math.floor(h * 0.72);
+                cropH = Math.floor(h * 0.24);
+                psmMode = '6';
+            } else if (cropIndex === 3) {
                 // Right edge narrow: (right 15%) — ISBN on spine/side band
                 cropX = Math.floor(w * 0.85);
                 cropW = Math.floor(w * 0.15);
                 cropY = Math.floor(h * 0.05);
                 cropH = Math.floor(h * 0.90);
                 rotation = -1; // rotate 90° CCW so vertical text becomes horizontal
-                psmMode = '6';
-            } else if (cropIndex === 2) {
-                // Center band: (30%-60%)
-                cropY = Math.floor(h * 0.30);
-                cropH = Math.floor(h * 0.30);
-                psmMode = '6';
-            } else if (cropIndex === 3) {
-                // Left edge narrow: (left 15%) — ISBN on spine (book flipped)
-                cropX = 0;
-                cropW = Math.floor(w * 0.15);
-                cropY = Math.floor(h * 0.05);
-                cropH = Math.floor(h * 0.90);
-                rotation = 1; // rotate 90° CW so vertical text becomes horizontal
                 psmMode = '6';
             } else if (cropIndex === 4) {
                 // Bottom strip rotated 90° CW — catches sideways ISBN
@@ -11170,27 +11169,28 @@ window.renderLifeStatus = renderLifeStatus;
                 rotation = -1;
                 psmMode = '7';
             } else if (cropIndex === 6) {
+                // Left edge narrow: (left 15%) — ISBN on spine (book flipped)
+                cropX = 0;
+                cropW = Math.floor(w * 0.15);
+                cropY = Math.floor(h * 0.05);
+                cropH = Math.floor(h * 0.90);
+                rotation = 1; // rotate 90° CW so vertical text becomes horizontal
+                psmMode = '6';
+            } else if (cropIndex === 7) {
+                // Center band: (30%-60%)
+                cropY = Math.floor(h * 0.30);
+                cropH = Math.floor(h * 0.30);
+                psmMode = '6';
+            } else if (cropIndex === 8) {
                 // Lower band: (50%-80%)
                 cropY = Math.floor(h * 0.50);
                 cropH = Math.floor(h * 0.30);
                 psmMode = '6';
-            } else if (cropIndex === 7) {
+            } else {
                 // Full scan: entire frame (5%-95%) — catches any position
                 cropY = Math.floor(h * 0.05);
                 cropH = Math.floor(h * 0.90);
                 psmMode = '11'; // SPARSE_TEXT
-            } else if (cropIndex === 8) {
-                // Bottom center focused: catches ISBN text block left of barcode
-                cropX = Math.floor(w * 0.20);
-                cropW = Math.floor(w * 0.60);
-                cropY = Math.floor(h * 0.80);
-                cropH = Math.floor(h * 0.16);
-                psmMode = '7';
-            } else {
-                // Full-width lower strip (wider than crop #0) for tilted covers
-                cropY = Math.floor(h * 0.72);
-                cropH = Math.floor(h * 0.24);
-                psmMode = '6';
             }
             _ocrFrameIndex++;
 
@@ -11275,8 +11275,8 @@ window.renderLifeStatus = renderLifeStatus;
             _ocrDelayTimer = null;
             _ocrFrameIndex = 0;
             if (window.AppLogger) AppLogger.info('[ISBN] OCR fallback starting (barcode not detected)');
-            _ocrInterval = setInterval(ocrCaptureFrame, 900);
-        }, 1800);
+            _ocrInterval = setInterval(ocrCaptureFrame, 700);
+        }, 1200);
     }
 
     function stopOcrInterval() {
@@ -11992,40 +11992,66 @@ window.renderLifeStatus = renderLifeStatus;
 
             var _scanHandled = false;
             var _scanAttemptCount = 0;
+            var _fullFrameRetried = false;
+
+            var _onBarcodeSuccess = async (decodedText) => {
+                _scanAttemptCount++;
+                if (_scanHandled) return;
+                // Validate barcode: reject garbage reads
+                var barcode = (decodedText || '').replace(/[-\s]/g, '');
+                if (!isValidIsbn(barcode)) {
+                    if (window.AppLogger) AppLogger.debug('[ISBN] Barcode rejected (invalid): ' + decodedText, {
+                        raw: decodedText,
+                        cleaned: barcode,
+                        length: barcode.length,
+                        attemptNum: _scanAttemptCount
+                    });
+                    return;
+                }
+                _scanHandled = true;
+                if (window.AppLogger) AppLogger.info('[ISBN] Barcode accepted: ' + barcode, { attemptNum: _scanAttemptCount });
+                stopOcrInterval();
+                if (statusEl) statusEl.textContent = 'ISBN: ' + barcode;
+                try { await _html5QrCode.stop(); } catch(e) {}
+                var field = document.getElementById('isbn-manual-field');
+                if (field) field.value = barcode;
+                await onIsbnScanned(barcode);
+                _scanHandled = false;
+            };
+
+            var _onBarcodeError = function(errorMessage) {
+                // Log scan failures periodically (every 50th failure to avoid spam)
+                _scanAttemptCount++;
+                if (_scanAttemptCount % 50 === 1) {
+                    if (window.AppLogger) AppLogger.debug('[ISBN] Scan attempt #' + _scanAttemptCount + ' no match', { error: errorMessage });
+                }
+                // Full-frame fallback: after 50 failed attempts, restart without qrbox restriction
+                if (_scanAttemptCount === 50 && !_fullFrameRetried && _html5QrCode) {
+                    _fullFrameRetried = true;
+                    if (window.AppLogger) AppLogger.info('[ISBN] Retrying with full-frame scan (no qrbox)');
+                    var fullConfig = _scannerConfig();
+                    delete fullConfig.qrbox;
+                    _html5QrCode.stop().then(function() {
+                        return _html5QrCode.start(
+                            { facingMode: 'environment' },
+                            fullConfig,
+                            _onBarcodeSuccess,
+                            function(err) {
+                                _scanAttemptCount++;
+                                if (_scanAttemptCount % 50 === 1) {
+                                    if (window.AppLogger) AppLogger.debug('[ISBN] Scan attempt #' + _scanAttemptCount + ' no match (full-frame)', { error: err });
+                                }
+                            }
+                        );
+                    }).catch(function() {});
+                }
+            };
+
             await _html5QrCode.start(
                 { facingMode: 'environment' },
                 _scannerConfig(),
-                async (decodedText) => {
-                    _scanAttemptCount++;
-                    if (_scanHandled) return;
-                    // Validate barcode: reject garbage reads
-                    var barcode = (decodedText || '').replace(/[-\s]/g, '');
-                    if (!isValidIsbn(barcode)) {
-                        if (window.AppLogger) AppLogger.debug('[ISBN] Barcode rejected (invalid): ' + decodedText, {
-                            raw: decodedText,
-                            cleaned: barcode,
-                            length: barcode.length,
-                            attemptNum: _scanAttemptCount
-                        });
-                        return;
-                    }
-                    _scanHandled = true;
-                    if (window.AppLogger) AppLogger.info('[ISBN] Barcode accepted: ' + barcode, { attemptNum: _scanAttemptCount });
-                    stopOcrInterval();
-                    if (statusEl) statusEl.textContent = 'ISBN: ' + barcode;
-                    try { await _html5QrCode.stop(); } catch(e) {}
-                    var field = document.getElementById('isbn-manual-field');
-                    if (field) field.value = barcode;
-                    await onIsbnScanned(barcode);
-                    _scanHandled = false;
-                },
-                function(errorMessage) {
-                    // Log scan failures periodically (every 50th failure to avoid spam)
-                    _scanAttemptCount++;
-                    if (_scanAttemptCount % 50 === 1) {
-                        if (window.AppLogger) AppLogger.debug('[ISBN] Scan attempt #' + _scanAttemptCount + ' no match', { error: errorMessage });
-                    }
-                }
+                _onBarcodeSuccess,
+                _onBarcodeError
             );
 
             if (window.AppLogger) AppLogger.info('[ISBN] Camera started successfully');
