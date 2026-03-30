@@ -1882,6 +1882,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     display: flex; flex-direction: column-reverse;
     align-items: center;
     justify-content: flex-start; padding-bottom: 20px;
+    min-height: 100%;
 }
 .book-tower-base {
     width: 92%; max-width: 390px; height: 14px;
@@ -1935,7 +1936,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 
 /* ── Book List View ── */
-.library-list { display: flex; flex-direction: column; gap: 8px; }
+.library-list { display: flex; flex-direction: column; gap: 8px; min-height: 100%; justify-content: flex-end; }
 .book-list-item {
     display: flex; gap: 12px; padding: 12px;
     background: var(--panel-bg); border: 1px solid var(--border-color);

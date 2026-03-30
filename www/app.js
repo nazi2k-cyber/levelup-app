@@ -12073,6 +12073,14 @@ window.renderLifeStatus = renderLifeStatus;
             renderListView(container, books);
         }
         if (shareBtn) shareBtn.classList.remove('d-none');
+
+        // 렌더링 후 스크롤을 최하단으로 이동 (1층이 배너 바로 위에 보이도록)
+        var libContent = document.getElementById('library-content');
+        if (libContent) {
+            requestAnimationFrame(function() {
+                libContent.scrollTop = libContent.scrollHeight;
+            });
+        }
     }
     window.renderLibrary = renderLibrary;
 
