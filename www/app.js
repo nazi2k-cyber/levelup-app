@@ -11594,7 +11594,7 @@ window.renderLifeStatus = renderLifeStatus;
             var libContent = document.getElementById('library-content');
             if (libContent && _bannerAdVisible) {
                 var bannerMargin = _getBannerMargin();
-                libContent.style.paddingBottom = (bannerMargin + 70) + 'px';
+                libContent.style.paddingBottom = (bannerMargin + 60) + 'px';
             }
         });
     };

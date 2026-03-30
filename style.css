@@ -1880,7 +1880,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 /* ── Book Tower (Reboot – thin spines, varying widths) ── */
 .library-tower {
     display: flex; flex-direction: column-reverse;
-    align-items: center; min-height: 100%;
+    align-items: center;
     justify-content: flex-start; padding-bottom: 20px;
 }
 .book-tower-base {
