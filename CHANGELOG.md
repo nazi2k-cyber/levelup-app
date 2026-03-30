@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.26] - 2026-03-30
+
+### 변경
+- fix: 내서재 모달 z-index, 카메라 버튼 위치, INT 보상 로그 추가
+
 ## [1.0.25] - 2026-03-29
 
 ### 변경
