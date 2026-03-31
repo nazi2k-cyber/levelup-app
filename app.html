@@ -823,6 +823,14 @@
                         </div>
                     </div>
                     <div class="setting-row" id="camera-status" style="font-size:0.7rem; color:var(--neon-blue); display:none; justify-content:flex-end; padding-top:0; text-align:right;"></div>
+
+                    <div class="setting-row">
+                        <span data-i18n="set_private_account">비공개 계정</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="btn-info-sm" id="btn-settings-privacy-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
+                            <label class="switch"><input type="checkbox" id="privacy-toggle"><span class="slider"></span></label>
+                        </div>
+                    </div>
                 </div>
                 <button class="btn-primary" style="background: #222; border: 1px solid var(--border-color); color: var(--neon-red);" id="btn-logout" data-i18n="set_logout">로그아웃</button>
 
@@ -837,13 +845,6 @@
                 </div>
 
                 <div class="system-card" style="margin-top: 20px;">
-                    <div class="setting-row">
-                        <span data-i18n="set_private_account">비공개 계정</span>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button class="btn-info-sm" id="btn-settings-privacy-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
-                            <label class="switch"><input type="checkbox" id="privacy-toggle"><span class="slider"></span></label>
-                        </div>
-                    </div>
                     <div class="setting-row">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <button class="btn-info-sm" id="btn-settings-delete-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>

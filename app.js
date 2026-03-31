@@ -2099,6 +2099,7 @@ async function loadUserDataFromDB(user) {
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.gpsEnabled !== undefined) AppState.user.gpsEnabled = data.gpsEnabled;
             if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
+            if(data.privateAccount !== undefined) AppState.user.privateAccount = data.privateAccount;
             if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
