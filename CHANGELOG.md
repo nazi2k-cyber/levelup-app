@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.76] - 2026-03-31
+
+### 변경
+- 소셜탭 프로필을 상태창 프로필과 동일한 레이아웃으로 변경
+
 ## [1.0.75] - 2026-03-31
 
 ### 변경
