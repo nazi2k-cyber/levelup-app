@@ -838,6 +838,13 @@
 
                 <div class="system-card" style="margin-top: 20px;">
                     <div class="setting-row">
+                        <span data-i18n="set_private_account">비공개 계정</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button class="btn-info-sm" id="btn-settings-privacy-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
+                            <label class="switch"><input type="checkbox" id="privacy-toggle"><span class="slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="setting-row">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <button class="btn-info-sm" id="btn-settings-delete-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
                             <button class="btn-primary" style="background: rgba(255,60,60,0.1); border: 1px solid var(--neon-red); color: var(--neon-red); font-size:0.75rem; padding:6px 14px; white-space:nowrap;" id="btn-delete-account" data-i18n="set_delete_account">계정 삭제</button>

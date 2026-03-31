@@ -52,7 +52,7 @@ service cloud.firestore {
         'questStr', 'questWeekStart', 'diaryStr', 'reelsStr',
         'dungeonStr', 'diyQuestsStr', 'questHistoryStr',
         'titleHistoryStr', 'streakStr', 'rareTitleStr',
-        'hasActiveReels', '_profileUploadFailed',
+        'hasActiveReels', '_profileUploadFailed', 'privateAccount',
         'ddaysStr', 'ddayCaption',
         'lastBonusExpDate',
         'lifeStatusStr',
