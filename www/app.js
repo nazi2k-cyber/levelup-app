@@ -4192,7 +4192,6 @@ function renderUsers(criteria, btn = null) {
                             ${titleBadgeHTML}
                             <div class="name-container">
                                 <div style="font-size: 0.9rem; font-weight: bold;">${sanitizeText(u.name)}</div>
-                                <button class="btn-edit-name" onclick="document.getElementById('btn-edit-name').click()">✏️</button>
                                 ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : `<button onclick="document.getElementById('btn-edit-insta').click()" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>`}
                             </div>
                             <div class="profile-follow-stats">
@@ -7845,6 +7844,15 @@ async function fetchAllReelsPosts() {
                         // 업로드 후 24시간 이내 포스트만 표시
                         if ((now - (p.timestamp || 0)) < 24 * 60 * 60 * 1000) {
                             hasValidPost = true;
+                            // 호칭 파싱
+                            let uTitle = "각성자";
+                            if (data.titleHistoryStr) {
+                                try { const hist = JSON.parse(data.titleHistoryStr); const last = hist[hist.length - 1].title; uTitle = typeof last === 'object' ? last[AppState.currentLang] || last.ko : last; } catch(e) {}
+                            }
+                            let uRareTitle = null;
+                            if (data.rareTitleStr) {
+                                try { const rt = JSON.parse(data.rareTitleStr); const ul = rt.unlocked || []; if (ul.length > 0) { const ro = ['uncommon','rare','epic','legendary']; const pp = {rank_global:40,rank_stat:30,streak:20,steps:10,reading:10}; uRareTitle = [...ul].sort((a,b) => { const pd = (pp[b.type]||0)-(pp[a.type]||0); return pd !== 0 ? pd : ro.indexOf(b.rarity)-ro.indexOf(a.rarity); })[0]; } } catch(e) {}
+                            }
                             posts.push({
                                 ...p,
                                 uid: d.id,
@@ -7852,7 +7860,9 @@ async function fetchAllReelsPosts() {
                                 userPhoto: data.photoURL || null,
                                 userLevel: data.level || 1,
                                 userInstaId: data.instaId || '',
-                                userFriends: data.friends || []
+                                userFriends: data.friends || [],
+                                userTitle: uTitle,
+                                userRareTitle: uRareTitle
                             });
                         }
                     });
@@ -8281,6 +8291,7 @@ function renderReelsCards(posts, lang) {
         const followBtn = !isMe ? `<button class="btn-reels-follow ${isFollowingPost ? 'following' : ''}" onclick="event.stopPropagation();window.toggleFriend('${sanitizeAttr(post.uid)}')">${isFollowingPost ? (i18n[reelsLang]?.btn_added || '팔로잉') : (i18n[reelsLang]?.btn_add || '팔로우')}</button>` : '';
         const postFollowingCount = isMe ? (AppState.user.friends || []).length : (post.userFriends || []).length;
         const postFollowerCount = reelsFollowerMap[post.uid] || 0;
+        const reelsTitleBadgeHTML = buildUserTitleBadgeHTML({ title: post.userTitle || '각성자', rareTitle: post.userRareTitle || null, isMe }, '0.55rem');
 
         // 시간표 블록 (폴딩/언폴딩 지원, 연속 동일 업무 합치기)
         const mergedBlocks = mergeConsecutiveBlocks(post.blocks);
@@ -8297,6 +8308,7 @@ function renderReelsCards(posts, lang) {
             <div class="reels-header">
                 <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(profileSrc)}','${DEFAULT_PROFILE_SVG}')" alt="">
                 <div class="reels-user-info">
+                    ${reelsTitleBadgeHTML}
                     <div class="reels-username">${sanitizeText(post.userName || '헌터')}${instaLink}${followBtn}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
                     <div class="profile-follow-stats" style="margin-top:2px;">
                         <span class="follow-stat-item"><strong>${formatFollowCount(postFollowingCount)}</strong> <span>${i18n[reelsLang]?.prof_following || '팔로잉'}</span></span>
