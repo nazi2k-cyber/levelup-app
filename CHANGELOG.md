@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.70] - 2026-03-31
+
+### 변경
+- fix: 러닝 계산기 기본값 자동저장 및 상태창 메인 데이터 미표시 버그 수정
+
 ## [1.0.69] - 2026-03-31
 
 ### 변경
