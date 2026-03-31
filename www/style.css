@@ -801,6 +801,15 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 
 /* ===== 릴스 탭 ===== */
+.reels-search-bar { margin-bottom: 10px; }
+.reels-search-bar input[type="text"] {
+    width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 1px solid var(--border-color); background: var(--panel-bg);
+    color: var(--text-main); font-size: 0.85rem; outline: none;
+    box-sizing: border-box;
+}
+.reels-search-bar input[type="text"]:focus { border-color: var(--neon-blue); }
+.reels-search-bar input[type="text"]::placeholder { color: var(--text-sub); }
 .reels-feed-container { display: flex; flex-direction: column; gap: 12px; }
 .reels-card { padding: 12px; }
 .reels-header {

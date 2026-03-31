@@ -7369,6 +7369,36 @@ window.copyPrevDaySchedule = function(checked) {
 // --- ★ Day1 포스트 → 내 플래너 복사 기능 ★ ---
 let _pendingCopyPost = null;
 let _reelsCachedPosts = []; // 렌더링된 포스트 캐시 (복사 기능용)
+let _reelsSearchQuery = ''; // Day1 검색어
+
+// Day1 닉네임/캡션 검색 필터
+window.filterReelsFeed = function(query) {
+    _reelsSearchQuery = (query || '').trim().toLowerCase();
+    const container = document.getElementById('reels-feed');
+    if (!container || _reelsCachedPosts.length === 0) return;
+    const lang = AppState.currentLang;
+    if (_reelsSearchQuery === '') {
+        // 검색어 없으면 전체 표시
+        container.innerHTML = renderReelsCards(_reelsCachedPosts, lang);
+        if (_reelsCachedPosts.length >= REELS_NATIVE_AD_POSITION && isNativePlatform) {
+            setTimeout(() => loadAndShowNativeAd('reels'), 300);
+        }
+    } else {
+        const filtered = _reelsCachedPosts.filter(p => {
+            const name = (p.userName || '').toLowerCase();
+            const caption = (p.caption || '').toLowerCase();
+            return name.includes(_reelsSearchQuery) || caption.includes(_reelsSearchQuery);
+        });
+        if (filtered.length > 0) {
+            container.innerHTML = renderReelsCards(filtered, lang);
+        } else {
+            container.innerHTML = `<div class="system-card" style="text-align:center; padding:30px; color:var(--text-sub);">
+                <div style="font-size:2rem; margin-bottom:10px;">🔍</div>
+                <div>${i18n[lang]?.reels_search_empty || '검색 결과가 없습니다.'}</div>
+            </div>`;
+        }
+    }
+};
 
 window.openCopyPlannerModal = function(postId) {
     const lang = AppState.currentLang;
@@ -8321,6 +8351,10 @@ async function renderReelsFeed() {
         }
     } finally {
         window._reelsFeedRendering = false;
+        // 검색어가 있으면 필터 재적용
+        if (_reelsSearchQuery) {
+            window.filterReelsFeed(_reelsSearchQuery);
+        }
     }
 }
 

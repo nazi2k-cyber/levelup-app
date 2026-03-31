@@ -758,6 +758,11 @@
                     <button class="btn-info-sm" id="btn-day1-info">ℹ️ <span data-i18n="btn_day1_info">가이드</span></button>
                 </div>
 
+                <!-- Day1 검색 -->
+                <div class="reels-search-bar">
+                    <input type="text" id="reels-search-input" data-i18n-placeholder="reels_search_placeholder" placeholder="닉네임 또는 캡션 검색..." oninput="window.filterReelsFeed(this.value)">
+                </div>
+
                 <!-- Day1 피드 -->
                 <div id="reels-feed" class="reels-feed-container"></div>
             </section>
