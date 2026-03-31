@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.58] - 2026-03-31
+
+### 변경
+- ISBN/OCR 스캐너 성능 대폭 개선: 고해상도 카메라, 네이티브 바코드 API, OCR 최적화
+
 ## [1.0.57] - 2026-03-31
 
 ### 변경
