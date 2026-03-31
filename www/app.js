@@ -13480,11 +13480,42 @@ window.renderLifeStatus = renderLifeStatus;
     var _rcDisplayUnit = 'km';
 
     window.toggleRcDisplayUnit = function() {
-        _rcDisplayUnit = (_rcDisplayUnit === 'km') ? 'mi' : 'km';
+        var oldUnit = _rcDisplayUnit;
+        _rcDisplayUnit = (oldUnit === 'km') ? 'mi' : 'km';
         var toggleBtns = document.querySelectorAll('#rc-unit-toggle .rc-unit-toggle-btn');
         toggleBtns.forEach(function(btn) {
             btn.classList.toggle('active', btn.getAttribute('data-unit') === _rcDisplayUnit);
         });
+
+        // Update unit labels
+        var unitLabel = _rcDisplayUnit;
+        var el;
+        el = document.getElementById('rc-pace-dist-label'); if (el) el.textContent = unitLabel;
+        el = document.getElementById('rc-vdot-dist-label'); if (el) el.textContent = unitLabel;
+        el = document.getElementById('rc-tm-speed-label'); if (el) el.textContent = _rcDisplayUnit === 'mi' ? 'mi/h' : 'km/h';
+
+        // Convert treadmill speed value
+        var tmEl = document.getElementById('rc-treadmill-speed');
+        if (tmEl) {
+            var spd = parseFloat(tmEl.value) || 0;
+            if (oldUnit === 'km' && _rcDisplayUnit === 'mi') spd = spd / 1.60934;
+            else if (oldUnit === 'mi' && _rcDisplayUnit === 'km') spd = spd * 1.60934;
+            tmEl.value = Math.round(spd * 10) / 10;
+        }
+
+        // Show/hide secondary pace rows
+        var isMi = _rcDisplayUnit === 'mi';
+        var pace2Row = document.getElementById('rc-res-pace2-row');
+        var tmPace2Row = document.getElementById('rc-tm-pace2-row');
+        if (pace2Row) pace2Row.classList.toggle('d-none', !isMi);
+        if (tmPace2Row) tmPace2Row.classList.toggle('d-none', !isMi);
+
+        // Update primary pace label
+        var paceLabel = document.getElementById('rc-res-pace-label');
+        if (paceLabel) paceLabel.textContent = isMi ? 'mi 페이스' : '페이스';
+        var tmPaceLabel = document.getElementById('rc-tm-pace-label');
+        if (tmPaceLabel) tmPaceLabel.textContent = isMi ? 'mi 페이스' : '페이스';
+
         // Recalculate to update display
         window.calcPace();
         window.calcTreadmill();
@@ -13524,22 +13555,11 @@ window.renderLifeStatus = renderLifeStatus;
         window.calcVDOT();
     };
 
-    // --- Helper: distance in km (input is always km now) ---
+    // --- Helper: distance in km (converts from mi if needed) ---
     function getDistKm(inputId) {
-        return parseFloat(document.getElementById(inputId).value) || 0;
-    }
-
-    // --- Helper: format pace with display unit ---
-    function formatPaceWithUnit(secPerKm) {
-        if (_rcDisplayUnit === 'mi') {
-            var secPerMi = secPerKm * 1.60934;
-            return formatPace(secPerMi) + ' <span class="rc-result-unit">/mi</span>';
-        }
-        return formatPace(secPerKm) + ' <span class="rc-result-unit">/km</span>';
-    }
-
-    function paceUnitLabel() {
-        return _rcDisplayUnit === 'mi' ? '/mi' : '/km';
+        var dist = parseFloat(document.getElementById(inputId).value) || 0;
+        if (_rcDisplayUnit === 'mi') dist *= 1.60934;
+        return dist;
     }
 
     // --- Helper: format pace ---
@@ -13565,6 +13585,7 @@ window.renderLifeStatus = renderLifeStatus;
     // --- Pace Calculator ---
     window.calcPace = function() {
         var distKm, totalSec, paceSecPerKm, speedKmh;
+        var isMi = _rcDisplayUnit === 'mi';
 
         if (_paceMode === 'pace') {
             // Calculate pace from distance + time
@@ -13578,9 +13599,11 @@ window.renderLifeStatus = renderLifeStatus;
             speedKmh = distKm / (totalSec / 3600);
         } else if (_paceMode === 'distance') {
             // Calculate distance from pace + time
+            // Pace input is per-mi when mi mode, per-km when km mode
             var pMin = parseInt(document.getElementById('rc-pace-min').textContent) || 0;
             var pSec = parseInt(document.getElementById('rc-pace-sec').textContent) || 0;
-            paceSecPerKm = pMin * 60 + pSec;
+            var paceInput = pMin * 60 + pSec;
+            paceSecPerKm = isMi ? paceInput / 1.60934 : paceInput;
             var hr2 = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
             var min2 = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
             var sec2 = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
@@ -13588,12 +13611,16 @@ window.renderLifeStatus = renderLifeStatus;
             if (paceSecPerKm <= 0 || totalSec <= 0) return;
             distKm = totalSec / paceSecPerKm;
             speedKmh = distKm / (totalSec / 3600);
-            document.getElementById('rc-pace-distance').value = Math.round(distKm * 100) / 100;
+            // Display distance in current unit
+            var distDisplay = isMi ? distKm / 1.60934 : distKm;
+            document.getElementById('rc-pace-distance').value = Math.round(distDisplay * 100) / 100;
         } else { // time
             distKm = getDistKm('rc-pace-distance');
+            // Pace input is per-mi when mi mode, per-km when km mode
             var pMin2 = parseInt(document.getElementById('rc-pace-min').textContent) || 0;
             var pSec2 = parseInt(document.getElementById('rc-pace-sec').textContent) || 0;
-            paceSecPerKm = pMin2 * 60 + pSec2;
+            var paceInput2 = pMin2 * 60 + pSec2;
+            paceSecPerKm = isMi ? paceInput2 / 1.60934 : paceInput2;
             if (distKm <= 0 || paceSecPerKm <= 0) return;
             totalSec = paceSecPerKm * distKm;
             speedKmh = distKm / (totalSec / 3600);
@@ -13607,25 +13634,37 @@ window.renderLifeStatus = renderLifeStatus;
         }
 
         var lap400 = Math.round(paceSecPerKm * 0.4);
-        document.getElementById('rc-res-pace').innerHTML = formatPaceWithUnit(paceSecPerKm);
-        document.getElementById('rc-res-lap').innerHTML = lap400 + ' <span class="rc-result-unit">초</span>';
-        if (_rcDisplayUnit === 'mi') {
+        if (isMi) {
+            var secPerMi = paceSecPerKm * 1.60934;
+            document.getElementById('rc-res-pace').innerHTML = formatPace(secPerMi) + ' <span class="rc-result-unit">/mi</span>';
+            document.getElementById('rc-res-pace2').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
             var speedMph = speedKmh / 1.60934;
             document.getElementById('rc-res-speed').innerHTML = speedMph.toFixed(1) + ' <span class="rc-result-unit">mi/h</span>';
         } else {
+            document.getElementById('rc-res-pace').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
             document.getElementById('rc-res-speed').innerHTML = speedKmh.toFixed(1) + ' <span class="rc-result-unit">km/h</span>';
         }
+        document.getElementById('rc-res-lap').innerHTML = lap400 + ' <span class="rc-result-unit">초</span>';
     };
 
     // --- Treadmill Calculator ---
     window.calcTreadmill = function() {
         var speed = parseFloat(document.getElementById('rc-treadmill-speed').value) || 0;
         if (speed <= 0) return;
-        var paceSecPerKm = 3600 / speed;
+        var isMi = _rcDisplayUnit === 'mi';
+        // Convert to km/h if input is in mi/h
+        var speedKmh = isMi ? speed * 1.60934 : speed;
+        var paceSecPerKm = 3600 / speedKmh;
         var time10k = paceSecPerKm * 10;
         var timeHalf = paceSecPerKm * 21.0975;
         var timeFull = paceSecPerKm * 42.195;
-        document.getElementById('rc-tm-pace').innerHTML = formatPaceWithUnit(paceSecPerKm);
+        if (isMi) {
+            var secPerMi = paceSecPerKm * 1.60934;
+            document.getElementById('rc-tm-pace').innerHTML = formatPace(secPerMi) + ' <span class="rc-result-unit">/mi</span>';
+            document.getElementById('rc-tm-pace2').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
+        } else {
+            document.getElementById('rc-tm-pace').innerHTML = formatPace(paceSecPerKm) + ' <span class="rc-result-unit">/km</span>';
+        }
         document.getElementById('rc-tm-10k').textContent = formatTime(time10k);
         document.getElementById('rc-tm-half').textContent = formatTime(timeHalf);
         document.getElementById('rc-tm-full').textContent = formatTime(timeFull);
@@ -13693,7 +13732,10 @@ window.renderLifeStatus = renderLifeStatus;
 
         document.getElementById('rc-vdot-value').textContent = vdot.toFixed(1);
 
-        // Training paces (% of VO2max ranges)
+        // Training paces (% of vVO2max ranges)
+        var isMi = _rcDisplayUnit === 'mi';
+        var paceUnit = isMi ? '/mi' : '/km';
+        var paceUnitHtml = '<span class="rc-result-unit">' + paceUnit + '</span>';
         var zones = [
             { id: 'rc-vdot-easy', lo: 0.59, hi: 0.74 },
             { id: 'rc-vdot-marathon', lo: 0.75, hi: 0.84 },
@@ -13702,13 +13744,13 @@ window.renderLifeStatus = renderLifeStatus;
             { id: 'rc-vdot-repetition', lo: 1.05, hi: 1.10 }
         ];
         zones.forEach(function(z) {
-            var paceLo = paceFromVDOT(vdot, z.hi); // faster pace from higher %
-            var paceHi = paceFromVDOT(vdot, z.lo); // slower pace from lower %
-            if (_rcDisplayUnit === 'mi') {
-                document.getElementById(z.id).innerHTML = formatPace(paceLo * 1.60934) + ' - ' + formatPace(paceHi * 1.60934) + ' <span class="rc-result-unit">/mi</span>';
-            } else {
-                document.getElementById(z.id).innerHTML = formatPace(paceLo) + ' - ' + formatPace(paceHi) + ' <span class="rc-result-unit">/km</span>';
+            var paceLo = paceFromVDOT(vdot, z.hi); // faster pace (sec/km)
+            var paceHi = paceFromVDOT(vdot, z.lo); // slower pace (sec/km)
+            if (isMi) {
+                paceLo *= 1.60934;
+                paceHi *= 1.60934;
             }
+            document.getElementById(z.id).innerHTML = formatPace(paceLo) + ' - ' + formatPace(paceHi) + ' ' + paceUnitHtml;
         });
 
         // Race predictions
@@ -13717,14 +13759,14 @@ window.renderLifeStatus = renderLifeStatus;
         var predFull = predictRaceTime(vdot, 42195);
 
         document.getElementById('rc-vdot-pred-10k').textContent = formatTime(pred10k * 60);
-        var pace10k = pred10k * 60 / 10;
-        document.getElementById('rc-vdot-pred-10k-pace').textContent = (_rcDisplayUnit === 'mi' ? formatPace(pace10k * 1.60934) + '/mi' : formatPace(pace10k) + '/km');
+        var pace10k = pred10k * 60 / 10; // sec/km
+        document.getElementById('rc-vdot-pred-10k-pace').textContent = formatPace(isMi ? pace10k * 1.60934 : pace10k) + paceUnit;
         document.getElementById('rc-vdot-pred-half').textContent = formatTime(predHalf * 60);
-        var paceHalf = predHalf * 60 / 21.0975;
-        document.getElementById('rc-vdot-pred-half-pace').textContent = (_rcDisplayUnit === 'mi' ? formatPace(paceHalf * 1.60934) + '/mi' : formatPace(paceHalf) + '/km');
+        var paceHalfVal = predHalf * 60 / 21.0975;
+        document.getElementById('rc-vdot-pred-half-pace').textContent = formatPace(isMi ? paceHalfVal * 1.60934 : paceHalfVal) + paceUnit;
         document.getElementById('rc-vdot-pred-full').textContent = formatTime(predFull * 60);
         var paceFull = predFull * 60 / 42.195;
-        document.getElementById('rc-vdot-pred-full-pace').textContent = (_rcDisplayUnit === 'mi' ? formatPace(paceFull * 1.60934) + '/mi' : formatPace(paceFull) + '/km');
+        document.getElementById('rc-vdot-pred-full-pace').textContent = formatPace(isMi ? paceFull * 1.60934 : paceFull) + paceUnit;
     };
 
     // --- Update summary card on status screen ---
@@ -13739,7 +13781,7 @@ window.renderLifeStatus = renderLifeStatus;
         var el1 = document.getElementById('rc-summary-dist');
         var el2 = document.getElementById('rc-summary-time');
         var el3 = document.getElementById('rc-summary-pace');
-        if (el1) el1.textContent = distDisplay + ' km';
+        if (el1) el1.textContent = distDisplay + ' ' + _rcDisplayUnit;
         if (el2) el2.textContent = formatTime(totalSec);
         if (distKm > 0 && totalSec > 0) {
             var pace = totalSec / distKm;

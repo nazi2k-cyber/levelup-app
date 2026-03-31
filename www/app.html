@@ -1077,7 +1077,7 @@
                     </div>
                     <div class="rc-input-row" style="margin-top:8px;">
                         <input type="number" id="rc-pace-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.onPaceDistInput()">
-                        <span class="rc-unit-label">km</span>
+                        <span class="rc-unit-label" id="rc-pace-dist-label">km</span>
                     </div>
                 </div>
 
@@ -1122,9 +1122,13 @@
 
                 <!-- 결과 -->
                 <div class="rc-results" id="rc-pace-results">
-                    <div class="rc-result-row">
-                        <span class="rc-result-label">페이스</span>
+                    <div class="rc-result-row" id="rc-res-pace-row">
+                        <span class="rc-result-label" id="rc-res-pace-label">페이스</span>
                         <span class="rc-result-value" id="rc-res-pace">6:00 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                    <div class="rc-result-row d-none" id="rc-res-pace2-row">
+                        <span class="rc-result-label">km 페이스</span>
+                        <span class="rc-result-value" id="rc-res-pace2"></span>
                     </div>
                     <div class="rc-result-row">
                         <span class="rc-result-label">400m 랩타임</span>
@@ -1142,14 +1146,18 @@
                     <div class="rc-section-desc">트레드밀 속도를 페이스로 계산</div>
                     <div class="rc-input-row" style="margin-top:10px;">
                         <input type="number" id="rc-treadmill-speed" class="rc-input" value="9.8" min="0.1" step="0.1" oninput="window.calcTreadmill()">
-                        <span class="rc-unit-label">km/h</span>
+                        <span class="rc-unit-label" id="rc-tm-speed-label">km/h</span>
                         <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(-0.1)">−</button>
                         <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(0.1)">+</button>
                     </div>
                     <div class="rc-results" id="rc-treadmill-results" style="margin-top:12px;">
-                        <div class="rc-result-row">
-                            <span class="rc-result-label">페이스</span>
+                        <div class="rc-result-row" id="rc-tm-pace-row">
+                            <span class="rc-result-label" id="rc-tm-pace-label">페이스</span>
                             <span class="rc-result-value" id="rc-tm-pace">6:07 <span class="rc-result-unit">/km</span></span>
+                        </div>
+                        <div class="rc-result-row d-none" id="rc-tm-pace2-row">
+                            <span class="rc-result-label">km 페이스</span>
+                            <span class="rc-result-value" id="rc-tm-pace2"></span>
                         </div>
                         <div class="rc-result-row">
                             <span class="rc-result-label">10K 완주 시간</span>
@@ -1182,7 +1190,7 @@
                     </div>
                     <div class="rc-input-row" style="margin-top:8px;">
                         <input type="number" id="rc-vdot-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.onVdotDistInput()">
-                        <span class="rc-unit-label">km</span>
+                        <span class="rc-unit-label" id="rc-vdot-dist-label">km</span>
                     </div>
                 </div>
 
