@@ -1995,6 +1995,9 @@ async function loadUserDataFromDB(user) {
             if (data.ormCalcHistoryStr) {
                 localStorage.setItem('orm_calc_history', data.ormCalcHistoryStr);
             }
+            // 계산기 상태창 메인 데이터 갱신 (Firebase 복원 후)
+            if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();
+            if (typeof window.refreshOrmCalcSummary === 'function') window.refreshOrmCalcSummary();
             // 스트릭 계산 및 스탯 감소
             applyStreakAndDecay();
             if(data.diaryStr) {
@@ -13542,11 +13545,13 @@ window.renderLifeStatus = renderLifeStatus;
     'use strict';
 
     let _paceMode = 'pace'; // 'pace' | 'distance' | 'time'
+    let _rcUserInteracted = false; // Track if user modified inputs
 
     // --- Overlay open/close ---
     window.openRunningCalcView = function() {
         const overlay = document.getElementById('running-calc-overlay');
         if (overlay) overlay.classList.remove('d-none');
+        _rcUserInteracted = false;
         window.calcPace();
         window.calcTreadmill();
         renderRcHistory();
@@ -13554,8 +13559,9 @@ window.renderLifeStatus = renderLifeStatus;
     window.closeRunningCalcView = function() {
         const overlay = document.getElementById('running-calc-overlay');
         if (overlay) overlay.classList.add('d-none');
-        // Save current calculation to history
-        if (window.saveRunningCalcHistory) window.saveRunningCalcHistory();
+        // Save current calculation to history only if user interacted
+        if (_rcUserInteracted && window.saveRunningCalcHistory) window.saveRunningCalcHistory();
+        _rcUserInteracted = false;
         updateSummaryCard();
     };
 
@@ -13621,6 +13627,7 @@ window.renderLifeStatus = renderLifeStatus;
 
     // --- Input validation ---
     window.rcValidateInput = function(el, type) {
+        _rcUserInteracted = true;
         var val = parseInt(el.value) || 0;
         if (type === 'hr' && val > 24) val = 0;
         else if (type === 'min' && val > 59) val = 0;
@@ -13634,6 +13641,7 @@ window.renderLifeStatus = renderLifeStatus;
 
     // --- Adjust +/- buttons ---
     window.rcAdjust = function(field, delta) {
+        _rcUserInteracted = true;
         var el = document.getElementById('rc-' + field);
         if (!el) return;
         var val = parseInt(el.value) + delta;
@@ -13815,6 +13823,7 @@ window.renderLifeStatus = renderLifeStatus;
 
     // --- Preset distance selection ---
     window.selectPaceDist = function(dist) {
+        _rcUserInteracted = true;
         document.getElementById('rc-pace-distance').value = dist;
         document.querySelectorAll('.rc-preset-btn[data-dist]').forEach(function(btn) {
             btn.classList.toggle('active', parseFloat(btn.getAttribute('data-dist')) === dist);
@@ -13823,6 +13832,7 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     window.onPaceDistInput = function() {
+        _rcUserInteracted = true;
         var val = parseFloat(document.getElementById('rc-pace-distance').value);
         document.querySelectorAll('.rc-preset-btn[data-dist]').forEach(function(btn) {
             btn.classList.toggle('active', parseFloat(btn.getAttribute('data-dist')) === val);
@@ -13831,6 +13841,7 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     window.selectVdotDist = function(dist) {
+        _rcUserInteracted = true;
         document.getElementById('rc-vdot-distance').value = dist;
         document.querySelectorAll('.rc-preset-btn[data-vdist]').forEach(function(btn) {
             btn.classList.toggle('active', parseFloat(btn.getAttribute('data-vdist')) === dist);
@@ -13839,6 +13850,7 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     window.onVdotDistInput = function() {
+        _rcUserInteracted = true;
         var val = parseFloat(document.getElementById('rc-vdot-distance').value);
         document.querySelectorAll('.rc-preset-btn[data-vdist]').forEach(function(btn) {
             btn.classList.toggle('active', parseFloat(btn.getAttribute('data-vdist')) === val);
@@ -14085,6 +14097,8 @@ window.renderLifeStatus = renderLifeStatus;
         }
         renderRcSummaryHistory();
     }
+    // Expose for external refresh (e.g. after Firebase data restore)
+    window.refreshRunningCalcSummary = function() { updateSummaryCard(); };
 
     function renderRcSummaryHistory() {
         var el = document.getElementById('rc-summary-history');
@@ -14373,9 +14387,30 @@ window.renderLifeStatus = renderLifeStatus;
         document.getElementById('orm-total-sum').textContent = (sq || bp || dl) ? Math.round(total * 10) / 10 + ' kg' : '- kg';
     }
 
+    // --- Rebuild _ormData from history if localStorage orm_data is missing ---
+    function rebuildOrmDataFromHistory() {
+        var list = loadOrmHistory();
+        if (list.length === 0) return;
+        // Find latest 1RM per exercise from history
+        var found = { squat: false, bench: false, deadlift: false };
+        for (var i = 0; i < list.length; i++) {
+            var ex = list[i].exercise;
+            if (ex && !found[ex] && list[i].result1rm) {
+                _ormData[ex] = list[i].result1rm;
+                found[ex] = true;
+            }
+            if (found.squat && found.bench && found.deadlift) break;
+        }
+        saveOrmData();
+    }
+
     // --- Update summary card on status screen ---
     function updateSummaryCard() {
-        // Use _ormData (latest 1RM per exercise from history)
+        // If _ormData is empty but history exists, rebuild from history
+        if (!_ormData.squat && !_ormData.bench && !_ormData.deadlift) {
+            rebuildOrmDataFromHistory();
+        }
+
         var sq = _ormData.squat;
         var bp = _ormData.bench;
         var dl = _ormData.deadlift;
@@ -14394,6 +14429,8 @@ window.renderLifeStatus = renderLifeStatus;
 
         renderOrmSummaryHistory();
     }
+    // Expose for external refresh (e.g. after Firebase data restore)
+    window.refreshOrmCalcSummary = function() { updateSummaryCard(); };
 
     function renderOrmSummaryHistory() {
         var el = document.getElementById('orm-summary-history');
