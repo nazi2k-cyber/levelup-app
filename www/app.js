@@ -13492,6 +13492,14 @@ window.renderLifeStatus = renderLifeStatus;
     window.closeRunningCalcView = function() {
         const overlay = document.getElementById('running-calc-overlay');
         if (overlay) overlay.classList.add('d-none');
+        // Save current calculation to history
+        var activeTab = document.querySelector('.rc-main-tab.active');
+        var tab = activeTab ? activeTab.dataset.rcTab : 'pace';
+        if (tab === 'vdot') {
+            if (window.saveRcVdotCalc) window.saveRcVdotCalc();
+        } else {
+            if (window.saveRcPaceCalc) window.saveRcPaceCalc();
+        }
         updateSummaryCard();
     };
 
@@ -13941,23 +13949,105 @@ window.renderLifeStatus = renderLifeStatus;
         document.getElementById('rc-vdot-pred-full-pace').textContent = formatPace(isMi ? paceFull * 1.60934 : paceFull) + paceUnit;
     };
 
-    // --- Update summary card on status screen ---
-    function updateSummaryCard() {
+    // --- History management ---
+    var RC_HISTORY_KEY = 'rc_calc_history';
+    var MAX_RC_HISTORY = 20;
+
+    function loadRcHistory() {
+        try {
+            var data = localStorage.getItem(RC_HISTORY_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch(e) { return []; }
+    }
+
+    function saveRcHistory(entry) {
+        var history = loadRcHistory();
+        history.unshift(entry);
+        if (history.length > MAX_RC_HISTORY) history = history.slice(0, MAX_RC_HISTORY);
+        try { localStorage.setItem(RC_HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
+    }
+
+    function formatDateKr(ts) {
+        var d = new Date(ts);
+        return (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+    }
+
+    // Save pace calculation to history
+    window.saveRcPaceCalc = function() {
+        var distDisplay = parseFloat(document.getElementById('rc-pace-distance').value) || 0;
         var distKm = getDistKm('rc-pace-distance');
         var hr = parseInt(document.getElementById('rc-pace-hr').value) || 0;
         var min = parseInt(document.getElementById('rc-pace-min-t').value) || 0;
         var sec = parseInt(document.getElementById('rc-pace-sec-t').value) || 0;
         var totalSec = hr * 3600 + min * 60 + sec;
-        var distDisplay = parseFloat(document.getElementById('rc-pace-distance').value) || 0;
+        if (distKm <= 0 || totalSec <= 0) return;
+        var paceSecPerKm = totalSec / distKm;
+        saveRcHistory({
+            type: 'pace', ts: Date.now(), unit: _rcDisplayUnit,
+            dist: distDisplay, distKm: distKm, time: formatTime(totalSec),
+            pace: formatPace(paceSecPerKm)
+        });
+    };
 
+    // Save VDOT calculation to history
+    window.saveRcVdotCalc = function() {
+        var distDisplay = parseFloat(document.getElementById('rc-vdot-distance').value) || 0;
+        var distKm = getDistKm('rc-vdot-distance');
+        var vdotEl = document.getElementById('rc-vdot-value');
+        if (!vdotEl) return;
+        var vdot = parseFloat(vdotEl.textContent);
+        if (!vdot || !isFinite(vdot) || distKm <= 0) return;
+        saveRcHistory({
+            type: 'vdot', ts: Date.now(), unit: _rcDisplayUnit,
+            dist: distDisplay, distKm: distKm, vdot: vdot.toFixed(1)
+        });
+    };
+
+    // --- Update summary card on status screen ---
+    function updateSummaryCard() {
+        var history = loadRcHistory();
         var el1 = document.getElementById('rc-summary-dist');
         var el2 = document.getElementById('rc-summary-time');
         var el3 = document.getElementById('rc-summary-pace');
-        if (el1) el1.textContent = distDisplay + ' ' + _rcDisplayUnit;
-        if (el2) el2.textContent = formatTime(totalSec);
-        if (distKm > 0 && totalSec > 0) {
-            var pace = totalSec / distKm;
-            if (el3) el3.textContent = formatPace(pace) + ' /km';
+
+        // Show most recent pace record in main summary
+        var latestPace = null;
+        for (var i = 0; i < history.length; i++) {
+            if (history[i].type === 'pace') { latestPace = history[i]; break; }
+        }
+        if (latestPace) {
+            if (el1) el1.textContent = latestPace.dist + ' ' + (latestPace.unit || 'km');
+            if (el2) el2.textContent = latestPace.time;
+            if (el3) el3.textContent = latestPace.pace + ' /km';
+        } else {
+            if (el1) el1.textContent = '- km';
+            if (el2) el2.textContent = '-';
+            if (el3) el3.textContent = '- /km';
+        }
+
+        // Render recent history list (max 3)
+        var histEl = document.getElementById('rc-summary-history');
+        if (histEl) {
+            if (history.length === 0) {
+                histEl.innerHTML = '';
+                return;
+            }
+            var html = '<div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:4px;">최근 기록</div>';
+            var count = Math.min(history.length, 3);
+            for (var j = 0; j < count; j++) {
+                var rec = history[j];
+                var dateStr = formatDateKr(rec.ts);
+                var line = '';
+                if (rec.type === 'pace') {
+                    line = dateStr + ' · ' + rec.dist + ' ' + (rec.unit || 'km') + ' / ' + rec.time;
+                    line += '<span style="float:right; color:var(--neon-green, #00e676); font-weight:700;">' + rec.pace + ' /km</span>';
+                } else if (rec.type === 'vdot') {
+                    line = dateStr + ' · ' + rec.dist + ' ' + (rec.unit || 'km');
+                    line += '<span style="float:right; color:var(--neon-gold); font-weight:700;">VDOT ' + rec.vdot + '</span>';
+                }
+                html += '<div style="padding:3px 0; border-top:1px solid rgba(255,255,255,0.05);">' + line + '</div>';
+            }
+            histEl.innerHTML = html;
         }
     }
 
@@ -13965,6 +14055,7 @@ window.renderLifeStatus = renderLifeStatus;
     document.addEventListener('DOMContentLoaded', function() {
         window.calcPace();
         window.calcTreadmill();
+        updateSummaryCard();
     });
 })();
 
@@ -13973,6 +14064,8 @@ window.renderLifeStatus = renderLifeStatus;
     'use strict';
 
     var _ormData = { squat: null, bench: null, deadlift: null };
+    var ORM_HISTORY_KEY = 'orm_calc_history';
+    var MAX_ORM_HISTORY = 20;
 
     // Load saved data
     try {
@@ -13983,6 +14076,27 @@ window.renderLifeStatus = renderLifeStatus;
     function saveOrmData() {
         try { localStorage.setItem('orm_data', JSON.stringify(_ormData)); } catch(e) {}
     }
+
+    function loadOrmHistory() {
+        try {
+            var data = localStorage.getItem(ORM_HISTORY_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch(e) { return []; }
+    }
+
+    function saveOrmHistory(entry) {
+        var history = loadOrmHistory();
+        history.unshift(entry);
+        if (history.length > MAX_ORM_HISTORY) history = history.slice(0, MAX_ORM_HISTORY);
+        try { localStorage.setItem(ORM_HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
+    }
+
+    function formatDateKr(ts) {
+        var d = new Date(ts);
+        return (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+    }
+
+    var exerciseNames = { squat: '스쿼트', bench: '벤치프레스', deadlift: '데드리프트' };
 
     // --- Overlay open/close ---
     window.openOrmCalcView = function() {
@@ -14059,6 +14173,12 @@ window.renderLifeStatus = renderLifeStatus;
         _ormData[exercise] = r1(avg);
         saveOrmData();
         updateTotalDisplay();
+
+        // Save to history
+        saveOrmHistory({
+            ts: Date.now(), exercise: exercise,
+            weight: weight, reps: reps, result: r1(avg)
+        });
     };
 
     // --- Update total display in overlay ---
@@ -14077,6 +14197,7 @@ window.renderLifeStatus = renderLifeStatus;
 
     // --- Update summary card on status screen ---
     function updateSummaryCard() {
+        // Use _ormData (latest 1RM per exercise from history)
         var sq = _ormData.squat;
         var bp = _ormData.bench;
         var dl = _ormData.deadlift;
@@ -14092,6 +14213,27 @@ window.renderLifeStatus = renderLifeStatus;
 
         var total = (sq || 0) + (bp || 0) + (dl || 0);
         if (el4) el4.textContent = (sq || bp || dl) ? Math.round(total * 10) / 10 + ' kg' : '- kg';
+
+        // Render recent history list (max 3)
+        var history = loadOrmHistory();
+        var histEl = document.getElementById('orm-summary-history');
+        if (histEl) {
+            if (history.length === 0) {
+                histEl.innerHTML = '';
+                return;
+            }
+            var html = '<div style="font-size:0.7rem; color:var(--text-sub); margin-bottom:4px;">최근 기록</div>';
+            var count = Math.min(history.length, 3);
+            for (var j = 0; j < count; j++) {
+                var rec = history[j];
+                var dateStr = formatDateKr(rec.ts);
+                var name = exerciseNames[rec.exercise] || rec.exercise;
+                var line = dateStr + ' · ' + name + ' ' + rec.weight + 'kg×' + rec.reps + '회';
+                line += '<span style="float:right; color:var(--neon-green, #00e676); font-weight:700;">' + rec.result + ' kg</span>';
+                html += '<div style="padding:3px 0; border-top:1px solid rgba(255,255,255,0.05);">' + line + '</div>';
+            }
+            histEl.innerHTML = html;
+        }
     }
 
     // Init on page load
