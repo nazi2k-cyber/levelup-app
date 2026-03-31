@@ -810,6 +810,10 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .reels-search-bar input[type="text"]:focus { border-color: var(--neon-blue); }
 .reels-search-bar input[type="text"]::placeholder { color: var(--text-sub); }
+.reels-sort-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
+.reels-sort-tabs::-webkit-scrollbar { display: none; }
+.reels-sort-btn { white-space: nowrap; padding: 5px 12px; font-size: 0.75rem; background: transparent; border: 1px solid var(--border-color); color: var(--text-sub); border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+.reels-sort-btn.active { background: var(--neon-blue); color: #000; border-color: var(--neon-blue); font-weight: bold; }
 .reels-feed-container { display: flex; flex-direction: column; gap: 12px; }
 .reels-card { padding: 12px; }
 .reels-header {

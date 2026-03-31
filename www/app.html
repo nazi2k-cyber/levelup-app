@@ -763,6 +763,13 @@
                     <input type="text" id="reels-search-input" data-i18n-placeholder="reels_search_placeholder" placeholder="@닉네임 검색 / 캡션 검색" oninput="window.filterReelsFeed(this.value)">
                 </div>
 
+                <!-- Day1 정렬 -->
+                <div class="reels-sort-tabs">
+                    <button class="reels-sort-btn active" data-reels-sort="latest" data-i18n="reels_sort_latest">최신순</button>
+                    <button class="reels-sort-btn" data-reels-sort="friends" data-i18n="reels_sort_friends">친구순</button>
+                    <button class="reels-sort-btn" data-reels-sort="likes" data-i18n="reels_sort_likes">좋아요순</button>
+                </div>
+
                 <!-- Day1 피드 -->
                 <div id="reels-feed" class="reels-feed-container"></div>
             </section>
