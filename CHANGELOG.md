@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.61] - 2026-03-31
+
+### 변경
+- 페이스 계산기: 버튼 이벤트 수정, 거리/시간 결과 표시, 버튼 크기 조정
+
 ## [1.0.60] - 2026-03-31
 
 ### 변경
