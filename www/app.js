@@ -1642,7 +1642,11 @@ function bindEvents() {
 
     document.getElementById('btn-edit-name').addEventListener('click', changePlayerName);
     document.getElementById('btn-edit-insta').addEventListener('click', changeInstaId);
-    document.getElementById('imageUpload').addEventListener('change', loadProfileImage); 
+    document.getElementById('imageUploadLabel').addEventListener('click', function(e) {
+        e.preventDefault();
+        showPhotoSourceSheet('imageUpload');
+    });
+    document.getElementById('imageUpload').addEventListener('change', loadProfileImage);
     
     document.getElementById('prof-title-badge').addEventListener('click', openTitleModal);
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
@@ -1761,6 +1765,10 @@ function bindEvents() {
     const prioritySaveBtn = document.getElementById('btn-planner-save-priority');
     if (prioritySaveBtn) prioritySaveBtn.addEventListener('click', savePlannerEntry);
     // Planner photo upload
+    document.getElementById('planner-photo-label').addEventListener('click', function(e) {
+        e.preventDefault();
+        showPhotoSourceSheet('plannerPhotoUpload');
+    });
     document.getElementById('plannerPhotoUpload').addEventListener('change', loadPlannerPhoto);
     // Planner share button
     document.getElementById('btn-planner-share').addEventListener('click', openShareModal);
@@ -4270,6 +4278,49 @@ async function resendVerificationEmail() {
     } finally {
         btn.disabled = false;
     }
+}
+
+// --- ★ 사진 소스 선택 (카메라/갤러리) 액션시트 ★ ---
+function showPhotoSourceSheet(inputId) {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    const input = document.getElementById(inputId);
+    if (!isNative) {
+        // 웹: 기존 동작 유지 (갤러리만)
+        input.removeAttribute('capture');
+        input.click();
+        return;
+    }
+    const lang = i18n[AppState.currentLang] || i18n.ko;
+    // 기존 시트가 있으면 제거
+    const existing = document.getElementById('photo-source-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'photo-source-overlay';
+    overlay.className = 'book-action-overlay';
+    overlay.innerHTML =
+        '<div class="book-action-sheet" onclick="event.stopPropagation()">'
+        + '<div class="book-action-title">' + (lang.photo_source_title || '사진 추가') + '</div>'
+        + '<button class="book-action-btn" id="photo-src-camera">📷 ' + (lang.photo_source_camera || '카메라로 촬영') + '</button>'
+        + '<button class="book-action-btn" id="photo-src-gallery">🖼️ ' + (lang.photo_source_gallery || '갤러리에서 선택') + '</button>'
+        + '<button class="book-action-btn cancel" id="photo-src-cancel">' + (lang.photo_source_cancel || '취소') + '</button>'
+        + '</div>';
+    document.body.appendChild(overlay);
+
+    function close() { overlay.remove(); }
+    overlay.addEventListener('click', close);
+    document.getElementById('photo-src-cancel').addEventListener('click', close);
+
+    document.getElementById('photo-src-camera').addEventListener('click', function() {
+        close();
+        input.setAttribute('capture', 'environment');
+        input.click();
+    });
+    document.getElementById('photo-src-gallery').addEventListener('click', function() {
+        close();
+        input.removeAttribute('capture');
+        input.click();
+    });
 }
 
 async function loadProfileImage(event) {
@@ -8761,7 +8812,7 @@ async function toggleHealthSync() {
     }
 }
 
-// --- 카메라 권한 토글 (ISBN 바코드 스캔용) ---
+// --- 카메라 권한 토글 (사진 촬영 + ISBN 바코드 스캔) ---
 async function toggleCamera() {
     const toggle = document.getElementById('camera-toggle');
     const statusDiv = document.getElementById('camera-status');
