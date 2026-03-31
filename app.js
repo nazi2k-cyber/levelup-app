@@ -13527,19 +13527,27 @@ window.renderLifeStatus = renderLifeStatus;
         var distGroup = document.getElementById('rc-pace-distance-group');
         var timeGroup = document.getElementById('rc-pace-time-group');
         var paceGroup = document.getElementById('rc-pace-pace-group');
-        // Show/hide inputs based on mode
+        var resDistRow = document.getElementById('rc-res-distance-row');
+        var resTimeRow = document.getElementById('rc-res-time-row');
+        // Show/hide inputs and result rows based on mode
         if (mode === 'pace') {
             distGroup.classList.remove('d-none');
             timeGroup.classList.remove('d-none');
             paceGroup.classList.add('d-none');
+            resDistRow.classList.add('d-none');
+            resTimeRow.classList.add('d-none');
         } else if (mode === 'distance') {
             distGroup.classList.add('d-none');
             timeGroup.classList.remove('d-none');
             paceGroup.classList.remove('d-none');
+            resDistRow.classList.remove('d-none');
+            resTimeRow.classList.add('d-none');
         } else { // time
             distGroup.classList.remove('d-none');
             timeGroup.classList.add('d-none');
             paceGroup.classList.remove('d-none');
+            resDistRow.classList.add('d-none');
+            resTimeRow.classList.remove('d-none');
         }
         window.calcPace();
     };
@@ -13572,7 +13580,7 @@ window.renderLifeStatus = renderLifeStatus;
         else window.calcPace();
     };
 
-    // --- Long-press acceleration for +/- buttons ---
+    // --- Long-press acceleration for +/- buttons (event delegation) ---
     (function() {
         var holdTimer = null;
         var holdInterval = null;
@@ -13580,6 +13588,12 @@ window.renderLifeStatus = renderLifeStatus;
         var INITIAL_SPEED = 150;
         var MIN_SPEED = 30;
         var ACCEL_STEP = 20;
+
+        function getFieldAndDelta(el) {
+            var btn = el.closest('.rc-time-btn[data-field]');
+            if (!btn) return null;
+            return { field: btn.getAttribute('data-field'), delta: parseInt(btn.getAttribute('data-delta')) };
+        }
 
         function startHold(field, delta) {
             stopHold();
@@ -13596,28 +13610,28 @@ window.renderLifeStatus = renderLifeStatus;
             if (holdInterval) { clearTimeout(holdInterval); holdInterval = null; }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.rc-time-btn[data-field]').forEach(function(btn) {
-                var field = btn.getAttribute('data-field');
-                var delta = parseInt(btn.getAttribute('data-delta'));
-
-                btn.addEventListener('click', function() {
-                    window.rcAdjust(field, delta);
-                });
-                btn.addEventListener('mousedown', function(e) {
-                    e.preventDefault();
-                    startHold(field, delta);
-                });
-                btn.addEventListener('mouseup', stopHold);
-                btn.addEventListener('mouseleave', stopHold);
-                btn.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    startHold(field, delta);
-                }, { passive: false });
-                btn.addEventListener('touchend', stopHold);
-                btn.addEventListener('touchcancel', stopHold);
-            });
+        document.addEventListener('click', function(e) {
+            var info = getFieldAndDelta(e.target);
+            if (info) window.rcAdjust(info.field, info.delta);
         });
+        document.addEventListener('mousedown', function(e) {
+            var info = getFieldAndDelta(e.target);
+            if (info) { e.preventDefault(); startHold(info.field, info.delta); }
+        });
+        document.addEventListener('mouseup', stopHold);
+        document.addEventListener('mouseleave', stopHold);
+        document.addEventListener('touchstart', function(e) {
+            var info = getFieldAndDelta(e.target);
+            if (info) { e.preventDefault(); startHold(info.field, info.delta); }
+        }, { passive: false });
+        document.addEventListener('touchend', function(e) {
+            var info = getFieldAndDelta(e.target);
+            if (info) {
+                stopHold();
+                window.rcAdjust(info.field, info.delta);
+            }
+        });
+        document.addEventListener('touchcancel', stopHold);
     })();
 
     window.rcAdjustTreadmill = function(delta) {
@@ -13767,6 +13781,8 @@ window.renderLifeStatus = renderLifeStatus;
             // Display distance in current unit
             var distDisplay = isMi ? distKm / 1.60934 : distKm;
             document.getElementById('rc-pace-distance').value = Math.round(distDisplay * 100) / 100;
+            var distUnit = isMi ? 'mi' : 'km';
+            document.getElementById('rc-res-distance').innerHTML = (Math.round(distDisplay * 100) / 100).toFixed(2) + ' <span class="rc-result-unit">' + distUnit + '</span>';
         } else { // time
             distKm = getDistKm('rc-pace-distance');
             // Pace input is per-mi when mi mode, per-km when km mode
@@ -13784,6 +13800,7 @@ window.renderLifeStatus = renderLifeStatus;
             document.getElementById('rc-pace-hr').value = th;
             document.getElementById('rc-pace-min-t').value = tm;
             document.getElementById('rc-pace-sec-t').value = ts;
+            document.getElementById('rc-res-time').textContent = formatTime(totalSec);
         }
 
         var lap400 = Math.round(paceSecPerKm * 0.4);
