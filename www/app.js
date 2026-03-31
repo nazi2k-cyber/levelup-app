@@ -4162,7 +4162,6 @@ function renderUsers(criteria, btn = null) {
     const myUid = auth.currentUser?.uid;
     const myFollowingCount = (AppState.user.friends || []).length;
     const myFollowerCount = myUid ? AppState.social.users.filter(u => Array.isArray(u.friends) && u.friends.includes(myUid)).length : 0;
-    const lang = AppState.currentLang;
 
     container.innerHTML = list.map((u, i) => {
         const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.6rem');
