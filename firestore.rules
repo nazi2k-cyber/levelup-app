@@ -56,7 +56,9 @@ service cloud.firestore {
         'ddaysStr', 'ddayCaption',
         'lastBonusExpDate',
         'lifeStatusStr',
-        'libraryStr'
+        'libraryStr',
+        'runningCalcHistoryStr',
+        'ormCalcHistoryStr'
       ];
     }
 
@@ -129,7 +131,9 @@ service cloud.firestore {
         && (!('ddayCaption' in d) || (d.ddayCaption is string && d.ddayCaption.size() <= 200))
         && (!('lastBonusExpDate' in d) || (d.lastBonusExpDate is string && d.lastBonusExpDate.size() <= 10))
         && (!('lifeStatusStr' in d) || (d.lifeStatusStr is string && d.lifeStatusStr.size() <= 1000))
-        && (!('libraryStr' in d) || (d.libraryStr is string && d.libraryStr.size() <= 50000));
+        && (!('libraryStr' in d) || (d.libraryStr is string && d.libraryStr.size() <= 50000))
+        && (!('runningCalcHistoryStr' in d) || (d.runningCalcHistoryStr is string && d.runningCalcHistoryStr.size() <= 10000))
+        && (!('ormCalcHistoryStr' in d) || (d.ormCalcHistoryStr is string && d.ormCalcHistoryStr.size() <= 10000));
     }
 
     // ──────────────────────────────────────────────
