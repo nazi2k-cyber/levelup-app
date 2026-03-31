@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.74] - 2026-03-31
+
+### 변경
+- fix: 닉네임 변경 시 최소 필드만 저장 + updateDoc 폴백
+
 ## [1.0.73] - 2026-03-31
 
 ### 변경
