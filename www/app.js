@@ -13058,12 +13058,7 @@ window.renderLifeStatus = renderLifeStatus;
                     delete fullConfig.qrbox;
                     _html5QrCode.stop().then(function() {
                         return _html5QrCode.start(
-                            {
-                                facingMode: { ideal: 'environment' },
-                                width: { ideal: 1920, min: 1280 },
-                                height: { ideal: 1080, min: 720 },
-                                focusMode: { ideal: 'continuous' }
-                            },
+                            { facingMode: 'environment' },
                             fullConfig,
                             _onBarcodeSuccess,
                             function(err) {
@@ -13078,12 +13073,7 @@ window.renderLifeStatus = renderLifeStatus;
             };
 
             await _html5QrCode.start(
-                {
-                    facingMode: { ideal: 'environment' },
-                    width: { ideal: 1920, min: 1280 },
-                    height: { ideal: 1080, min: 720 },
-                    focusMode: { ideal: 'continuous' }
-                },
+                { facingMode: 'environment' },
                 _scannerConfig(),
                 _onBarcodeSuccess,
                 _onBarcodeError
