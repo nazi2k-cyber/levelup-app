@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.82] - 2026-03-31
+
+### 변경
+- Day1 프로필 사진 클릭 시 프로필 모달 표시 및 애드몹 광고 가림 방지
+
 ## [1.0.81] - 2026-03-31
 
 ### 변경
