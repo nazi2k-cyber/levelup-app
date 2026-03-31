@@ -2231,10 +2231,10 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     min-width: 70px;
 }
 .rc-time-input {
-    width: 48px; padding: 8px 4px; text-align: center;
+    width: 52px; padding: 10px 4px; text-align: center;
     background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);
     border-radius: 8px; color: var(--text-main);
-    font-size: 1.1rem; font-weight: 700;
+    font-size: 1.15rem; font-weight: 700;
     outline: none; transition: border-color 0.2s;
     -moz-appearance: textfield;
 }
@@ -2244,15 +2244,24 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .rc-time-input:focus { border-color: var(--neon-blue); }
 .rc-time-btn {
-    width: 32px; height: 32px; border-radius: 6px;
+    width: 38px; height: 38px; border-radius: 8px;
     background: rgba(255,255,255,0.08); border: 1px solid var(--border-color);
-    color: var(--text-main); font-size: 1rem; font-weight: 700;
+    color: var(--text-main); font-size: 1.1rem; font-weight: 700;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     transition: background 0.15s; flex-shrink: 0;
     -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 .rc-time-btn:active { background: rgba(0,217,255,0.2); }
-.rc-time-unit { font-size: 0.7rem; color: var(--text-sub); font-weight: 400; white-space: nowrap; }
+.rc-time-unit { font-size: 0.7rem; color: var(--text-sub); font-weight: 400; white-space: nowrap; margin-right: 2px; }
+.rc-calc-result {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; margin-top: 8px;
+}
+.rc-calc-result .rc-result-label { font-size: 0.85rem; color: var(--text-sub); }
+.rc-result-highlight-value { font-size: 1.1rem; font-weight: 700; color: var(--neon-green, #00e676); }
+.rc-calc-result.d-none { display: none !important; }
 .rc-results {
     background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
     border-radius: 10px; padding: 12px 14px; margin-top: 12px;
