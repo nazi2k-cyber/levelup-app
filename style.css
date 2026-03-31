@@ -287,6 +287,20 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 .rank-tab-btn.active { background: var(--neon-blue); color: #fff; border-color: var(--neon-blue); font-weight: bold;}
 .user-card { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 8px; }
 .user-card.my-rank { border-color: var(--neon-gold); background: rgba(255, 204, 0, 0.05); }
+/* 소셜탭 내 프로필 (상태창과 동일 레이아웃) */
+.social-my-profile { flex-wrap: wrap; align-items: flex-start; padding: 12px; }
+.social-my-profile-inner { display: flex; justify-content: space-between; align-items: center; flex: 1; margin-left: 10px; }
+.social-my-profile .profile-box { display: flex; align-items: center; gap: 12px; }
+.social-my-profile .profile-image-container { position: relative; width: 45px; height: 45px; min-width: 45px; border-radius: 50%; border: 2px solid var(--neon-blue); background: #222; display: flex; justify-content: center; align-items: center; }
+.social-my-profile .profile-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.social-my-profile .upload-overlay { position: absolute; bottom: -5px; right: -5px; background: var(--neon-blue); width: 20px; height: 20px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 12px; cursor: pointer; border: 2px solid var(--bg-dark); z-index: 5; }
+.social-my-profile .name-container { display: flex; align-items: center; gap: 5px; }
+.social-my-profile .btn-edit-name { background: none; border: none; font-size: 0.8rem; cursor: pointer; padding: 0; color: var(--text-sub); }
+.social-my-profile .compact-score-box { text-align: right; }
+.social-my-profile .compact-score-val { font-size: 1.6rem; font-weight: 900; color: var(--neon-blue); line-height: 1; }
+.social-my-profile .profile-follow-stats { display: flex; gap: 12px; margin-top: 4px; }
+.social-my-profile .follow-stat-item { font-size: 0.7rem; color: var(--text-sub); cursor: pointer; }
+.social-my-profile .follow-stat-item strong { color: var(--text-main); font-weight: 900; }
 .user-info { flex-grow: 1; margin-left: 10px; }
 .user-score { font-weight: 900; color: var(--neon-blue); font-size: 1rem; text-align: right; margin-right: 12px; }
 .btn-friend { padding: 4px 8px; font-size: 0.65rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 4px; }

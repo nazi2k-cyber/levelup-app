@@ -4158,23 +4158,67 @@ function renderUsers(criteria, btn = null) {
 
     const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: #ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
 
+    // 현재 유저의 팔로잉/팔로워 수 계산 (my-rank 카드용)
+    const myUid = auth.currentUser?.uid;
+    const myFollowingCount = (AppState.user.friends || []).length;
+    const myFollowerCount = myUid ? AppState.social.users.filter(u => Array.isArray(u.friends) && u.friends.includes(myUid)).length : 0;
+    const lang = AppState.currentLang;
+
     container.innerHTML = list.map((u, i) => {
         const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.6rem');
-        const cardHTML = `
-        <div class="user-card ${u.isMe ? 'my-rank' : ''}">
-            <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
-            <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
-                <div class="user-info" style="margin-left:0;">
-                    ${titleBadgeHTML}
-                    <div style="font-size:0.9rem; display:flex; align-items:center;">
-                        ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+        let cardHTML;
+
+        if (u.isMe) {
+            // 상태창 프로필과 동일한 레이아웃
+            cardHTML = `
+            <div class="user-card my-rank social-my-profile">
+                <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
+                <div class="social-my-profile-inner">
+                    <div class="profile-box">
+                        <div class="profile-image-container">
+                            ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" class="profile-img" alt="Profile">` : ''}
+                            <label class="upload-overlay" onclick="document.getElementById('imageUpload').click()">📷</label>
+                        </div>
+                        <div>
+                            ${titleBadgeHTML}
+                            <div class="name-container">
+                                <div style="font-size: 0.9rem; font-weight: bold;">${sanitizeText(u.name)}</div>
+                                <button class="btn-edit-name" onclick="document.getElementById('btn-edit-name').click()">✏️</button>
+                                ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : `<button onclick="document.getElementById('btn-edit-insta').click()" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>`}
+                            </div>
+                            <div class="profile-follow-stats">
+                                <span class="follow-stat-item" onclick="window.goToSocialTab('friends')">
+                                    <strong>${formatFollowCount(myFollowingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span>
+                                </span>
+                                <span class="follow-stat-item" onclick="window.goToSocialTab('followers')">
+                                    <strong>${formatFollowCount(myFollowerCount)}</strong> <span>${i18n[lang]?.prof_followers || '팔로워'}</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="compact-score-box">
+                        <div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.tot_score || '종합 스코어'}</div>
+                        <div class="compact-score-val">${u.total.toLocaleString()}</div>
                     </div>
                 </div>
-            </div>
-            <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria]}</div>
-            ${!u.isMe ? `<button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? (i18n[AppState.currentLang]?.btn_added || '친구✓') : (i18n[AppState.currentLang]?.btn_add || '추가')}</button>` : ''}
-        </div>`;
+            </div>`;
+        } else {
+            cardHTML = `
+            <div class="user-card">
+                <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
+                <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
+                    ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                    <div class="user-info" style="margin-left:0;">
+                        ${titleBadgeHTML}
+                        <div style="font-size:0.9rem; display:flex; align-items:center;">
+                            ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria]}</div>
+                <button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? (i18n[AppState.currentLang]?.btn_added || '친구✓') : (i18n[AppState.currentLang]?.btn_add || '추가')}</button>
+            </div>`;
+        }
 
         // 네이티브 광고 placeholder 삽입 (N번째 유저 카드 뒤)
         if (i === NATIVE_AD_POSITION - 1 && list.length >= NATIVE_AD_POSITION) {
