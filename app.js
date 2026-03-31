@@ -4759,7 +4759,26 @@ function buildUserTitleBadgeHTML(u, fontSize) {
 
 // --- 프로필 스탯 모달 ---
 function openProfileStatsModal(userId) {
-    const u = AppState.social.users.find(x => x.id === userId);
+    let u = AppState.social.users.find(x => x.id === userId);
+
+    // Day1(reels) 포스트에서 유저 데이터 fallback
+    if (!u && Array.isArray(_reelsCachedPosts)) {
+        const post = _reelsCachedPosts.find(p => p.uid === userId);
+        if (post) {
+            u = {
+                id: post.uid,
+                name: post.userName || '헌터',
+                photoURL: post.userPhoto || null,
+                level: post.userLevel || 1,
+                title: post.userTitle || '각성자',
+                rareTitle: post.userRareTitle || null,
+                isMe: post.uid === auth.currentUser?.uid,
+                friends: post.userFriends || [],
+                stats: post.userStats || { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 }
+            };
+        }
+    }
+
     if (!u) return;
 
     // ★ 네이티브 광고 숨김 (모달 위에 겹치지 않도록)
@@ -8418,7 +8437,7 @@ function renderReelsCards(posts, lang) {
 
         const cardHTML = `<div class="system-card reels-card" data-post-id="${postId}">
             <div class="reels-header">
-                <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(profileSrc)}','${DEFAULT_PROFILE_SVG}')" alt="">
+                <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(profileSrc)}','${DEFAULT_PROFILE_SVG}')" alt="" onclick="window.openProfileStatsModal('${sanitizeAttr(post.uid)}')" style="cursor:pointer;">
                 <div class="reels-user-info">
                     ${reelsTitleBadgeHTML}
                     <div class="reels-username">${sanitizeText(post.userName || '헌터')}${instaLink}${followBtn}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
