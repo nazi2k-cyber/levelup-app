@@ -1666,6 +1666,15 @@ function bindEvents() {
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
     document.querySelectorAll('.social-tab-btn').forEach(btn => { btn.addEventListener('click', () => toggleSocialMode(btn.dataset.mode, btn)); });
     document.querySelectorAll('.rank-tab-btn').forEach(btn => { btn.addEventListener('click', () => renderUsers(btn.dataset.sort, btn)); });
+    document.querySelectorAll('.reels-sort-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.reels-sort-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            _reelsSortMode = btn.dataset.reelsSort;
+            window._reelsFeedLastKey = null;
+            renderReelsFeed();
+        });
+    });
 
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
 
@@ -7416,6 +7425,7 @@ window.copyPrevDaySchedule = function(checked) {
 let _pendingCopyPost = null;
 let _reelsCachedPosts = []; // 렌더링된 포스트 캐시 (복사 기능용)
 let _reelsSearchQuery = ''; // Day1 검색어
+let _reelsSortMode = 'latest'; // 'latest' | 'friends' | 'likes'
 
 // Day1 검색 필터 (@닉네임 → 닉네임 검색, 그 외 → 캡션 검색)
 window.filterReelsFeed = function(query) {
@@ -8355,12 +8365,24 @@ async function renderReelsFeed() {
 
     // 포스트 데이터 키 생성 (uid_timestamp 목록으로 변경 감지)
     function postsKey(posts) {
-        return posts.map(p => `${p.uid}_${p.timestamp}`).join(',');
+        return _reelsSortMode + ':' + posts.map(p => `${p.uid}_${p.timestamp}`).join(',');
     }
 
     // 로컬 캐시 먼저 표시 (단, 이전 렌더와 동일하면 스킵)
     const localData = getReelsData();
-    const localPosts = (localData.posts || []).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const localPosts = (localData.posts || []);
+    // 로컬 캐시: latest/friends는 동기 정렬, likes는 서버 데이터에서 처리
+    if (_reelsSortMode === 'friends') {
+        const myFriends = new Set(AppState.user.friends || []);
+        localPosts.sort((a, b) => {
+            const aF = myFriends.has(a.uid) ? 1 : 0;
+            const bF = myFriends.has(b.uid) ? 1 : 0;
+            if (aF !== bF) return bF - aF;
+            return (b.timestamp || 0) - (a.timestamp || 0);
+        });
+    } else {
+        localPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    }
     const localKey = postsKey(localPosts);
 
     if (localPosts.length > 0) {
@@ -8378,10 +8400,11 @@ async function renderReelsFeed() {
 
     // Firestore에서 최신 데이터 로드 (5초 타임아웃)
     try {
-        const posts = await Promise.race([
+        const rawPosts = await Promise.race([
             fetchAllReelsPosts(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
         ]);
+        const posts = await applySortToReelsPosts(rawPosts);
         if (posts.length === 0) {
             if (window._reelsFeedLastKey !== '') {
                 container.innerHTML = `<div class="system-card" style="text-align:center; padding:30px; color:var(--text-sub);">
@@ -8682,6 +8705,43 @@ async function loadReelsReactions(postId) {
         if (docSnap.exists()) return docSnap.data();
     } catch(e) { AppLogger.error('[Reels] 리액션 로드 실패: ' + (e.message || e)); }
     return { likes: [], comments: [] };
+}
+
+// 좋아요 카운트 일괄 조회 (Day1 정렬용)
+async function batchFetchLikeCounts(posts) {
+    const results = {};
+    const promises = posts.map(async (p) => {
+        const postId = getPostId(p);
+        try {
+            const docSnap = await getDoc(doc(db, "reels_reactions", postId));
+            results[postId] = docSnap.exists() ? (docSnap.data().likes || []).length : 0;
+        } catch(e) { results[postId] = 0; }
+    });
+    await Promise.all(promises);
+    return results;
+}
+
+// Day1 정렬 적용 (latest/friends/likes)
+async function applySortToReelsPosts(posts) {
+    if (_reelsSortMode === 'friends') {
+        const myFriends = new Set(AppState.user.friends || []);
+        posts.sort((a, b) => {
+            const aF = myFriends.has(a.uid) ? 1 : 0;
+            const bF = myFriends.has(b.uid) ? 1 : 0;
+            if (aF !== bF) return bF - aF;
+            return (b.timestamp || 0) - (a.timestamp || 0);
+        });
+    } else if (_reelsSortMode === 'likes') {
+        const likeCounts = await batchFetchLikeCounts(posts);
+        posts.sort((a, b) => {
+            const diff = (likeCounts[getPostId(b)] || 0) - (likeCounts[getPostId(a)] || 0);
+            if (diff !== 0) return diff;
+            return (b.timestamp || 0) - (a.timestamp || 0);
+        });
+    } else {
+        posts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    }
+    return posts;
 }
 
 // 좋아요 토글 (Optimistic UI: 즉시 반영 후 서버 쓰기, 실패 시 롤백)
