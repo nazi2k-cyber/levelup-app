@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.85] - 2026-03-31
+
+### 변경
+- fix: 비공개 계정 설정 로그인 시 복원 및 위치 조정
+
 ## [1.0.84] - 2026-03-31
 
 ### 변경
