@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.79] - 2026-03-31
+
+### 변경
+- feat: 소셜 닉네임 수정 버튼 제거 및 Day1 호칭 표기 추가
+
 ## [1.0.78] - 2026-03-31
 
 ### 변경
