@@ -108,9 +108,10 @@ const i18n = {
         ri_dungeon_bonus: "추가 던전 보상!",
 
         // 릴스 탭
-        nav_reels: "Day1", reels_title: "🎬 Day1", reels_post_btn: "Day1 포스팅",
+        nav_reels: "Day1", reels_title: "🎬 Day1", reels_search_placeholder: "닉네임 또는 캡션 검색...", reels_post_btn: "Day1 포스팅",
         reels_post_hint: "업로드 1일 후 자동 삭제",
         reels_empty: "아직 포스팅이 없습니다. 타임테이블을 완성하고 포스팅해보세요!",
+        reels_search_empty: "검색 결과가 없습니다.",
         reels_no_timetable: "먼저 플래너에서 오늘의 시간표를 작성하고 저장해주세요.",
         reels_no_photo: "사진과 텍스트를 모두 입력해야 포스팅할 수 있습니다.",
         reels_posted: "Day1에 포스팅되었습니다!",
@@ -380,9 +381,10 @@ const i18n = {
         ri_dungeon_bonus: "Extra dungeon reward!",
 
         // Reels tab
-        nav_reels: "Reels", reels_title: "🎬 Reels", reels_post_btn: "Post Timetable",
+        nav_reels: "Reels", reels_title: "🎬 Reels", reels_search_placeholder: "Search by nickname or caption...", reels_post_btn: "Post Timetable",
         reels_post_hint: "Complete your timetable and add a photo to post",
         reels_empty: "No posts yet. Complete your timetable and share it!",
+        reels_search_empty: "No results found.",
         reels_no_timetable: "Please create and save today's timetable in the Planner first.",
         reels_no_photo: "You must add a photo to your timetable before posting.",
         reels_posted: "Posted to Reels!",
@@ -652,9 +654,10 @@ const i18n = {
         ri_dungeon_bonus: "追加ダンジョン報酬！",
 
         // リールタブ
-        nav_reels: "リール", reels_title: "🎬 リール", reels_post_btn: "タイムテーブル投稿",
+        nav_reels: "リール", reels_title: "🎬 リール", reels_search_placeholder: "ニックネームまたはキャプションで検索...", reels_post_btn: "タイムテーブル投稿",
         reels_post_hint: "タイムテーブルを完成し、写真を追加すると投稿できます",
         reels_empty: "まだ投稿がありません。タイムテーブルを完成して共有しましょう！",
+        reels_search_empty: "検索結果がありません。",
         reels_no_timetable: "まずプランナーで今日のタイムテーブルを作成・保存してください。",
         reels_no_photo: "投稿するにはタイムテーブルに写真を追加してください。",
         reels_posted: "リールに投稿されました！",
