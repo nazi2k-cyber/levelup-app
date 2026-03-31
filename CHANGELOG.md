@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.73] - 2026-03-31
+
+### 변경
+- diag: saveUserData에 Firestore 문서 필드 진단 로직 추가
+
 ## [1.0.72] - 2026-03-31
 
 ### 변경
