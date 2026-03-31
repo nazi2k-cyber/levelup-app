@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.72] - 2026-03-31
+
+### 변경
+- fix: 닉네임 변경 후 Firestore 저장 실패(permission-denied) 수정
+
 ## [1.0.71] - 2026-03-31
 
 ### 변경
