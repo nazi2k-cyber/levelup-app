@@ -1822,7 +1822,7 @@ async function saveUserData() {
     // 디바운스: 연속 호출 시 마지막 호출만 실행 (2초 대기)
     if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
     if (_saveInFlight) { _savePendingAfterFlight = true; return; }
-    _saveDebounceTimer = setTimeout(() => _doSaveUserData(), 2000);
+    _saveDebounceTimer = setTimeout(() => _doSaveUserData().catch(() => {}), 2000);
 }
 
 async function _doSaveUserData() {
@@ -1890,6 +1890,38 @@ async function _doSaveUserData() {
             runningCalcHistoryStr: localStorage.getItem('running_calc_history') || '[]',
             ormCalcHistoryStr: localStorage.getItem('orm_calc_history') || '[]'
         };
+        // Firestore 보안 규칙 크기 제한에 맞춰 클라이언트에서 사전 검증/절삭
+        const _strLimits = {
+            questStr: 10000, diaryStr: 500000, reelsStr: 500000,
+            dungeonStr: 50000, diyQuestsStr: 50000, questHistoryStr: 200000,
+            titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
+            ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000,
+            libraryStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000
+        };
+        const _overflowed = [];
+        for (const [key, limit] of Object.entries(_strLimits)) {
+            if (typeof payload[key] === 'string' && payload[key].length > limit) {
+                _overflowed.push(`${key}(${payload[key].length}>${limit})`);
+                // 초과 시 기본값으로 절삭 (데이터 유실보다 저장 실패 방지 우선)
+                if (key === 'diaryStr' || key === 'questHistoryStr') {
+                    // 대용량 필드는 이전 값 유지를 위해 payload에서 제거 (merge:true이므로 기존 값 유지)
+                    delete payload[key];
+                } else {
+                    payload[key] = key === 'ddayCaption' ? payload[key].substring(0, limit) : '{}';
+                }
+            }
+        }
+        if (_overflowed.length > 0) {
+            console.warn('[SaveData] 필드 크기 초과 감지 (절삭 적용):', _overflowed.join(', '));
+            if (window.AppLogger) AppLogger.warn('[SaveData] 필드 초과: ' + _overflowed.join(', '));
+        }
+
+        // name 길이 제한 (Firestore 규칙: 1~30자)
+        if (payload.name && payload.name.length > 30) {
+            payload.name = payload.name.substring(0, 30);
+            if (window.AppLogger) AppLogger.warn('[SaveData] name 30자 초과 → 절삭');
+        }
+
         // 진단: 페이로드 크기 및 photoURL 상태 로그
         const payloadSize = new Blob([JSON.stringify(payload)]).size;
         const photoType = payload.photoURL ? (payload.photoURL.startsWith('data:') ? 'base64' : payload.photoURL.startsWith('http') ? 'url' : 'other') : 'null';
@@ -1902,6 +1934,7 @@ async function _doSaveUserData() {
     } catch(e) {
         console.error("DB 저장 실패:", e);
         if (window.AppLogger) AppLogger.error('[DB] 저장 실패: ' + (e.code || '') + ' ' + (e.message || ''), e.stack || '');
+        throw e; // 호출자가 에러를 감지할 수 있도록 재전파
     } finally {
         _saveInFlight = false;
         if (_savePendingAfterFlight) {
@@ -2583,8 +2616,8 @@ async function changePlayerName() {
     const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
     if (newName && newName.trim() !== "" && newName.trim() !== AppState.user.name) {
         const trimmed = newName.trim();
-        if (trimmed.length > 50) {
-            alert("닉네임은 50자 이내로 입력해주세요.");
+        if (trimmed.length > 30) {
+            alert("닉네임은 30자 이내로 입력해주세요.");
             return;
         }
         try {
@@ -2601,8 +2634,23 @@ async function changePlayerName() {
             AppState.user.nameLastChanged = Date.now();
             loadPlayerName();
             updateSocialUserData();
-            saveUserData();
-            if (window.AppLogger) AppLogger.info(`[NameChange] 변경 완료: "${oldName}" → "${trimmed}"`);
+            // 디바운스 없이 즉시 저장하여 닉네임 변경과 DB 저장의 원자성 보장
+            try {
+                await _doSaveUserData();
+                if (window.AppLogger) AppLogger.info(`[NameChange] 변경 완료: "${oldName}" → "${trimmed}"`);
+            } catch (saveErr) {
+                // DB 저장 실패 시 닉네임 롤백
+                if (window.AppLogger) AppLogger.error(`[NameChange] DB 저장 실패 → 롤백: ${saveErr.code || ''} ${saveErr.message || ''}`);
+                AppState.user.name = oldName;
+                AppState.user.nameLastChanged = null;
+                loadPlayerName();
+                updateSocialUserData();
+                // usernames 롤백: 새 이름 해제, 이전 이름 재선점
+                await releaseUsername(trimmed);
+                await claimUsername(oldName, auth.currentUser.uid);
+                alert("닉네임 저장에 실패했습니다. 다시 시도해주세요.");
+                return;
+            }
         } catch (e) {
             console.error("[NameChange] 닉네임 변경 실패:", e);
             if (window.AppLogger) AppLogger.error(`[NameChange] 실패: ${e.code || ''} ${e.message || ''}`, e.stack || '');

@@ -163,7 +163,7 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 1
-        && request.resource.data.name.size() <= 50
+        && request.resource.data.name.size() <= 30
         && request.resource.data.claimedAt is number;
       // 수정: 기존 소유자만 가능 (닉네임 이전 시)
       allow update: if request.auth != null
