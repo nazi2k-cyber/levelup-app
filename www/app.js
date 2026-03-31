@@ -4137,7 +4137,7 @@ function renderUsers(criteria, btn = null) {
 
     let list = AppState.social.users.map(u => {
         const s = u.stats;
-        const total = (Number(s.str)||0) + (Number(s.int)||0) + (Number(s.cha)||0) + (Number(s.vit)||0) + (Number(s.wlth)||0) + (Number(s.agi)||0);
+        const total = Math.round(Number(s.str)||0) + Math.round(Number(s.int)||0) + Math.round(Number(s.cha)||0) + Math.round(Number(s.vit)||0) + Math.round(Number(s.wlth)||0) + Math.round(Number(s.agi)||0);
         const steps = Number(u.stepData?.totalSteps) || 0;
         return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps, books: u.books || 0 };
     });
@@ -4163,8 +4163,18 @@ function renderUsers(criteria, btn = null) {
     const myFollowingCount = (AppState.user.friends || []).length;
     const myFollowerCount = myUid ? AppState.social.users.filter(u => Array.isArray(u.friends) && u.friends.includes(myUid)).length : 0;
 
+    // 팔로워 카운트 맵 사전 계산
+    const followerCountMap = {};
+    AppState.social.users.forEach(su => {
+        if (Array.isArray(su.friends)) {
+            su.friends.forEach(fid => { followerCountMap[fid] = (followerCountMap[fid] || 0) + 1; });
+        }
+    });
+
     container.innerHTML = list.map((u, i) => {
         const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.6rem');
+        const uFollowingCount = (u.friends || []).length;
+        const uFollowerCount = followerCountMap[u.id] || 0;
         let cardHTML;
 
         if (u.isMe) {
@@ -4211,6 +4221,10 @@ function renderUsers(criteria, btn = null) {
                         ${titleBadgeHTML}
                         <div style="font-size:0.9rem; display:flex; align-items:center;">
                             ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+                        </div>
+                        <div class="profile-follow-stats" style="margin-top:2px;">
+                            <span class="follow-stat-item"><strong>${formatFollowCount(uFollowingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span>
+                            <span class="follow-stat-item"><strong>${formatFollowCount(uFollowerCount)}</strong> <span>${i18n[lang]?.prof_followers || '팔로워'}</span></span>
                         </div>
                     </div>
                 </div>
@@ -7837,7 +7851,8 @@ async function fetchAllReelsPosts() {
                                 userName: data.name || '헌터',
                                 userPhoto: data.photoURL || null,
                                 userLevel: data.level || 1,
-                                userInstaId: data.instaId || ''
+                                userInstaId: data.instaId || '',
+                                userFriends: data.friends || []
                             });
                         }
                     });
@@ -8239,6 +8254,23 @@ function renderReelsCards(posts, lang) {
     const copyIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
     const reportIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
 
+    // 팔로워 카운트 맵 사전 계산 (Day1)
+    const reelsFollowerMap = {};
+    const socialUsers = AppState.social.users || [];
+    socialUsers.forEach(su => {
+        if (Array.isArray(su.friends)) {
+            su.friends.forEach(fid => { reelsFollowerMap[fid] = (reelsFollowerMap[fid] || 0) + 1; });
+        }
+    });
+    // social 데이터 미로드 시 reels posts 자체 friends로도 계산
+    if (socialUsers.length === 0) {
+        posts.forEach(p => {
+            if (Array.isArray(p.userFriends)) {
+                p.userFriends.forEach(fid => { reelsFollowerMap[fid] = (reelsFollowerMap[fid] || 0) + 1; });
+            }
+        });
+    }
+
     const html = posts.map((post, postIdx) => {
         const postId = getPostId(post);
         const profileSrc = post.userPhoto ? sanitizeURL(post.userPhoto) : DEFAULT_PROFILE_SVG;
@@ -8247,6 +8279,8 @@ function renderReelsCards(posts, lang) {
         const reelsLang = AppState.currentLang;
         const isFollowingPost = (AppState.user.friends || []).includes(post.uid);
         const followBtn = !isMe ? `<button class="btn-reels-follow ${isFollowingPost ? 'following' : ''}" onclick="event.stopPropagation();window.toggleFriend('${sanitizeAttr(post.uid)}')">${isFollowingPost ? (i18n[reelsLang]?.btn_added || '팔로잉') : (i18n[reelsLang]?.btn_add || '팔로우')}</button>` : '';
+        const postFollowingCount = isMe ? (AppState.user.friends || []).length : (post.userFriends || []).length;
+        const postFollowerCount = reelsFollowerMap[post.uid] || 0;
 
         // 시간표 블록 (폴딩/언폴딩 지원, 연속 동일 업무 합치기)
         const mergedBlocks = mergeConsecutiveBlocks(post.blocks);
@@ -8264,6 +8298,10 @@ function renderReelsCards(posts, lang) {
                 <img class="reels-avatar" src="${profileSrc}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(profileSrc)}','${DEFAULT_PROFILE_SVG}')" alt="">
                 <div class="reels-user-info">
                     <div class="reels-username">${sanitizeText(post.userName || '헌터')}${instaLink}${followBtn}${isMe ? ' <span style="color:var(--neon-gold); font-size:0.65rem;">(나)</span>' : ''}</div>
+                    <div class="profile-follow-stats" style="margin-top:2px;">
+                        <span class="follow-stat-item"><strong>${formatFollowCount(postFollowingCount)}</strong> <span>${i18n[reelsLang]?.prof_following || '팔로잉'}</span></span>
+                        <span class="follow-stat-item"><strong>${formatFollowCount(postFollowerCount)}</strong> <span>${i18n[reelsLang]?.prof_followers || '팔로워'}</span></span>
+                    </div>
                     <div class="reels-user-meta">Lv.${post.userLevel} ${post.mood ? getMoodEmoji(post.mood) : ''}</div>
                     ${post.location ? `<div class="reels-location">📍 ${sanitizeText(post.location.name)}</div>` : ''}
                 </div>
