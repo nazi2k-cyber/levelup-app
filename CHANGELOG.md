@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.67] - 2026-03-31
+
+### 변경
+- fix: 계산기 상세화면 열 때 기록 로드 + 상태창 카드에 최근 기록 표시
+
 ## [1.0.66] - 2026-03-31
 
 ### 변경
