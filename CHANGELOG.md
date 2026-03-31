@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.69] - 2026-03-31
+
+### 변경
+- feat: 프로필/플래너 사진 업로드 시 카메라 촬영 연동 및 설정 카메라 설명 업데이트
+
 ## [1.0.68] - 2026-03-31
 
 ### 변경
