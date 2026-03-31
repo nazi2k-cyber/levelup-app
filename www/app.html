@@ -1086,14 +1086,16 @@
                     <label class="rc-label">페이스</label>
                     <div class="rc-time-input-row">
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-pace-min">6</span><span class="rc-time-unit">분</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-pace-min" value="6" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'min')">
+                            <span class="rc-time-unit">분</span>
+                            <button class="rc-time-btn" data-field="pace-min" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="pace-min" data-delta="1">+</button>
                         </div>
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-pace-sec">0</span><span class="rc-time-unit">초</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-pace-sec" value="0" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'sec')">
+                            <span class="rc-time-unit">초</span>
+                            <button class="rc-time-btn" data-field="pace-sec" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="pace-sec" data-delta="1">+</button>
                         </div>
                     </div>
                 </div>
@@ -1103,19 +1105,22 @@
                     <label class="rc-label">시간</label>
                     <div class="rc-time-input-row">
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-hr',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-pace-hr">1</span><span class="rc-time-unit">시간</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-hr',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-pace-hr" value="1" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'hr')">
+                            <span class="rc-time-unit">시간</span>
+                            <button class="rc-time-btn" data-field="pace-hr" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="pace-hr" data-delta="1">+</button>
                         </div>
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min-t',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-pace-min-t">0</span><span class="rc-time-unit">분</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-min-t',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-pace-min-t" value="0" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'min')">
+                            <span class="rc-time-unit">분</span>
+                            <button class="rc-time-btn" data-field="pace-min-t" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="pace-min-t" data-delta="1">+</button>
                         </div>
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec-t',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-pace-sec-t">0</span><span class="rc-time-unit">초</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('pace-sec-t',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-pace-sec-t" value="0" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'sec')">
+                            <span class="rc-time-unit">초</span>
+                            <button class="rc-time-btn" data-field="pace-sec-t" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="pace-sec-t" data-delta="1">+</button>
                         </div>
                     </div>
                 </div>
@@ -1199,19 +1204,22 @@
                     <label class="rc-label">시간</label>
                     <div class="rc-time-input-row">
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-hr',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-vdot-hr">1</span><span class="rc-time-unit">시간</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-hr',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-vdot-hr" value="1" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'hr')">
+                            <span class="rc-time-unit">시간</span>
+                            <button class="rc-time-btn" data-field="vdot-hr" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="vdot-hr" data-delta="1">+</button>
                         </div>
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-min',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-vdot-min">0</span><span class="rc-time-unit">분</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-min',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-vdot-min" value="0" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'min')">
+                            <span class="rc-time-unit">분</span>
+                            <button class="rc-time-btn" data-field="vdot-min" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="vdot-min" data-delta="1">+</button>
                         </div>
                         <div class="rc-time-block">
-                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-sec',1)">+</button>
-                            <div class="rc-time-value"><span id="rc-vdot-sec">0</span><span class="rc-time-unit">초</span></div>
-                            <button class="rc-time-btn" onclick="window.rcAdjust('vdot-sec',-1)">−</button>
+                            <input type="number" class="rc-time-input" id="rc-vdot-sec" value="0" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'sec')">
+                            <span class="rc-time-unit">초</span>
+                            <button class="rc-time-btn" data-field="vdot-sec" data-delta="-1">−</button>
+                            <button class="rc-time-btn" data-field="vdot-sec" data-delta="1">+</button>
                         </div>
                     </div>
                 </div>

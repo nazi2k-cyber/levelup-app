@@ -13544,20 +13544,81 @@ window.renderLifeStatus = renderLifeStatus;
         window.calcPace();
     };
 
+    // --- Input validation ---
+    window.rcValidateInput = function(el, type) {
+        var val = parseInt(el.value) || 0;
+        if (type === 'hr' && val > 24) val = 0;
+        else if (type === 'min' && val > 59) val = 0;
+        else if (type === 'sec' && val > 59) val = 0;
+        if (val < 0) val = 0;
+        el.value = val;
+        var id = el.id || '';
+        if (id.indexOf('vdot') !== -1) window.calcVDOT();
+        else window.calcPace();
+    };
+
     // --- Adjust +/- buttons ---
     window.rcAdjust = function(field, delta) {
         var el = document.getElementById('rc-' + field);
         if (!el) return;
-        var val = parseInt(el.textContent) + delta;
+        var val = parseInt(el.value) + delta;
         // Clamp values
-        if (field.indexOf('hr') !== -1) val = Math.max(0, Math.min(99, val));
-        else if (field.indexOf('min') !== -1) val = Math.max(0, Math.min(59, val));
-        else if (field.indexOf('sec') !== -1) val = Math.max(0, Math.min(59, val));
-        el.textContent = val;
+        if (field.indexOf('hr') !== -1) { if (val > 24) val = 0; if (val < 0) val = 24; }
+        else if (field.indexOf('min') !== -1) { if (val > 59) val = 0; if (val < 0) val = 59; }
+        else if (field.indexOf('sec') !== -1) { if (val > 59) val = 0; if (val < 0) val = 59; }
+        el.value = val;
         // Trigger calc
         if (field.indexOf('vdot') !== -1) window.calcVDOT();
         else window.calcPace();
     };
+
+    // --- Long-press acceleration for +/- buttons ---
+    (function() {
+        var holdTimer = null;
+        var holdInterval = null;
+        var HOLD_DELAY = 400;
+        var INITIAL_SPEED = 150;
+        var MIN_SPEED = 30;
+        var ACCEL_STEP = 20;
+
+        function startHold(field, delta) {
+            stopHold();
+            var speed = INITIAL_SPEED;
+            holdTimer = setTimeout(function repeat() {
+                window.rcAdjust(field, delta);
+                speed = Math.max(MIN_SPEED, speed - ACCEL_STEP);
+                holdInterval = setTimeout(repeat, speed);
+            }, HOLD_DELAY);
+        }
+
+        function stopHold() {
+            if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+            if (holdInterval) { clearTimeout(holdInterval); holdInterval = null; }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.rc-time-btn[data-field]').forEach(function(btn) {
+                var field = btn.getAttribute('data-field');
+                var delta = parseInt(btn.getAttribute('data-delta'));
+
+                btn.addEventListener('click', function() {
+                    window.rcAdjust(field, delta);
+                });
+                btn.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    startHold(field, delta);
+                });
+                btn.addEventListener('mouseup', stopHold);
+                btn.addEventListener('mouseleave', stopHold);
+                btn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    startHold(field, delta);
+                }, { passive: false });
+                btn.addEventListener('touchend', stopHold);
+                btn.addEventListener('touchcancel', stopHold);
+            });
+        });
+    })();
 
     window.rcAdjustTreadmill = function(delta) {
         var el = document.getElementById('rc-treadmill-speed');
@@ -13682,9 +13743,9 @@ window.renderLifeStatus = renderLifeStatus;
         if (_paceMode === 'pace') {
             // Calculate pace from distance + time
             distKm = getDistKm('rc-pace-distance');
-            var hr = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
-            var min = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
-            var sec = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
+            var hr = parseInt(document.getElementById('rc-pace-hr').value) || 0;
+            var min = parseInt(document.getElementById('rc-pace-min-t').value) || 0;
+            var sec = parseInt(document.getElementById('rc-pace-sec-t').value) || 0;
             totalSec = hr * 3600 + min * 60 + sec;
             if (distKm <= 0 || totalSec <= 0) return;
             paceSecPerKm = totalSec / distKm;
@@ -13692,13 +13753,13 @@ window.renderLifeStatus = renderLifeStatus;
         } else if (_paceMode === 'distance') {
             // Calculate distance from pace + time
             // Pace input is per-mi when mi mode, per-km when km mode
-            var pMin = parseInt(document.getElementById('rc-pace-min').textContent) || 0;
-            var pSec = parseInt(document.getElementById('rc-pace-sec').textContent) || 0;
+            var pMin = parseInt(document.getElementById('rc-pace-min').value) || 0;
+            var pSec = parseInt(document.getElementById('rc-pace-sec').value) || 0;
             var paceInput = pMin * 60 + pSec;
             paceSecPerKm = isMi ? paceInput / 1.60934 : paceInput;
-            var hr2 = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
-            var min2 = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
-            var sec2 = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
+            var hr2 = parseInt(document.getElementById('rc-pace-hr').value) || 0;
+            var min2 = parseInt(document.getElementById('rc-pace-min-t').value) || 0;
+            var sec2 = parseInt(document.getElementById('rc-pace-sec-t').value) || 0;
             totalSec = hr2 * 3600 + min2 * 60 + sec2;
             if (paceSecPerKm <= 0 || totalSec <= 0) return;
             distKm = totalSec / paceSecPerKm;
@@ -13709,8 +13770,8 @@ window.renderLifeStatus = renderLifeStatus;
         } else { // time
             distKm = getDistKm('rc-pace-distance');
             // Pace input is per-mi when mi mode, per-km when km mode
-            var pMin2 = parseInt(document.getElementById('rc-pace-min').textContent) || 0;
-            var pSec2 = parseInt(document.getElementById('rc-pace-sec').textContent) || 0;
+            var pMin2 = parseInt(document.getElementById('rc-pace-min').value) || 0;
+            var pSec2 = parseInt(document.getElementById('rc-pace-sec').value) || 0;
             var paceInput2 = pMin2 * 60 + pSec2;
             paceSecPerKm = isMi ? paceInput2 / 1.60934 : paceInput2;
             if (distKm <= 0 || paceSecPerKm <= 0) return;
@@ -13720,9 +13781,9 @@ window.renderLifeStatus = renderLifeStatus;
             var th = Math.floor(totalSec / 3600);
             var tm = Math.floor((totalSec % 3600) / 60);
             var ts = Math.round(totalSec % 60);
-            document.getElementById('rc-pace-hr').textContent = th;
-            document.getElementById('rc-pace-min-t').textContent = tm;
-            document.getElementById('rc-pace-sec-t').textContent = ts;
+            document.getElementById('rc-pace-hr').value = th;
+            document.getElementById('rc-pace-min-t').value = tm;
+            document.getElementById('rc-pace-sec-t').value = ts;
         }
 
         var lap400 = Math.round(paceSecPerKm * 0.4);
@@ -13812,9 +13873,9 @@ window.renderLifeStatus = renderLifeStatus;
 
     window.calcVDOT = function() {
         var distKm = getDistKm('rc-vdot-distance');
-        var hr = parseInt(document.getElementById('rc-vdot-hr').textContent) || 0;
-        var min = parseInt(document.getElementById('rc-vdot-min').textContent) || 0;
-        var sec = parseInt(document.getElementById('rc-vdot-sec').textContent) || 0;
+        var hr = parseInt(document.getElementById('rc-vdot-hr').value) || 0;
+        var min = parseInt(document.getElementById('rc-vdot-min').value) || 0;
+        var sec = parseInt(document.getElementById('rc-vdot-sec').value) || 0;
         var totalMin = hr * 60 + min + sec / 60;
         if (distKm <= 0 || totalMin <= 0) return;
 
@@ -13864,9 +13925,9 @@ window.renderLifeStatus = renderLifeStatus;
     // --- Update summary card on status screen ---
     function updateSummaryCard() {
         var distKm = getDistKm('rc-pace-distance');
-        var hr = parseInt(document.getElementById('rc-pace-hr').textContent) || 0;
-        var min = parseInt(document.getElementById('rc-pace-min-t').textContent) || 0;
-        var sec = parseInt(document.getElementById('rc-pace-sec-t').textContent) || 0;
+        var hr = parseInt(document.getElementById('rc-pace-hr').value) || 0;
+        var min = parseInt(document.getElementById('rc-pace-min-t').value) || 0;
+        var sec = parseInt(document.getElementById('rc-pace-sec-t').value) || 0;
         var totalSec = hr * 3600 + min * 60 + sec;
         var distDisplay = parseFloat(document.getElementById('rc-pace-distance').value) || 0;
 

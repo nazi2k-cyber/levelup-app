@@ -2227,23 +2227,32 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     display: flex; gap: 8px; justify-content: center;
 }
 .rc-time-block {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    display: flex; flex-direction: row; align-items: center; gap: 4px;
     min-width: 70px;
 }
+.rc-time-input {
+    width: 48px; padding: 8px 4px; text-align: center;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);
+    border-radius: 8px; color: var(--text-main);
+    font-size: 1.1rem; font-weight: 700;
+    outline: none; transition: border-color 0.2s;
+    -moz-appearance: textfield;
+}
+.rc-time-input::-webkit-outer-spin-button,
+.rc-time-input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+}
+.rc-time-input:focus { border-color: var(--neon-blue); }
 .rc-time-btn {
-    width: 36px; height: 28px; border-radius: 6px;
+    width: 32px; height: 32px; border-radius: 6px;
     background: rgba(255,255,255,0.08); border: 1px solid var(--border-color);
     color: var(--text-main); font-size: 1rem; font-weight: 700;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: background 0.15s;
+    transition: background 0.15s; flex-shrink: 0;
+    -webkit-user-select: none; user-select: none;
 }
 .rc-time-btn:active { background: rgba(0,217,255,0.2); }
-.rc-time-value {
-    display: flex; align-items: baseline; gap: 2px;
-    font-size: 1.1rem; font-weight: 700; color: var(--text-main);
-    padding: 4px 0;
-}
-.rc-time-unit { font-size: 0.65rem; color: var(--text-sub); font-weight: 400; }
+.rc-time-unit { font-size: 0.7rem; color: var(--text-sub); font-weight: 400; white-space: nowrap; }
 .rc-results {
     background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
     border-radius: 10px; padding: 12px 14px; margin-top: 12px;
@@ -2281,6 +2290,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 [data-theme="light"] .rc-preset-btn { background: #f5f5f5; }
 [data-theme="light"] .rc-unit-toggle-btn { color: #666; }
 [data-theme="light"] .rc-time-btn { background: rgba(0,0,0,0.05); }
+[data-theme="light"] .rc-time-input { background: #fff; }
 [data-theme="light"] .rc-results { background: rgba(0,0,0,0.02); }
 [data-theme="light"] .rc-result-row + .rc-result-row { border-top-color: rgba(0,0,0,0.06); }
 
