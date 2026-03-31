@@ -793,7 +793,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['stat-radar', 'bonus-exp', 'step-count', 'my-library', 'orm-calc', 'running-calc', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote', 'my-library'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -803,9 +803,8 @@ function saveStatusCardOrder() {
 
 function loadStatusCardOrder() {
     const saved = localStorage.getItem('statusCardOrder');
-    if (!saved) return;
+    const order = saved ? JSON.parse(saved) : DEFAULT_STATUS_CARD_ORDER;
     try {
-        const order = JSON.parse(saved);
         const section = document.getElementById('status');
         const btnMyinfo = document.getElementById('btn-myinfo');
         order.forEach(cardId => {
@@ -924,7 +923,7 @@ const STATUS_CARD_LABELS = {
     'running-calc': { name: '러닝 계산기', icon: '🏃' },
     'orm-calc': { name: '1RM 계산기', icon: '🏋️' }
 };
-const ALL_CARD_IDS = ['stat-radar', 'bonus-exp', 'step-count', 'my-library', 'orm-calc', 'running-calc', 'pomodoro', 'life-status', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote', 'my-library'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
