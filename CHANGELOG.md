@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.88] - 2026-03-31
+
+### 변경
+- feat: Day1 피드 정렬 알고리즘 추가 (최신순/친구순/좋아요순)
+
 ## [1.0.87] - 2026-03-31
 
 ### 변경
