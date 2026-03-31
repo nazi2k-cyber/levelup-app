@@ -1928,6 +1928,107 @@ async function _doSaveUserData() {
         const photoLen = payload.photoURL ? payload.photoURL.length : 0;
         console.log(`[SaveData] uid=${auth.currentUser.uid}, payloadSize=${payloadSize}bytes, photoURL.type=${photoType}, photoURL.len=${photoLen}`);
         if (window.AppLogger) AppLogger.info(`[SaveData] size=${payloadSize}B, photo=${photoType}(${photoLen})`);
+
+        // ── 진단: 기존 문서 읽기 + 필드 검증 (permission-denied 원인 분석) ──
+        try {
+            const _diagSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+            if (_diagSnap.exists()) {
+                const _existingData = _diagSnap.data();
+                const _existingKeys = Object.keys(_existingData).sort();
+                const _payloadKeys = Object.keys(payload).sort();
+                const _allowedFields = new Set([
+                    'name','level','points','photoURL','stats','pendingStats',
+                    'friends','fcmToken','syncEnabled','gpsEnabled','pushEnabled',
+                    'instaId','nameLastChanged','lastRouletteDate','lastReelsPostTs',
+                    'stepData','streak','questStr','questWeekStart','diaryStr','reelsStr',
+                    'dungeonStr','diyQuestsStr','questHistoryStr','titleHistoryStr',
+                    'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed',
+                    'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
+                    'libraryStr','runningCalcHistoryStr','ormCalcHistoryStr'
+                ]);
+                // 기존 문서의 허용되지 않은 필드
+                const _extraFields = _existingKeys.filter(k => !_allowedFields.has(k));
+                if (_extraFields.length > 0) {
+                    if (window.AppLogger) AppLogger.warn('[SaveDiag] 기존 문서에 미허용 필드 존재: ' + _extraFields.join(', '));
+                }
+                // 변경된 키 (affectedKeys 시뮬레이션)
+                const _affectedKeys = _payloadKeys.filter(k => JSON.stringify(payload[k]) !== JSON.stringify(_existingData[k]));
+                if (window.AppLogger) AppLogger.info('[SaveDiag] affectedKeys: ' + (_affectedKeys.length > 0 ? _affectedKeys.join(', ') : '(없음)'));
+                // 기존 문서+payload 병합 후 각 필드 검증
+                const _merged = { ..._existingData, ...payload };
+                const _issues = [];
+                if ('name' in _merged && (typeof _merged.name !== 'string' || _merged.name.length < 1 || _merged.name.length > 30)) _issues.push(`name(type=${typeof _merged.name},len=${_merged.name?.length})`);
+                if ('level' in _merged && (typeof _merged.level !== 'number' || _merged.level < 1 || _merged.level > 999)) _issues.push(`level(${_merged.level})`);
+                if ('points' in _merged && (typeof _merged.points !== 'number' || _merged.points < 0)) _issues.push(`points(${_merged.points})`);
+                if ('photoURL' in _merged && _merged.photoURL !== null && (typeof _merged.photoURL !== 'string' || _merged.photoURL.length > 1024)) _issues.push(`photoURL(len=${_merged.photoURL?.length})`);
+                if ('nameLastChanged' in _merged && _merged.nameLastChanged !== null && typeof _merged.nameLastChanged !== 'number') _issues.push(`nameLastChanged(type=${typeof _merged.nameLastChanged},val=${_merged.nameLastChanged})`);
+                if ('lastReelsPostTs' in _merged && typeof _merged.lastReelsPostTs !== 'number') _issues.push(`lastReelsPostTs(type=${typeof _merged.lastReelsPostTs})`);
+                if ('fcmToken' in _merged && _merged.fcmToken !== null && typeof _merged.fcmToken !== 'string') _issues.push(`fcmToken(type=${typeof _merged.fcmToken})`);
+                if ('instaId' in _merged && (typeof _merged.instaId !== 'string' || _merged.instaId.length > 30)) _issues.push(`instaId(len=${_merged.instaId?.length})`);
+                // streak 맵 검증 (기존 문서에 map으로 존재할 수 있음)
+                if ('streak' in _merged) {
+                    const _s = _merged.streak;
+                    if (typeof _s !== 'object' || _s === null || Array.isArray(_s)) _issues.push(`streak(NOT_MAP:type=${typeof _s})`);
+                    else {
+                        const _validStreakKeys = new Set(['currentStreak', 'lastActiveDate', 'multiplier']);
+                        const _extraStreakKeys = Object.keys(_s).filter(k => !_validStreakKeys.has(k));
+                        if (_extraStreakKeys.length > 0) _issues.push(`streak(extraKeys:${_extraStreakKeys.join(',')})`);
+                        if ('currentStreak' in _s && (typeof _s.currentStreak !== 'number' || _s.currentStreak < 0)) _issues.push(`streak.currentStreak(${_s.currentStreak})`);
+                        if ('multiplier' in _s && (typeof _s.multiplier !== 'number' || _s.multiplier < 0)) _issues.push(`streak.multiplier(${_s.multiplier})`);
+                        if ('lastActiveDate' in _s && _s.lastActiveDate !== null && typeof _s.lastActiveDate !== 'string') _issues.push(`streak.lastActiveDate(type=${typeof _s.lastActiveDate})`);
+                    }
+                }
+                // stats/pendingStats 맵 검증
+                ['stats', 'pendingStats'].forEach(fk => {
+                    if (fk in _merged) {
+                        const _sm = _merged[fk];
+                        if (typeof _sm !== 'object' || _sm === null || Array.isArray(_sm)) { _issues.push(`${fk}(NOT_MAP)`); return; }
+                        const _validStatKeys = new Set(['str', 'int', 'cha', 'vit', 'wlth', 'agi']);
+                        const _extraStatKeys = Object.keys(_sm).filter(k => !_validStatKeys.has(k));
+                        if (_extraStatKeys.length > 0) _issues.push(`${fk}(extraKeys:${_extraStatKeys.join(',')})`);
+                    }
+                });
+                // 불리언 필드 검증
+                ['syncEnabled', 'gpsEnabled', 'pushEnabled', 'hasActiveReels', '_profileUploadFailed'].forEach(bk => {
+                    if (bk in _merged && typeof _merged[bk] !== 'boolean') _issues.push(`${bk}(type=${typeof _merged[bk]})`);
+                });
+                // 문자열 크기 검증
+                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,libraryStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10};
+                for (const [sk, sl] of Object.entries(_strChecks)) {
+                    if (sk in _merged && (typeof _merged[sk] !== 'string' || _merged[sk].length > sl)) _issues.push(`${sk}(type=${typeof _merged[sk]},len=${_merged[sk]?.length},limit=${sl})`);
+                }
+                // friends 검증
+                if ('friends' in _merged && (!Array.isArray(_merged.friends) || _merged.friends.length > 500)) _issues.push(`friends(len=${_merged.friends?.length})`);
+                // stepData 검증
+                if ('stepData' in _merged) {
+                    const _sd = _merged.stepData;
+                    if (typeof _sd !== 'object' || _sd === null || Array.isArray(_sd)) _issues.push('stepData(NOT_MAP)');
+                    else {
+                        const _validStepKeys = new Set(['date', 'rewardedSteps', 'totalSteps']);
+                        const _extraStepKeys = Object.keys(_sd).filter(k => !_validStepKeys.has(k));
+                        if (_extraStepKeys.length > 0) _issues.push(`stepData(extraKeys:${_extraStepKeys.join(',')})`);
+                    }
+                }
+                if (_issues.length > 0) {
+                    console.error('[SaveDiag] 검증 실패 필드:', _issues);
+                    if (window.AppLogger) AppLogger.error('[SaveDiag] 검증실패: ' + _issues.join(' | '));
+                } else {
+                    if (window.AppLogger) AppLogger.info('[SaveDiag] 모든 필드 검증 통과 (클라이언트 기준)');
+                }
+                // 전체 기존 문서 키/타입 덤프
+                const _keyDump = _existingKeys.map(k => {
+                    const v = _existingData[k];
+                    const t = v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v;
+                    const extra = typeof v === 'string' ? `,len=${v.length}` : '';
+                    return `${k}(${t}${extra})`;
+                }).join(' ');
+                if (window.AppLogger) AppLogger.info('[SaveDiag] 기존문서: ' + _keyDump);
+            }
+        } catch(_diagErr) {
+            if (window.AppLogger) AppLogger.warn('[SaveDiag] 진단 실패: ' + (_diagErr.message || _diagErr));
+        }
+        // ── 진단 끝 ──
+
         await setDoc(doc(db, "users", auth.currentUser.uid), payload, { merge: true });
         console.log('[SaveData] setDoc OK');
         if (window.AppLogger) AppLogger.info('[SaveData] Firestore 저장 성공');
