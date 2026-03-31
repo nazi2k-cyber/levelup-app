@@ -13555,10 +13555,10 @@ window.renderLifeStatus = renderLifeStatus;
             // Reset distance to default 10 if it was modified by distance mode calc
             var distEl = document.getElementById('rc-pace-distance');
             var distVal = parseFloat(distEl.value);
-            var presets = [5, 10, 21.0975, 42.195];
-            var isPreset = presets.some(function(p) { return Math.abs(p - distVal) < 0.01; });
+            var currentPresets = _rcDisplayUnit === 'mi' ? _rcPresetsMi : _rcPresetsKm;
+            var isPreset = currentPresets.some(function(p) { return Math.abs(p.val - distVal) < 0.01; });
             if (!isPreset) {
-                distEl.value = 10;
+                distEl.value = _rcDisplayUnit === 'mi' ? 6.2 : 10;
                 window.onPaceDistInput();
             }
         }
@@ -13659,6 +13659,44 @@ window.renderLifeStatus = renderLifeStatus;
     // --- Display unit state (km or mi) ---
     var _rcDisplayUnit = 'km';
 
+    // Preset definitions per unit
+    var _rcPresetsKm = [
+        { val: 5, label: '5' },
+        { val: 10, label: '10' },
+        { val: 21.0975, label: '하프' },
+        { val: 42.195, label: '풀' }
+    ];
+    var _rcPresetsMi = [
+        { val: 5, label: '5' },
+        { val: 6.2, label: '10(6.2)' },
+        { val: 13.1, label: '하프(13.1)' },
+        { val: 26.2, label: '풀(26.2)' }
+    ];
+
+    function updatePresetButtons() {
+        var presets = _rcDisplayUnit === 'mi' ? _rcPresetsMi : _rcPresetsKm;
+
+        // Update pace preset buttons
+        var paceBtns = document.querySelectorAll('.rc-preset-btn[data-dist]');
+        paceBtns.forEach(function(btn, i) {
+            if (i < presets.length) {
+                btn.setAttribute('data-dist', presets[i].val);
+                btn.textContent = presets[i].label;
+                btn.setAttribute('onclick', 'window.selectPaceDist(' + presets[i].val + ')');
+            }
+        });
+
+        // Update VDOT preset buttons
+        var vdotBtns = document.querySelectorAll('.rc-preset-btn[data-vdist]');
+        vdotBtns.forEach(function(btn, i) {
+            if (i < presets.length) {
+                btn.setAttribute('data-vdist', presets[i].val);
+                btn.textContent = presets[i].label;
+                btn.setAttribute('onclick', 'window.selectVdotDist(' + presets[i].val + ')');
+            }
+        });
+    }
+
     window.toggleRcDisplayUnit = function() {
         var oldUnit = _rcDisplayUnit;
         _rcDisplayUnit = (oldUnit === 'km') ? 'mi' : 'km';
@@ -13674,6 +13712,18 @@ window.renderLifeStatus = renderLifeStatus;
         el = document.getElementById('rc-vdot-dist-label'); if (el) el.textContent = unitLabel;
         el = document.getElementById('rc-tm-speed-label'); if (el) el.textContent = _rcDisplayUnit === 'mi' ? 'mi/h' : 'km/h';
 
+        // Convert distance input values
+        var distIds = ['rc-pace-distance', 'rc-vdot-distance'];
+        distIds.forEach(function(id) {
+            var distEl = document.getElementById(id);
+            if (distEl) {
+                var d = parseFloat(distEl.value) || 0;
+                if (oldUnit === 'km' && _rcDisplayUnit === 'mi') d = d / 1.60934;
+                else if (oldUnit === 'mi' && _rcDisplayUnit === 'km') d = d * 1.60934;
+                distEl.value = Math.round(d * 10) / 10;
+            }
+        });
+
         // Convert treadmill speed value
         var tmEl = document.getElementById('rc-treadmill-speed');
         if (tmEl) {
@@ -13682,6 +13732,13 @@ window.renderLifeStatus = renderLifeStatus;
             else if (oldUnit === 'mi' && _rcDisplayUnit === 'km') spd = spd * 1.60934;
             tmEl.value = Math.round(spd * 10) / 10;
         }
+
+        // Update preset button labels and values
+        updatePresetButtons();
+
+        // Re-highlight active preset
+        window.onPaceDistInput();
+        window.onVdotDistInput();
 
         // Show/hide secondary pace rows
         var isMi = _rcDisplayUnit === 'mi';
