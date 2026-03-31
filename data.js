@@ -108,7 +108,7 @@ const i18n = {
         ri_dungeon_bonus: "추가 던전 보상!",
 
         // 릴스 탭
-        nav_reels: "Day1", reels_title: "🎬 Day1", reels_search_placeholder: "닉네임 또는 캡션 검색...", reels_post_btn: "Day1 포스팅",
+        nav_reels: "Day1", reels_title: "🎬 Day1", reels_search_placeholder: "@닉네임 검색 / 캡션 검색", reels_post_btn: "Day1 포스팅",
         reels_post_hint: "업로드 1일 후 자동 삭제",
         reels_empty: "아직 포스팅이 없습니다. 타임테이블을 완성하고 포스팅해보세요!",
         reels_search_empty: "검색 결과가 없습니다.",
@@ -384,7 +384,7 @@ const i18n = {
         ri_dungeon_bonus: "Extra dungeon reward!",
 
         // Reels tab
-        nav_reels: "Reels", reels_title: "🎬 Reels", reels_search_placeholder: "Search by nickname or caption...", reels_post_btn: "Post Timetable",
+        nav_reels: "Reels", reels_title: "🎬 Reels", reels_search_placeholder: "@nickname search / caption search", reels_post_btn: "Post Timetable",
         reels_post_hint: "Complete your timetable and add a photo to post",
         reels_empty: "No posts yet. Complete your timetable and share it!",
         reels_search_empty: "No results found.",
@@ -660,7 +660,7 @@ const i18n = {
         ri_dungeon_bonus: "追加ダンジョン報酬！",
 
         // リールタブ
-        nav_reels: "リール", reels_title: "🎬 リール", reels_search_placeholder: "ニックネームまたはキャプションで検索...", reels_post_btn: "タイムテーブル投稿",
+        nav_reels: "リール", reels_title: "🎬 リール", reels_search_placeholder: "@ニックネーム検索 / キャプション検索", reels_post_btn: "タイムテーブル投稿",
         reels_post_hint: "タイムテーブルを完成し、写真を追加すると投稿できます",
         reels_empty: "まだ投稿がありません。タイムテーブルを完成して共有しましょう！",
         reels_search_empty: "検索結果がありません。",
