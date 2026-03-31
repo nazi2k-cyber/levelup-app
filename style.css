@@ -4,14 +4,14 @@
     --bg-dark: #050508; --panel-bg: rgba(15, 25, 40, 0.95);
     --text-main: #ffffff; --text-sub: #aaaaaa; --border-color: #333333;
     --neon-blue: #00d9ff; --neon-gold: #ffcc00; --neon-purple: #b53cff;
-    --neon-red: #ff3c3c; --nav-bg: #0a0a10;
+    --neon-red: #ff3c3c; --neon-green: #00e676; --nav-bg: #0a0a10;
 }
 
 [data-theme="light"] {
     --bg-dark: #f4f5f7; --panel-bg: #ffffff;
     --text-main: #1a1a1a; --text-sub: #666666; --border-color: #dddddd;
     --neon-blue: #0066cc; --neon-gold: #d4a017; --neon-purple: #8a2be2;
-    --neon-red: #dc3545; --nav-bg: #ffffff;
+    --neon-red: #dc3545; --neon-green: #00c853; --nav-bg: #ffffff;
 }
 
 body {
@@ -2224,7 +2224,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     font-size: 0.8rem; color: var(--text-sub); white-space: nowrap;
 }
 .rc-time-input-row {
-    display: flex; gap: 8px; justify-content: center;
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
 }
 .rc-time-block {
     display: flex; flex-direction: row; align-items: center; gap: 4px;

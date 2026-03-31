@@ -13519,6 +13519,7 @@ window.renderLifeStatus = renderLifeStatus;
         var paceGroup = document.getElementById('rc-pace-pace-group');
         var resDistRow = document.getElementById('rc-res-distance-row');
         var resTimeRow = document.getElementById('rc-res-time-row');
+        var resultsBox = document.getElementById('rc-pace-results');
         // Show/hide inputs and result rows based on mode
         if (mode === 'pace') {
             distGroup.classList.remove('d-none');
@@ -13526,18 +13527,30 @@ window.renderLifeStatus = renderLifeStatus;
             paceGroup.classList.add('d-none');
             resDistRow.classList.add('d-none');
             resTimeRow.classList.add('d-none');
+            resultsBox.classList.remove('d-none');
         } else if (mode === 'distance') {
             distGroup.classList.add('d-none');
             timeGroup.classList.remove('d-none');
             paceGroup.classList.remove('d-none');
             resDistRow.classList.remove('d-none');
             resTimeRow.classList.add('d-none');
+            resultsBox.classList.add('d-none');
         } else { // time
             distGroup.classList.remove('d-none');
             timeGroup.classList.add('d-none');
             paceGroup.classList.remove('d-none');
             resDistRow.classList.add('d-none');
             resTimeRow.classList.remove('d-none');
+            resultsBox.classList.add('d-none');
+            // Reset distance to default 10 if it was modified by distance mode calc
+            var distEl = document.getElementById('rc-pace-distance');
+            var distVal = parseFloat(distEl.value);
+            var presets = [5, 10, 21.0975, 42.195];
+            var isPreset = presets.some(function(p) { return Math.abs(p - distVal) < 0.01; });
+            if (!isPreset) {
+                distEl.value = 10;
+                window.onPaceDistInput();
+            }
         }
         window.calcPace();
     };
@@ -13770,7 +13783,6 @@ window.renderLifeStatus = renderLifeStatus;
             speedKmh = distKm / (totalSec / 3600);
             // Display distance in current unit
             var distDisplay = isMi ? distKm / 1.60934 : distKm;
-            document.getElementById('rc-pace-distance').value = Math.round(distDisplay * 100) / 100;
             var distUnit = isMi ? 'mi' : 'km';
             document.getElementById('rc-res-distance').innerHTML = (Math.round(distDisplay * 100) / 100).toFixed(2) + ' <span class="rc-result-unit">' + distUnit + '</span>';
         } else { // time
