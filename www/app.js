@@ -2847,6 +2847,55 @@ function drawRadarChart() {
     if(totalScoreEl) totalScoreEl.innerHTML = `${totalSum}`;
 }
 
+function drawRadarChartForUser(stats) {
+    const centerX = 50, centerY = 50, radius = 33;
+    const angles = [];
+    for (let i = 0; i < 6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
+
+    const gridGroup = document.getElementById('profileRadarGrid');
+    const axesGroup = document.getElementById('profileRadarAxes');
+
+    let gridHtml = '', axesHtml = '';
+    for (let level = 1; level <= 5; level++) {
+        const r = radius * (level / 5); let points = '';
+        for (let i = 0; i < 6; i++) points += `${centerX + r * Math.cos(angles[i])},${centerY + r * Math.sin(angles[i])} `;
+        gridHtml += `<polygon points="${points.trim()}" class="radar-bg-line"></polygon>`;
+    }
+    for (let i = 0; i < 6; i++) axesHtml += `<line x1="50" y1="50" x2="${centerX + radius * Math.cos(angles[i])}" y2="${centerY + radius * Math.sin(angles[i])}" class="radar-bg-line"></line>`;
+    gridGroup.innerHTML = gridHtml;
+    axesGroup.innerHTML = axesHtml;
+
+    const pointsGroup = document.getElementById('profileRadarPoints');
+    const labelsGroup = document.getElementById('profileRadarLabels');
+    let pointsHtml = '', labelsHtml = '', dataPoints = '';
+
+    for (let i = 0; i < 6; i++) {
+        const key = statKeys[i];
+        const val = Math.round(Number(stats[key]) || 0);
+        const r = radius * (val / 100);
+        const x = centerX + r * Math.cos(angles[i]);
+        const y = centerY + r * Math.sin(angles[i]);
+        dataPoints += `${x},${y} `;
+        pointsHtml += `<circle cx="${x}" cy="${y}" r="1.2" class="radar-point"></circle>`;
+
+        const labelRadius = radius + 9;
+        const lx = centerX + labelRadius * Math.cos(angles[i]);
+        const ly = centerY + labelRadius * Math.sin(angles[i]) + 2;
+        let anchor = 'middle';
+        if (i === 1 || i === 2) anchor = 'start';
+        if (i === 4 || i === 5) anchor = 'end';
+
+        labelsHtml += `<text x="${lx}" y="${ly - 3}" text-anchor="${anchor}" class="radar-label">${i18n[AppState.currentLang][key]}</text><text x="${lx}" y="${ly + 4}" text-anchor="${anchor}" class="radar-value">${val}</text>`;
+    }
+
+    pointsGroup.innerHTML = pointsHtml;
+    labelsGroup.innerHTML = labelsHtml;
+
+    const polygon = document.getElementById('profilePlayerPolygon');
+    polygon.setAttribute('points', '50,50 50,50 50,50 50,50 50,50 50,50');
+    setTimeout(() => polygon.setAttribute('points', dataPoints.trim()), 50);
+}
+
 // --- 퀘스트 로직 ---
 function renderQuestList() {
     const container = document.getElementById('quest-list-container');
@@ -4215,7 +4264,7 @@ function renderUsers(criteria, btn = null) {
             <div class="user-card">
                 <div style="width:25px; font-weight:bold; color:var(--text-sub);">${i+1}</div>
                 <div style="display:flex; align-items:center; flex-grow:1; margin-left:10px;">
-                    ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue);"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue);"></div>`}
+                    ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" onclick="window.openProfileStatsModal('${sanitizeAttr(u.id)}')" style="width:30px; height:30px; border-radius:50%; object-fit:cover; margin-right:8px; border:1px solid var(--neon-blue); cursor:pointer;"><div style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); display:none;"></div>` : `<div onclick="window.openProfileStatsModal('${sanitizeAttr(u.id)}')" style="width:30px; height:30px; border-radius:50%; background:#444; margin-right:8px; border:1px solid var(--neon-blue); cursor:pointer;"></div>`}
                     <div class="user-info" style="margin-left:0;">
                         ${titleBadgeHTML}
                         <div style="font-size:0.9rem; display:flex; align-items:center;">
@@ -4708,8 +4757,55 @@ function buildUserTitleBadgeHTML(u, fontSize) {
     return `<div class="title-badge">${baseIcon} ${sanitizeText(baseText)}</div>`;
 }
 
+// --- 프로필 스탯 모달 ---
+function openProfileStatsModal(userId) {
+    const u = AppState.social.users.find(x => x.id === userId);
+    if (!u) return;
+
+    const lang = AppState.currentLang;
+    const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.7rem');
+    const followingCount = (u.friends || []).length;
+    // 팔로워 수 계산
+    let followerCount = 0;
+    AppState.social.users.forEach(su => {
+        if (Array.isArray(su.friends) && su.friends.includes(userId)) followerCount++;
+    });
+
+    const profileHTML = `
+        <div style="display:flex; align-items:center; gap:12px;">
+            ${u.photoURL
+                ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-blue); flex-shrink:0;">`
+                : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue); flex-shrink:0;"></div>`}
+            <div>
+                ${titleBadgeHTML}
+                <div style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</div>
+                <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
+                <div class="profile-follow-stats" style="margin-top:4px;">
+                    <span class="follow-stat-item"><strong>${formatFollowCount(followingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span>
+                    <span class="follow-stat-item"><strong>${formatFollowCount(followerCount)}</strong> <span>${i18n[lang]?.prof_followers || '팔로워'}</span></span>
+                </div>
+            </div>
+        </div>`;
+
+    document.getElementById('profile-stats-user-info').innerHTML = profileHTML;
+    drawRadarChartForUser(u.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0});
+
+    const m = document.getElementById('profileStatsModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+function closeProfileStatsModal() {
+    const m = document.getElementById('profileStatsModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+}
+
+window.openProfileStatsModal = openProfileStatsModal;
+window.closeProfileStatsModal = closeProfileStatsModal;
+
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
-function closeInfoModal() { 
+function closeInfoModal() {
     const m = document.getElementById('infoModal'); 
     m.classList.add('d-none'); 
     m.classList.remove('d-flex'); 

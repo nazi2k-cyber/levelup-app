@@ -1574,6 +1574,27 @@
         </div>
     </div>
 
+    <div class="modal-overlay d-none" id="profileStatsModal" onclick="if(event.target===this){closeProfileStatsModal();}">
+        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 15px;">
+            <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
+                <span id="profile-stats-modal-title" style="font-weight:bold; color:var(--neon-blue);">프로필</span>
+                <button class="modal-close" onclick="closeProfileStatsModal()">×</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; max-height: 65vh;">
+                <div id="profile-stats-user-info"></div>
+                <div class="radar-chart-container" style="margin-top: 10px;">
+                    <svg class="radar-chart" viewBox="0 0 100 100" id="profileRadarSvg">
+                        <g id="profileRadarGrid"></g>
+                        <g id="profileRadarAxes"></g>
+                        <polygon id="profilePlayerPolygon" class="radar-polygon" points="" />
+                        <g id="profileRadarPoints"></g>
+                        <g id="profileRadarLabels"></g>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay d-none" id="infoModal" onclick="if(event.target===this){document.getElementById('infoModal').classList.add('d-none');document.getElementById('infoModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
