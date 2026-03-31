@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.75] - 2026-03-31
+
+### 변경
+- diag: 닉네임 저장 필드별 분리 테스트 (name만/nameLastChanged만/둘다)
+
 ## [1.0.74] - 2026-03-31
 
 ### 변경
