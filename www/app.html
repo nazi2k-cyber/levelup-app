@@ -309,6 +309,7 @@
                                 <div style="font-size:1.1rem; font-weight:900; color:var(--neon-green, #00e676);" id="rc-summary-pace">- /km</div>
                             </div>
                         </div>
+                        <div id="rc-summary-history" style="margin-top:6px;"></div>
                     </div>
                     <div id="rc-summary-history" style="margin-top:8px; font-size:0.72rem; color:var(--text-sub);"></div>
                 </div>
@@ -342,6 +343,7 @@
                                 <div style="font-size:1.1rem; font-weight:900; color:var(--neon-red);" id="orm-summary-total">- kg</div>
                             </div>
                         </div>
+                        <div id="orm-summary-history" style="margin-top:6px;"></div>
                     </div>
                     <div id="orm-summary-history" style="margin-top:8px; font-size:0.72rem; color:var(--text-sub);"></div>
                 </div>
@@ -1157,6 +1159,22 @@
                     </div>
                 </div>
 
+                <!-- 기록 저장 버튼 -->
+                <div style="margin-top:12px; text-align:center;">
+                    <button class="orm-calc-btn" style="background:linear-gradient(135deg, var(--neon-cyan, #00d9ff), var(--neon-blue, #007bff));" onclick="window.saveRunningCalcHistory()">기록 저장</button>
+                </div>
+
+                <!-- 최근 기록 (페이스) -->
+                <div class="rc-section-card" id="rc-pace-history-section" style="margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 class="rc-section-title">최근 기록</h3>
+                        <button class="calc-history-clear-btn" onclick="window.clearRunningCalcHistory('pace')" style="display:none;" id="rc-pace-history-clear">전체 삭제</button>
+                    </div>
+                    <div id="rc-pace-history-list" class="calc-history-list">
+                        <div class="calc-history-empty">저장된 기록이 없습니다</div>
+                    </div>
+                </div>
+
                 <!-- 트레드밀 계산기 -->
                 <div class="rc-section-card" style="margin-top:20px;">
                     <h3 class="rc-section-title">트레드밀 계산기</h3>
@@ -1283,6 +1301,22 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 기록 저장 버튼 (VDOT) -->
+                <div style="margin-top:12px; text-align:center;">
+                    <button class="orm-calc-btn" style="background:linear-gradient(135deg, var(--neon-cyan, #00d9ff), var(--neon-blue, #007bff));" onclick="window.saveRunningCalcHistory()">기록 저장</button>
+                </div>
+
+                <!-- 최근 기록 (VDOT) -->
+                <div class="rc-section-card" id="rc-vdot-history-section" style="margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 class="rc-section-title">최근 기록</h3>
+                        <button class="calc-history-clear-btn" onclick="window.clearRunningCalcHistory('vdot')" style="display:none;" id="rc-vdot-history-clear">전체 삭제</button>
+                    </div>
+                    <div id="rc-vdot-history-list" class="calc-history-list">
+                        <div class="calc-history-empty">저장된 기록이 없습니다</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1382,6 +1416,17 @@
                     <h3 class="rc-section-title">RM 비율표</h3>
                     <div class="rc-section-desc">1RM 기준 반복 횟수별 예상 무게</div>
                     <div class="rc-results" id="orm-pct-rows"></div>
+                </div>
+
+                <!-- 최근 기록 (1RM) -->
+                <div class="rc-section-card" id="orm-history-section" style="margin-top:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 class="rc-section-title">최근 기록</h3>
+                        <button class="calc-history-clear-btn" onclick="window.clearOrmCalcHistory()" style="display:none;" id="orm-history-clear">전체 삭제</button>
+                    </div>
+                    <div id="orm-history-list" class="calc-history-list">
+                        <div class="calc-history-empty">저장된 기록이 없습니다</div>
+                    </div>
                 </div>
             </div>
 

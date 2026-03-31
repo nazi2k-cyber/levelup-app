@@ -5,6 +5,36 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.67] - 2026-03-31
+
+### 변경
+- fix: 계산기 상세화면 열 때 기록 로드 + 상태창 카드에 최근 기록 표시
+
+## [1.0.66] - 2026-03-31
+
+### 변경
+- Fix mile distance conversion for preset buttons in pace/VDOT calculator
+
+## [1.0.65] - 2026-03-31
+
+### 변경
+- fix: Firestore 보안 규칙에 계산기 기록 필드 추가
+
+## [1.0.64] - 2026-03-31
+
+### 변경
+- feat: 러닝 계산기 및 1RM 계산기 직전 계산 기록 저장 기능 추가
+
+## [1.0.63] - 2026-03-31
+
+### 변경
+- fix: 페이스 계산기 거리 탭 페이스 기본값 6분→5분으로 변경
+
+## [1.0.62] - 2026-03-31
+
+### 변경
+- fix: 페이스 계산기 탭 UI 4가지 이슈 수정
+
 ## [1.0.61] - 2026-03-31
 
 ### 변경
