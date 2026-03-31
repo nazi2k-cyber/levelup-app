@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.62] - 2026-03-31
+
+### 변경
+- fix: 페이스 계산기 탭 UI 4가지 이슈 수정
+
 ## [1.0.61] - 2026-03-31
 
 ### 변경
