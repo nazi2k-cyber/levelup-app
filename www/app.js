@@ -13498,6 +13498,7 @@ window.renderLifeStatus = renderLifeStatus;
         if (overlay) overlay.classList.remove('d-none');
         window.calcPace();
         window.calcTreadmill();
+        renderRcHistory();
     };
     window.closeRunningCalcView = function() {
         const overlay = document.getElementById('running-calc-overlay');
@@ -13969,6 +13970,30 @@ window.renderLifeStatus = renderLifeStatus;
             var pace = totalSec / distKm;
             if (el3) el3.textContent = formatPace(pace) + ' /km';
         }
+        renderRcSummaryHistory();
+    }
+
+    function renderRcSummaryHistory() {
+        var el = document.getElementById('rc-summary-history');
+        if (!el) return;
+        var list = loadRcHistory();
+        if (list.length === 0) { el.innerHTML = ''; return; }
+        var maxShow = Math.min(list.length, 3);
+        var html = '<div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:4px;">최근 기록</div>';
+        for (var i = 0; i < maxShow; i++) {
+            var item = list[i];
+            var dateStr = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+            if (item.type === 'vdot') {
+                html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
+                    '<span>' + dateStr + ' · ' + item.dist + ' ' + item.unit + '</span>' +
+                    '<span style="color:var(--neon-cyan, #00d9ff); font-weight:700;">VDOT ' + item.vdot + '</span></div>';
+            } else {
+                html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
+                    '<span>' + dateStr + ' · ' + item.dist + ' ' + item.unit + ' / ' + item.time + '</span>' +
+                    '<span style="color:var(--neon-green, #00e676); font-weight:700;">' + item.pace + ' /' + item.unit + '</span></div>';
+            }
+        }
+        el.innerHTML = html;
     }
 
     // --- Running Calc History (localStorage) ---
@@ -14144,6 +14169,7 @@ window.renderLifeStatus = renderLifeStatus;
         var overlay = document.getElementById('orm-calc-overlay');
         if (overlay) overlay.classList.remove('d-none');
         updateTotalDisplay();
+        renderOrmHistory();
     };
     window.closeOrmCalcView = function() {
         var overlay = document.getElementById('orm-calc-overlay');
@@ -14250,6 +14276,24 @@ window.renderLifeStatus = renderLifeStatus;
 
         var total = (sq || 0) + (bp || 0) + (dl || 0);
         if (el4) el4.textContent = (sq || bp || dl) ? Math.round(total * 10) / 10 + ' kg' : '- kg';
+        renderOrmSummaryHistory();
+    }
+
+    function renderOrmSummaryHistory() {
+        var el = document.getElementById('orm-summary-history');
+        if (!el) return;
+        var list = loadOrmHistory();
+        if (list.length === 0) { el.innerHTML = ''; return; }
+        var maxShow = Math.min(list.length, 3);
+        var html = '<div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:4px;">최근 기록</div>';
+        for (var i = 0; i < maxShow; i++) {
+            var item = list[i];
+            var dateStr = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+            html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
+                '<span>' + dateStr + ' · ' + item.exerciseName + ' ' + item.weight + 'kg×' + item.reps + '회</span>' +
+                '<span style="color:var(--neon-red); font-weight:700;">' + item.result1rm + ' kg</span></div>';
+        }
+        el.innerHTML = html;
     }
 
     // --- 1RM Calc History ---
