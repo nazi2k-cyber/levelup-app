@@ -685,7 +685,8 @@ function getInitialAppState() {
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
             nameLastChanged: null,
             rareTitle: { unlocked: [] },
-            cameraEnabled: false
+            cameraEnabled: false,
+            privateAccount: false
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -1660,6 +1661,7 @@ function bindEvents() {
     document.getElementById('btn-settings-gps-guide').addEventListener('click', () => openSettingsGuideModal('gps'));
     document.getElementById('btn-settings-fitness-guide').addEventListener('click', () => openSettingsGuideModal('fitness'));
     document.getElementById('btn-settings-delete-guide').addEventListener('click', () => openSettingsGuideModal('delete'));
+    document.getElementById('btn-settings-privacy-guide').addEventListener('click', () => openSettingsGuideModal('privacy'));
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
 
     document.getElementById('btn-levelup').addEventListener('click', processLevelUp); 
@@ -1683,6 +1685,7 @@ function bindEvents() {
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('camera-toggle').addEventListener('change', toggleCamera);
+    document.getElementById('privacy-toggle').addEventListener('change', togglePrivateAccount);
     document.getElementById('btn-settings-camera-guide').addEventListener('click', function() {
         const lang = i18n[AppState.currentLang];
         alert(lang.cam_guide || 'ISBN 바코드 스캔을 위해 카메라 권한이 필요합니다.\n내 서재에서 책을 스캔할 때 사용됩니다.');
@@ -1871,6 +1874,7 @@ async function _doSaveUserData() {
             syncEnabled: normalizeBooleanForFirestore(AppState.user.syncEnabled),
             gpsEnabled: normalizeBooleanForFirestore(AppState.user.gpsEnabled),
             pushEnabled: normalizeBooleanForFirestore(AppState.user.pushEnabled),
+            privateAccount: normalizeBooleanForFirestore(AppState.user.privateAccount),
             fcmToken: AppState.user.fcmToken || null,
             stepData: normalizedStepData,
             instaId: AppState.user.instaId || "",
@@ -1942,7 +1946,7 @@ async function _doSaveUserData() {
                     'instaId','nameLastChanged','lastRouletteDate','lastReelsPostTs',
                     'stepData','streak','questStr','questWeekStart','diaryStr','reelsStr',
                     'dungeonStr','diyQuestsStr','questHistoryStr','titleHistoryStr',
-                    'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed',
+                    'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
                     'libraryStr','runningCalcHistoryStr','ormCalcHistoryStr'
                 ]);
@@ -1989,7 +1993,7 @@ async function _doSaveUserData() {
                     }
                 });
                 // 불리언 필드 검증
-                ['syncEnabled', 'gpsEnabled', 'pushEnabled', 'hasActiveReels', '_profileUploadFailed'].forEach(bk => {
+                ['syncEnabled', 'gpsEnabled', 'pushEnabled', 'hasActiveReels', '_profileUploadFailed', 'privateAccount'].forEach(bk => {
                     if (bk in _merged && typeof _merged[bk] !== 'boolean') _issues.push(`${bk}(type=${typeof _merged[bk]})`);
                 });
                 // 문자열 크기 검증
@@ -2189,6 +2193,7 @@ async function loadUserDataFromDB(user) {
             }
             document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
+            document.getElementById('privacy-toggle').checked = AppState.user.privateAccount;
             updateCameraToggleUI();
             const loadedName = data.name || user.displayName || "신규 헌터";
             // ── 기존 유저 닉네임 마이그레이션: usernames 컬렉션에 예약 ──
@@ -3529,16 +3534,20 @@ window.syncGlobalDungeon = async () => {
                                 }
                             } catch(e) {}
                         }
-                        participants.push({
-                            id: doc.id,
-                            name: data.name || '헌터',
-                            photoURL: data.photoURL || null,
-                            title, rareTitle,
-                            instaId: data.instaId || '',
-                            hasContributed: !!dng.hasContributed,
-                            statValue: Number(stats[AppState.dungeon.targetStat]) || 0,
-                            isMe: auth.currentUser?.uid === doc.id
-                        });
+                        // 비공개 계정은 참여자 목록에서 숨김 (자기 자신은 표시)
+                        const isMe = auth.currentUser?.uid === doc.id;
+                        if (!data.privateAccount || isMe) {
+                            participants.push({
+                                id: doc.id,
+                                name: data.name || '헌터',
+                                photoURL: data.photoURL || null,
+                                title, rareTitle,
+                                instaId: data.instaId || '',
+                                hasContributed: !!dng.hasContributed,
+                                statValue: Number(stats[AppState.dungeon.targetStat]) || 0,
+                                isMe
+                            });
+                        }
                     }
                 } catch(e) {}
             }
@@ -4161,8 +4170,10 @@ async function fetchSocialData() {
                 try { const lib = JSON.parse(data.libraryStr); readBooks = (lib.books || []).filter(b => b.category === 'read').length; } catch(e) {}
             }
             const uid = auth.currentUser?.uid;
-            return { id: d.id, ...data, title, rareTitle, books: readBooks, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isFollower: uid && Array.isArray(data.friends) && data.friends.includes(uid), isMe: uid === d.id };
+            return { id: d.id, ...data, title, rareTitle, books: readBooks, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isFollower: uid && Array.isArray(data.friends) && data.friends.includes(uid), isMe: uid === d.id, privateAccount: !!data.privateAccount };
         });
+        // 비공개 계정 필터링 (자기 자신은 항상 표시)
+        AppState.social.users = AppState.social.users.filter(u => u.isMe || !u.privateAccount);
         renderUsers(AppState.social.sortCriteria);
         updateProfileFollowCounts();
         // 랭킹 기반 희귀 호칭 평가
@@ -5433,8 +5444,8 @@ function openSettingsGuideModal(type) {
     const title = l[titleKey] || titleKey;
     const desc = l[descKey] || descKey;
 
-    const colors = { push: 'var(--neon-gold)', gps: 'var(--neon-blue)', fitness: 'var(--neon-purple, #b388ff)', delete: 'var(--neon-red)' };
-    const icons = { push: '🔔', gps: '📍', fitness: '🏃', delete: '⚠️' };
+    const colors = { push: 'var(--neon-gold)', gps: 'var(--neon-blue)', fitness: 'var(--neon-purple, #b388ff)', delete: 'var(--neon-red)', privacy: 'var(--neon-purple, #b388ff)' };
+    const icons = { push: '🔔', gps: '📍', fitness: '🏃', delete: '⚠️', privacy: '🔒' };
     const color = colors[type] || 'var(--neon-blue)';
     const icon = icons[type] || 'ℹ️';
 
@@ -7419,7 +7430,10 @@ window.filterReelsFeed = function(query) {
             setTimeout(() => loadAndShowNativeAd('reels'), 300);
         }
     } else {
+        const myUid = auth.currentUser?.uid;
         const filtered = _reelsCachedPosts.filter(p => {
+            // 비공개 계정 필터링 (자기 게시물은 항상 표시)
+            if (p.privateAccount && p.uid !== myUid) return false;
             const name = (p.userName || '').toLowerCase();
             const caption = (p.caption || '').toLowerCase();
             return name.includes(_reelsSearchQuery) || caption.includes(_reelsSearchQuery);
@@ -8023,7 +8037,8 @@ async function fetchAllReelsPosts() {
                                 userInstaId: data.instaId || '',
                                 userFriends: data.friends || [],
                                 userTitle: uTitle,
-                                userRareTitle: uRareTitle
+                                userRareTitle: uRareTitle,
+                                privateAccount: !!data.privateAccount
                             });
                         }
                     });
@@ -8037,9 +8052,12 @@ async function fetchAllReelsPosts() {
             }
         });
     } catch(e) { AppLogger.error('[Reels] 피드 로드 실패: ' + (e.message || e)); }
+    // 비공개 계정 필터링 (자기 게시물은 항상 표시)
+    const myUid = auth.currentUser?.uid;
+    const filtered = posts.filter(p => !p.privateAccount || p.uid === myUid);
     // 최신순 정렬
-    posts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    return posts;
+    filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    return filtered;
 }
 
 // ===== 위치 태그 (Location Tag) =====
@@ -9287,6 +9305,14 @@ async function toggleHealthSync() {
             }
         }
     }
+}
+
+// --- 비공개 계정 토글 ---
+function togglePrivateAccount() {
+    const toggle = document.getElementById('privacy-toggle');
+    AppState.user.privateAccount = toggle.checked;
+    saveUserData();
+    if (window.AppLogger) AppLogger.info('[Privacy] privateAccount set to ' + toggle.checked);
 }
 
 // --- 카메라 권한 토글 (사진 촬영 + ISBN 바코드 스캔) ---
