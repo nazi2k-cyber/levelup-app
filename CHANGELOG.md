@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.81] - 2026-03-31
+
+### 변경
+- fix: 프로필 모달 오픈 시 네이티브 광고 숨김 처리
+
 ## [1.0.80] - 2026-03-31
 
 ### 변경
