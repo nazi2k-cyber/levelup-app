@@ -4762,6 +4762,14 @@ function openProfileStatsModal(userId) {
     const u = AppState.social.users.find(x => x.id === userId);
     if (!u) return;
 
+    // ★ 네이티브 광고 숨김 (모달 위에 겹치지 않도록)
+    if (isNativePlatform && _nativeAdVisible) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.hideAd();
+        } catch (e) { /* 무시 */ }
+    }
+
     const lang = AppState.currentLang;
     const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.7rem');
     const followingCount = (u.friends || []).length;
@@ -4799,6 +4807,14 @@ function closeProfileStatsModal() {
     const m = document.getElementById('profileStatsModal');
     m.classList.add('d-none');
     m.classList.remove('d-flex');
+
+    // ★ 네이티브 광고 복원
+    if (isNativePlatform && _nativeAdLoaded && _nativeAdActiveTab) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.resumeAd();
+        } catch (e) { /* 무시 */ }
+    }
 }
 
 window.openProfileStatsModal = openProfileStatsModal;
