@@ -7418,7 +7418,7 @@ let _pendingCopyPost = null;
 let _reelsCachedPosts = []; // 렌더링된 포스트 캐시 (복사 기능용)
 let _reelsSearchQuery = ''; // Day1 검색어
 
-// Day1 닉네임/캡션 검색 필터
+// Day1 검색 필터 (@닉네임 → 닉네임 검색, 그 외 → 캡션 검색)
 window.filterReelsFeed = function(query) {
     _reelsSearchQuery = (query || '').trim().toLowerCase();
     const container = document.getElementById('reels-feed');
@@ -7432,12 +7432,23 @@ window.filterReelsFeed = function(query) {
         }
     } else {
         const myUid = auth.currentUser?.uid;
+        const isNameSearch = _reelsSearchQuery.startsWith('@');
+        const keyword = isNameSearch ? _reelsSearchQuery.slice(1).trim() : _reelsSearchQuery;
+        if (!keyword) {
+            container.innerHTML = renderReelsCards(_reelsCachedPosts, lang);
+            return;
+        }
         const filtered = _reelsCachedPosts.filter(p => {
-            // 비공개 계정 필터링 (자기 게시물은 항상 표시)
-            if (p.privateAccount && p.uid !== myUid) return false;
-            const name = (p.userName || '').toLowerCase();
-            const caption = (p.caption || '').toLowerCase();
-            return name.includes(_reelsSearchQuery) || caption.includes(_reelsSearchQuery);
+            const isMe = p.uid === myUid;
+            if (isNameSearch) {
+                // @닉네임 검색: 비공개 계정 비노출
+                if (p.privateAccount && !isMe) return false;
+                return (p.userName || '').toLowerCase().includes(keyword);
+            } else {
+                // 캡션 검색: 비공개 계정 게시물 비노출
+                if (p.privateAccount && !isMe) return false;
+                return (p.caption || '').toLowerCase().includes(keyword);
+            }
         });
         if (filtered.length > 0) {
             container.innerHTML = renderReelsCards(filtered, lang);
