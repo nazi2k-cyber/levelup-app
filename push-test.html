@@ -1282,6 +1282,7 @@ window.loadLogs = async function() {
                     messageId: data.messageId || null,
                     error: data.error || null,
                     sender: data.sender || null,
+                    uid: data.uid || null,
                     userName: null,
                     userNickname: null
                 });
@@ -1289,11 +1290,16 @@ window.loadLogs = async function() {
             // Attempt to resolve user names from usersCache for fallback
             if (usersCache.length) {
                 const tokenMap = {};
+                const uidMap = {};
                 for (const u of usersCache) {
-                    if (u.fcmToken) tokenMap[u.fcmToken] = u;
+                    uidMap[u.uid] = u;
+                    if (u.fcmToken) {
+                        tokenMap[u.fcmToken] = u;
+                        tokenMap[u.fcmToken.substring(0, 20) + "..."] = u;
+                    }
                 }
                 for (const l of logs) {
-                    const matched = tokenMap[l.target];
+                    const matched = (l.uid && uidMap[l.uid]) || tokenMap[l.target] || null;
                     if (matched) {
                         l.userName = matched.displayName;
                         l.userNickname = matched.nickname || null;
