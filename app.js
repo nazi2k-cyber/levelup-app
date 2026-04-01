@@ -1886,7 +1886,7 @@ async function _doSaveUserData() {
             fcmToken: AppState.user.fcmToken || null,
             stepData: normalizedStepData,
             instaId: AppState.user.instaId || "",
-            nameLastChanged: normalizedNameLastChanged,
+            ...(normalizedNameLastChanged !== null ? { nameLastChanged: normalizedNameLastChanged } : {}),
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
@@ -2111,7 +2111,7 @@ async function loadUserDataFromDB(user) {
             if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
-            if(data.nameLastChanged) AppState.user.nameLastChanged = data.nameLastChanged;
+            if(data.nameLastChanged != null) AppState.user.nameLastChanged = data.nameLastChanged;
             if(data.streakStr) {
                 try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
             }
@@ -2749,29 +2749,17 @@ async function changePlayerName() {
             AppState.user.nameLastChanged = Date.now();
             loadPlayerName();
             updateSocialUserData();
-            // 필드별 분리 테스트: 어떤 필드가 permission-denied를 유발하는지 진단
             const uid = auth.currentUser.uid;
             const userRef = doc(db, "users", uid);
             const ts = Date.now();
-            const tests = [
-                { label: 'name만', data: { name: trimmed } },
-                { label: 'nameLastChanged만', data: { nameLastChanged: ts } },
-                { label: 'name+nameLastChanged', data: { name: trimmed, nameLastChanged: ts } },
-            ];
-            let saved = false;
-            for (const t of tests) {
-                try {
-                    await updateDoc(userRef, t.data);
-                    if (window.AppLogger) AppLogger.info(`[NameChange] ✓ ${t.label} 성공`);
-                    saved = true;
-                    break;
-                } catch (e) {
-                    if (window.AppLogger) AppLogger.error(`[NameChange] ✗ ${t.label} 실패: ${e.code} ${e.message}`);
-                }
-            }
-            if (!saved) {
-                // 모든 테스트 실패 → 롤백
-                if (window.AppLogger) AppLogger.error('[NameChange] 모든 저장 방식 실패 → 롤백');
+            try {
+                await updateDoc(userRef, { name: trimmed, nameLastChanged: ts });
+                AppState.user.nameLastChanged = ts;
+                if (window.AppLogger) AppLogger.info(`[NameChange] 변경 완료: "${oldName}" → "${trimmed}"`);
+                saveUserData();
+            } catch (e) {
+                if (window.AppLogger) AppLogger.error(`[NameChange] 저장 실패: ${e.code} ${e.message}`);
+                // 저장 실패 → 롤백
                 AppState.user.name = oldName;
                 AppState.user.nameLastChanged = null;
                 loadPlayerName();
@@ -2780,13 +2768,6 @@ async function changePlayerName() {
                 await claimUsername(oldName, auth.currentUser.uid);
                 alert("닉네임 저장에 실패했습니다. 다시 시도해주세요.");
                 return;
-            }
-            // 성공한 경우 나머지 필드도 저장
-            if (saved) {
-                AppState.user.nameLastChanged = ts;
-                try { await updateDoc(userRef, { name: trimmed, nameLastChanged: ts }); } catch(_) {}
-                if (window.AppLogger) AppLogger.info(`[NameChange] 변경 완료: "${oldName}" → "${trimmed}"`);
-                saveUserData();
             }
         } catch (e) {
             console.error("[NameChange] 닉네임 변경 실패:", e);
