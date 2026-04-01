@@ -1364,11 +1364,12 @@ window.applyLogFilters = function() {
         return;
     }
 
-    let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th><th>User</th><th>Nickname</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th><th>User</th></tr></thead><tbody>';
     for (const l of filtered) {
         const time = new Date(l.timestamp).toLocaleString("ko-KR", { hour12: false });
         const badge = l.success ? '<span class="badge badge-success">OK</span>' : '<span class="badge badge-error">FAIL</span>';
         const id = l.success ? (l.messageId || "").substring(0, 20) : esc(l.error || "");
+        const uidShort = l.uid ? esc(l.uid.substring(0, 12)) + '...' : '';
 
         html += `<tr>
             <td>${esc(time)}</td>
@@ -1376,8 +1377,7 @@ window.applyLogFilters = function() {
             <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${esc(l.target)}</td>
             <td>${badge}</td>
             <td style="font-size:0.7rem; color:var(--text-sub); max-width:140px; overflow:hidden; text-overflow:ellipsis;">${id}</td>
-            <td>${l.userName ? esc(l.userName) : '<span style="color:var(--text-sub)">-</span>'}</td>
-            <td>${l.userNickname ? esc(l.userNickname) : '<span style="color:var(--text-sub)">-</span>'}</td>
+            <td>${l.userName ? `<strong>${esc(l.userName)}</strong>` + (uidShort ? `<br><span class="user-email">${uidShort}</span>` : '') : '<span style="color:var(--text-sub)">-</span>'}</td>
         </tr>`;
     }
     html += '</tbody></table>';
