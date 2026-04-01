@@ -1639,6 +1639,14 @@ function bindEvents() {
     document.getElementById('btn-google-login').addEventListener('click', simulateGoogleLogin);
     document.getElementById('auth-toggle-btn').addEventListener('click', toggleAuthMode);
     document.getElementById('login-email').addEventListener('focus', showEmailLoginFields);
+
+    // 네이티브 앱: Android Credential Manager가 이메일 입력 시 Google 계정 팝업을 표시하는 것을 방지
+    // autocomplete="email"이 Credential Manager 바텀시트를 트리거하므로 네이티브에서는 비활성화
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+        document.getElementById('login-email').setAttribute('autocomplete', 'off');
+        document.getElementById('login-pw').setAttribute('autocomplete', 'off');
+        document.getElementById('login-pw-confirm').setAttribute('autocomplete', 'off');
+    }
     document.getElementById('btn-resend-verify').addEventListener('click', resendVerificationEmail);
     document.getElementById('btn-back-login').addEventListener('click', hideEmailVerificationNotice);
     document.getElementById('forgot-pw-link').addEventListener('click', handleForgotPassword);
@@ -1897,7 +1905,9 @@ async function _doSaveUserData() {
             syncEnabled: normalizeBooleanForFirestore(AppState.user.syncEnabled),
             gpsEnabled: normalizeBooleanForFirestore(AppState.user.gpsEnabled),
             pushEnabled: normalizeBooleanForFirestore(AppState.user.pushEnabled),
-            privateAccount: normalizeBooleanForFirestore(AppState.user.privateAccount),
+            // privateAccount: 서버에 해당 필드가 존재하거나 사용자가 토글한 경우에만 전송
+            // 기존 문서에 없는 상태에서 기본값(false)을 전송하면 서버 규칙 미배포 시 permission-denied 발생
+            ...(AppState._privateAccountExplicit ? { privateAccount: normalizeBooleanForFirestore(AppState.user.privateAccount) } : {}),
             fcmToken: AppState.user.fcmToken || null,
             stepData: normalizedStepData,
             instaId: AppState.user.instaId || "",
@@ -2122,7 +2132,7 @@ async function loadUserDataFromDB(user) {
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.gpsEnabled !== undefined) AppState.user.gpsEnabled = data.gpsEnabled;
             if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
-            if(data.privateAccount !== undefined) AppState.user.privateAccount = data.privateAccount;
+            if(data.privateAccount !== undefined) { AppState.user.privateAccount = data.privateAccount; AppState._privateAccountExplicit = true; }
             if(data.fcmToken) AppState.user.fcmToken = data.fcmToken;
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
@@ -9374,6 +9384,7 @@ async function toggleHealthSync() {
 function togglePrivateAccount() {
     const toggle = document.getElementById('privacy-toggle');
     AppState.user.privateAccount = toggle.checked;
+    AppState._privateAccountExplicit = true;
     saveUserData();
     if (window.AppLogger) AppLogger.info('[Privacy] privateAccount set to ' + toggle.checked);
 }
