@@ -2736,26 +2736,8 @@ async function changePlayerName() {
             AppState.user.nameLastChanged = Date.now();
             loadPlayerName();
             updateSocialUserData();
-            const uid = auth.currentUser.uid;
-            const userRef = doc(db, "users", uid);
-            const ts = Date.now();
-            try {
-                await updateDoc(userRef, { name: trimmed, nameLastChanged: ts });
-                AppState.user.nameLastChanged = ts;
-                if (window.AppLogger) AppLogger.info(`[NameChange] 변경 완료: "${oldName}" → "${trimmed}"`);
-                saveUserData();
-            } catch (e) {
-                if (window.AppLogger) AppLogger.error(`[NameChange] 저장 실패: ${e.code} ${e.message}`);
-                // 저장 실패 → 롤백
-                AppState.user.name = oldName;
-                AppState.user.nameLastChanged = null;
-                loadPlayerName();
-                updateSocialUserData();
-                await releaseUsername(trimmed);
-                await claimUsername(oldName, auth.currentUser.uid);
-                alert("닉네임 저장에 실패했습니다. 다시 시도해주세요.");
-                return;
-            }
+            if (window.AppLogger) AppLogger.info(`[NameChange] 변경 완료: "${oldName}" → "${trimmed}"`);
+            saveUserData();
         } catch (e) {
             console.error("[NameChange] 닉네임 변경 실패:", e);
             if (window.AppLogger) AppLogger.error(`[NameChange] 실패: ${e.code || ''} ${e.message || ''}`, e.stack || '');
