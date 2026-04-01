@@ -79,12 +79,14 @@ console.log(`${count}건 nameLastChanged 정리 완료`);
 
 ## Firebase 콘솔 설정 (코드 외)
 
-### 4. AdMob 동의 양식 설정
+### 4. ~~AdMob 동의 양식 설정~~ ✅ 완료 (2026-04-01)
 
-- Firebase 콘솔 → AdMob → 앱 설정
-- App ID `ca-app-pub-6654057059754695~3529972498`에 대한 **동의 양식(Consent Form)** 생성
-- 이걸 하지 않으면 `Publisher misconfiguration` 오류 계속 발생
-- GDPR/ATT 동의 관련이므로 법적 검토 후 양식 작성 권장
+- ~~Firebase 콘솔 → AdMob → 앱 설정~~
+- ~~App ID `ca-app-pub-6654057059754695~3529972498`에 대한 **동의 양식(Consent Form)** 생성~~
+- ~~이걸 하지 않으면 `Publisher misconfiguration` 오류 계속 발생~~
+- ~~GDPR/ATT 동의 관련이므로 법적 검토 후 양식 작성 권장~~
+- **완료:** AdMob 콘솔 → Privacy & messaging → GDPR 메시지 「LEVEL UP GDPR Consent」 생성 및 게시
+- **코드:** 동의 상태 추적, Publisher misconfiguration 감지, npa 파라미터 적용 (`claude/admob-consent-form-7xD5i`)
 
 ---
 
@@ -103,7 +105,7 @@ console.log(`${count}건 nameLastChanged 정리 완료`);
 | `permission-denied` 오류 | 0건 |
 | WebChannel error | 90%+ 감소 |
 | `[SaveData] Firestore 저장 성공` | 정상 증가 |
-| AdMob 오류 | 콘솔 설정 전까지 유지 (코드 무관) |
+| AdMob 오류 | ✅ 콘솔 설정 완료 — `Publisher misconfiguration` 해소 예상 |
 
 ---
 
@@ -113,6 +115,6 @@ console.log(`${count}건 nameLastChanged 정리 완료`);
 |---|---|---|
 | 1 | 코드 배포 (이미 push 완료) | **즉시** |
 | 2 | Firestore rules 프로덕션 동기화 확인 | **즉시** |
-| 3 | AdMob 동의 양식 설정 | **금주 내** |
+| 3 | ~~AdMob 동의 양식 설정~~ | ✅ **완료** |
 | 4 | 레거시 데이터 마이그레이션 스크립트 | **권장** |
 | 5 | 24시간 모니터링 | **배포 직후** |
