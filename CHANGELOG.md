@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.101] - 2026-04-01
+
+### 변경
+- feat: 설정>계정삭제 상단에 로그인 이메일 주소 및 계정 종류 아이콘 표시
+
 ## [1.0.100] - 2026-04-01
 
 ### 변경
