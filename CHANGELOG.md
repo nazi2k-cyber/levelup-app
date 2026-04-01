@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.100] - 2026-04-01
+
+### 변경
+- fix: 이메일 로그인 시 Google Fitness 권한 요청에서 Google 로그인 팝업 방지
+
 ## [1.0.99] - 2026-04-01
 
 ### 변경
