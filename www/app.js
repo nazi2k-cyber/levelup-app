@@ -2098,6 +2098,42 @@ async function _doSaveUserData() {
     } catch(e) {
         console.error("DB 저장 실패:", e);
         if (window.AppLogger) AppLogger.error('[DB] 저장 실패: ' + (e.code || '') + ' ' + (e.message || ''), e.stack || '');
+
+        // ── permission-denied 상세 계측: payload 필드 타입/길이/키셋 덤프 ──
+        if (window.AppLogger && e.code === 'permission-denied' && typeof payload === 'object' && payload) {
+            try {
+                const _pdKeys = Object.keys(payload).sort();
+                const _fieldDescs = _pdKeys.map(k => {
+                    const v = payload[k];
+                    const t = v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v;
+                    let extra = '';
+                    if (typeof v === 'string') extra = ',len=' + v.length;
+                    else if (Array.isArray(v)) extra = ',len=' + v.length;
+                    else if (typeof v === 'object' && v !== null) extra = ',keys=' + Object.keys(v).join('/');
+                    return k + '(' + t + extra + ')';
+                });
+                // AppLogger 800자 제한을 고려해 청크 분할 출력
+                const _PD_PREFIX = '[DB:PermDenied] payload ';
+                const _PD_CHUNK_LIMIT = 750;
+                let _pdChunk = '';
+                let _pdIdx = 1;
+                for (let i = 0; i < _fieldDescs.length; i++) {
+                    const _candidate = _pdChunk ? _pdChunk + ' ' + _fieldDescs[i] : _fieldDescs[i];
+                    if ((_PD_PREFIX + '(' + _pdIdx + '): ' + _candidate).length > _PD_CHUNK_LIMIT && _pdChunk) {
+                        AppLogger.error(_PD_PREFIX + '(' + _pdIdx + '): ' + _pdChunk);
+                        _pdIdx++;
+                        _pdChunk = _fieldDescs[i];
+                    } else {
+                        _pdChunk = _candidate;
+                    }
+                }
+                if (_pdChunk) AppLogger.error(_PD_PREFIX + '(' + _pdIdx + '): ' + _pdChunk);
+                AppLogger.error('[DB:PermDenied] keySet(' + _pdKeys.length + '): ' + _pdKeys.join(','));
+            } catch (_dumpErr) {
+                // 덤프 로직 자체 실패는 무시
+            }
+        }
+
         throw e; // 호출자가 에러를 감지할 수 있도록 재전파
     } finally {
         _saveInFlight = false;
