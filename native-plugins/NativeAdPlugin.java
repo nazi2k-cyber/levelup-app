@@ -29,6 +29,8 @@ import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.LoadAdError;
+
+import android.os.Bundle;
 import com.google.android.gms.ads.nativead.MediaView;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.google.android.gms.ads.nativead.NativeAdOptions;
@@ -120,7 +122,15 @@ public class NativeAdPlugin extends Plugin {
                         .build())
                     .build();
 
-                adLoader.loadAd(new AdRequest.Builder().build());
+                AdRequest.Builder adRequestBuilder = new AdRequest.Builder();
+                boolean npa = call.getBoolean("npa", false);
+                if (npa) {
+                    Bundle extras = new Bundle();
+                    extras.putString("npa", "1");
+                    adRequestBuilder.addNetworkExtrasBundle(
+                        com.google.ads.mediation.admob.AdMobAdapter.class, extras);
+                }
+                adLoader.loadAd(adRequestBuilder.build());
             } catch (Exception e) {
                 Log.e(TAG, "광고 로드 오류: " + e.getMessage());
                 call.reject("Failed to load ad: " + e.getMessage());

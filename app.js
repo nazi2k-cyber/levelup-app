@@ -6437,9 +6437,29 @@ let _admobInitialized = false;
 let _rewardedAdReady = false;
 let _rewardedAdListenersRegistered = false;
 let _rewardEarned = false; // 광고 시청 완료 시 true
+let _consentStatus = 'UNKNOWN'; // 'UNKNOWN' | 'REQUIRED' | 'NOT_REQUIRED' | 'OBTAINED'
 let _rewardedAdContext = 'bonusExp'; // 'bonusExp' | 'libraryImage'
 let _rewardedAdOnSuccess = null; // 광고 시청 완료 후 콜백
 let _rewardedAdOnFail = null; // 광고 중도 이탈/실패 시 콜백
+
+// ★ 동의 상태 리셋 (테스트/디버그용)
+async function resetAdMobConsent() {
+    if (!isNativePlatform) return;
+    try {
+        const { AdMob } = window.Capacitor.Plugins;
+        if (!AdMob) return;
+        await AdMob.resetConsentInfo();
+        _consentStatus = 'UNKNOWN';
+        if (window.AppLogger) AppLogger.info('[AdMob] 동의 상태 리셋 완료');
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[AdMob] 동의 리셋 실패: ' + (e.message || ''));
+    }
+}
+
+// ★ 개인 맞춤 광고 허용 여부
+function canShowPersonalizedAds() {
+    return _consentStatus === 'OBTAINED' || _consentStatus === 'NOT_REQUIRED';
+}
 
 async function initAdMob() {
     if (_admobInitialized) return;
@@ -6451,14 +6471,42 @@ async function initAdMob() {
         // ★ GDPR/UMP 동의 상태 확인 및 동의 양식 표시
         try {
             const consentInfo = await AdMob.requestConsentInfo();
-            if (consentInfo.status === 'REQUIRED') {
-                await AdMob.showConsentForm();
-                if (window.AppLogger) AppLogger.info('[AdMob] GDPR 동의 양식 표시 완료');
+            _consentStatus = consentInfo.status || 'UNKNOWN';
+            if (window.AppLogger) AppLogger.info('[AdMob] 동의 상태: ' + _consentStatus +
+                (consentInfo.isConsentFormAvailable ? ' (양식 사용 가능)' : ' (양식 없음)'));
+
+            if (_consentStatus === 'REQUIRED' && consentInfo.isConsentFormAvailable) {
+                try {
+                    await AdMob.showConsentForm();
+                    _consentStatus = 'OBTAINED';
+                    if (window.AppLogger) AppLogger.info('[AdMob] GDPR 동의 양식 표시 완료');
+                } catch (formErr) {
+                    const errMsg = formErr.message || formErr.errorMessage || '';
+                    if (window.AppLogger) AppLogger.warn('[AdMob] 동의 양식 표시 실패: ' + errMsg);
+                }
+            } else if (_consentStatus === 'REQUIRED' && !consentInfo.isConsentFormAvailable) {
+                // ★ 동의가 필요하지만 양식이 없음 → Firebase 콘솔에서 동의 양식 미설정
+                if (window.AppLogger) AppLogger.error(
+                    '[AdMob] 동의 양식 미설정 (Publisher misconfiguration 가능). ' +
+                    'Firebase 콘솔 → Privacy & messaging → GDPR 에서 동의 양식을 생성하세요. ' +
+                    'App ID: ca-app-pub-6654057059754695~3529972498'
+                );
             }
-            if (window.AppLogger) AppLogger.info('[AdMob] 동의 상태: ' + consentInfo.status);
         } catch (consentErr) {
-            // 동의 확인 실패 시에도 광고 초기화는 계속 진행
-            if (window.AppLogger) AppLogger.warn('[AdMob] 동의 확인 실패: ' + (consentErr.message || ''));
+            const errMsg = consentErr.message || consentErr.errorMessage || '';
+            const isMisconfiguration = errMsg.toLowerCase().includes('misconfigur') ||
+                errMsg.toLowerCase().includes('form unavailable') ||
+                errMsg.toLowerCase().includes('no matching form');
+            if (isMisconfiguration) {
+                if (window.AppLogger) AppLogger.error(
+                    '[AdMob] Publisher misconfiguration — 동의 양식이 AdMob 콘솔에 설정되지 않았습니다. ' +
+                    'Firebase 콘솔 → Privacy & messaging 에서 GDPR 메시지를 생성하세요. ' +
+                    'App ID: ca-app-pub-6654057059754695~3529972498'
+                );
+            } else {
+                // 동의 확인 실패 시에도 광고 초기화는 계속 진행
+                if (window.AppLogger) AppLogger.warn('[AdMob] 동의 확인 실패: ' + errMsg);
+            }
         }
 
         await AdMob.initialize({
@@ -6620,6 +6668,7 @@ async function preloadRewardedAd() {
         await AdMob.prepareRewardVideoAd({
             adId: REWARDED_AD_UNIT_ID,
             isTesting: false,
+            npa: !canShowPersonalizedAds(),
         });
         // _rewardedAdReady는 onRewardedVideoAdLoaded 리스너에서 설정
     } catch (e) {
@@ -6643,6 +6692,7 @@ async function preloadRewardedInterstitial() {
         await AdMob.prepareRewardInterstitialAd({
             adId: REWARDED_INTERSTITIAL_AD_UNIT_ID,
             isTesting: false,
+            npa: !canShowPersonalizedAds(),
         });
     } catch (e) {
         _rewardedInterstitialReady = false;
@@ -6698,6 +6748,7 @@ async function showBannerAd() {
                 position: 'TOP_CENTER',
                 margin: bannerMargin,
                 isTesting: false,
+                npa: !canShowPersonalizedAds(),
             });
             _bannerAdLoaded = true;
         }
@@ -6885,6 +6936,7 @@ window.claimBonusExp = async function() {
             await AdMob.prepareRewardVideoAd({
                 adId: REWARDED_AD_UNIT_ID,
                 isTesting: false,
+                npa: !canShowPersonalizedAds(),
             });
             _rewardedAdReady = true;
         } catch (e) {
@@ -7011,6 +7063,7 @@ async function loadAndShowNativeAd(tabId) {
         const result = await NativeAd.loadAd({
             adId: NATIVE_AD_UNIT_ID,
             isTesting: false,
+            npa: !canShowPersonalizedAds(),
         });
 
         if (result && result.loaded) {
@@ -13039,6 +13092,7 @@ window.renderLifeStatus = renderLifeStatus;
                         await AdMob.prepareRewardVideoAd({
                             adId: REWARDED_AD_UNIT_ID,
                             isTesting: false,
+                            npa: !canShowPersonalizedAds(),
                         });
                         _rewardedAdReady = true;
                     }
