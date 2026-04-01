@@ -296,13 +296,22 @@ async function handleGetTestUsers(request) {
                 }
             } catch (_e) { /* ignore streak parse error */ }
 
+            // Determine streak stage: N/A, 2d_inactive, 3d+_inactive
+            let streakStage = "none"; // 미해당
+            if (diffDays !== null) {
+                if (diffDays >= 3) streakStage = "3d+";
+                else if (diffDays >= 2) streakStage = "2d";
+            }
+
             users.push({
                 uid: String(doc.id),
                 displayName: String(data.displayName || data.nickname || doc.id.substring(0, 8)),
+                nickname: data.nickname ? String(data.nickname) : null,
                 lang: String(data.lang || "ko"),
                 fcmToken: data.fcmToken ? String(data.fcmToken) : null,
                 lastActiveDate,
-                diffDays
+                diffDays,
+                streakStage
             });
         } catch (docErr) {
             console.warn("[getTestUsers] Skipping doc", doc.id, docErr.message);
@@ -322,6 +331,20 @@ async function handleGetPushLogs(request) {
         .get();
     console.log("[getPushLogs] Found", logsSnap.size, "logs");
 
+    // Build token-to-user map for resolving individual targets
+    const usersSnap = await db.collection("users").get();
+    const tokenToUser = {};
+    for (const uDoc of usersSnap.docs) {
+        const uData = uDoc.data();
+        if (uData.fcmToken) {
+            tokenToUser[String(uData.fcmToken)] = {
+                uid: uDoc.id,
+                displayName: String(uData.displayName || uData.nickname || uDoc.id.substring(0, 8)),
+                nickname: uData.nickname ? String(uData.nickname) : null
+            };
+        }
+    }
+
     const logs = [];
     for (const doc of logsSnap.docs) {
         try {
@@ -334,15 +357,19 @@ async function handleGetPushLogs(request) {
             } catch (_e) {
                 ts = String(data.timestamp || "");
             }
+            const target = String(data.target || "");
+            const userInfo = tokenToUser[target] || null;
             logs.push({
                 id: String(doc.id),
                 timestamp: ts,
                 type: String(data.type || ""),
-                target: String(data.target || ""),
+                target,
                 success: !!data.success,
                 messageId: data.messageId ? String(data.messageId) : null,
                 error: data.error ? String(data.error) : null,
-                sender: data.sender ? String(data.sender) : null
+                sender: data.sender ? String(data.sender) : null,
+                userName: userInfo ? userInfo.displayName : null,
+                userNickname: userInfo ? userInfo.nickname : null
             });
         } catch (docErr) {
             console.warn("[getPushLogs] Skipping doc", doc.id, docErr.message);

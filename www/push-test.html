@@ -660,6 +660,49 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                 <h2 style="margin:0;">Send History</h2>
                 <button class="btn btn-ghost btn-sm" onclick="loadLogs()">Refresh</button>
             </div>
+            <!-- Filters -->
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0; min-width:140px;">
+                    <label style="margin-bottom:4px;">Time</label>
+                    <select id="filter-time" onchange="applyLogFilters()" style="padding:6px 8px; font-size:0.8rem;">
+                        <option value="">All</option>
+                        <option value="today">Today</option>
+                        <option value="3d">Last 3 days</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0; min-width:130px;">
+                    <label style="margin-bottom:4px;">Type</label>
+                    <select id="filter-type" onchange="applyLogFilters()" style="padding:6px 8px; font-size:0.8rem;">
+                        <option value="">All</option>
+                        <option value="raid_start">raid_start</option>
+                        <option value="daily_reminder">daily_reminder</option>
+                        <option value="dday_reminder">dday_reminder</option>
+                        <option value="quest_reminder">quest_reminder</option>
+                        <option value="streak_warning">streak_warning</option>
+                        <option value="streak_broken">streak_broken</option>
+                        <option value="custom">custom</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0; min-width:130px;">
+                    <label style="margin-bottom:4px;">Target</label>
+                    <select id="filter-target" onchange="applyLogFilters()" style="padding:6px 8px; font-size:0.8rem;">
+                        <option value="">All</option>
+                        <option value="topic">Topic</option>
+                        <option value="individual">Individual</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0; min-width:100px;">
+                    <label style="margin-bottom:4px;">Result</label>
+                    <select id="filter-result" onchange="applyLogFilters()" style="padding:6px 8px; font-size:0.8rem;">
+                        <option value="">All</option>
+                        <option value="ok">OK</option>
+                        <option value="fail">FAIL</option>
+                    </select>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="resetLogFilters()" style="height:32px;">Reset</button>
+            </div>
             <div id="logs-table"><p class="loading">Loading...</p></div>
         </div>
     </div>
@@ -1133,13 +1176,20 @@ window.loadUsers = async function() {
                         diffDays = Number.isFinite(d) ? d : null;
                     }
                 } catch (_e) {}
+                let streakStage = "none";
+                if (diffDays !== null) {
+                    if (diffDays >= 3) streakStage = "3d+";
+                    else if (diffDays >= 2) streakStage = "2d";
+                }
                 usersCache.push({
                     uid: doc.id,
                     displayName: data.displayName || data.nickname || doc.id.substring(0, 8),
+                    nickname: data.nickname || null,
                     lang: data.lang || "ko",
                     fcmToken: data.fcmToken || null,
                     lastActiveDate,
-                    diffDays
+                    diffDays,
+                    streakStage
                 });
             });
             tok("Users", "Fallback OK — loaded " + usersCache.length + " users from Firestore directly");
@@ -1155,15 +1205,24 @@ window.loadUsers = async function() {
         return;
     }
 
-    let html = '<table><thead><tr><th>User</th><th>Lang</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>User</th><th>Nickname</th><th>Lang</th><th>Streak Stage</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
     for (const u of usersCache) {
         const diffClass = u.diffDays === null ? "" : u.diffDays >= 3 ? "badge-error" : u.diffDays >= 2 ? "badge-warning" : "badge-active";
         const diffText = u.diffDays === null ? "-" : u.diffDays === 0 ? "Today" : u.diffDays + "d ago";
         const tokenShort = u.fcmToken ? u.fcmToken.substring(0, 16) + "..." : "none";
 
+        // Streak stage display
+        const stage = u.streakStage || "none";
+        let stageLabel, stageClass;
+        if (stage === "3d+") { stageLabel = "3일+ 미접속"; stageClass = "badge-error"; }
+        else if (stage === "2d") { stageLabel = "2일 미접속"; stageClass = "badge-warning"; }
+        else { stageLabel = "미해당"; stageClass = ""; }
+
         html += `<tr>
             <td><strong>${esc(u.displayName)}</strong><br><span class="user-email">${esc(u.uid.substring(0, 12))}...</span></td>
+            <td>${esc(u.nickname || '-')}</td>
             <td>${esc(u.lang)}</td>
+            <td><span class="badge ${stageClass}">${stageLabel}</span></td>
             <td><span class="badge ${diffClass}">${diffText}</span></td>
             <td><span class="token-masked">${esc(tokenShort)}</span></td>
             <td>${u.fcmToken ? `<button class="btn btn-primary btn-sm" onclick="sendToUser('${esc(u.fcmToken)}')">Send</button>` : '-'}</td>
@@ -1182,6 +1241,8 @@ window.sendToUser = function(token) {
 };
 
 // --- Logs ---
+let logsCache = [];
+
 window.loadLogs = async function() {
     const container = document.getElementById("logs-table");
     container.innerHTML = '<p class="loading">Loading...</p>';
@@ -1220,9 +1281,25 @@ window.loadLogs = async function() {
                     success: !!data.success,
                     messageId: data.messageId || null,
                     error: data.error || null,
-                    sender: data.sender || null
+                    sender: data.sender || null,
+                    userName: null,
+                    userNickname: null
                 });
             });
+            // Attempt to resolve user names from usersCache for fallback
+            if (usersCache.length) {
+                const tokenMap = {};
+                for (const u of usersCache) {
+                    if (u.fcmToken) tokenMap[u.fcmToken] = u;
+                }
+                for (const l of logs) {
+                    const matched = tokenMap[l.target];
+                    if (matched) {
+                        l.userName = matched.displayName;
+                        l.userNickname = matched.nickname || null;
+                    }
+                }
+            }
             tok("History", "Fallback OK — loaded " + logs.length + " logs from Firestore directly");
         } catch (e2) {
             terror("History", "Fallback also failed: " + (e2.code || "") + " " + (e2.message || e2));
@@ -1231,13 +1308,58 @@ window.loadLogs = async function() {
         }
     }
 
-    if (!logs.length) {
-        container.innerHTML = '<p class="loading">No send history yet.</p>';
+    logsCache = logs;
+    applyLogFilters();
+};
+
+window.applyLogFilters = function() {
+    const container = document.getElementById("logs-table");
+    const filterTime = document.getElementById("filter-time").value;
+    const filterType = document.getElementById("filter-type").value;
+    const filterTarget = document.getElementById("filter-target").value;
+    const filterResult = document.getElementById("filter-result").value;
+
+    let filtered = logsCache;
+
+    // Time filter
+    if (filterTime) {
+        const now = new Date();
+        let cutoff;
+        if (filterTime === "today") {
+            cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        } else {
+            const days = parseInt(filterTime);
+            cutoff = new Date(now.getTime() - days * 86400000);
+        }
+        filtered = filtered.filter(l => new Date(l.timestamp) >= cutoff);
+    }
+
+    // Type filter
+    if (filterType) {
+        filtered = filtered.filter(l => l.type === filterType);
+    }
+
+    // Target filter (topic vs individual)
+    if (filterTarget === "topic") {
+        filtered = filtered.filter(l => l.target.startsWith("topic:") || l.target.includes("_alerts") || l.target.includes("_reminder") || l.target === "announcements" || l.target === "daily_reminder");
+    } else if (filterTarget === "individual") {
+        filtered = filtered.filter(l => !l.target.startsWith("topic:") && !l.target.includes("_alerts") && !["announcements", "daily_reminder"].includes(l.target) && l.target.length > 20);
+    }
+
+    // Result filter
+    if (filterResult === "ok") {
+        filtered = filtered.filter(l => l.success);
+    } else if (filterResult === "fail") {
+        filtered = filtered.filter(l => !l.success);
+    }
+
+    if (!filtered.length) {
+        container.innerHTML = '<p class="loading">No matching logs.</p>';
         return;
     }
 
-    let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th></tr></thead><tbody>';
-    for (const l of logs) {
+    let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th><th>User</th><th>Nickname</th></tr></thead><tbody>';
+    for (const l of filtered) {
         const time = new Date(l.timestamp).toLocaleString("ko-KR", { hour12: false });
         const badge = l.success ? '<span class="badge badge-success">OK</span>' : '<span class="badge badge-error">FAIL</span>';
         const id = l.success ? (l.messageId || "").substring(0, 20) : esc(l.error || "");
@@ -1248,10 +1370,20 @@ window.loadLogs = async function() {
             <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${esc(l.target)}</td>
             <td>${badge}</td>
             <td style="font-size:0.7rem; color:var(--text-sub); max-width:140px; overflow:hidden; text-overflow:ellipsis;">${id}</td>
+            <td>${l.userName ? esc(l.userName) : '<span style="color:var(--text-sub)">-</span>'}</td>
+            <td>${l.userNickname ? esc(l.userNickname) : '<span style="color:var(--text-sub)">-</span>'}</td>
         </tr>`;
     }
     html += '</tbody></table>';
     container.innerHTML = html;
+};
+
+window.resetLogFilters = function() {
+    document.getElementById("filter-time").value = "";
+    document.getElementById("filter-type").value = "";
+    document.getElementById("filter-target").value = "";
+    document.getElementById("filter-result").value = "";
+    applyLogFilters();
 };
 
 // --- Feedback ---
