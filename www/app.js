@@ -9153,7 +9153,7 @@ async function showPermissionPrompts() {
             if (HealthConnect) {
                 const availability = await HealthConnect.isAvailable();
                 if (availability.available) {
-                    fitnessGranted = await requestFitnessScope();
+                    fitnessGranted = await requestFitnessScope(true);
                 }
             }
             if (!fitnessGranted && GoogleFit) {
@@ -9162,7 +9162,7 @@ async function showPermissionPrompts() {
                     if (availability.needsSignIn) {
                         if (window.AppLogger) AppLogger.info('[PermPrompt] Google Fit requires sign-in, skipping auto-prompt');
                     } else {
-                        fitnessGranted = await requestFitnessScope();
+                        fitnessGranted = await requestFitnessScope(true);
                     }
                 }
             }
@@ -9422,7 +9422,8 @@ function updateCameraToggleUI() {
 }
 
 // 네이티브 건강 데이터 권한 요청 (Health Connect → Google Fit SDK 순서)
-async function requestFitnessScope() {
+// skipGoogleSignIn: true일 경우 Google 계정 로그인이 필요한 상황에서 팝업 없이 건너뜀 (자동 프롬프트용)
+async function requestFitnessScope(skipGoogleSignIn = false) {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return false;
 
@@ -9441,6 +9442,14 @@ async function requestFitnessScope() {
         // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
         const { GoogleFit } = window.Capacitor.Plugins;
         if (GoogleFit) {
+            // 네이티브 Google 계정이 없고 자동 프롬프트인 경우 Google Sign-In 팝업 방지
+            if (skipGoogleSignIn) {
+                const gfStatus = await GoogleFit.isAvailable();
+                if (gfStatus.needsSignIn) {
+                    if (window.AppLogger) AppLogger.info('[GoogleFit] Google Sign-In 필요 → 자동 프롬프트에서 건너뜀');
+                    return false;
+                }
+            }
             await GoogleFit.requestPermissions();
             if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
             return true;
