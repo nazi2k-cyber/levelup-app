@@ -1404,6 +1404,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 이메일/비밀번호 사용자의 이메일 인증 확인 (Google OAuth 등은 건너뜀)
             const isEmailUser = user.providerData.some(p => p.providerId === 'password');
+            AppState.isEmailUser = isEmailUser;
             if (isEmailUser && !user.emailVerified) {
                 AppLogger.info('[Auth] 미인증 이메일 사용자 차단: ' + user.email);
                 const lang = AppState.currentLang || 'ko';
@@ -2250,7 +2251,16 @@ async function loadUserDataFromDB(user) {
                     }
                 } catch(e) {}
             }
-            document.getElementById('sync-toggle').checked = AppState.user.syncEnabled;
+            const syncToggleEl = document.getElementById('sync-toggle');
+            syncToggleEl.checked = AppState.user.syncEnabled;
+            if (AppState.isEmailUser) {
+                syncToggleEl.disabled = true;
+                syncToggleEl.checked = false;
+                syncToggleEl.closest('.setting-row').style.opacity = '0.5';
+            } else {
+                syncToggleEl.disabled = false;
+                syncToggleEl.closest('.setting-row').style.opacity = '';
+            }
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
             document.getElementById('privacy-toggle').checked = AppState.user.privateAccount;
             updateCameraToggleUI();
@@ -9193,8 +9203,8 @@ async function showPermissionPrompts() {
         }
     }
 
-    // 3) 건강 데이터 — 앱 토글 off일 때만 요청
-    if (!AppState.user.syncEnabled) {
+    // 3) 건강 데이터 — 앱 토글 off일 때만 요청 (이메일 로그인 사용자는 스킵)
+    if (!AppState.user.syncEnabled && !AppState.isEmailUser) {
         try {
             let fitnessGranted = false;
             const { HealthConnect, GoogleFit } = cap.Plugins || {};
@@ -9346,11 +9356,18 @@ async function toggleHealthSync() {
             return;
         }
 
+        // 이메일 로그인 사용자는 구글 피트니스 동기화 사용 불가
+        if (AppState.isEmailUser) {
+            toggle.checked = false;
+            const lang = i18n[AppState.currentLang];
+            statusDiv.style.display = 'flex';
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.fitness_email_disabled || '이메일 로그인 사용자는 구글 피트니스 동기화를 사용할 수 없습니다.'}</span>`;
+            return;
+        }
+
         // 네이티브 건강 데이터 권한 요청 (Health Connect / Google Fit SDK)
         statusDiv.style.display = 'flex';
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">건강 데이터 권한 요청 중...</span>`;
-
-        // Google Sign-In 필요 여부는 인포 모달에서 사전 안내 (confirm 팝업 제거)
 
         const granted = await requestFitnessScope();
         if (!granted) {
@@ -9655,6 +9672,12 @@ function updateStepCountUI() {
     const valueEl = document.getElementById('step-count-value');
     const infoEl = document.getElementById('step-count-info');
     const reqPanel = document.getElementById('step-req-panel');
+
+    // 이메일 로그인 사용자는 걸음수 카드 숨김
+    if (AppState.isEmailUser) {
+        card.style.display = 'none';
+        return;
+    }
 
     // 항상 표시
     card.style.display = '';

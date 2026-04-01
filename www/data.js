@@ -212,6 +212,7 @@ const i18n = {
         sync_complete_msg: "동기화 완료 ({source}): 총 {steps}보", sync_reward_msg: "추가 보상: +{points}P, STR +{str}",
         sync_no_steps: "걸음 수 기록이 없습니다. (0보)", sync_next_reward: "다음 보상까지 {n}보 남음",
         fitness_needs_google_signin: "Google 피트니스 데이터를 사용하려면 Google 계정 로그인이 필요합니다.\n계속하시겠습니까?",
+        fitness_email_disabled: "이메일 로그인 사용자는 구글 피트니스 동기화를 사용할 수 없습니다. Google 계정으로 로그인해주세요.",
         login_terms_html: '계속하면 BRAVECAT의 <a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">소비자 약관</a> 및 <a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">이용 정책</a>에 동의하고, <a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">개인정보 처리방침</a>을 확인하는 것으로 간주됩니다.',
         // 온보딩 가이드
         ob_title_1: "나만의 캐릭터 성장", ob_desc_1: "6가지 스탯을 키우고 레벨업하며<br>최고의 나를 만들어보세요",
@@ -490,6 +491,7 @@ const i18n = {
         sync_complete_msg: "Sync complete ({source}): {steps} steps total", sync_reward_msg: "Bonus: +{points}P, STR +{str}",
         sync_no_steps: "No step data recorded. (0 steps)", sync_next_reward: "{n} steps to next reward",
         fitness_needs_google_signin: "Google Fitness requires signing in with a Google account.\nWould you like to continue?",
+        fitness_email_disabled: "Fitness sync is not available for email login users. Please sign in with a Google account.",
         login_terms_html: 'By continuing, you agree to BRAVECAT\'s <a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">Terms of Service</a> and <a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">Usage Policy</a>, and acknowledge the <a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">Privacy Policy</a>.',
         // Onboarding Guide
         ob_title_1: "Build Your Character", ob_desc_1: "Grow 6 stats and level up<br>to become the best version of yourself",
@@ -768,6 +770,7 @@ const i18n = {
         sync_complete_msg: "同期完了 ({source}): 合計 {steps}歩", sync_reward_msg: "追加報酬: +{points}P, STR +{str}",
         sync_no_steps: "歩数記録がありません。(0歩)", sync_next_reward: "次の報酬まで {n}歩",
         fitness_needs_google_signin: "Google フィットネスのデータを使用するには、Googleアカウントでのログインが必要です。\n続行しますか？",
+        fitness_email_disabled: "メールログインユーザーはフィットネス同期を利用できません。Googleアカウントでログインしてください。",
         login_terms_html: '続行すると、BRAVECATの<a href="#" onclick="event.preventDefault();openLegalModal(\'terms\')">利用規約</a>および<a href="#" onclick="event.preventDefault();openLegalModal(\'usage-policy\')">利用ポリシー</a>に同意し、<a href="#" onclick="event.preventDefault();openLegalModal(\'privacy\')">プライバシーポリシー</a>を確認したものとみなされます。',
         // オンボーディングガイド
         ob_title_1: "キャラクター育成", ob_desc_1: "6つのステータスを成長させレベルアップ<br>最高の自分を目指しましょう",
