@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.89] - 2026-04-01
+
+### 변경
+- 내 서재를 Life Status 하단으로 이동
+
 ## [1.0.88] - 2026-03-31
 
 ### 변경
