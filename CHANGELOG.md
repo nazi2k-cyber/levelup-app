@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.95] - 2026-04-01
+
+### 변경
+- fix: 닉네임 변경 permission-denied 해결 및 1개월 제한 문구 제거
+
 ## [1.0.94] - 2026-04-01
 
 ### 변경
