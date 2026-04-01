@@ -7148,8 +7148,8 @@ async function positionNativeAd(tabId) {
 
         const rect = placeholder.getBoundingClientRect();
 
-        // 던전탭: 최하단 고정 위치 계산
-        if (tabId === 'dungeon') {
+        // 던전/플래너탭: 최하단 고정 위치 계산
+        if (tabId === 'dungeon' || tabId === 'diary') {
             const navHeight = 65;
             const adHeight = rect.height || 280;
             const fixedY = window.innerHeight - navHeight - adHeight;
@@ -7194,8 +7194,8 @@ async function positionNativeAd(tabId) {
 function setupNativeAdScrollSync(tabId) {
     cleanupNativeAdScrollSync();
 
-    // 던전탭: 최하단 고정이므로 스크롤 동기화 불필요 (항상 표시)
-    if (tabId === 'dungeon') return;
+    // 던전/플래너탭: 최하단 고정이므로 스크롤 동기화 불필요 (항상 표시)
+    if (tabId === 'dungeon' || tabId === 'diary') return;
 
     const mainEl = document.querySelector('main');
     const placeholderId = 'native-ad-placeholder-' + tabId;
