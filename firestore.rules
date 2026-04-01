@@ -105,6 +105,7 @@ service cloud.firestore {
         && (!('pushEnabled' in d) || d.pushEnabled is bool)
         && (!('hasActiveReels' in d) || d.hasActiveReels is bool)
         && (!('_profileUploadFailed' in d) || d._profileUploadFailed is bool)
+        && (!('privateAccount' in d) || d.privateAccount is bool)
 
         // ── 문자열 필드 (짧은) ──
         // instaId: 인스타그램 ID, 최대 30자 (실제 IG 제한=30)
