@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.116] - 2026-04-01
+
+### 변경
+- feat: 플래너/던전 탭 광고 배너→네이티브 전환 (상단 고정, 스크롤 시 가려짐)
+
 ## [1.0.115] - 2026-04-01
 
 ### 변경
