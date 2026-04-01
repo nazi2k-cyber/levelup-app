@@ -5,7 +5,8 @@ import { tlog, tok, twarn, terror } from "./log-panel.js";
 let _container = null;
 let _results = [];
 let _config = null;
-let _stats = null;
+let _statsProfile = null;
+let _statsPlanner = null;
 let _currentView = "dashboard"; // dashboard | results | config
 
 const STORAGE_BUCKET = "levelup-app-53d02.firebasestorage.app";
@@ -17,6 +18,11 @@ function getReelsPhotoUrl(uid, timestamp) {
 
 function getReelsPhotoUrlJpg(uid, timestamp) {
     const path = `reels_photos/${uid}/${timestamp}.jpg`;
+    return `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
+}
+
+function getProfilePhotoUrl(uid) {
+    const path = `profile_images/${uid}/profile.webp`;
     return `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
 }
 
@@ -42,7 +48,7 @@ function render() {
     _container.innerHTML = `
         <div class="card">
             <h2>자동 스크리닝 시스템</h2>
-            <p class="text-sub text-sm mb-8">캡션/이미지 자동 검열 시스템을 관리합니다.</p>
+            <p class="text-sub text-sm mb-8">프로필/플래너 이미지 및 캡션 자동 검열 시스템을 관리합니다.</p>
             <div class="as-view-tabs">
                 <button class="as-view-tab active" data-view="dashboard">대시보드</button>
                 <button class="as-view-tab" data-view="results">스크리닝 결과</button>
@@ -79,37 +85,67 @@ function renderDashboard() {
     el.innerHTML = `
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h2>스크리닝 대시보드</h2>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn btn-outline btn-sm" id="btn-refresh-stats">통계 새로고침</button>
-                    <button class="btn btn-primary btn-sm" id="btn-batch-screen">스크리닝</button>
-                    <button class="btn btn-outline btn-sm" id="btn-batch-screen-full" style="border-color:var(--accent);">스크리닝(전체)</button>
+                <h2>스크리닝-프로필</h2>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <label class="as-toggle-row" style="margin:0; font-size:0.8rem;">
+                        <input type="checkbox" id="chk-profile-force">
+                        <span>스킵 무효화 (전체 검색)</span>
+                    </label>
+                    <button class="btn btn-outline btn-sm" id="btn-refresh-stats-profile">통계 새로고침</button>
+                    <button class="btn btn-primary btn-sm" id="btn-batch-screen-profile">스크리닝</button>
                 </div>
             </div>
-            <div id="as-stats-area">
+            <div id="as-stats-area-profile">
+                <p class="text-sub text-sm">통계를 로드하려면 '통계 새로고침'을 클릭하세요.</p>
+            </div>
+        </div>
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h2>스크리닝-플래너</h2>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <label class="as-toggle-row" style="margin:0; font-size:0.8rem;">
+                        <input type="checkbox" id="chk-planner-force">
+                        <span>스킵 무효화 (전체 검색)</span>
+                    </label>
+                    <button class="btn btn-outline btn-sm" id="btn-refresh-stats-planner">통계 새로고침</button>
+                    <button class="btn btn-primary btn-sm" id="btn-batch-screen-planner">스크리닝</button>
+                </div>
+            </div>
+            <div id="as-stats-area-planner">
                 <p class="text-sub text-sm">통계를 로드하려면 '통계 새로고침'을 클릭하세요.</p>
             </div>
         </div>
     `;
 
-    document.getElementById("btn-refresh-stats").addEventListener("click", loadStats);
-    document.getElementById("btn-batch-screen").addEventListener("click", () => batchScreen(false));
-    document.getElementById("btn-batch-screen-full").addEventListener("click", () => batchScreen(true));
+    document.getElementById("btn-refresh-stats-profile").addEventListener("click", () => loadStats("profile"));
+    document.getElementById("btn-refresh-stats-planner").addEventListener("click", () => loadStats("planner"));
+    document.getElementById("btn-batch-screen-profile").addEventListener("click", () => {
+        const force = document.getElementById("chk-profile-force").checked;
+        batchScreenProfile(force);
+    });
+    document.getElementById("btn-batch-screen-planner").addEventListener("click", () => {
+        const force = document.getElementById("chk-planner-force").checked;
+        batchScreen(force);
+    });
 }
 
-async function loadStats() {
-    const area = document.getElementById("as-stats-area");
-    if (!area) return; // 대시보드 뷰가 아닌 경우 스킵
+async function loadStats(type) {
+    const areaId = type === "profile" ? "as-stats-area-profile" : "as-stats-area-planner";
+    const typeLabel = type === "profile" ? "프로필" : "플래너";
+    const area = document.getElementById(areaId);
+    if (!area) return;
     area.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
-    tlog("AutoScreen", "스크리닝 통계 로딩...");
+    tlog("AutoScreen", `${typeLabel} 스크리닝 통계 로딩...`);
 
     try {
-        _stats = await callAdmin("getScreeningStats");
-        tok("AutoScreen", "통계 로드 완료");
+        const stats = await callAdmin("getScreeningStats", { type });
+        if (type === "profile") _statsProfile = stats;
+        else _statsPlanner = stats;
+        tok("AutoScreen", `${typeLabel} 통계 로드 완료`);
 
         let rateLimitAlert = "";
-        if (_stats.azureRateLimited) {
-            const limitDt = new Date(_stats.azureRateLimited).toLocaleString("ko-KR");
+        if (stats.azureRateLimited) {
+            const limitDt = new Date(stats.azureRateLimited).toLocaleString("ko-KR");
             rateLimitAlert = `
                 <div style="background:#ff525220; border:1px solid #ff5252; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
                     <strong style="color:#ff5252;">Azure F0 한도 초과</strong>
@@ -121,51 +157,52 @@ async function loadStats() {
             ${rateLimitAlert}
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value">${(_stats.total || 0) + (_stats.clean || 0)}</div>
+                    <div class="stat-value">${(stats.total || 0) + (stats.clean || 0)}</div>
                     <div class="stat-label">총 스캔</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color:var(--success);">${_stats.clean || 0}</div>
+                    <div class="stat-value" style="color:var(--success);">${stats.clean || 0}</div>
                     <div class="stat-label">정상 (Clean)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${_stats.total || 0}</div>
+                    <div class="stat-value">${stats.total || 0}</div>
                     <div class="stat-label">총 플래그</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value as-pending">${_stats.pending || 0}</div>
+                    <div class="stat-value as-pending">${stats.pending || 0}</div>
                     <div class="stat-label">검토 대기</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value as-approved">${_stats.approved || 0}</div>
+                    <div class="stat-value as-approved">${stats.approved || 0}</div>
                     <div class="stat-label">승인됨</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value as-rejected">${_stats.rejected || 0}</div>
+                    <div class="stat-value as-rejected">${stats.rejected || 0}</div>
                     <div class="stat-label">거부됨</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value as-auto-deleted">${_stats.autoDeleted || 0}</div>
+                    <div class="stat-value as-auto-deleted">${stats.autoDeleted || 0}</div>
                     <div class="stat-label">자동 삭제</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value as-auto-hidden">${_stats.autoHidden || 0}</div>
+                    <div class="stat-value as-auto-hidden">${stats.autoHidden || 0}</div>
                     <div class="stat-label">자동 숨김</div>
                 </div>
             </div>
             <div class="ua-charts-row" style="margin-top:16px;">
                 <div class="ua-chart-box">
                     <h3 class="text-sm" style="color:var(--accent); margin-bottom:12px;">심각도별 분포</h3>
-                    ${renderSeverityBars(_stats.bySeverity || {})}
+                    ${renderSeverityBars(stats.bySeverity || {})}
                 </div>
+                ${type === "planner" ? `
                 <div class="ua-chart-box">
                     <h3 class="text-sm" style="color:var(--accent); margin-bottom:12px;">카테고리별 분포</h3>
-                    ${renderCategoryBars(_stats.byCategory || {})}
-                </div>
+                    ${renderCategoryBars(stats.byCategory || {})}
+                </div>` : ""}
             </div>
         `;
     } catch (e) {
-        terror("AutoScreen", "통계 로드 실패: " + e.message);
+        terror("AutoScreen", `${typeLabel} 통계 로드 실패: ` + e.message);
         if (area) area.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
     }
 }
@@ -215,8 +252,80 @@ function renderCategoryBars(data) {
     `).join("");
 }
 
+async function batchScreenProfile(forceRescan = false) {
+    const modeLabel = forceRescan ? "프로필 전체 스크리닝" : "프로필 스크리닝";
+    const confirmMsg = forceRescan
+        ? "모든 유저의 프로필 이미지를 처음부터 다시 스크리닝합니다.\n\n기존 프로필 스크리닝 결과를 삭제하고 전수조사합니다."
+        : "프로필 이미지에 대해 스크리닝을 실행합니다.\n\n이미 스크리닝된 프로필은 건너뜁니다.";
+
+    if (!confirm(confirmMsg)) return;
+
+    tlog("AutoScreen", `${modeLabel} 실행 중...`);
+    const btn = document.getElementById("btn-batch-screen-profile");
+    btn.disabled = true;
+    btn.textContent = "스크리닝 중...";
+
+    try {
+        const result = await callAdmin("batchScreenProfiles", { forceRescan });
+        const d = result.detail || {};
+
+        tok("AutoScreen", `${modeLabel} 완료: ${result.screenedCount}건 스캔, ${result.flaggedCount}건 플래그`);
+        if (result.skippedCount > 0) {
+            tlog("AutoScreen", `기 스크리닝 스킵: ${result.skippedCount}건 (이미 검사됨)`);
+        }
+
+        // 엔진 구동 상태 로그
+        if (d.imageEnabled) {
+            if (d.nsfwjsModelReady) tok("NSFWJS", "NSFWJS 엔진 구동 성공 (MobileNetV2)");
+            else terror("NSFWJS", `NSFWJS 엔진 구동 실패: ${d.nsfwjsModelError || "알 수 없는 오류"}`);
+            if (d.azureEnabled) {
+                if (d.azureClientReady) tok("Azure", "Azure Content Safety 엔진 구동 성공");
+                else terror("Azure", `Azure 엔진 구동 실패: ${d.azureClientError || "알 수 없는 오류"}`);
+            }
+        }
+
+        // 이미지 스크리닝 상세
+        if (d.imageEnabled && d.imageScreenedCount > 0) {
+            const imgMsg = `이미지 스크리닝: ${d.imageScreenedCount}건 검사 → ${d.imageFlaggedCount}건 플래그`;
+            d.imageFlaggedCount > 0 ? twarn("Image", imgMsg) : tok("Image", imgMsg);
+
+            if (d.nsfwjsCount > 0) {
+                const parts = [];
+                if (d.nsfwjsSafeCount) parts.push(`안전 ${d.nsfwjsSafeCount}`);
+                if (d.nsfwjsAmbiguousCount) parts.push(`애매 ${d.nsfwjsAmbiguousCount}`);
+                if (d.nsfwjsFlaggedCount) parts.push(`플래그 ${d.nsfwjsFlaggedCount}`);
+                if (d.nsfwjsErrorCount) parts.push(`오류 ${d.nsfwjsErrorCount}`);
+                const detail = parts.length ? ` (${parts.join(", ")})` : "";
+                tok("NSFWJS", `NSFWJS 1차: ${d.nsfwjsCount}건 분석${detail}`);
+            }
+
+            if (d.azureEnabled && d.azureCount > 0) {
+                const azMsg = `Azure 2차: ${d.azureCount}건 정밀검사 → ${d.azureFlaggedCount}건 플래그`;
+                d.azureFlaggedCount > 0 ? twarn("Azure", azMsg) : tok("Azure", azMsg);
+            }
+        }
+
+        if (result.autoDeletedCount > 0) twarn("AutoScreen", `프로필 자동 삭제: ${result.autoDeletedCount}건`);
+        if (result.autoHiddenCount > 0) twarn("AutoScreen", `프로필 자동 숨김: ${result.autoHiddenCount}건`);
+
+        let alertMsg = `${modeLabel} 완료!\n\n` +
+            `스캔: ${result.screenedCount}건 | 플래그: ${result.flaggedCount}건\n` +
+            `자동 삭제: ${result.autoDeletedCount}건 | 자동 숨김: ${result.autoHiddenCount}건`;
+        if (result.skippedCount > 0) alertMsg += `\n스킵: ${result.skippedCount}건 (이미 검사됨)`;
+        alert(alertMsg);
+
+        loadStats("profile");
+    } catch (e) {
+        terror("AutoScreen", `${modeLabel} 실패: ` + e.message);
+        alert(`${modeLabel} 실패: ` + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "스크리닝";
+    }
+}
+
 async function batchScreen(forceRescan = false) {
-    const modeLabel = forceRescan ? "전체 스크리닝 (전수조사)" : "스크리닝";
+    const modeLabel = forceRescan ? "플래너 전체 스크리닝 (전수조사)" : "플래너 스크리닝";
     const confirmMsg = forceRescan
         ? "전체 활성 포스트를 처음부터 다시 스크리닝합니다.\n\n기존 스크리닝 결과를 삭제하고 전수조사합니다."
         : "활성 포스트에 대해 스크리닝을 실행합니다.\n\n이미 스크리닝된 포스트는 건너뜁니다.";
@@ -224,11 +333,9 @@ async function batchScreen(forceRescan = false) {
     if (!confirm(confirmMsg)) return;
 
     tlog("AutoScreen", `${modeLabel} 실행 중...`);
-    const btn = document.getElementById("btn-batch-screen");
-    const btnFull = document.getElementById("btn-batch-screen-full");
+    const btn = document.getElementById("btn-batch-screen-planner");
     btn.disabled = true;
-    btnFull.disabled = true;
-    (forceRescan ? btnFull : btn).textContent = "스크리닝 중...";
+    btn.textContent = "스크리닝 중...";
 
     try {
         const result = await callAdmin("batchScreenPosts", { forceRescan });
@@ -340,7 +447,7 @@ async function batchScreen(forceRescan = false) {
         }
         alert(alertMsg);
         // 현재 뷰에 따라 적절한 데이터 새로고침
-        loadStats();
+        loadStats("planner");
         if (_currentView === "results") {
             loadResults();
         }
@@ -349,9 +456,7 @@ async function batchScreen(forceRescan = false) {
         alert(`${modeLabel} 실패: ` + e.message);
     } finally {
         btn.disabled = false;
-        btnFull.disabled = false;
         btn.textContent = "스크리닝";
-        btnFull.textContent = "스크리닝(전체)";
     }
 }
 
@@ -364,6 +469,11 @@ function renderResults() {
             <h2>스크리닝 결과</h2>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
                 <button class="btn btn-outline btn-sm" id="btn-load-results">결과 조회</button>
+                <select id="as-filter-type" style="width:auto; padding:6px 10px; font-size:0.8rem;">
+                    <option value="">전체 유형</option>
+                    <option value="profile">프로필</option>
+                    <option value="planner">플래너</option>
+                </select>
                 <select id="as-filter-status" style="width:auto; padding:6px 10px; font-size:0.8rem;">
                     <option value="">전체 상태</option>
                     <option value="clean">정상 (Clean)</option>
@@ -407,11 +517,12 @@ async function loadResults() {
     listEl.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
     tlog("AutoScreen", "스크리닝 결과 로딩...");
 
+    const type = document.getElementById("as-filter-type").value || undefined;
     const status = document.getElementById("as-filter-status").value || undefined;
     const severity = document.getElementById("as-filter-severity").value || undefined;
 
     try {
-        const data = await callAdmin("getScreeningResults", { status, severity });
+        const data = await callAdmin("getScreeningResults", { type, status, severity });
         _results = data.results || [];
         tok("AutoScreen", `${_results.length}건 조회 완료`);
         countEl.textContent = `${_results.length}건`;
@@ -432,6 +543,7 @@ async function loadResults() {
 function renderResultTable(results) {
     let html = `<table>
         <thead><tr>
+            <th>유형</th>
             <th>작성자</th>
             <th>캡션</th>
             <th>텍스트 플래그</th>
@@ -453,15 +565,28 @@ function renderResultTable(results) {
         const textFlagsSummary = renderTextFlagsSummary(r);
 
         // 썸네일 (photo 필드 없으면 Storage 경로에서 직접 구성)
-        const thumbTs = getPostTimestamp(r.postId);
-        const thumbSrc = r.photo || getReelsPhotoUrl(r.ownerUid, thumbTs);
-        const thumbFallback = getReelsPhotoUrlJpg(r.ownerUid, thumbTs);
-        const thumbnailHtml = `<img src="${escHtml(thumbSrc)}" alt="thumb" style="width:48px; height:48px; object-fit:cover; border-radius:4px; border:1px solid var(--border);" onerror="if(this.src.includes('.webp')){this.src='${escHtml(thumbFallback)}'}else{this.style.display='none'}">`;
+        let thumbSrc, thumbFallback;
+        if (r.type === "profile") {
+            thumbSrc = r.photo || getProfilePhotoUrl(r.ownerUid);
+            thumbFallback = null;
+        } else {
+            const thumbTs = getPostTimestamp(r.postId);
+            thumbSrc = r.photo || getReelsPhotoUrl(r.ownerUid, thumbTs);
+            thumbFallback = getReelsPhotoUrlJpg(r.ownerUid, thumbTs);
+        }
+        const thumbnailHtml = thumbFallback
+            ? `<img src="${escHtml(thumbSrc)}" alt="thumb" style="width:48px; height:48px; object-fit:cover; border-radius:${r.type === "profile" ? "50%" : "4px"}; border:1px solid var(--border);" onerror="if(this.src.includes('.webp')){this.src='${escHtml(thumbFallback)}'}else{this.style.display='none'}">`
+            : `<img src="${escHtml(thumbSrc)}" alt="thumb" style="width:48px; height:48px; object-fit:cover; border-radius:${r.type === "profile" ? "50%" : "4px"}; border:1px solid var(--border);" onerror="this.style.display='none'">`;
 
         // 이미지 플래그 요약
         const imageFlagsSummary = renderImageFlagsSummary(r);
 
+        const typeBadge = r.type === "profile"
+            ? '<span class="badge badge-info">프로필</span>'
+            : '<span class="badge badge-info">플래너</span>';
+
         html += `<tr class="as-row as-sev-${r.overallSeverity}" data-postid="${escHtml(r.postId)}" style="cursor:pointer;">
+            <td>${typeBadge}</td>
             <td>${escHtml(r.ownerName || "—")}</td>
             <td class="text-sm">${captionPreview || '<span class="text-sub">—</span>'}</td>
             <td class="text-sm">${textFlagsSummary}</td>
@@ -547,19 +672,32 @@ function selectResult(postId) {
     const panel = document.getElementById("as-detail-panel");
     panel.classList.remove("hidden");
 
-    document.getElementById("as-detail-title").textContent = `${r.ownerName || "—"}의 포스트 스크리닝`;
+    const isProfile = r.type === "profile";
+    document.getElementById("as-detail-title").textContent = isProfile
+        ? `${r.ownerName || r.ownerUid}의 프로필 이미지 스크리닝`
+        : `${r.ownerName || "—"}의 포스트 스크리닝`;
 
     const dt = r.screenedAt ? new Date(r.screenedAt).toLocaleString("ko-KR") : "—";
     const reviewDt = r.reviewedAt ? new Date(r.reviewedAt).toLocaleString("ko-KR") : "—";
 
-    const detailTs = getPostTimestamp(r.postId);
-    const detailPhotoSrc = r.photo || getReelsPhotoUrl(r.ownerUid, detailTs);
-    const detailPhotoFallback = getReelsPhotoUrlJpg(r.ownerUid, detailTs);
-    const photoHtml = `<div style="margin-top:12px;">
-        <img src="${escHtml(detailPhotoSrc)}" alt="post photo"
-             style="max-width:100%; max-height:300px; border-radius:8px; border:1px solid var(--border);"
-             onerror="if(this.src.includes('.webp')){this.src='${escHtml(detailPhotoFallback)}'}else{this.style.display='none'}">
-    </div>`;
+    let photoHtml;
+    if (isProfile) {
+        const detailPhotoSrc = r.photo || getProfilePhotoUrl(r.ownerUid);
+        photoHtml = `<div style="margin-top:12px;">
+            <img src="${escHtml(detailPhotoSrc)}" alt="profile photo"
+                 style="max-width:200px; max-height:200px; border-radius:50%; border:2px solid var(--border);"
+                 onerror="this.style.display='none'">
+        </div>`;
+    } else {
+        const detailTs = getPostTimestamp(r.postId);
+        const detailPhotoSrc = r.photo || getReelsPhotoUrl(r.ownerUid, detailTs);
+        const detailPhotoFallback = getReelsPhotoUrlJpg(r.ownerUid, detailTs);
+        photoHtml = `<div style="margin-top:12px;">
+            <img src="${escHtml(detailPhotoSrc)}" alt="post photo"
+                 style="max-width:100%; max-height:300px; border-radius:8px; border:1px solid var(--border);"
+                 onerror="if(this.src.includes('.webp')){this.src='${escHtml(detailPhotoFallback)}'}else{this.style.display='none'}">
+        </div>`;
+    }
 
     // 텍스트 플래그 표시
     const catLabels = {
@@ -602,21 +740,21 @@ function selectResult(postId) {
 
     document.getElementById("as-detail-content").innerHTML = `
         <div class="stats-grid">
-            <div class="stat-card"><div class="stat-value text-sm">${escHtml(r.ownerName || "—")}</div><div class="stat-label">작성자</div></div>
+            <div class="stat-card"><div class="stat-value text-sm">${escHtml(r.ownerName || r.ownerUid || "—")}</div><div class="stat-label">${isProfile ? "유저" : "작성자"}</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${getSeverityBadge(r.overallSeverity)}</div><div class="stat-label">심각도</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${getStatusBadge(r.status)}</div><div class="stat-label">상태</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${dt}</div><div class="stat-label">스크리닝 시간</div></div>
         </div>
-        <p class="text-sub text-sm">UID: ${r.ownerUid} | PostID: ${r.postId}</p>
+        <p class="text-sub text-sm">UID: ${r.ownerUid} | ${isProfile ? "유형: 프로필" : `PostID: ${r.postId}`}</p>
         ${r.reviewedBy ? `<p class="text-sub text-sm">검토: ${escHtml(r.reviewedBy)} (${reviewDt})</p>` : ""}
-        <div style="margin-top:12px; padding:12px; background:var(--bg-input); border-radius:8px;">
+        ${!isProfile ? `<div style="margin-top:12px; padding:12px; background:var(--bg-input); border-radius:8px;">
             <p class="text-sm" style="white-space:pre-wrap;">${escHtml(r.caption || "(캡션 없음)")}</p>
-        </div>
+        </div>` : ""}
         ${photoHtml}
-        <div style="margin-top:16px;">
+        ${!isProfile ? `<div style="margin-top:16px;">
             <h3 class="text-sm" style="color:var(--accent); margin-bottom:8px;">텍스트 플래그</h3>
             ${textFlagsHtml}
-        </div>
+        </div>` : ""}
         <div style="margin-top:12px;">
             <h3 class="text-sm" style="color:var(--accent); margin-bottom:8px;">이미지 플래그</h3>
             ${imageFlagsHtml}

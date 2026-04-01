@@ -1225,6 +1225,8 @@ exports.ping = onCall(pingCallableOpts, async (request) => {
                     return await handleAutoScreenPost(request);
                 case "batchScreenPosts":
                     return await handleBatchScreenPosts(request);
+                case "batchScreenProfiles":
+                    return await handleBatchScreenProfiles(request);
                 case "getScreeningResults":
                     return await handleGetScreeningResults(request);
                 case "reviewScreenedPost":
@@ -2189,6 +2191,7 @@ async function executeScreening(post, config) {
 
         const cleanDoc = {
             postId,
+            type: "planner",
             ownerUid: post.ownerUid,
             ownerName: post.ownerName || "",
             caption: post.caption || "",
@@ -2222,6 +2225,7 @@ async function executeScreening(post, config) {
 
     const screeningResult = {
         postId,
+        type: "planner",
         ownerUid: post.ownerUid,
         ownerName: post.ownerName || "",
         caption: post.caption || "",
@@ -2296,6 +2300,260 @@ async function performAutoDelete(ownerUid, timestamp) {
             try { await bucket.file(`thumbs/reels_photos/${timestamp}.jpg`).delete(); } catch (e3) { }
         } catch (e2) { }
     }
+}
+
+// ─── 자동 스크리닝: 프로필 이미지 스크리닝 실행 ───
+
+async function executeProfileScreening(uid, photoURL, config) {
+    const { settings } = config;
+    const postId = `profile_${uid}`;
+
+    const meta = {
+        imageScreened: false,
+        nsfwjsVerdict: null,
+        nsfwjsScores: null,
+        azureVerdict: null,
+        errors: [],
+    };
+
+    // 이미지 스크리닝 (하이브리드: NSFWJS 1차 → Azure 2차)
+    let imageFlags = null;
+    if (settings.imageScreeningEnabled && photoURL) {
+        meta.imageScreened = true;
+        imageFlags = await screenImage(photoURL, settings, meta);
+    }
+
+    const overallSeverity = getOverallSeverity([], imageFlags);
+
+    if (!overallSeverity) {
+        const needsReview = meta.imageScreened &&
+            (meta.nsfwjsVerdict === "ambiguous" || meta.nsfwjsVerdict === "error") &&
+            (meta.azureVerdict === "error" || meta.azureVerdict === null);
+        const cleanStatus = needsReview ? "pending" : "clean";
+
+        const cleanDoc = {
+            postId,
+            type: "profile",
+            ownerUid: uid,
+            ownerName: "",
+            photo: photoURL || "",
+            screenedAt: Date.now(),
+            status: cleanStatus,
+            overallSeverity: needsReview ? "low" : null,
+            textFlags: [],
+            imageFlags: null,
+            engineData: meta.imageScreened ? {
+                nsfwjsVerdict: meta.nsfwjsVerdict,
+                nsfwjsScores: meta.nsfwjsScores,
+                azureVerdict: meta.azureVerdict,
+                errors: meta.errors.length > 0 ? meta.errors : null,
+                needsReview: needsReview || null,
+            } : null,
+        };
+        await db.collection("screening_results").doc(postId).set(cleanDoc);
+        return { status: cleanStatus, _meta: meta };
+    }
+
+    let status = "pending";
+    const sevLevel = SEVERITY_ORDER[overallSeverity] || 0;
+
+    if (settings.autoDeleteThreshold && sevLevel >= SEVERITY_ORDER[settings.autoDeleteThreshold]) {
+        status = "auto_deleted";
+    } else if (settings.autoHideThreshold && sevLevel >= SEVERITY_ORDER[settings.autoHideThreshold]) {
+        status = "auto_hidden";
+    }
+
+    const screeningResult = {
+        postId,
+        type: "profile",
+        ownerUid: uid,
+        ownerName: "",
+        photo: photoURL || "",
+        screenedAt: Date.now(),
+        textFlags: [],
+        imageFlags,
+        overallSeverity,
+        status,
+        reviewedBy: null,
+        reviewedAt: null,
+        engineData: meta.imageScreened ? {
+            nsfwjsVerdict: meta.nsfwjsVerdict,
+            nsfwjsScores: meta.nsfwjsScores,
+            azureVerdict: meta.azureVerdict,
+            errors: meta.errors.length > 0 ? meta.errors : null,
+        } : null,
+    };
+
+    await db.collection("screening_results").doc(postId).set(screeningResult);
+
+    // 프로필 이미지 자동 삭제: photoURL 필드 제거
+    if (status === "auto_deleted") {
+        try {
+            await db.collection("users").doc(uid).update({ photoURL: null });
+            const bucket = getStorage().bucket();
+            const [files] = await bucket.getFiles({ prefix: `profile_images/${uid}` });
+            for (const file of files) {
+                await file.delete();
+                try { await bucket.file(`thumbs/${file.name}`).delete(); } catch (e) { }
+            }
+            console.log(`[ProfileScreen] 프로필 이미지 자동 삭제: ${uid} (severity: ${overallSeverity})`);
+        } catch (e) {
+            console.error(`[ProfileScreen] 프로필 이미지 자동 삭제 실패: ${uid}`, e.message);
+        }
+    }
+
+    screeningResult._meta = meta;
+    return screeningResult;
+}
+
+// ─── 자동 스크리닝: 핸들러 — 프로필 일괄 스크리닝 ───
+
+async function handleBatchScreenProfiles(request) {
+    await assertAdmin(request);
+
+    const { forceRescan } = request.data || {};
+    const config = await getScreeningConfig();
+
+    // forceRescan 시 기존 프로필 screening_results 삭제
+    if (forceRescan) {
+        const existingSnap = await db.collection("screening_results")
+            .where("type", "==", "profile").get();
+        if (existingSnap.size > 0) {
+            const batch = db.batch();
+            let batchCount = 0;
+            for (const doc of existingSnap.docs) {
+                batch.delete(doc.ref);
+                batchCount++;
+                if (batchCount >= 500) break;
+            }
+            await batch.commit();
+            if (existingSnap.size > 500) {
+                const batch2 = db.batch();
+                for (const doc of existingSnap.docs.slice(500)) {
+                    batch2.delete(doc.ref);
+                }
+                await batch2.commit();
+            }
+            console.log(`[batchScreenProfiles] forceRescan: deleted ${existingSnap.size} existing profile screening results`);
+        }
+    }
+
+    // 프로필 이미지가 있는 모든 유저 조회
+    const usersSnap = await db.collection("users").get();
+
+    let screenedCount = 0;
+    let flaggedCount = 0;
+    let autoDeletedCount = 0;
+    let autoHiddenCount = 0;
+    let skippedCount = 0;
+    let imageScreenedCount = 0;
+    let imageFlaggedCount = 0;
+    let nsfwjsCount = 0;
+    let nsfwjsFlaggedCount = 0;
+    let nsfwjsSafeCount = 0;
+    let nsfwjsAmbiguousCount = 0;
+    let nsfwjsErrorCount = 0;
+    let azureCount = 0;
+    let azureFlaggedCount = 0;
+    let azureErrorCount = 0;
+
+    const imageEnabled = !!config.settings.imageScreeningEnabled;
+    const azureEnabled = !!config.settings.azureEnabled;
+
+    // 엔진 구동 상태 사전 점검
+    let nsfwjsModelReady = false;
+    let nsfwjsModelError = null;
+    let azureClientReady = false;
+    let azureClientError = null;
+
+    if (imageEnabled) {
+        try {
+            const model = await getNsfwModel();
+            nsfwjsModelReady = !!model;
+            if (!model) nsfwjsModelError = "NSFWJS 모델 로드 실패 (null 반환)";
+        } catch (e) { nsfwjsModelError = e.message; }
+
+        if (azureEnabled) {
+            try {
+                const client = getAzureClient();
+                azureClientReady = !!client;
+                if (!client) azureClientError = getAzureInitError() || "Azure 클라이언트 초기화 실패";
+            } catch (e) { azureClientError = e.message; }
+        }
+    }
+
+    for (const userDoc of usersSnap.docs) {
+        const data = userDoc.data();
+        const photoURL = data.photoURL;
+        if (!photoURL || typeof photoURL !== "string" || !photoURL.startsWith("http")) continue;
+
+        const postId = `profile_${userDoc.id}`;
+
+        // 이미 스크리닝된 프로필은 스킵
+        if (!forceRescan) {
+            const existingDoc = await db.collection("screening_results").doc(postId).get();
+            if (existingDoc.exists) { skippedCount++; continue; }
+        }
+
+        screenedCount++;
+        const result = await executeProfileScreening(userDoc.id, photoURL, config);
+
+        if (result && result._meta) {
+            const m = result._meta;
+            if (m.imageScreened) imageScreenedCount++;
+            if (m.nsfwjsVerdict) {
+                nsfwjsCount++;
+                if (m.nsfwjsVerdict === "safe") nsfwjsSafeCount++;
+                else if (m.nsfwjsVerdict === "flagged") nsfwjsFlaggedCount++;
+                else if (m.nsfwjsVerdict === "ambiguous") nsfwjsAmbiguousCount++;
+                else if (m.nsfwjsVerdict === "error") nsfwjsErrorCount++;
+            }
+            if (m.azureVerdict) {
+                azureCount++;
+                if (m.azureVerdict === "flagged") azureFlaggedCount++;
+                else if (m.azureVerdict === "error") azureErrorCount++;
+            }
+            for (const err of (m.errors || [])) {
+                console.warn(`[batchScreenProfiles] ${postId}: ${err}`);
+            }
+        }
+
+        if (result && result.status !== "clean") {
+            flaggedCount++;
+            if (result.status === "auto_deleted") autoDeletedCount++;
+            if (result.status === "auto_hidden") autoHiddenCount++;
+            if (result.imageFlags) imageFlaggedCount++;
+        }
+    }
+
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    console.log(`[batchScreenProfiles] Admin ${adminEmail}: screened=${screenedCount}, flagged=${flaggedCount}, skipped=${skippedCount}`);
+
+    return {
+        screenedCount,
+        flaggedCount,
+        autoDeletedCount,
+        autoHiddenCount,
+        skippedCount,
+        detail: {
+            imageEnabled,
+            azureEnabled,
+            nsfwjsModelReady,
+            nsfwjsModelError,
+            azureClientReady,
+            azureClientError,
+            imageScreenedCount,
+            imageFlaggedCount,
+            nsfwjsCount,
+            nsfwjsFlaggedCount,
+            nsfwjsSafeCount,
+            nsfwjsAmbiguousCount,
+            nsfwjsErrorCount,
+            azureCount,
+            azureFlaggedCount,
+            azureErrorCount,
+        }
+    };
 }
 
 // ─── 자동 스크리닝: 핸들러 — 단일 포스트 스크리닝 ───
@@ -2533,9 +2791,10 @@ async function handleBatchScreenPosts(request) {
 async function handleGetScreeningResults(request) {
     await assertAdmin(request);
 
-    const { status, severity, limit: maxResults } = request.data || {};
+    const { status, severity, type, limit: maxResults } = request.data || {};
     let q = db.collection("screening_results").orderBy("screenedAt", "desc");
 
+    if (type) q = q.where("type", "==", type);
     if (status) q = q.where("status", "==", status);
     if (severity) q = q.where("overallSeverity", "==", severity);
     q = q.limit(maxResults || 100);
@@ -2623,7 +2882,13 @@ async function handleUpdateScreeningConfig(request) {
 async function handleGetScreeningStats(request) {
     await assertAdmin(request);
 
-    const snap = await db.collection("screening_results").get();
+    const { type } = request.data || {};
+    let snap;
+    if (type) {
+        snap = await db.collection("screening_results").where("type", "==", type).get();
+    } else {
+        snap = await db.collection("screening_results").get();
+    }
     let total = 0, pending = 0, approved = 0, rejected = 0, autoDeleted = 0, autoHidden = 0, clean = 0;
     let byCategory = {};
     let bySeverity = { low: 0, medium: 0, high: 0 };
