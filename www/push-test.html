@@ -1183,8 +1183,8 @@ window.loadUsers = async function() {
                 }
                 usersCache.push({
                     uid: doc.id,
-                    displayName: data.displayName || data.nickname || doc.id.substring(0, 8),
-                    nickname: data.nickname || null,
+                    displayName: data.name || data.displayName || doc.id.substring(0, 8),
+                    nickname: data.name || null,
                     lang: data.lang || "ko",
                     fcmToken: data.fcmToken || null,
                     lastActiveDate,
