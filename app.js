@@ -1822,6 +1822,17 @@ function getCleanDiaryStrForFirestore() {
 }
 
 const USER_STAT_KEYS = ['str', 'int', 'cha', 'vit', 'wlth', 'agi'];
+
+// streak 맵 정규화 — 레거시 streak 맵 필드의 extra key/잘못된 타입으로 인한 permission-denied 방지
+function normalizeStreakMapForFirestore(input) {
+    const s = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
+    return {
+        currentStreak: (typeof s.currentStreak === 'number' && Number.isFinite(s.currentStreak) && s.currentStreak >= 0) ? s.currentStreak : 0,
+        lastActiveDate: (typeof s.lastActiveDate === 'string') ? s.lastActiveDate : null,
+        multiplier: (typeof s.multiplier === 'number' && Number.isFinite(s.multiplier) && s.multiplier >= 0) ? s.multiplier : 1.0
+    };
+}
+
 function normalizeStatsMapForFirestore(input) {
     const source = (input && typeof input === 'object') ? input : {};
     const normalized = {};
@@ -1911,7 +1922,8 @@ async function _doSaveUserData() {
             fcmToken: AppState.user.fcmToken || null,
             stepData: normalizedStepData,
             instaId: AppState.user.instaId || "",
-            ...(normalizedNameLastChanged !== null ? { nameLastChanged: normalizedNameLastChanged } : {}),
+            nameLastChanged: normalizedNameLastChanged,
+            streak: normalizeStreakMapForFirestore(AppState.user.streak),
             streakStr: JSON.stringify(AppState.user.streak),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
@@ -2066,6 +2078,11 @@ async function _doSaveUserData() {
         }
         // ── 진단 끝 ──
 
+        // 디바운스(2초) + 진단 getDoc 사이에 로그아웃될 수 있으므로 재확인
+        if (!auth.currentUser) {
+            if (window.AppLogger) AppLogger.warn('[SaveData] setDoc 직전 auth 소실 — 저장 중단');
+            return;
+        }
         await setDoc(doc(db, "users", auth.currentUser.uid), payload, { merge: true });
         console.log('[SaveData] setDoc OK');
         if (window.AppLogger) AppLogger.info('[SaveData] Firestore 저장 성공');
