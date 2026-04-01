@@ -906,6 +906,9 @@ async function handleGetUserAnalytics(request) {
     const expectAgeDistribution = {};
     const ageGroupDistribution = {};
 
+    // ISBN 기반 많이 읽은 책 집계
+    const bookCountMap = {}; // isbn -> { count, title, author, publisher, thumbnail }
+
     for (const doc of usersSnap.docs) {
         totalUsers++;
         const data = doc.data();
@@ -948,6 +951,26 @@ async function handleGetUserAnalytics(request) {
             }
         } catch (_) { /* ignore */ }
 
+        // ISBN 기반 도서 집계 (libraryStr 파싱)
+        try {
+            const lib = JSON.parse(data.libraryStr || "{}");
+            const books = Array.isArray(lib.books) ? lib.books : [];
+            for (const book of books) {
+                const isbn = book.isbn;
+                if (!isbn) continue;
+                if (!bookCountMap[isbn]) {
+                    bookCountMap[isbn] = {
+                        count: 0,
+                        title: book.title || "",
+                        author: book.author || "",
+                        publisher: book.publisher || "",
+                        thumbnail: book.thumbnail || ""
+                    };
+                }
+                bookCountMap[isbn].count++;
+            }
+        } catch (_) { /* ignore */ }
+
         // 레벨 분포
         const lv = data.level || 1;
         if (lv <= 10) levelDistribution["1-10"]++;
@@ -977,6 +1000,19 @@ async function handleGetUserAnalytics(request) {
         console.error("[getUserAnalytics] Auth listUsers failed:", e.message);
     }
 
+    // Top 10 많이 읽은 책 (ISBN 기준, 등록 유저 수 내림차순)
+    const topBooks = Object.entries(bookCountMap)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 10)
+        .map(([isbn, info]) => ({
+            isbn,
+            title: info.title,
+            author: info.author,
+            publisher: info.publisher,
+            thumbnail: info.thumbnail,
+            count: info.count
+        }));
+
     return {
         totalUsers,
         active7d,
@@ -988,7 +1024,8 @@ async function handleGetUserAnalytics(request) {
         levelDistribution,
         birthdaySetCount,
         expectAgeDistribution,
-        ageGroupDistribution
+        ageGroupDistribution,
+        topBooks
     };
 }
 

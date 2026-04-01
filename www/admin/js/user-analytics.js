@@ -51,6 +51,10 @@ function render() {
                     <div id="ua-level-chart"></div>
                 </div>
             </div>
+            <h2 class="mt-16">많이 읽은 책 Top 10</h2>
+            <div id="ua-top-books" class="ua-top-books">
+                <p class="text-sub text-sm">데이터 로딩 중...</p>
+            </div>
             <button class="btn btn-outline btn-sm mt-16" id="ua-refresh-btn">새로고침</button>
         </div>
     `;
@@ -93,6 +97,9 @@ export async function loadUserAnalytics() {
 
         // 레벨 분포 바 차트
         renderBarChart("ua-level-chart", d.levelDistribution);
+
+        // 많이 읽은 책 Top 10
+        renderTopBooks("ua-top-books", d.topBooks || []);
 
         tok("Analytics", `유저 분석 완료: 전체 ${d.totalUsers}명, 액티브(30일) ${d.active30d}명`);
     } catch (e) {
@@ -152,6 +159,55 @@ function renderBarChart(containerId, data, labelFn, customOrder) {
             </div>
         `;
     }).join("");
+}
+
+function renderTopBooks(containerId, books) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (!books || books.length === 0) {
+        el.innerHTML = '<p class="text-sub text-sm">데이터 없음</p>';
+        return;
+    }
+
+    el.innerHTML = `
+        <table class="ua-top-books-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th></th>
+                    <th>제목</th>
+                    <th>저자</th>
+                    <th>출판사</th>
+                    <th>등록 수</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${books.map((b, i) => `
+                    <tr>
+                        <td class="ua-rank">${i + 1}</td>
+                        <td class="ua-thumb-cell">
+                            ${b.thumbnail
+                                ? `<img class="ua-book-thumb" src="${escapeAttr(b.thumbnail)}" alt="" onerror="this.style.display='none'">`
+                                : '<div class="ua-book-thumb-placeholder"></div>'}
+                        </td>
+                        <td class="ua-book-title">${escapeHtml(b.title || "제목 없음")}</td>
+                        <td class="ua-book-author">${escapeHtml(b.author || "-")}</td>
+                        <td class="ua-book-publisher">${escapeHtml(b.publisher || "-")}</td>
+                        <td class="ua-book-count">${b.count}명</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function escapeAttr(str) {
+    return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 window._loadUserAnalytics = loadUserAnalytics;
