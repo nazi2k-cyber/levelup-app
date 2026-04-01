@@ -1907,10 +1907,10 @@ async function _doSaveUserData() {
             pendingStats: normalizedPendingStats,
             level: normalizedLevel,
             points: normalizedPoints,
-            titleHistoryStr: JSON.stringify(AppState.user.titleHistory),
-            questStr: JSON.stringify(AppState.quest.completedState),
-            questWeekStart: AppState.quest.weekStart,
-            dungeonStr: JSON.stringify(AppState.dungeon),
+            titleHistoryStr: JSON.stringify(AppState.user.titleHistory ?? []),
+            questStr: JSON.stringify(AppState.quest?.completedState ?? {}),
+            questWeekStart: AppState.quest?.weekStart || '',
+            dungeonStr: JSON.stringify(AppState.dungeon ?? {}),
             friends: normalizedFriends,
             photoURL: (_profileUploadInFlight || isBase64Image(AppState.user.photoURL)) ? null : (AppState.user.photoURL || null),
             syncEnabled: normalizeBooleanForFirestore(AppState.user.syncEnabled),
@@ -1924,14 +1924,14 @@ async function _doSaveUserData() {
             instaId: AppState.user.instaId || "",
             nameLastChanged: normalizedNameLastChanged,
             streak: normalizeStreakMapForFirestore(AppState.user.streak),
-            streakStr: JSON.stringify(AppState.user.streak),
+            streakStr: JSON.stringify(AppState.user.streak ?? {}),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
             lastBonusExpDate: localStorage.getItem(_bonusExpKey()) || '',
             lastReelsPostTs: normalizedLastReelsPostTs,
-            diyQuestsStr: JSON.stringify(AppState.diyQuests),
-            questHistoryStr: JSON.stringify(AppState.questHistory),
-            rareTitleStr: JSON.stringify(AppState.user.rareTitle),
+            diyQuestsStr: JSON.stringify(AppState.diyQuests ?? []),
+            questHistoryStr: JSON.stringify(AppState.questHistory ?? []),
+            rareTitleStr: JSON.stringify(AppState.user.rareTitle ?? {}),
             ddaysStr: JSON.stringify(AppState.ddays || []),
             ddayCaption: AppState.ddayCaption || '',
             lifeStatusStr: localStorage.getItem('life_status_config') || '',
@@ -1979,8 +1979,9 @@ async function _doSaveUserData() {
         if (window.AppLogger) AppLogger.info(`[SaveData] size=${payloadSize}B, photo=${photoType}(${photoLen})`);
 
         // ── 진단: 기존 문서 읽기 + 필드 검증 (permission-denied 원인 분석) ──
+        let _diagSnap = null;
         try {
-            const _diagSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
+            _diagSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
             if (_diagSnap.exists()) {
                 const _existingData = _diagSnap.data();
                 const _existingKeys = Object.keys(_existingData).sort();
@@ -2072,6 +2073,8 @@ async function _doSaveUserData() {
                     return `${k}(${t}${extra})`;
                 }).join(' ');
                 if (window.AppLogger) AppLogger.info('[SaveDiag] 기존문서: ' + _keyDump);
+                // 키 목록만 별도 로그 (truncation 방지)
+                if (window.AppLogger) AppLogger.info('[SaveDiag] existingKeys(' + _existingKeys.length + '): ' + _existingKeys.join(','));
             }
         } catch(_diagErr) {
             if (window.AppLogger) AppLogger.warn('[SaveDiag] 진단 실패: ' + (_diagErr.message || _diagErr));
@@ -2083,9 +2086,14 @@ async function _doSaveUserData() {
             if (window.AppLogger) AppLogger.warn('[SaveData] setDoc 직전 auth 소실 — 저장 중단');
             return;
         }
-        await setDoc(doc(db, "users", auth.currentUser.uid), payload, { merge: true });
-        console.log('[SaveData] setDoc OK');
-        if (window.AppLogger) AppLogger.info('[SaveData] Firestore 저장 성공');
+        const _userDocRef = doc(db, "users", auth.currentUser.uid);
+        if (_diagSnap && _diagSnap.exists()) {
+            await updateDoc(_userDocRef, payload);
+        } else {
+            await setDoc(_userDocRef, payload);
+        }
+        console.log('[SaveData] save OK');
+        if (window.AppLogger) AppLogger.info('[SaveData] Firestore 저장 성공 (' + (_diagSnap && _diagSnap.exists() ? 'update' : 'create') + ')');
     } catch(e) {
         console.error("DB 저장 실패:", e);
         if (window.AppLogger) AppLogger.error('[DB] 저장 실패: ' + (e.code || '') + ' ' + (e.message || ''), e.stack || '');
