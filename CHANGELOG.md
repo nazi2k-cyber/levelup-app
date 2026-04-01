@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.99] - 2026-04-01
+
+### 변경
+- fix: deleteField() sentinel 제거로 streak 검증 실패 및 permission-denied 해결
+
 ## [1.0.98] - 2026-04-01
 
 ### 변경
