@@ -374,6 +374,7 @@ async function handleGetPushLogs(request) {
                 messageId: data.messageId ? String(data.messageId) : null,
                 error: data.error ? String(data.error) : null,
                 sender: data.sender ? String(data.sender) : null,
+                uid: data.uid ? String(data.uid) : null,
                 userName: userInfo ? userInfo.displayName : null,
                 userNickname: userInfo ? userInfo.nickname : null
             });
