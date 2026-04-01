@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.107] - 2026-04-01
+
+### 변경
+- 이메일 로그인 시 구글 피트니스 confirm 팝업 제거, 인포 모달에 제약사항 안내 추가
+
 ## [1.0.106] - 2026-04-01
 
 ### 변경
