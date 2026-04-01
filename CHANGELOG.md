@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.109] - 2026-04-01
+
+### 변경
+- AdMob GDPR/UMP 동의 양식 처리 강화 및 npa 파라미터 추가
+
 ## [1.0.108] - 2026-04-01
 
 ### 변경
