@@ -305,8 +305,8 @@ async function handleGetTestUsers(request) {
 
             users.push({
                 uid: String(doc.id),
-                displayName: String(data.displayName || data.nickname || doc.id.substring(0, 8)),
-                nickname: data.nickname ? String(data.nickname) : null,
+                displayName: String(data.name || data.displayName || doc.id.substring(0, 8)),
+                nickname: data.name ? String(data.name) : null,
                 lang: String(data.lang || "ko"),
                 fcmToken: data.fcmToken ? String(data.fcmToken) : null,
                 lastActiveDate,
@@ -339,8 +339,8 @@ async function handleGetPushLogs(request) {
         const uData = uDoc.data();
         const info = {
             uid: uDoc.id,
-            displayName: String(uData.displayName || uData.nickname || uDoc.id.substring(0, 8)),
-            nickname: uData.nickname ? String(uData.nickname) : null
+            displayName: String(uData.name || uData.displayName || uDoc.id.substring(0, 8)),
+            nickname: uData.name ? String(uData.name) : null
         };
         uidToUser[uDoc.id] = info;
         if (uData.fcmToken) {
