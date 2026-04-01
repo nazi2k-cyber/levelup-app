@@ -2715,19 +2715,6 @@ async function generateUniqueName(baseName, uid) {
 }
 
 async function changePlayerName() {
-    // 1개월(30일) 쿨다운 체크
-    if (AppState.user.nameLastChanged) {
-        const ts = typeof AppState.user.nameLastChanged === 'number'
-            ? AppState.user.nameLastChanged
-            : Date.parse(AppState.user.nameLastChanged);
-        const lastChanged = new Date(Number.isFinite(ts) ? ts : 0);
-        const now = new Date();
-        const diffDays = (now - lastChanged) / (1000 * 60 * 60 * 24);
-        if (diffDays < 30) {
-            alert(i18n[AppState.currentLang].name_err || "명칭 변경은 1개월에 한 번만 가능합니다.");
-            return;
-        }
-    }
     const newName = prompt(i18n[AppState.currentLang].name_prompt || "닉네임 변경", AppState.user.name);
     if (newName && newName.trim() !== "" && newName.trim() !== AppState.user.name) {
         const trimmed = newName.trim();
