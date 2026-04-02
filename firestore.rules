@@ -157,9 +157,9 @@ service cloud.firestore {
         && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || (d.ormCalcHistoryStr is string && d.ormCalcHistoryStr.size() <= 10000));
     }
 
-    // DEBUG: PartA ✅ → PartB1만 추가하여 테스트
+    // DEBUG: 모든 검증을 분리된 함수로 호출 — 단일 함수 평가 한계 테스트
     function isValidUserData() {
-      return areWrittenFieldsAllowed() && isValidUserDataPartA() && isValidUserDataPartB1();
+      return areWrittenFieldsAllowed() && isValidUserDataPartA() && isValidUserDataPartB1() && isValidUserDataPartB2();
     }
 
     // ──────────────────────────────────────────────
