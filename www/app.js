@@ -4062,9 +4062,10 @@ function processLevelUp() {
         AppState.user.pendingStats[k] = 0; 
     });
     const top = statKeys.map(k => ({k, v:AppState.user.stats[k]})).sort((a,b) => b.v - a.v);
-    const newTitle = { 
+    const newTitle = {
         ko: `${titleVocab[top[0].k].ko.pre[0]} ${titleVocab[top[1].k].ko.suf[0]}`,
-        en: `${titleVocab[top[0].k].en.pre[0]} ${titleVocab[top[1].k].en.suf[0]}`
+        en: `${titleVocab[top[0].k].en.pre[0]} ${titleVocab[top[1].k].en.suf[0]}`,
+        ja: `${titleVocab[top[0].k].ja.pre[0]} ${titleVocab[top[1].k].ja.suf[0]}`
     };
     AppState.user.titleHistory.push({ level: AppState.user.level, title: newTitle });
     
@@ -14380,7 +14381,7 @@ window.renderLifeStatus = renderLifeStatus;
             // Reset distance to default 10 if it was modified by distance mode calc
             var distEl = document.getElementById('rc-pace-distance');
             var distVal = parseFloat(distEl.value);
-            var currentPresets = _rcDisplayUnit === 'mi' ? _rcPresetsMi : _rcPresetsKm;
+            var currentPresets = _rcDisplayUnit === 'mi' ? _getRcPresetsMi() : _getRcPresetsKm();
             var isPreset = currentPresets.some(function(p) { return Math.abs(p.val - distVal) < 0.01; });
             if (!isPreset) {
                 distEl.value = _rcDisplayUnit === 'mi' ? 6.2 : 10;
@@ -14486,22 +14487,32 @@ window.renderLifeStatus = renderLifeStatus;
     // --- Display unit state (km or mi) ---
     var _rcDisplayUnit = 'km';
 
-    // Preset definitions per unit
-    var _rcPresetsKm = [
-        { val: 5, label: '5' },
-        { val: 10, label: '10' },
-        { val: 21.0975, label: '하프' },
-        { val: 42.195, label: '풀' }
-    ];
-    var _rcPresetsMi = [
-        { val: 5, label: '5' },
-        { val: 6.2, label: '10(6.2)' },
-        { val: 13.1, label: '하프(13.1)' },
-        { val: 26.2, label: '풀(26.2)' }
-    ];
+    // Preset definitions per unit (dynamically resolved via i18n)
+    function _getRcPresetsKm() {
+        var lang = i18n[AppState.currentLang] || i18n.ko;
+        var half = lang.rc_half || '하프';
+        var full = lang.rc_full || '풀';
+        return [
+            { val: 5, label: '5' },
+            { val: 10, label: '10' },
+            { val: 21.0975, label: half },
+            { val: 42.195, label: full }
+        ];
+    }
+    function _getRcPresetsMi() {
+        var lang = i18n[AppState.currentLang] || i18n.ko;
+        var half = lang.rc_half || '하프';
+        var full = lang.rc_full || '풀';
+        return [
+            { val: 5, label: '5' },
+            { val: 6.2, label: '10(6.2)' },
+            { val: 13.1, label: half + '(13.1)' },
+            { val: 26.2, label: full + '(26.2)' }
+        ];
+    }
 
     function updatePresetButtons() {
-        var presets = _rcDisplayUnit === 'mi' ? _rcPresetsMi : _rcPresetsKm;
+        var presets = _rcDisplayUnit === 'mi' ? _getRcPresetsMi() : _getRcPresetsKm();
 
         // Update pace preset buttons
         var paceBtns = document.querySelectorAll('.rc-preset-btn[data-dist]');
