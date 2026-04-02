@@ -7157,12 +7157,17 @@ async function positionNativeAd(tabId) {
             const appHeader = document.querySelector('header');
             if (appHeader) clipTop = appHeader.getBoundingClientRect().bottom;
         }
+        // 하단 클리핑: nav bar 위로만 보이도록
+        let clipBottom = 0;
+        const navEl = document.querySelector('nav');
+        if (navEl) clipBottom = navEl.getBoundingClientRect().top;
         await NativeAd.showAd({
             x: rect.left,
             y: rect.top,
             width: rect.width,
             height: rect.height,
             clipTop,
+            clipBottom,
         });
         _nativeAdVisible = true;
     } catch (e) {
@@ -7210,6 +7215,7 @@ function setupNativeAdScrollSync(tabId) {
     const clipRef = tabId === 'social'
         ? document.querySelector('.social-sticky-header')
         : document.querySelector('header');
+    const navRef = document.querySelector('nav');
 
     function onScroll() {
         if (_nativeAdScrollRAF) return;
@@ -7219,9 +7225,10 @@ function setupNativeAdScrollSync(tabId) {
 
             const rect = placeholder.getBoundingClientRect();
             const clipTop = clipRef ? clipRef.getBoundingClientRect().bottom : 0;
+            const clipBottom = navRef ? navRef.getBoundingClientRect().top : 0;
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) {
-                NativeAd.updatePosition({ y: rect.top, clipTop }).catch(() => {});
+                NativeAd.updatePosition({ y: rect.top, clipTop, clipBottom }).catch(() => {});
             }
         });
     }
