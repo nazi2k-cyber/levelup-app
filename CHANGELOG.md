@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.127] - 2026-04-02
+
+### 변경
+- debug: 모든 검증을 분리된 함수로 호출 — 단일 함수 표현식 한계 테스트
+
 ## [1.0.126] - 2026-04-02
 
 ### 변경
