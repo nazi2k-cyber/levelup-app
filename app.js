@@ -10296,6 +10296,26 @@ function registerEarlyPushListeners() {
     console.log('[FCM] 얼리 푸시 리스너 등록 완료');
 }
 
+// --- 앱 종료 확인 토스트 ---
+function showExitToast(msg) {
+    let toast = document.getElementById('exit-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'exit-toast';
+        toast.style.cssText = 'position:fixed; bottom:100px; left:50%; transform:translateX(-50%); ' +
+            'background:rgba(0,0,0,0.8); color:#fff; padding:10px 24px; border-radius:20px; ' +
+            'font-size:0.85rem; font-weight:600; z-index:9999; transition:opacity 0.3s;';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    toast.style.display = 'block';
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 1800);
+}
+
 // --- Android 뒤로가기 버튼 처리 ---
 function registerBackButtonHandler() {
     const cap = window.Capacitor;
@@ -10382,8 +10402,17 @@ function registerBackButtonHandler() {
             return;
         }
 
-        // 4) 이미 홈 탭이면 앱 최소화
-        if (cap.Plugins.App.minimizeApp) {
+        // 4) 이미 홈 탭이면 → 두 번 눌러 앱 종료
+        if (!window._backPressedOnce) {
+            window._backPressedOnce = true;
+            showExitToast('종료하려면 다시 누르세요');
+            setTimeout(() => { window._backPressedOnce = false; }, 2000);
+            return;
+        }
+        // 두 번째 뒤로가기 → 앱 종료
+        if (cap.Plugins.App.exitApp) {
+            cap.Plugins.App.exitApp();
+        } else if (cap.Plugins.App.minimizeApp) {
             cap.Plugins.App.minimizeApp();
         }
     });
