@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.123] - 2026-04-02
+
+### 변경
+- debug: areWrittenFieldsAllowed()만 복원하여 필드 허용 목록 검증 테스트
+
 ## [1.0.122] - 2026-04-02
 
 ### 변경

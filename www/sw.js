@@ -1,5 +1,5 @@
 // LEVEL UP: REBOOT — Service Worker (오프라인 모드 + FCM)
-const CACHE_VERSION = 'levelup-v1.0.122';
+const CACHE_VERSION = 'levelup-v1.0.123';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = 'storage-images-v1';
