@@ -319,7 +319,7 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 /* 네이티브 광고 placeholder (소셜탭 랭킹 내 인라인) */
 .native-ad-slot { min-height: 280px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .native-ad-slot .ad-loading-text { color: var(--text-sub); font-size: 0.7rem; opacity: 0.4; }
-.native-ad-slot-bottom-fixed { position: fixed; bottom: calc(65px + env(safe-area-inset-bottom)); left: 0; z-index: 9; margin-bottom: 0; }
+.native-ad-slot-bottom-fixed { margin-top: 12px; margin-bottom: 0; }
 
 .raid-participants-list { margin-top: 10px; max-height: 200px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
 .raid-participants-title { font-size: 0.75rem; color: var(--text-sub); font-weight: bold; margin-bottom: 6px; }
