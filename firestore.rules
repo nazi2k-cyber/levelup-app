@@ -108,13 +108,14 @@ service cloud.firestore {
     // users 컬렉션
     // ──────────────────────────────────────────────
     // 인증된 유저 전체 읽기 허용 (소셜 랭킹, Day1 피드, 던전 글로벌 싱크에 필요)
-    // 쓰기는 본인 문서만 + 필드 타입 검증 통과 시
+    // 쓰기는 본인 문서만 + 핵심 필드 타입 검증 통과 시
+    // 참고: JSON 직렬화 문자열 필드(questStr, diaryStr 등)는 Firestore 규칙
+    // 표현식 한도로 인해 서버 검증 생략, 클라이언트에서 검증 (app.js _strLimits)
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && request.auth.uid == userId
-        && isValidUserFieldsPart1()
-        && isValidUserFieldsPart2();
+        && isValidUserFieldsPart1();
       // 계정 삭제: 본인 문서만 삭제 가능 (Google 정책 준수)
       allow delete: if request.auth != null
         && request.auth.uid == userId;
