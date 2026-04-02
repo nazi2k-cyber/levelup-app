@@ -144,10 +144,9 @@ service cloud.firestore {
     // 쓰기는 본인 문서만 + 필드 검증 통과 시
     match /users/{userId} {
       allow read: if request.auth != null;
-      // DEBUG: 단계적 검증 복원 — areWrittenFieldsAllowed()만 활성화
       allow create, update: if request.auth != null
         && request.auth.uid == userId
-        && areWrittenFieldsAllowed();
+        && isValidUserData();
       // 계정 삭제: 본인 문서만 삭제 가능 (Google 정책 준수)
       allow delete: if request.auth != null
         && request.auth.uid == userId;
