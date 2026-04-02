@@ -82,26 +82,26 @@ service cloud.firestore {
         && (!('lastReelsPostTs' in d) || d.lastReelsPostTs == null || d.lastReelsPostTs is number);
     }
 
-    // Part 2: JSON 직렬화 문자열 필드 (크기 제한)
+    // Part 2: JSON 직렬화 문자열 필드 (타입만 검증, 크기는 클라이언트에서 검증)
     function isValidUserFieldsPart2() {
       let d = request.resource.data;
       return
-        (!('questStr' in d) || d.questStr == null || (d.questStr is string && d.questStr.size() <= 10000))
-        && (!('diaryStr' in d) || d.diaryStr == null || (d.diaryStr is string && d.diaryStr.size() <= 500000))
-        && (!('reelsStr' in d) || d.reelsStr == null || (d.reelsStr is string && d.reelsStr.size() <= 500000))
-        && (!('dungeonStr' in d) || d.dungeonStr == null || (d.dungeonStr is string && d.dungeonStr.size() <= 50000))
-        && (!('diyQuestsStr' in d) || d.diyQuestsStr == null || (d.diyQuestsStr is string && d.diyQuestsStr.size() <= 50000))
-        && (!('questHistoryStr' in d) || d.questHistoryStr == null || (d.questHistoryStr is string && d.questHistoryStr.size() <= 200000))
-        && (!('titleHistoryStr' in d) || d.titleHistoryStr == null || (d.titleHistoryStr is string && d.titleHistoryStr.size() <= 50000))
-        && (!('streakStr' in d) || d.streakStr == null || (d.streakStr is string && d.streakStr.size() <= 5000))
-        && (!('rareTitleStr' in d) || d.rareTitleStr == null || (d.rareTitleStr is string && d.rareTitleStr.size() <= 10000))
-        && (!('ddaysStr' in d) || d.ddaysStr == null || (d.ddaysStr is string && d.ddaysStr.size() <= 50000))
-        && (!('ddayCaption' in d) || d.ddayCaption == null || (d.ddayCaption is string && d.ddayCaption.size() <= 200))
-        && (!('lastBonusExpDate' in d) || d.lastBonusExpDate == null || (d.lastBonusExpDate is string && d.lastBonusExpDate.size() <= 10))
-        && (!('lifeStatusStr' in d) || d.lifeStatusStr == null || (d.lifeStatusStr is string && d.lifeStatusStr.size() <= 1000))
-        && (!('libraryStr' in d) || d.libraryStr == null || (d.libraryStr is string && d.libraryStr.size() <= 50000))
-        && (!('runningCalcHistoryStr' in d) || d.runningCalcHistoryStr == null || (d.runningCalcHistoryStr is string && d.runningCalcHistoryStr.size() <= 10000))
-        && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || (d.ormCalcHistoryStr is string && d.ormCalcHistoryStr.size() <= 10000));
+        (!('questStr' in d) || d.questStr == null || d.questStr is string)
+        && (!('diaryStr' in d) || d.diaryStr == null || d.diaryStr is string)
+        && (!('reelsStr' in d) || d.reelsStr == null || d.reelsStr is string)
+        && (!('dungeonStr' in d) || d.dungeonStr == null || d.dungeonStr is string)
+        && (!('diyQuestsStr' in d) || d.diyQuestsStr == null || d.diyQuestsStr is string)
+        && (!('questHistoryStr' in d) || d.questHistoryStr == null || d.questHistoryStr is string)
+        && (!('titleHistoryStr' in d) || d.titleHistoryStr == null || d.titleHistoryStr is string)
+        && (!('streakStr' in d) || d.streakStr == null || d.streakStr is string)
+        && (!('rareTitleStr' in d) || d.rareTitleStr == null || d.rareTitleStr is string)
+        && (!('ddaysStr' in d) || d.ddaysStr == null || d.ddaysStr is string)
+        && (!('ddayCaption' in d) || d.ddayCaption == null || d.ddayCaption is string)
+        && (!('lastBonusExpDate' in d) || d.lastBonusExpDate == null || d.lastBonusExpDate is string)
+        && (!('lifeStatusStr' in d) || d.lifeStatusStr == null || d.lifeStatusStr is string)
+        && (!('libraryStr' in d) || d.libraryStr == null || d.libraryStr is string)
+        && (!('runningCalcHistoryStr' in d) || d.runningCalcHistoryStr == null || d.runningCalcHistoryStr is string)
+        && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || d.ormCalcHistoryStr is string);
     }
 
     // ──────────────────────────────────────────────
