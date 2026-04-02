@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.122] - 2026-04-02
+
+### 변경
+- debug: Firestore 규칙에서 isValidUserData() 임시 제거 — permission-denied 원인 분석
+
 ## [1.0.121] - 2026-04-02
 
 ### 변경
