@@ -4695,7 +4695,24 @@ function showPhotoSourceSheet(inputId) {
         + '</div>';
     document.body.appendChild(overlay);
 
-    function close() { overlay.remove(); }
+    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
+    if (isNativePlatform && _nativeAdVisible) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.hideAd();
+        } catch (e) { /* 무시 */ }
+    }
+
+    function close() {
+        overlay.remove();
+        // ★ 네이티브 광고 복원
+        if (isNativePlatform && _nativeAdLoaded && _nativeAdActiveTab) {
+            try {
+                const { NativeAd } = window.Capacitor.Plugins;
+                if (NativeAd) NativeAd.resumeAd();
+            } catch (e) { /* 무시 */ }
+        }
+    }
     overlay.addEventListener('click', close);
     document.getElementById('photo-src-cancel').addEventListener('click', close);
 
