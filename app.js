@@ -10410,7 +10410,7 @@ function registerBackButtonHandler() {
         // 4) 이미 홈 탭이면 → 두 번 눌러 앱 종료
         if (!window._backPressedOnce) {
             window._backPressedOnce = true;
-            showExitToast('종료하려면 다시 누르세요');
+            showExitToast(i18n[AppState.currentLang].exit_hint || '종료하려면 다시 누르세요');
             setTimeout(() => { window._backPressedOnce = false; }, 2000);
             return;
         }
