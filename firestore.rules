@@ -42,69 +42,51 @@ service cloud.firestore {
         && (!('totalSteps' in s) || (s.totalSteps is number && s.totalSteps >= 0));
     }
 
-    // users 문서 허용 필드 목록
-    function allowedUserFields() {
-      return [
-        'name', 'level', 'points', 'photoURL', 'stats', 'pendingStats',
-        'friends', 'fcmToken', 'syncEnabled', 'gpsEnabled', 'pushEnabled',
-        'instaId', 'nameLastChanged', 'lastRouletteDate', 'lastReelsPostTs',
-        'stepData', 'streak',
-        'questStr', 'questWeekStart', 'diaryStr', 'reelsStr',
-        'dungeonStr', 'diyQuestsStr', 'questHistoryStr',
-        'titleHistoryStr', 'streakStr', 'rareTitleStr',
-        'hasActiveReels', '_profileUploadFailed', 'privateAccount',
-        'ddaysStr', 'ddayCaption',
-        'lastBonusExpDate',
-        'lifeStatusStr',
-        'libraryStr',
-        'runningCalcHistoryStr',
-        'ormCalcHistoryStr'
-      ];
-    }
+    // ──────────────────────────────────────────────
+    // users 문서 필드 타입 검증
+    // ──────────────────────────────────────────────
+    // 참고: areWrittenFieldsAllowed() (diff().affectedKeys().hasOnly()) 검증은
+    // Firestore 표현식 한도(1000/요청)를 초과하여 제거함.
+    // 개별 필드 타입 검증으로 허용되지 않은 값 쓰기를 방어함.
+    // 검증을 두 함수로 분리하여 표현식 수를 분산.
 
-    // 쓰기 시 변경된 필드만 허용 목록에 있는지 검증
-    // merge:true 사용 시 request.resource.data는 기존 문서 + 새 필드의 합산이므로
-    // 기존 레거시 필드(displayName, lang 등)가 있으면 hasOnly가 실패함
-    // → create는 전체 필드 검증, update는 변경된 필드(affectedKeys)만 검증
-    function areWrittenFieldsAllowed() {
-      return resource == null
-        ? request.resource.data.keys().hasOnly(allowedUserFields())
-        : request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserFields());
-    }
-
-    // DEBUG: 타입 검증을 두 파트로 분리하여 실패 지점 추적
-    // Part A: 핵심 필드 + 맵 + 배열 + 불리언
-    function isValidUserDataPartA() {
+    // Part 1: 핵심 필드 + 맵 + 배열 + 불리언 + 짧은 문자열/숫자
+    function isValidUserFieldsPart1() {
       let d = request.resource.data;
       return
+        // ── 핵심 필드 ──
         (!('name' in d) || (d.name is string && d.name.size() >= 1 && d.name.size() <= 30))
         && (!('level' in d) || (d.level is number && d.level >= 1 && d.level <= 999))
         && (!('points' in d) || (d.points is number && d.points >= 0))
         && (!('photoURL' in d) || d.photoURL == null || (d.photoURL is string && d.photoURL.size() <= 1024))
+        // ── 맵 필드 ──
         && (!('stats' in d) || isValidStatsMap(d.stats))
         && (!('pendingStats' in d) || isValidStatsMap(d.pendingStats))
         && (!('streak' in d) || isValidStreakMap(d.streak))
         && (!('stepData' in d) || isValidStepData(d.stepData))
+        // ── 배열 필드 ──
         && (!('friends' in d) || (d.friends is list && d.friends.size() <= 500))
+        // ── 불리언 필드 ──
         && (!('syncEnabled' in d) || d.syncEnabled is bool)
         && (!('gpsEnabled' in d) || d.gpsEnabled is bool)
         && (!('pushEnabled' in d) || d.pushEnabled is bool)
         && (!('hasActiveReels' in d) || d.hasActiveReels is bool)
         && (!('_profileUploadFailed' in d) || d._profileUploadFailed is bool)
-        && (!('privateAccount' in d) || d.privateAccount is bool);
-    }
-
-    // Part B: 문자열 + 숫자 필드
-    function isValidUserDataPartB() {
-      let d = request.resource.data;
-      return
-        (!('instaId' in d) || d.instaId == null || (d.instaId is string && d.instaId.size() <= 30))
+        && (!('privateAccount' in d) || d.privateAccount is bool)
+        // ── 짧은 문자열/숫자 필드 ──
+        && (!('instaId' in d) || d.instaId == null || (d.instaId is string && d.instaId.size() <= 30))
         && (!('fcmToken' in d) || d.fcmToken == null || (d.fcmToken is string && d.fcmToken.size() <= 500))
         && (!('questWeekStart' in d) || d.questWeekStart == null || (d.questWeekStart is string && d.questWeekStart.size() <= 10))
         && (!('lastRouletteDate' in d) || d.lastRouletteDate == null || (d.lastRouletteDate is string && d.lastRouletteDate.size() <= 10))
         && (!('nameLastChanged' in d) || d.nameLastChanged == null || d.nameLastChanged is number)
-        && (!('lastReelsPostTs' in d) || d.lastReelsPostTs == null || d.lastReelsPostTs is number)
-        && (!('questStr' in d) || d.questStr == null || (d.questStr is string && d.questStr.size() <= 10000))
+        && (!('lastReelsPostTs' in d) || d.lastReelsPostTs == null || d.lastReelsPostTs is number);
+    }
+
+    // Part 2: JSON 직렬화 문자열 필드 (크기 제한)
+    function isValidUserFieldsPart2() {
+      let d = request.resource.data;
+      return
+        (!('questStr' in d) || d.questStr == null || (d.questStr is string && d.questStr.size() <= 10000))
         && (!('diaryStr' in d) || d.diaryStr == null || (d.diaryStr is string && d.diaryStr.size() <= 500000))
         && (!('reelsStr' in d) || d.reelsStr == null || (d.reelsStr is string && d.reelsStr.size() <= 500000))
         && (!('dungeonStr' in d) || d.dungeonStr == null || (d.dungeonStr is string && d.dungeonStr.size() <= 50000))
@@ -122,63 +104,17 @@ service cloud.firestore {
         && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || (d.ormCalcHistoryStr is string && d.ormCalcHistoryStr.size() <= 10000));
     }
 
-    // Part B를 두 파트로 추가 분리
-    // Part B1: 짧은 문자열 + 숫자 필드 (6개)
-    function isValidUserDataPartB1() {
-      let d = request.resource.data;
-      return
-        (!('instaId' in d) || d.instaId == null || (d.instaId is string && d.instaId.size() <= 30))
-        && (!('fcmToken' in d) || d.fcmToken == null || (d.fcmToken is string && d.fcmToken.size() <= 500))
-        && (!('questWeekStart' in d) || d.questWeekStart == null || (d.questWeekStart is string && d.questWeekStart.size() <= 10))
-        && (!('lastRouletteDate' in d) || d.lastRouletteDate == null || (d.lastRouletteDate is string && d.lastRouletteDate.size() <= 10))
-        && (!('nameLastChanged' in d) || d.nameLastChanged == null || d.nameLastChanged is number)
-        && (!('lastReelsPostTs' in d) || d.lastReelsPostTs == null || d.lastReelsPostTs is number);
-    }
-
-    // Part B2를 B2a/B2b로 분리
-    // Part B2a: JSON 문자열 전반부 (8개)
-    function isValidUserDataPartB2a() {
-      let d = request.resource.data;
-      return
-        (!('questStr' in d) || d.questStr == null || (d.questStr is string && d.questStr.size() <= 10000))
-        && (!('diaryStr' in d) || d.diaryStr == null || (d.diaryStr is string && d.diaryStr.size() <= 500000))
-        && (!('reelsStr' in d) || d.reelsStr == null || (d.reelsStr is string && d.reelsStr.size() <= 500000))
-        && (!('dungeonStr' in d) || d.dungeonStr == null || (d.dungeonStr is string && d.dungeonStr.size() <= 50000))
-        && (!('diyQuestsStr' in d) || d.diyQuestsStr == null || (d.diyQuestsStr is string && d.diyQuestsStr.size() <= 50000))
-        && (!('questHistoryStr' in d) || d.questHistoryStr == null || (d.questHistoryStr is string && d.questHistoryStr.size() <= 200000))
-        && (!('titleHistoryStr' in d) || d.titleHistoryStr == null || (d.titleHistoryStr is string && d.titleHistoryStr.size() <= 50000))
-        && (!('streakStr' in d) || d.streakStr == null || (d.streakStr is string && d.streakStr.size() <= 5000));
-    }
-
-    // Part B2b: JSON 문자열 후반부 (8개)
-    function isValidUserDataPartB2b() {
-      let d = request.resource.data;
-      return
-        (!('rareTitleStr' in d) || d.rareTitleStr == null || (d.rareTitleStr is string && d.rareTitleStr.size() <= 10000))
-        && (!('ddaysStr' in d) || d.ddaysStr == null || (d.ddaysStr is string && d.ddaysStr.size() <= 50000))
-        && (!('ddayCaption' in d) || d.ddayCaption == null || (d.ddayCaption is string && d.ddayCaption.size() <= 200))
-        && (!('lastBonusExpDate' in d) || d.lastBonusExpDate == null || (d.lastBonusExpDate is string && d.lastBonusExpDate.size() <= 10))
-        && (!('lifeStatusStr' in d) || d.lifeStatusStr == null || (d.lifeStatusStr is string && d.lifeStatusStr.size() <= 1000))
-        && (!('libraryStr' in d) || d.libraryStr == null || (d.libraryStr is string && d.libraryStr.size() <= 50000))
-        && (!('runningCalcHistoryStr' in d) || d.runningCalcHistoryStr == null || (d.runningCalcHistoryStr is string && d.runningCalcHistoryStr.size() <= 10000))
-        && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || (d.ormCalcHistoryStr is string && d.ormCalcHistoryStr.size() <= 10000));
-    }
-
-    // DEBUG: PartA✅ B1✅ → B2a만 추가 (B2b 제외)
-    function isValidUserData() {
-      return areWrittenFieldsAllowed() && isValidUserDataPartA() && isValidUserDataPartB1() && isValidUserDataPartB2a();
-    }
-
     // ──────────────────────────────────────────────
     // users 컬렉션
     // ──────────────────────────────────────────────
     // 인증된 유저 전체 읽기 허용 (소셜 랭킹, Day1 피드, 던전 글로벌 싱크에 필요)
-    // 쓰기는 본인 문서만 + 필드 검증 통과 시
+    // 쓰기는 본인 문서만 + 필드 타입 검증 통과 시
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && request.auth.uid == userId
-        && isValidUserData();
+        && isValidUserFieldsPart1()
+        && isValidUserFieldsPart2();
       // 계정 삭제: 본인 문서만 삭제 가능 (Google 정책 준수)
       allow delete: if request.auth != null
         && request.auth.uid == userId;
