@@ -50,7 +50,7 @@
                 <input type="password" class="login-input d-none" id="login-pw" data-i18n-placeholder="ph_pw" autocomplete="current-password">
                 <input type="password" class="login-input d-none" id="login-pw-confirm" data-i18n-placeholder="ph_pw_conf" autocomplete="new-password">
                 <div id="pw-hint" class="hint-text d-none" data-i18n="pw_req_hint">※ 8자리 이상, 대문자 1개 이상, 특수문자 2개 이상 포함</div>
-                <div id="pw-mismatch-hint" class="hint-text d-none">※ 비밀번호가 일치하지 않습니다</div>
+                <div id="pw-mismatch-hint" class="hint-text d-none" data-i18n="pw_mismatch">※ 비밀번호가 일치하지 않습니다</div>
                 <button class="btn-primary d-none" id="btn-login-submit" data-i18n="btn_login_submit">시스템 접속</button>
                 <div class="forgot-pw-link d-none" id="forgot-pw-link" data-i18n="forgot_pw">비밀번호를 잊으셨나요?</div>
             </div>
@@ -93,10 +93,10 @@
 
     <!-- 로그인 전 화면 하단 오류 로그 패널 (body 직속 자식 → position:fixed 정상 동작 보장) -->
     <div id="login-log-panel" style="position:fixed;bottom:0;left:0;right:0;padding:8px 12px;display:flex;gap:8px;align-items:center;justify-content:center;background:rgba(5,5,8,0.92);border-top:1px solid #1a1a2a;z-index:9999;">
-        <span style="font-size:0.7rem;color:#555;">오류 로그</span>
-        <span id="login-log-badge" style="font-size:0.72rem;color:#00d9ff;font-weight:bold;">0개</span>
-        <button onclick="AppLogger.openViewer()" style="background:rgba(0,217,255,0.08);border:1px solid #00d9ff;color:#00d9ff;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.72rem;">로그 보기</button>
-        <button onclick="AppLogger.export()" style="background:rgba(255,204,0,0.08);border:1px solid #ffcc00;color:#ffcc00;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.72rem;">파일 저장</button>
+        <span style="font-size:0.7rem;color:#555;" data-i18n="log_label">오류 로그</span>
+        <span id="login-log-badge" style="font-size:0.72rem;color:#00d9ff;font-weight:bold;">0<span data-i18n="log_count_unit">개</span></span>
+        <button onclick="AppLogger.openViewer()" style="background:rgba(0,217,255,0.08);border:1px solid #00d9ff;color:#00d9ff;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.72rem;" data-i18n="log_view">로그 보기</button>
+        <button onclick="AppLogger.export()" style="background:rgba(255,204,0,0.08);border:1px solid #ffcc00;color:#ffcc00;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.72rem;" data-i18n="log_save">파일 저장</button>
     </div>
 
     <!-- 온보딩 가이드 (최초 1회 노출) -->
@@ -173,7 +173,7 @@
             <div id="sys-title">LEVEL UP: REBOOT</div>
             <div style="display:flex; align-items:center; gap:8px;">
                 <div class="streak-badge d-none" id="streak-badge" title="Streak">
-                    <span class="streak-icon">&#x1F525;</span><span id="streak-count">0</span><span id="streak-day-label">일</span>
+                    <span class="streak-icon">&#x1F525;</span><span id="streak-count">0</span><span id="streak-day-label" data-i18n="streak_day">일</span>
                 </div>
                 <div class="level-badge" id="sys-level">Lv. 1</div>
             </div>
@@ -213,7 +213,7 @@
                             <div style="font-size: 0.65rem; color: var(--text-sub);" data-i18n="tot_score">종합 스코어</div>
                             <div class="compact-score-val" id="totalScore">0</div>
                         </div>
-                        <button id="btn-hamburger-menu" class="btn-hamburger-menu" aria-label="메뉴">
+                        <button id="btn-hamburger-menu" class="btn-hamburger-menu" aria-label="Menu">
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
                                 <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
                             </svg>
@@ -290,30 +290,30 @@
                     <div id="bonus-exp-icon" style="font-size:2.2rem; margin:8px 0;">🎬</div>
                     <div id="bonus-exp-status" style="font-size:0.75rem; color:var(--neon-gold); margin:6px 0;"></div>
                     <div id="bonus-exp-timer" style="font-size:0.75rem; color:var(--neon-cyan); margin:4px 0; display:none;"></div>
-                    <button id="btn-bonus-exp" class="btn-primary" style="max-width:220px; margin:0 auto; background:linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));" onclick="window.claimBonusExp()">🎬 광고 보고 EXP 받기</button>
+                    <button id="btn-bonus-exp" class="btn-primary" style="max-width:220px; margin:0 auto; background:linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));" onclick="window.claimBonusExp()" data-i18n="bonus_exp_btn_label">🎬 광고 보고 EXP 받기</button>
                 </div>
 
                 <!-- 러닝 계산기 카드 -->
                 <div class="system-card status-reorderable" data-card-id="running-calc" style="margin-top:10px; margin-bottom:0;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h2 style="margin:0; font-size:0.95rem; color:var(--neon-blue);">🏃 러닝 계산기</h2>
-                        <button class="btn-info-sm" onclick="window.openRunningCalcView()">상세</button>
+                        <h2 style="margin:0; font-size:0.95rem; color:var(--neon-blue);" data-i18n="rc_title">🏃 러닝 계산기</h2>
+                        <button class="btn-info-sm" onclick="window.openRunningCalcView()" data-i18n="rc_detail">상세</button>
                     </div>
                     <div id="running-calc-summary" style="margin-top:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">
                             <div style="display:flex; align-items:center; gap:12px;">
                                 <div>
-                                    <div style="font-size:0.65rem; color:var(--text-sub);">거리</div>
+                                    <div style="font-size:0.65rem; color:var(--text-sub);" data-i18n="rc_distance">거리</div>
                                     <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="rc-summary-dist">- km</div>
                                 </div>
                                 <div style="color:var(--text-sub);">|</div>
                                 <div>
-                                    <div style="font-size:0.65rem; color:var(--text-sub);">시간</div>
+                                    <div style="font-size:0.65rem; color:var(--text-sub);" data-i18n="rc_time">시간</div>
                                     <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="rc-summary-time">-</div>
                                 </div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:0.65rem; color:var(--text-sub);">km 페이스</div>
+                                <div style="font-size:0.65rem; color:var(--text-sub);" data-i18n="rc_km_pace">km 페이스</div>
                                 <div style="font-size:1.1rem; font-weight:900; color:var(--neon-green, #00e676);" id="rc-summary-pace">- /km</div>
                             </div>
                         </div>
@@ -324,29 +324,29 @@
                 <!-- 1RM 계산기 카드 -->
                 <div class="system-card status-reorderable" data-card-id="orm-calc" style="margin-top:10px; margin-bottom:0;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h2 style="margin:0; font-size:0.95rem; color:var(--neon-red);">🏋️ 1RM 계산기</h2>
-                        <button class="btn-info-sm" onclick="window.openOrmCalcView()">상세</button>
+                        <h2 style="margin:0; font-size:0.95rem; color:var(--neon-red);" data-i18n="orm_title">🏋️ 1RM 계산기</h2>
+                        <button class="btn-info-sm" onclick="window.openOrmCalcView()" data-i18n="rc_detail">상세</button>
                     </div>
                     <div id="orm-calc-summary" style="margin-top:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:rgba(255,60,60,0.05); border-radius:8px; border:1px solid rgba(255,60,60,0.15);">
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <div style="text-align:center;">
-                                    <div style="font-size:0.6rem; color:var(--text-sub);">스쿼트</div>
+                                    <div style="font-size:0.6rem; color:var(--text-sub);" data-i18n="orm_squat">스쿼트</div>
                                     <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="orm-summary-squat">- kg</div>
                                 </div>
                                 <div style="color:var(--text-sub); font-size:0.7rem;">+</div>
                                 <div style="text-align:center;">
-                                    <div style="font-size:0.6rem; color:var(--text-sub);">벤치프레스</div>
+                                    <div style="font-size:0.6rem; color:var(--text-sub);" data-i18n="orm_bench">벤치프레스</div>
                                     <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="orm-summary-bench">- kg</div>
                                 </div>
                                 <div style="color:var(--text-sub); font-size:0.7rem;">+</div>
                                 <div style="text-align:center;">
-                                    <div style="font-size:0.6rem; color:var(--text-sub);">데드리프트</div>
+                                    <div style="font-size:0.6rem; color:var(--text-sub);" data-i18n="orm_deadlift">데드리프트</div>
                                     <div style="font-size:0.85rem; font-weight:700; color:var(--text-main);" id="orm-summary-dead">- kg</div>
                                 </div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:0.6rem; color:var(--text-sub);">3대 합산</div>
+                                <div style="font-size:0.6rem; color:var(--text-sub);" data-i18n="orm_3lift_sum">3대 합산</div>
                                 <div style="font-size:1.1rem; font-weight:900; color:var(--neon-red);" id="orm-summary-total">- kg</div>
                             </div>
                         </div>
@@ -396,7 +396,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
                         <h2 style="margin:0; color:var(--neon-blue);">LIFE STATUS</h2>
                         <div style="display:flex; gap:6px;">
-                            <button class="btn-info-sm" id="btn-life-status-settings" style="font-size:0.75rem;">⚙️ 설정</button>
+                            <button class="btn-info-sm" id="btn-life-status-settings" style="font-size:0.75rem;" data-i18n="settings_btn">⚙️ 설정</button>
                         </div>
                     </div>
                     <div id="life-status-content"></div>
@@ -408,7 +408,7 @@
                         <div style="display:flex; align-items:center; gap:8px;">
                             <h2 style="margin:0;">D-DAY</h2>
                         </div>
-                        <button class="btn-info-sm" id="btn-add-dday" style="font-size:0.75rem;">+ 추가</button>
+                        <button class="btn-info-sm" id="btn-add-dday" style="font-size:0.75rem;" data-i18n="dday_add">+ 추가</button>
                     </div>
                     <div id="dday-list"></div>
                 </div>
@@ -416,7 +416,7 @@
                 <!-- D-Day Caption (목표/좌우명) -->
                 <div class="system-card status-reorderable dday-caption-card" data-card-id="dday-caption" style="margin-top: 10px; margin-bottom: 0; cursor: pointer;" id="dday-caption-card">
                     <div id="dday-caption-display" class="dday-caption-display">
-                        <span class="dday-caption-placeholder">나의 목표 / 좌우명을 입력하세요</span>
+                        <span class="dday-caption-placeholder" data-i18n="dday_caption_placeholder">나의 목표 / 좌우명을 입력하세요</span>
                     </div>
                 </div>
 
@@ -424,7 +424,7 @@
                     <div style="font-size: 1.2rem; color: var(--neon-blue); margin-bottom: 8px;">❝</div>
                     <div id="daily-quote" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 10px; line-height: 1.5; word-break: keep-all; font-style: italic;"></div>
                     <div id="daily-quote-author" style="font-size: 0.7rem; color: var(--neon-gold); font-weight: bold;"></div>
-                    <button class="btn-planner-share" id="btn-copy-quote" onclick="copyQuoteText()" style="position: absolute; bottom: 10px; right: 10px;" title="명언 복사">
+                    <button class="btn-planner-share" id="btn-copy-quote" onclick="copyQuoteText()" style="position: absolute; bottom: 10px; right: 10px;" title="Copy quote">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
                         </svg>
@@ -557,23 +557,23 @@
                         <div class="anomaly-boss-icon" id="active-anomaly-icon"></div>
                         <div class="raid-title-text" style="text-align:left;">
                             <div id="active-raid-station" style="font-size:0.8rem; color:var(--text-sub); margin-bottom:2px;"></div>
-                            <h3 id="active-raid-title" style="margin: 0; font-size: 1.1rem; color: var(--text-main); word-break: keep-all; line-height: 1.3;">이상 현상 발생</h3>
+                            <h3 id="active-raid-title" style="margin: 0; font-size: 1.1rem; color: var(--text-main); word-break: keep-all; line-height: 1.3;" data-i18n="raid_anomaly_title">이상 현상 발생</h3>
                         </div>
                     </div>
-                    <p id="active-raid-desc" style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px; word-break: keep-all; line-height: 1.4;">목표를 달성하여 시스템 붕괴를 막으십시오.</p>
+                    <p id="active-raid-desc" style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px; word-break: keep-all; line-height: 1.4;" data-i18n="raid_anomaly_desc">목표를 달성하여 시스템 붕괴를 막으십시오.</p>
 
                     <div class="raid-reward-box" id="raid-reward-box">
                         <div class="raid-reward-header">
                             <span class="raid-reward-icon">🏆</span>
-                            <span id="raid-reward-label">클리어 보상</span>
+                            <span id="raid-reward-label" data-i18n="raid_clear_reward">클리어 보상</span>
                         </div>
                         <div class="raid-reward-items">
                             <div class="raid-reward-item">
-                                <span class="raid-reward-key" id="raid-reward-points-label">결속 포인트</span>
+                                <span class="raid-reward-key" id="raid-reward-points-label" data-i18n="raid_bond_points">결속 포인트</span>
                                 <span class="raid-reward-val text-gold">+200 P</span>
                             </div>
                             <div class="raid-reward-item">
-                                <span class="raid-reward-key" id="raid-reward-stat-label">성장 데이터</span>
+                                <span class="raid-reward-key" id="raid-reward-stat-label" data-i18n="raid_growth_data">성장 데이터</span>
                                 <span class="raid-reward-val" id="raid-reward-stat-val" style="color:var(--neon-blue);">STR +2.0</span>
                             </div>
                         </div>
@@ -641,11 +641,11 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <div id="planner-selected-date" style="font-size:0.9rem; font-weight:bold; color:var(--neon-gold);"></div>
                         <div id="planner-mood-selector" style="display:flex; gap:6px;">
-                            <button class="diary-mood-btn" data-mood="great" title="최고">😄</button>
-                            <button class="diary-mood-btn" data-mood="good" title="좋음">🙂</button>
-                            <button class="diary-mood-btn" data-mood="neutral" title="보통">😐</button>
-                            <button class="diary-mood-btn" data-mood="bad" title="나쁨">😞</button>
-                            <button class="diary-mood-btn" data-mood="terrible" title="최악">😫</button>
+                            <button class="diary-mood-btn" data-mood="great" data-i18n-title="mood_great" title="최고">😄</button>
+                            <button class="diary-mood-btn" data-mood="good" data-i18n-title="mood_good" title="좋음">🙂</button>
+                            <button class="diary-mood-btn" data-mood="neutral" data-i18n-title="mood_neutral" title="보통">😐</button>
+                            <button class="diary-mood-btn" data-mood="bad" data-i18n-title="mood_bad" title="나쁨">😞</button>
+                            <button class="diary-mood-btn" data-mood="terrible" data-i18n-title="mood_terrible" title="최악">😫</button>
                         </div>
                     </div>
 
@@ -688,7 +688,7 @@
                         <!-- 사진 캡션 텍스트 -->
                         <div class="planner-caption-box">
                             <textarea id="planner-caption" class="planner-caption-input" maxlength="280"
-                                      placeholder="오늘의 한마디를 남겨보세요..."
+                                      placeholder="오늘의 한마디를 남겨보세요..." data-i18n-placeholder="planner_caption_placeholder"
                                       oninput="window.updateCaptionCounter()"></textarea>
                             <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
                         </div>
@@ -848,12 +848,12 @@
                 <button class="btn-primary" style="background: #222; border: 1px solid var(--border-color); color: var(--neon-red);" id="btn-logout" data-i18n="set_logout">로그아웃</button>
 
                 <div class="system-card" style="margin-top: 20px;">
-                    <h2 style="margin-bottom: 10px;">법적 고지</h2>
+                    <h2 style="margin-bottom: 10px;" data-i18n="legal_title">법적 고지</h2>
                     <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('oss')">오픈소스 라이선스</button>
-                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('terms')">소비자 약관</button>
-                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('usage-policy')">이용 정책</button>
-                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('privacy')">개인정보 처리방침</button>
+                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('oss')" data-i18n="legal_oss">오픈소스 라이선스</button>
+                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('terms')" data-i18n="legal_terms">소비자 약관</button>
+                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('usage-policy')" data-i18n="legal_usage">이용 정책</button>
+                        <button class="btn-primary" style="flex:1 1 calc(50% - 4px); min-width:0; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.7rem; padding:8px 4px; white-space:nowrap;" onclick="openLegalModal('privacy')" data-i18n="legal_privacy">개인정보 처리방침</button>
                     </div>
                 </div>
 
@@ -871,24 +871,24 @@
                 </div>
 
                 <div class="system-card" style="margin-top: 12px; display:none;" id="admin-logger-toggle-card">
-                    <h2 style="margin-bottom: 10px;">로그 관리</h2>
+                    <h2 style="margin-bottom: 10px;" data-i18n="log_management">로그 관리</h2>
                     <div class="setting-row">
-                        <span style="font-size:0.85rem;">일반 사용자 로그 표시</span>
+                        <span style="font-size:0.85rem;" data-i18n="log_user_display">일반 사용자 로그 표시</span>
                         <label class="switch"><input type="checkbox" id="admin-logger-toggle"><span class="slider"></span></label>
                     </div>
                     <div id="admin-logger-toggle-status" style="font-size:0.7rem; color:var(--neon-blue); text-align:right; padding-top:2px;"></div>
                 </div>
 
                 <div class="system-card" style="margin-top: 12px; display:none;" id="settings-log-card">
-                    <h2 style="margin-bottom: 10px;">오류 로그</h2>
+                    <h2 style="margin-bottom: 10px;" data-i18n="log_error_title">오류 로그</h2>
                     <div class="setting-row">
-                        <span style="font-size:0.85rem;">수집된 로그</span>
-                        <span id="log-count-badge" style="font-size:0.8rem; color:var(--neon-blue); font-weight:bold;">0개</span>
+                        <span style="font-size:0.85rem;" data-i18n="log_collected">수집된 로그</span>
+                        <span id="log-count-badge" style="font-size:0.8rem; color:var(--neon-blue); font-weight:bold;">0<span data-i18n="log_count_unit">개</span></span>
                     </div>
                     <div style="display:flex; gap:8px; margin-top:10px;">
-                        <button class="btn-primary" style="background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); flex:1;" onclick="AppLogger.openViewer()">로그 보기</button>
-                        <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold); flex:1;" onclick="AppLogger.export()">파일 저장</button>
-                        <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red); flex:1;" onclick="if(confirm('로그를 모두 삭제하시겠습니까?')) AppLogger.clear()">초기화</button>
+                        <button class="btn-primary" style="background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); flex:1;" onclick="AppLogger.openViewer()" data-i18n="log_view">로그 보기</button>
+                        <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold); flex:1;" onclick="AppLogger.export()" data-i18n="log_save">파일 저장</button>
+                        <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red); flex:1;" onclick="if(confirm(i18n[AppState.currentLang]?.log_clear_confirm || '로그를 모두 삭제하시겠습니까?')) AppLogger.clear()" data-i18n="log_clear">초기화</button>
                     </div>
                 </div>
             </section>
@@ -910,11 +910,11 @@
     <div id="hamburger-menu-popup" class="hamburger-menu-popup d-none">
         <button id="btn-edit-status-cards" class="hamburger-menu-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
-            상태창 편집
+            <span data-i18n="home_editor_title">상태창 편집</span>
         </button>
         <button id="btn-goto-settings" class="hamburger-menu-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/></svg>
-            설정
+            <span data-i18n="nav_settings">설정</span>
         </button>
     </div>
 
@@ -928,8 +928,8 @@
             <div id="isbn-scanner-reader" class="isbn-scanner-reader"></div>
             <div id="isbn-scanner-status" class="isbn-scanner-status" data-i18n="lib_scan_hint">바코드를 카메라에 비춰주세요</div>
             <div id="isbn-manual-input" class="isbn-manual-input">
-                <input type="text" id="isbn-manual-field" placeholder="ISBN 직접 입력" maxlength="13" inputmode="numeric">
-                <button onclick="window.manualIsbnLookup()" class="btn-primary" style="padding:8px 16px; font-size:0.8rem;">검색</button>
+                <input type="text" id="isbn-manual-field" placeholder="ISBN 직접 입력" data-i18n-placeholder="isbn_manual_input" maxlength="13" inputmode="numeric">
+                <button onclick="window.manualIsbnLookup()" class="btn-primary" style="padding:8px 16px; font-size:0.8rem;" data-i18n="isbn_search">검색</button>
             </div>
             <!-- Embedded scan result panel (shown inside scanner overlay) -->
             <div id="isbn-scan-result" class="isbn-scan-result d-none">
@@ -1045,20 +1045,20 @@
         <!-- Library Date Picker Dialog -->
         <div id="lib-date-picker-overlay" class="lib-date-picker-overlay d-none" onclick="window.closeLibraryDatePicker(event)">
             <div class="lib-date-picker-dialog" onclick="event.stopPropagation()">
-                <div class="lib-date-picker-title">날짜 선택</div>
+                <div class="lib-date-picker-title" data-i18n="lib_date_picker_title">날짜 선택</div>
                 <div class="lib-date-picker-columns">
                     <div class="lib-date-picker-col">
-                        <div class="lib-date-picker-col-title">연도</div>
+                        <div class="lib-date-picker-col-title" data-i18n="lib_date_year_col">연도</div>
                         <div id="lib-date-picker-years" class="lib-date-picker-list"></div>
                     </div>
                     <div class="lib-date-picker-col">
-                        <div class="lib-date-picker-col-title">월</div>
+                        <div class="lib-date-picker-col-title" data-i18n="lib_date_month_col">월</div>
                         <div id="lib-date-picker-months" class="lib-date-picker-list"></div>
                     </div>
                 </div>
                 <div class="lib-date-picker-actions">
                     <button class="lib-date-picker-btn" onclick="window.closeLibraryDatePicker()"  data-i18n="btn_cancel">취소</button>
-                    <button class="lib-date-picker-btn primary" onclick="window.confirmLibraryDatePicker()">확인</button>
+                    <button class="lib-date-picker-btn primary" onclick="window.confirmLibraryDatePicker()" data-i18n="btn_confirm">확인</button>
                 </div>
             </div>
         </div>
@@ -1082,7 +1082,7 @@
             <button class="library-back-btn" onclick="window.closeRunningCalcView()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
             </button>
-            <span class="rc-header-title">러닝 계산기</span>
+            <span class="rc-header-title" data-i18n="rc_full_title">러닝 계산기</span>
             <div class="rc-unit-toggle" id="rc-unit-toggle" onclick="window.toggleRcDisplayUnit()">
                 <span class="rc-unit-toggle-btn active" data-unit="km">km</span>
                 <span class="rc-unit-toggle-btn" data-unit="mi">mi</span>
@@ -1091,30 +1091,30 @@
 
         <!-- Main Tabs: 페이스 계산기 / VDOT 계산기 -->
         <div class="rc-main-tabs">
-            <button class="rc-main-tab active" data-rc-tab="pace" onclick="window.switchRunningCalcTab('pace')">페이스 계산기</button>
-            <button class="rc-main-tab" data-rc-tab="vdot" onclick="window.switchRunningCalcTab('vdot')">VDOT 계산기</button>
+            <button class="rc-main-tab active" data-rc-tab="pace" onclick="window.switchRunningCalcTab('pace')" data-i18n="rc_pace_calc">페이스 계산기</button>
+            <button class="rc-main-tab" data-rc-tab="vdot" onclick="window.switchRunningCalcTab('vdot')" data-i18n="rc_vdot_calc">VDOT 계산기</button>
         </div>
 
         <div class="rc-content" id="rc-content">
             <!-- ===== 페이스 계산기 탭 ===== -->
             <div class="rc-tab-panel active" id="rc-panel-pace">
-                <div class="rc-section-desc">입력된 값을 기준으로 페이스, 거리, 시간을 계산</div>
+                <div class="rc-section-desc" data-i18n="rc_pace_desc">입력된 값을 기준으로 페이스, 거리, 시간을 계산</div>
 
                 <!-- 계산 모드 서브탭: 페이스/거리/시간 -->
                 <div class="rc-sub-tabs">
-                    <button class="rc-sub-tab active" data-calc-mode="pace" onclick="window.switchPaceMode('pace')">페이스</button>
-                    <button class="rc-sub-tab" data-calc-mode="distance" onclick="window.switchPaceMode('distance')">거리</button>
-                    <button class="rc-sub-tab" data-calc-mode="time" onclick="window.switchPaceMode('time')">시간</button>
+                    <button class="rc-sub-tab active" data-calc-mode="pace" onclick="window.switchPaceMode('pace')" data-i18n="rc_pace">페이스</button>
+                    <button class="rc-sub-tab" data-calc-mode="distance" onclick="window.switchPaceMode('distance')" data-i18n="rc_distance">거리</button>
+                    <button class="rc-sub-tab" data-calc-mode="time" onclick="window.switchPaceMode('time')" data-i18n="rc_time">시간</button>
                 </div>
 
                 <!-- 거리 입력 -->
                 <div class="rc-input-group" id="rc-pace-distance-group">
-                    <label class="rc-label">거리</label>
+                    <label class="rc-label" data-i18n="rc_distance">거리</label>
                     <div class="rc-preset-row">
                         <button class="rc-preset-btn" data-dist="5" onclick="window.selectPaceDist(5)">5</button>
                         <button class="rc-preset-btn active" data-dist="10" onclick="window.selectPaceDist(10)">10</button>
-                        <button class="rc-preset-btn" data-dist="21.0975" onclick="window.selectPaceDist(21.0975)">하프</button>
-                        <button class="rc-preset-btn" data-dist="42.195" onclick="window.selectPaceDist(42.195)">풀</button>
+                        <button class="rc-preset-btn" data-dist="21.0975" onclick="window.selectPaceDist(21.0975)" data-i18n="rc_half">하프</button>
+                        <button class="rc-preset-btn" data-dist="42.195" onclick="window.selectPaceDist(42.195)" data-i18n="rc_full">풀</button>
                     </div>
                     <div class="rc-input-row" style="margin-top:8px;">
                         <input type="number" id="rc-pace-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.onPaceDistInput()">
@@ -1124,7 +1124,7 @@
 
                 <!-- 페이스 입력 (거리/시간 모드에서 표시) -->
                 <div class="rc-input-group d-none" id="rc-pace-pace-group">
-                    <label class="rc-label">페이스</label>
+                    <label class="rc-label" data-i18n="rc_pace">페이스</label>
                     <div class="rc-time-input-row">
                         <div class="rc-time-block">
                             <input type="number" class="rc-time-input" id="rc-pace-min" value="5" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'min')">
@@ -1143,7 +1143,7 @@
 
                 <!-- 시간 입력 -->
                 <div class="rc-input-group" id="rc-pace-time-group">
-                    <label class="rc-label">시간</label>
+                    <label class="rc-label" data-i18n="rc_time">시간</label>
                     <div class="rc-time-input-row">
                         <div class="rc-time-block">
                             <input type="number" class="rc-time-input" id="rc-pace-hr" value="1" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'hr')">
@@ -1168,54 +1168,54 @@
 
                 <!-- 결과: 거리 모드 -->
                 <div class="rc-calc-result d-none" id="rc-res-distance-row">
-                    <span class="rc-result-label">거리</span>
+                    <span class="rc-result-label" data-i18n="rc_distance">거리</span>
                     <span class="rc-result-value rc-result-highlight-value" id="rc-res-distance">12.00 <span class="rc-result-unit">km</span></span>
                 </div>
                 <!-- 결과: 시간 모드 -->
                 <div class="rc-calc-result d-none" id="rc-res-time-row">
-                    <span class="rc-result-label">시간</span>
+                    <span class="rc-result-label" data-i18n="rc_time">시간</span>
                     <span class="rc-result-value rc-result-highlight-value" id="rc-res-time">0:50:00</span>
                 </div>
                 <!-- 결과: 상세 -->
                 <div class="rc-results" id="rc-pace-results">
                     <div class="rc-result-row" id="rc-res-pace-row">
-                        <span class="rc-result-label" id="rc-res-pace-label">페이스</span>
+                        <span class="rc-result-label" id="rc-res-pace-label" data-i18n="rc_pace">페이스</span>
                         <span class="rc-result-value" id="rc-res-pace">6:00 <span class="rc-result-unit">/km</span></span>
                     </div>
                     <div class="rc-result-row d-none" id="rc-res-pace2-row">
-                        <span class="rc-result-label">km 페이스</span>
+                        <span class="rc-result-label" data-i18n="rc_km_pace">km 페이스</span>
                         <span class="rc-result-value" id="rc-res-pace2"></span>
                     </div>
                     <div class="rc-result-row">
-                        <span class="rc-result-label">400m 랩타임</span>
+                        <span class="rc-result-label" data-i18n="rc_lap_time">400m 랩타임</span>
                         <span class="rc-result-value" id="rc-res-lap">144 <span class="rc-result-unit">초</span></span>
                     </div>
                     <div class="rc-result-row">
-                        <span class="rc-result-label">시속</span>
+                        <span class="rc-result-label" data-i18n="rc_speed">시속</span>
                         <span class="rc-result-value" id="rc-res-speed">10.0 <span class="rc-result-unit">km/h</span></span>
                     </div>
                 </div>
 
                 <!-- 기록 저장 버튼 -->
                 <div style="margin-top:12px; text-align:center;">
-                    <button class="orm-calc-btn" style="background:linear-gradient(135deg, var(--neon-cyan, #00d9ff), var(--neon-blue, #007bff));" onclick="window.saveRunningCalcHistory()">기록 저장</button>
+                    <button class="orm-calc-btn" style="background:linear-gradient(135deg, var(--neon-cyan, #00d9ff), var(--neon-blue, #007bff));" onclick="window.saveRunningCalcHistory()" data-i18n="rc_save_history">기록 저장</button>
                 </div>
 
                 <!-- 최근 기록 (페이스) -->
                 <div class="rc-section-card" id="rc-pace-history-section" style="margin-top:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 class="rc-section-title">최근 기록</h3>
-                        <button class="calc-history-clear-btn" onclick="window.clearRunningCalcHistory('pace')" style="display:none;" id="rc-pace-history-clear">전체 삭제</button>
+                        <h3 class="rc-section-title" data-i18n="rc_recent_history">최근 기록</h3>
+                        <button class="calc-history-clear-btn" onclick="window.clearRunningCalcHistory('pace')" style="display:none;" id="rc-pace-history-clear" data-i18n="rc_clear_all">전체 삭제</button>
                     </div>
                     <div id="rc-pace-history-list" class="calc-history-list">
-                        <div class="calc-history-empty">저장된 기록이 없습니다</div>
+                        <div class="calc-history-empty" data-i18n="rc_no_history">저장된 기록이 없습니다</div>
                     </div>
                 </div>
 
                 <!-- 트레드밀 계산기 -->
                 <div class="rc-section-card" style="margin-top:20px;">
-                    <h3 class="rc-section-title">트레드밀 계산기</h3>
-                    <div class="rc-section-desc">트레드밀 속도를 페이스로 계산</div>
+                    <h3 class="rc-section-title" data-i18n="rc_treadmill">트레드밀 계산기</h3>
+                    <div class="rc-section-desc" data-i18n="rc_treadmill_desc">트레드밀 속도를 페이스로 계산</div>
                     <div class="rc-input-row" style="margin-top:10px;">
                         <input type="number" id="rc-treadmill-speed" class="rc-input" value="9.8" min="0.1" step="0.1" oninput="window.calcTreadmill()">
                         <span class="rc-unit-label" id="rc-tm-speed-label">km/h</span>
@@ -1224,23 +1224,23 @@
                     </div>
                     <div class="rc-results" id="rc-treadmill-results" style="margin-top:12px;">
                         <div class="rc-result-row" id="rc-tm-pace-row">
-                            <span class="rc-result-label" id="rc-tm-pace-label">페이스</span>
+                            <span class="rc-result-label" id="rc-tm-pace-label" data-i18n="rc_pace">페이스</span>
                             <span class="rc-result-value" id="rc-tm-pace">6:07 <span class="rc-result-unit">/km</span></span>
                         </div>
                         <div class="rc-result-row d-none" id="rc-tm-pace2-row">
-                            <span class="rc-result-label">km 페이스</span>
+                            <span class="rc-result-label" data-i18n="rc_km_pace">km 페이스</span>
                             <span class="rc-result-value" id="rc-tm-pace2"></span>
                         </div>
                         <div class="rc-result-row">
-                            <span class="rc-result-label">10K 완주 시간</span>
+                            <span class="rc-result-label" data-i18n="rc_10k_time">10K 완주 시간</span>
                             <span class="rc-result-value" id="rc-tm-10k">1:01:13</span>
                         </div>
                         <div class="rc-result-row">
-                            <span class="rc-result-label">하프 완주 시간</span>
+                            <span class="rc-result-label" data-i18n="rc_half_time">하프 완주 시간</span>
                             <span class="rc-result-value" id="rc-tm-half">2:09:10</span>
                         </div>
                         <div class="rc-result-row">
-                            <span class="rc-result-label">풀 완주 시간</span>
+                            <span class="rc-result-label" data-i18n="rc_full_time">풀 완주 시간</span>
                             <span class="rc-result-value" id="rc-tm-full">4:18:16</span>
                         </div>
                     </div>
@@ -1249,16 +1249,16 @@
 
             <!-- ===== VDOT 계산기 탭 ===== -->
             <div class="rc-tab-panel" id="rc-panel-vdot">
-                <div class="rc-section-desc">PB를 기준으로 VDOT과 적합한 훈련 페이스를 계산하며 입력 거리가 길어질수록 정확도가 향상</div>
+                <div class="rc-section-desc" data-i18n="rc_vdot_desc">PB를 기준으로 VDOT과 적합한 훈련 페이스를 계산하며 입력 거리가 길어질수록 정확도가 향상</div>
 
                 <!-- 거리 입력 -->
                 <div class="rc-input-group">
-                    <label class="rc-label">거리</label>
+                    <label class="rc-label" data-i18n="rc_distance">거리</label>
                     <div class="rc-preset-row">
                         <button class="rc-preset-btn" data-vdist="5" onclick="window.selectVdotDist(5)">5</button>
                         <button class="rc-preset-btn active" data-vdist="10" onclick="window.selectVdotDist(10)">10</button>
-                        <button class="rc-preset-btn" data-vdist="21.0975" onclick="window.selectVdotDist(21.0975)">하프</button>
-                        <button class="rc-preset-btn" data-vdist="42.195" onclick="window.selectVdotDist(42.195)">풀</button>
+                        <button class="rc-preset-btn" data-vdist="21.0975" onclick="window.selectVdotDist(21.0975)" data-i18n="rc_half">하프</button>
+                        <button class="rc-preset-btn" data-vdist="42.195" onclick="window.selectVdotDist(42.195)" data-i18n="rc_full">풀</button>
                     </div>
                     <div class="rc-input-row" style="margin-top:8px;">
                         <input type="number" id="rc-vdot-distance" class="rc-input" value="10" min="0.1" step="0.1" oninput="window.onVdotDistInput()">
@@ -1268,7 +1268,7 @@
 
                 <!-- 시간 입력 -->
                 <div class="rc-input-group">
-                    <label class="rc-label">시간</label>
+                    <label class="rc-label" data-i18n="rc_time">시간</label>
                     <div class="rc-time-input-row">
                         <div class="rc-time-block">
                             <input type="number" class="rc-time-input" id="rc-vdot-hr" value="1" inputmode="numeric" onfocus="this.select()" onchange="window.rcValidateInput(this,'hr')">
@@ -1322,18 +1322,18 @@
 
                 <!-- 예상 기록 -->
                 <div class="rc-section-card" style="margin-top:16px;">
-                    <h3 class="rc-section-title">예상 기록</h3>
+                    <h3 class="rc-section-title" data-i18n="rc_predictions">예상 기록</h3>
                     <div class="rc-results">
                         <div class="rc-result-row">
-                            <span class="rc-result-label">10K 예상</span>
+                            <span class="rc-result-label" data-i18n="rc_10k_pred">10K 예상</span>
                             <span class="rc-result-value"><span id="rc-vdot-pred-10k">1:00:00</span> <span class="rc-result-unit" id="rc-vdot-pred-10k-pace">6:00/km</span></span>
                         </div>
                         <div class="rc-result-row">
-                            <span class="rc-result-label">하프 예상</span>
+                            <span class="rc-result-label" data-i18n="rc_half_pred">하프 예상</span>
                             <span class="rc-result-value"><span id="rc-vdot-pred-half">2:12:55</span> <span class="rc-result-unit" id="rc-vdot-pred-half-pace">6:18/km</span></span>
                         </div>
                         <div class="rc-result-row">
-                            <span class="rc-result-label">풀 예상</span>
+                            <span class="rc-result-label" data-i18n="rc_full_pred">풀 예상</span>
                             <span class="rc-result-value"><span id="rc-vdot-pred-full">4:32:55</span> <span class="rc-result-unit" id="rc-vdot-pred-full-pace">6:28/km</span></span>
                         </div>
                     </div>
@@ -1341,17 +1341,17 @@
 
                 <!-- 기록 저장 버튼 (VDOT) -->
                 <div style="margin-top:12px; text-align:center;">
-                    <button class="orm-calc-btn" style="background:linear-gradient(135deg, var(--neon-cyan, #00d9ff), var(--neon-blue, #007bff));" onclick="window.saveRunningCalcHistory()">기록 저장</button>
+                    <button class="orm-calc-btn" style="background:linear-gradient(135deg, var(--neon-cyan, #00d9ff), var(--neon-blue, #007bff));" onclick="window.saveRunningCalcHistory()" data-i18n="rc_save_history">기록 저장</button>
                 </div>
 
                 <!-- 최근 기록 (VDOT) -->
                 <div class="rc-section-card" id="rc-vdot-history-section" style="margin-top:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 class="rc-section-title">최근 기록</h3>
-                        <button class="calc-history-clear-btn" onclick="window.clearRunningCalcHistory('vdot')" style="display:none;" id="rc-vdot-history-clear">전체 삭제</button>
+                        <h3 class="rc-section-title" data-i18n="rc_recent_history">최근 기록</h3>
+                        <button class="calc-history-clear-btn" onclick="window.clearRunningCalcHistory('vdot')" style="display:none;" id="rc-vdot-history-clear" data-i18n="rc_clear_all">전체 삭제</button>
                     </div>
                     <div id="rc-vdot-history-list" class="calc-history-list">
-                        <div class="calc-history-empty">저장된 기록이 없습니다</div>
+                        <div class="calc-history-empty" data-i18n="rc_no_history">저장된 기록이 없습니다</div>
                     </div>
                 </div>
             </div>
@@ -1364,65 +1364,65 @@
             <button class="library-back-btn" onclick="window.closeOrmCalcView()">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
             </button>
-            <span class="rc-header-title">1RM 계산기</span>
+            <span class="rc-header-title" data-i18n="orm_full_title">1RM 계산기</span>
             <div style="width:24px;"></div>
         </div>
 
         <div class="rc-content">
             <!-- 목차 -->
             <div class="orm-toc">
-                <h3 style="margin:0 0 10px 0; font-size:0.85rem; color:var(--text-main);">목차</h3>
+                <h3 style="margin:0 0 10px 0; font-size:0.85rem; color:var(--text-main);" data-i18n="orm_toc">목차</h3>
                 <ol style="margin:0; padding-left:20px; font-size:0.8rem; line-height:2;">
-                    <li><a href="#orm-section-calc" class="orm-toc-link">1RM 계산하기</a></li>
-                    <li><a href="#orm-section-what" class="orm-toc-link">1RM이란?</a></li>
-                    <li><a href="#orm-section-method" class="orm-toc-link">계산 방법</a></li>
-                    <li><a href="#orm-section-guide" class="orm-toc-link">1RM 기반 훈련 가이드</a></li>
-                    <li><a href="#orm-section-faq" class="orm-toc-link">자주 묻는 질문</a></li>
+                    <li><a href="#orm-section-calc" class="orm-toc-link" data-i18n="orm_toc_calc">1RM 계산하기</a></li>
+                    <li><a href="#orm-section-what" class="orm-toc-link" data-i18n="orm_toc_what">1RM이란?</a></li>
+                    <li><a href="#orm-section-method" class="orm-toc-link" data-i18n="orm_toc_method">계산 방법</a></li>
+                    <li><a href="#orm-section-guide" class="orm-toc-link" data-i18n="orm_toc_guide">1RM 기반 훈련 가이드</a></li>
+                    <li><a href="#orm-section-faq" class="orm-toc-link" data-i18n="orm_toc_faq">자주 묻는 질문</a></li>
                 </ol>
             </div>
 
             <!-- 1RM 계산하기 -->
             <div id="orm-section-calc" style="margin-top:24px;">
-                <h2 class="orm-section-heading">1RM 계산하기</h2>
+                <h2 class="orm-section-heading" data-i18n="orm_section_calc">1RM 계산하기</h2>
 
                 <div class="rc-input-group">
-                    <label class="rc-label">종목 선택</label>
+                    <label class="rc-label" data-i18n="orm_exercise_select">종목 선택</label>
                     <select id="orm-exercise" class="rc-select" style="width:100%;">
-                        <option value="squat">스쿼트</option>
-                        <option value="bench">벤치프레스</option>
-                        <option value="deadlift">데드리프트</option>
+                        <option value="squat" data-i18n="orm_squat">스쿼트</option>
+                        <option value="bench" data-i18n="orm_bench">벤치프레스</option>
+                        <option value="deadlift" data-i18n="orm_deadlift">데드리프트</option>
                     </select>
                 </div>
 
                 <div class="rc-input-group">
-                    <label class="rc-label">반복 횟수 (12회 이하)</label>
+                    <label class="rc-label" data-i18n="orm_reps_label">반복 횟수 (12회 이하)</label>
                     <select id="orm-reps" class="rc-select" style="width:100%;">
-                        <option value="1">1회</option>
-                        <option value="2">2회</option>
-                        <option value="3">3회</option>
-                        <option value="4">4회</option>
-                        <option value="5" selected>5회</option>
-                        <option value="6">6회</option>
-                        <option value="7">7회</option>
-                        <option value="8">8회</option>
-                        <option value="9">9회</option>
-                        <option value="10">10회</option>
-                        <option value="11">11회</option>
-                        <option value="12">12회</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5" selected>5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
                     </select>
                 </div>
 
                 <div class="rc-input-group">
-                    <label class="rc-label">무게 (kg)</label>
-                    <input type="number" id="orm-weight" class="rc-input" placeholder="무게 (kg)" min="1" step="0.5" style="width:100%; box-sizing:border-box;">
+                    <label class="rc-label" data-i18n="orm_weight_label">무게 (kg)</label>
+                    <input type="number" id="orm-weight" class="rc-input" placeholder="무게 (kg)" data-i18n-placeholder="orm_weight_placeholder" min="1" step="0.5" style="width:100%; box-sizing:border-box;">
                 </div>
 
-                <button class="orm-calc-btn" onclick="window.calcOneRM()">계산하기</button>
+                <button class="orm-calc-btn" onclick="window.calcOneRM()" data-i18n="orm_calculate">계산하기</button>
 
                 <!-- 결과 -->
                 <div class="rc-results d-none" id="orm-results" style="margin-top:16px;">
                     <div class="rc-result-row rc-result-highlight">
-                        <span class="rc-result-label" style="font-weight:700;">예상 1RM</span>
+                        <span class="rc-result-label" style="font-weight:700;" data-i18n="orm_estimated">예상 1RM</span>
                         <span class="rc-result-value rc-vdot-score" id="orm-result-1rm" style="color:var(--neon-red);">0 kg</span>
                     </div>
                     <div class="rc-result-divider"></div>
@@ -1450,43 +1450,43 @@
 
                 <!-- RM 비율표 -->
                 <div class="rc-section-card d-none" id="orm-pct-table" style="margin-top:16px;">
-                    <h3 class="rc-section-title">RM 비율표</h3>
-                    <div class="rc-section-desc">1RM 기준 반복 횟수별 예상 무게</div>
+                    <h3 class="rc-section-title" data-i18n="orm_ratio_table">RM 비율표</h3>
+                    <div class="rc-section-desc" data-i18n="orm_ratio_desc">1RM 기준 반복 횟수별 예상 무게</div>
                     <div class="rc-results" id="orm-pct-rows"></div>
                 </div>
 
                 <!-- 최근 기록 (1RM) -->
                 <div class="rc-section-card" id="orm-history-section" style="margin-top:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 class="rc-section-title">최근 기록</h3>
-                        <button class="calc-history-clear-btn" onclick="window.clearOrmCalcHistory()" style="display:none;" id="orm-history-clear">전체 삭제</button>
+                        <h3 class="rc-section-title" data-i18n="rc_recent_history">최근 기록</h3>
+                        <button class="calc-history-clear-btn" onclick="window.clearOrmCalcHistory()" style="display:none;" id="orm-history-clear" data-i18n="rc_clear_all">전체 삭제</button>
                     </div>
                     <div id="orm-history-list" class="calc-history-list">
-                        <div class="calc-history-empty">저장된 기록이 없습니다</div>
+                        <div class="calc-history-empty" data-i18n="rc_no_history">저장된 기록이 없습니다</div>
                     </div>
                 </div>
             </div>
 
             <!-- 3대 운동 합산 -->
             <div class="rc-section-card" style="margin-top:24px;">
-                <h3 class="rc-section-title">3대 운동 1RM 합산</h3>
-                <div class="rc-section-desc">각 종목 계산 결과가 자동으로 반영됩니다</div>
+                <h3 class="rc-section-title" data-i18n="orm_total_title">3대 운동 1RM 합산</h3>
+                <div class="rc-section-desc" data-i18n="orm_total_desc">각 종목 계산 결과가 자동으로 반영됩니다</div>
                 <div class="rc-results">
                     <div class="rc-result-row">
-                        <span class="rc-result-label">🏋️ 스쿼트</span>
+                        <span class="rc-result-label">🏋️ <span data-i18n="orm_squat">스쿼트</span></span>
                         <span class="rc-result-value" id="orm-total-squat" style="color:var(--neon-blue);">- kg</span>
                     </div>
                     <div class="rc-result-row">
-                        <span class="rc-result-label">🏋️ 벤치프레스</span>
+                        <span class="rc-result-label">🏋️ <span data-i18n="orm_bench">벤치프레스</span></span>
                         <span class="rc-result-value" id="orm-total-bench" style="color:var(--neon-blue);">- kg</span>
                     </div>
                     <div class="rc-result-row">
-                        <span class="rc-result-label">🏋️ 데드리프트</span>
+                        <span class="rc-result-label">🏋️ <span data-i18n="orm_deadlift">데드리프트</span></span>
                         <span class="rc-result-value" id="orm-total-dead" style="color:var(--neon-blue);">- kg</span>
                     </div>
                     <div class="rc-result-divider"></div>
                     <div class="rc-result-row rc-result-highlight">
-                        <span class="rc-result-label" style="font-weight:700;">합산 총 무게</span>
+                        <span class="rc-result-label" style="font-weight:700;" data-i18n="orm_total_weight">합산 총 무게</span>
                         <span class="rc-result-value rc-vdot-score" id="orm-total-sum" style="color:var(--neon-red);">- kg</span>
                     </div>
                 </div>
@@ -1494,41 +1494,41 @@
 
             <!-- 1RM이란? -->
             <div id="orm-section-what" style="margin-top:28px;">
-                <h2 class="orm-section-heading">1RM이란?</h2>
+                <h2 class="orm-section-heading" data-i18n="orm_section_what">1RM이란?</h2>
                 <div class="orm-info-text">
-                    <p><strong>1RM(One-Repetition Maximum)</strong>은 특정 운동에서 올바른 자세로 단 <strong>1회</strong> 들어올릴 수 있는 최대 무게를 의미합니다.</p>
-                    <p>근력 수준을 객관적으로 평가하고, 훈련 프로그램의 강도를 설정하는 데 가장 널리 사용되는 지표입니다.</p>
+                    <p data-i18n="orm_what_p1"><strong>1RM(One-Repetition Maximum)</strong>은 특정 운동에서 올바른 자세로 단 <strong>1회</strong> 들어올릴 수 있는 최대 무게를 의미합니다.</p>
+                    <p data-i18n="orm_what_p2">근력 수준을 객관적으로 평가하고, 훈련 프로그램의 강도를 설정하는 데 가장 널리 사용되는 지표입니다.</p>
                 </div>
             </div>
 
             <!-- 계산 방법 -->
             <div id="orm-section-method" style="margin-top:28px;">
-                <h2 class="orm-section-heading">계산 방법</h2>
+                <h2 class="orm-section-heading" data-i18n="orm_section_method">계산 방법</h2>
                 <div class="orm-info-text">
-                    <p>본 계산기는 여러 공인 공식의 <strong>평균값</strong>을 사용합니다:</p>
+                    <p data-i18n="orm_method_p1">본 계산기는 여러 공인 공식의 <strong>평균값</strong>을 사용합니다:</p>
                     <ul>
-                        <li><strong>Epley:</strong> 무게 × (1 + 반복횟수 / 30)</li>
-                        <li><strong>Brzycki:</strong> 무게 × 36 / (37 − 반복횟수)</li>
-                        <li><strong>Lander:</strong> 100 × 무게 / (101.3 − 2.67123 × 반복횟수)</li>
-                        <li><strong>Lombardi:</strong> 무게 × 반복횟수^0.10</li>
-                        <li><strong>O'Conner:</strong> 무게 × (1 + 반복횟수 / 40)</li>
+                        <li data-i18n="orm_method_epley"><strong>Epley:</strong> 무게 × (1 + 반복횟수 / 30)</li>
+                        <li data-i18n="orm_method_brzycki"><strong>Brzycki:</strong> 무게 × 36 / (37 − 반복횟수)</li>
+                        <li data-i18n="orm_method_lander"><strong>Lander:</strong> 100 × 무게 / (101.3 − 2.67123 × 반복횟수)</li>
+                        <li data-i18n="orm_method_lombardi"><strong>Lombardi:</strong> 무게 × 반복횟수^0.10</li>
+                        <li data-i18n="orm_method_oconner"><strong>O'Conner:</strong> 무게 × (1 + 반복횟수 / 40)</li>
                     </ul>
-                    <p>반복 횟수가 <strong>1~6회</strong>일 때 가장 정확하며, 10회 이상에서는 오차가 커질 수 있습니다.</p>
+                    <p data-i18n="orm_method_accuracy">반복 횟수가 <strong>1~6회</strong>일 때 가장 정확하며, 10회 이상에서는 오차가 커질 수 있습니다.</p>
                 </div>
             </div>
 
             <!-- 1RM 기반 훈련 가이드 -->
             <div id="orm-section-guide" style="margin-top:28px;">
-                <h2 class="orm-section-heading">1RM 기반 훈련 가이드</h2>
+                <h2 class="orm-section-heading" data-i18n="orm_section_guide">1RM 기반 훈련 가이드</h2>
                 <div class="orm-info-text">
                     <table class="orm-guide-table">
                         <thead>
-                            <tr><th>목표</th><th>1RM %</th><th>반복</th><th>세트</th></tr>
+                            <tr><th data-i18n="orm_guide_goal">목표</th><th>1RM %</th><th data-i18n="orm_guide_reps">반복</th><th data-i18n="orm_guide_sets">세트</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td>근력</td><td>85-100%</td><td>1-5</td><td>3-5</td></tr>
-                            <tr><td>근비대</td><td>65-85%</td><td>6-12</td><td>3-5</td></tr>
-                            <tr><td>근지구력</td><td>50-65%</td><td>12-20</td><td>2-4</td></tr>
+                            <tr><td data-i18n="orm_guide_strength">근력</td><td>85-100%</td><td>1-5</td><td>3-5</td></tr>
+                            <tr><td data-i18n="orm_guide_hypertrophy">근비대</td><td>65-85%</td><td>6-12</td><td>3-5</td></tr>
+                            <tr><td data-i18n="orm_guide_endurance">근지구력</td><td>50-65%</td><td>12-20</td><td>2-4</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1536,14 +1536,14 @@
 
             <!-- 자주 묻는 질문 -->
             <div id="orm-section-faq" style="margin-top:28px; padding-bottom:40px;">
-                <h2 class="orm-section-heading">자주 묻는 질문</h2>
+                <h2 class="orm-section-heading" data-i18n="orm_section_faq">자주 묻는 질문</h2>
                 <div class="orm-info-text">
-                    <p><strong>Q. 1RM을 직접 측정하는 것이 위험한가요?</strong></p>
-                    <p>A. 경험이 부족한 경우 부상 위험이 있으므로, 계산기를 활용한 <strong>간접 추정</strong>을 권장합니다. 직접 측정 시 반드시 보조자와 함께 진행하세요.</p>
-                    <p style="margin-top:12px;"><strong>Q. 어떤 공식이 가장 정확한가요?</strong></p>
-                    <p>A. Brzycki와 Epley 공식이 가장 널리 검증되었습니다. 본 계산기는 여러 공식의 평균을 사용하여 정확도를 높입니다.</p>
-                    <p style="margin-top:12px;"><strong>Q. 3대 운동 합산 기준은?</strong></p>
-                    <p>A. 일반적으로 체중의 <strong>3배 이상</strong>이면 중급, <strong>5배 이상</strong>이면 상급으로 분류됩니다.</p>
+                    <p data-i18n="orm_faq_q1"><strong>Q. 1RM을 직접 측정하는 것이 위험한가요?</strong></p>
+                    <p data-i18n="orm_faq_a1">A. 경험이 부족한 경우 부상 위험이 있으므로, 계산기를 활용한 <strong>간접 추정</strong>을 권장합니다. 직접 측정 시 반드시 보조자와 함께 진행하세요.</p>
+                    <p style="margin-top:12px;" data-i18n="orm_faq_q2"><strong>Q. 어떤 공식이 가장 정확한가요?</strong></p>
+                    <p data-i18n="orm_faq_a2">A. Brzycki와 Epley 공식이 가장 널리 검증되었습니다. 본 계산기는 여러 공식의 평균을 사용하여 정확도를 높입니다.</p>
+                    <p style="margin-top:12px;" data-i18n="orm_faq_q3"><strong>Q. 3대 운동 합산 기준은?</strong></p>
+                    <p data-i18n="orm_faq_a3">A. 일반적으로 체중의 <strong>3배 이상</strong>이면 중급, <strong>5배 이상</strong>이면 상급으로 분류됩니다.</p>
                 </div>
             </div>
         </div>
@@ -1555,7 +1555,7 @@
             <button id="btn-editor-back" class="editor-nav-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
             </button>
-            <h2 class="editor-title">홈 화면 편집</h2>
+            <h2 class="editor-title" data-i18n="home_editor_title">홈 화면 편집</h2>
             <button id="btn-editor-add" class="editor-nav-btn">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
             </button>
@@ -1568,14 +1568,14 @@
         <div class="card-select-content">
             <div class="card-select-header">
                 <label class="card-select-check-all">
-                    <input type="checkbox" id="card-select-all"> <span>전체</span>
+                    <input type="checkbox" id="card-select-all"> <span data-i18n="card_select_all">전체</span>
                 </label>
-                <h3 class="card-select-title">추가할 카드 선택</h3>
+                <h3 class="card-select-title" data-i18n="card_select_title">추가할 카드 선택</h3>
             </div>
             <div id="card-select-list" class="card-select-list"></div>
             <div class="card-select-actions">
-                <button id="btn-card-select-cancel" class="card-select-btn">취소</button>
-                <button id="btn-card-select-done" class="card-select-btn card-select-btn-done">완료</button>
+                <button id="btn-card-select-cancel" class="card-select-btn" data-i18n="card_select_cancel">취소</button>
+                <button id="btn-card-select-done" class="card-select-btn card-select-btn-done" data-i18n="card_select_done">완료</button>
             </div>
         </div>
     </div>
@@ -1583,7 +1583,7 @@
     <div class="modal-overlay d-none" id="titleModal" onclick="if(event.target===this){document.getElementById('titleModal').classList.add('d-none');document.getElementById('titleModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
-                <span id="title-modal-title" style="font-weight: bold; color: var(--neon-blue);">호칭 시스템 가이드</span>
+                <span id="title-modal-title" style="font-weight: bold; color: var(--neon-blue);" data-i18n="title_system_guide">호칭 시스템 가이드</span>
                 <button class="modal-close" id="btn-history-close">×</button>
             </div>
             <div class="modal-body" id="title-guide-container" style="overflow-y: auto; max-height: 60vh;"></div>
@@ -1593,13 +1593,13 @@
     <div class="modal-overlay d-none" id="logViewerModal" onclick="if(event.target===this){this.classList.add('d-none');this.style.display='none';}">
         <div class="modal-content" style="max-width: 95%; width: 420px; padding: 15px; max-height: 80vh;">
             <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
-                <span style="font-weight:bold; color:var(--neon-blue);">오류 로그 뷰어</span>
+                <span style="font-weight:bold; color:var(--neon-blue);" data-i18n="log_viewer_title">오류 로그 뷰어</span>
                 <button class="modal-close" onclick="document.getElementById('logViewerModal').classList.add('d-none');document.getElementById('logViewerModal').style.display='none';">×</button>
             </div>
             <div id="log-viewer-content" style="overflow-y:auto; flex-grow:1; max-height:55vh; font-family:monospace; font-size:0.72rem;"></div>
             <div style="display:flex; gap:8px; margin-top:10px; flex-shrink:0;">
-                <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold);" onclick="AppLogger.export()">파일 저장</button>
-                <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red);" onclick="if(confirm('로그를 모두 삭제하시겠습니까?')){AppLogger.clear();AppLogger.openViewer();}">초기화</button>
+                <button class="btn-primary" style="background:rgba(255,204,0,0.1); border:1px solid var(--neon-gold); color:var(--neon-gold);" onclick="AppLogger.export()" data-i18n="log_save">파일 저장</button>
+                <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red);" onclick="if(confirm(i18n[AppState.currentLang]?.log_clear_confirm || '로그를 모두 삭제하시겠습니까?')){AppLogger.clear();AppLogger.openViewer();}" data-i18n="log_clear">초기화</button>
             </div>
         </div>
     </div>
@@ -1607,7 +1607,7 @@
     <div class="modal-overlay d-none" id="profileStatsModal" onclick="if(event.target===this){closeProfileStatsModal();}">
         <div class="modal-content" style="max-width: 95%; width: 360px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
-                <span id="profile-stats-modal-title" style="font-weight:bold; color:var(--neon-blue);">프로필</span>
+                <span id="profile-stats-modal-title" style="font-weight:bold; color:var(--neon-blue);" data-i18n="profile_modal_title">프로필</span>
                 <button class="modal-close" onclick="closeProfileStatsModal()">×</button>
             </div>
             <div class="modal-body" style="overflow-y: auto; max-height: 65vh;">
@@ -1628,7 +1628,7 @@
     <div class="modal-overlay d-none" id="infoModal" onclick="if(event.target===this){document.getElementById('infoModal').classList.add('d-none');document.getElementById('infoModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 400px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 5px; padding-bottom: 5px;">
-                <span id="info-modal-title">정보</span>
+                <span id="info-modal-title" data-i18n="info_modal_title">정보</span>
                 <button class="modal-close" id="btn-info-close">×</button>
             </div>
             <div class="modal-body" id="info-modal-body" style="overflow-y: auto; max-height: 60vh;"></div>
@@ -1639,7 +1639,7 @@
     <div class="modal-overlay d-none" id="legalModal" onclick="if(event.target===this){document.getElementById('legalModal').classList.add('d-none');document.getElementById('legalModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 420px; padding: 15px; max-height: 80vh;">
             <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
-                <span id="legal-modal-title" style="font-weight:bold; color:var(--neon-blue);">약관</span>
+                <span id="legal-modal-title" style="font-weight:bold; color:var(--neon-blue);" data-i18n="legal_modal_title">약관</span>
                 <button class="modal-close" onclick="document.getElementById('legalModal').classList.add('d-none');document.getElementById('legalModal').classList.remove('d-flex');">×</button>
             </div>
             <div id="legal-modal-body" style="overflow-y:auto; flex-grow:1; max-height:60vh; font-size:0.8rem; color:var(--text-main); line-height:1.7;"></div>
@@ -1691,7 +1691,7 @@
             <div id="loot-icon" class="loot-icon">&#x1F381;</div>
             <div id="loot-name" class="loot-name">아이템 이름</div>
             <div id="loot-desc" class="loot-desc">보상 설명</div>
-            <button class="btn-primary" style="margin-top:15px; max-width:200px; margin-left:auto; margin-right:auto;" onclick="document.getElementById('lootModal').classList.add('d-none');document.getElementById('lootModal').classList.remove('d-flex');">
+            <button class="btn-primary" style="margin-top:15px; max-width:200px; margin-left:auto; margin-right:auto;" onclick="document.getElementById('lootModal').classList.add('d-none');document.getElementById('lootModal').classList.remove('d-flex');" data-i18n="btn_confirm">
                 확인
             </button>
         </div>
@@ -1701,7 +1701,7 @@
     <div class="modal-overlay d-none" id="shareModal" onclick="if(event.target===this){document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px; text-align:center;">
             <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 8px;">
-                <span id="share-modal-title" style="font-weight:bold; color:var(--neon-blue);">플래너 공유</span>
+                <span id="share-modal-title" style="font-weight:bold; color:var(--neon-blue);" data-i18n="share_modal_title">플래너 공유</span>
                 <button class="modal-close" onclick="document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');">×</button>
             </div>
             <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
@@ -1727,14 +1727,14 @@
     <div class="modal-overlay d-none" id="copyPlannerModal" onclick="if(event.target===this){closeCopyPlannerModal();}">
         <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px;">
             <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 8px;">
-                <span id="copy-planner-modal-title" style="font-weight:bold; color:var(--neon-gold);">⚠️ 플래너 덮어쓰기 경고</span>
+                <span id="copy-planner-modal-title" style="font-weight:bold; color:var(--neon-gold);" data-i18n="reels_copy_confirm_title">⚠️ 플래너 덮어쓰기 경고</span>
                 <button class="modal-close" onclick="closeCopyPlannerModal()">×</button>
             </div>
             <div class="modal-body" id="copy-planner-modal-body" style="color:var(--text); font-size:0.9rem; line-height:1.6;">
             </div>
             <div style="display:flex; gap:10px; margin-top:16px;">
-                <button class="btn-share-option" id="btn-copy-planner-cancel" style="flex:1;" onclick="closeCopyPlannerModal()">취소</button>
-                <button class="btn-share-option" id="btn-copy-planner-confirm" style="flex:1; background:var(--neon-blue); color:#fff;" onclick="confirmCopyPlanner()">복사하기</button>
+                <button class="btn-share-option" id="btn-copy-planner-cancel" style="flex:1;" onclick="closeCopyPlannerModal()" data-i18n="reels_copy_cancel_btn">취소</button>
+                <button class="btn-share-option" id="btn-copy-planner-confirm" style="flex:1; background:var(--neon-blue); color:#fff;" onclick="confirmCopyPlanner()" data-i18n="reels_copy_confirm_btn">복사하기</button>
             </div>
         </div>
     </div>

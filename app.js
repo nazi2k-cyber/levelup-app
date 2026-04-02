@@ -489,7 +489,7 @@ function hideUploadProgress() {
 }
 function createUploadProgressCallback(label) {
     const lang = AppState?.currentLang || 'ko';
-    const defaultLabel = lang === 'ko' ? '업로드 중...' : 'Uploading...';
+    const defaultLabel = i18n[lang]?.upload_progress || '업로드 중...';
     return (pct) => showUploadProgress(pct, label || defaultLabel);
 }
 
@@ -2815,7 +2815,7 @@ async function changePlayerName() {
     if (newName && newName.trim() !== "" && newName.trim() !== AppState.user.name) {
         const trimmed = newName.trim();
         if (trimmed.length > 30) {
-            alert("닉네임은 30자 이내로 입력해주세요.");
+            alert(i18n[AppState.currentLang]?.name_too_long || "닉네임은 30자 이내로 입력해주세요.");
             return;
         }
         try {
@@ -2837,7 +2837,7 @@ async function changePlayerName() {
         } catch (e) {
             console.error("[NameChange] 닉네임 변경 실패:", e);
             if (window.AppLogger) AppLogger.error(`[NameChange] 실패: ${e.code || ''} ${e.message || ''}`, e.stack || '');
-            alert("닉네임 변경 중 오류가 발생했습니다. 다시 시도해주세요.");
+            alert(i18n[AppState.currentLang]?.name_change_error || "닉네임 변경 중 오류가 발생했습니다. 다시 시도해주세요.");
         }
     }
 }
@@ -4092,6 +4092,11 @@ function changeLanguage(langCode) {
         const key = el.getAttribute('data-i18n-placeholder');
         if (i18n[langCode][key]) el.placeholder = i18n[langCode][key];
     });
+    // title 속성 번역
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (i18n[langCode][key]) el.title = i18n[langCode][key];
+    });
     updateLoginLangButtons(langCode);
 
     if(document.getElementById('app-container').classList.contains('d-flex')){
@@ -4454,8 +4459,8 @@ async function simulateLogin() {
             await signInWithEmailAndPassword(auth, email, pw);
             ConversionTracker.loginComplete('email');
         }
-    } catch (e) { alert("인증 오류: " + e.message); }
-    finally { btn.innerText = AppState.isLoginMode ? "시스템 접속" : "회원가입"; btn.disabled = false; }
+    } catch (e) { alert((i18n[AppState.currentLang]?.auth_error || "인증 오류: ") + e.message); }
+    finally { const t = i18n[AppState.currentLang] || {}; btn.innerText = AppState.isLoginMode ? (t.btn_login_submit || "시스템 접속") : (t.btn_signup_submit || "회원가입"); btn.disabled = false; }
 }
 
 async function handleForgotPassword() {
@@ -4532,7 +4537,7 @@ async function simulateGoogleLogin() {
                     '3. "SHA 인증서 지문" 섹션에 SHA-1 추가\n' +
                     '4. google-services.json 다시 다운로드 → 저장소에 커밋 후 재빌드';
             }
-            alert("Google 로그인 실패:\n" + errMsg);
+            alert((i18n[AppState.currentLang]?.google_login_fail || "Google 로그인 실패:\n") + errMsg);
         }
     } else {
         // ── 웹 브라우저: 기존 Popup 방식 유지 ──
@@ -4541,7 +4546,7 @@ async function simulateGoogleLogin() {
             ConversionTracker.loginComplete('google');
         } catch (e) {
             console.error("웹 구글 로그인 실패:", e);
-            alert("Google 로그인 실패: " + e.message);
+            alert((i18n[AppState.currentLang]?.google_login_fail || "Google 로그인 실패:\n") + e.message);
         }
     }
 }
@@ -4662,7 +4667,7 @@ async function resendVerificationEmail() {
         await fbSignOut(auth);
         alert(i18n[lang]?.verify_resent || "인증 메일이 재발송되었습니다.");
     } catch (e) {
-        alert("오류: " + e.message);
+        alert((i18n[AppState.currentLang]?.general_error || "오류: ") + e.message);
     } finally {
         btn.disabled = false;
     }
@@ -4733,7 +4738,7 @@ async function loadProfileImage(event) {
     if (!file) return;
     if (!auth.currentUser) {
         const lang = AppState.currentLang || 'ko';
-        alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in first.');
+        alert(i18n[lang]?.login_required || '로그인이 필요합니다.');
         return;
     }
     const lang = AppState.currentLang || 'ko';
@@ -4757,7 +4762,7 @@ async function loadProfileImage(event) {
             setProfilePreview(base64);
             if (!auth.currentUser) {
                 _plog('C-FAIL', 'auth.currentUser is null after canvas');
-                alert(lang === 'ko' ? '로그인이 필요합니다.' : 'Please log in first.');
+                alert(i18n[lang]?.login_required || '로그인이 필요합니다.');
                 return;
             }
             _plog('C', `auth OK: uid=${auth.currentUser.uid}`);
@@ -4766,7 +4771,7 @@ async function loadProfileImage(event) {
                 const uid = auth.currentUser.uid;
                 _plog('D', 'Calling uploadImageToStorage...');
                 const lang = AppState.currentLang || 'ko';
-                const progressCb = createUploadProgressCallback(lang === 'ko' ? '프로필 사진 업로드 중...' : 'Uploading profile photo...');
+                const progressCb = createUploadProgressCallback(i18n[lang]?.profile_photo_uploading || '프로필 사진 업로드 중...');
                 const downloadURL = await uploadImageToStorage(`profile_images/${uid}/profile${getImageExtension()}`, base64, progressCb);
                 hideUploadProgress();
                 _plog('E', `Upload OK: url=${downloadURL.substring(0, 80)}...`);
@@ -4779,7 +4784,7 @@ async function loadProfileImage(event) {
                 // base64 직접 저장 대신 실패 플래그 기록 — Firestore 문서 비대화 방지
                 AppState.user.photoURL = AppState.user.photoURL || DEFAULT_PROFILE_SVG;
                 AppState.user._profileUploadFailed = true;
-                alert(lang === 'ko' ? '프로필 사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.' : 'Profile photo upload failed. Please check your network and try again.');
+                alert(i18n[lang]?.profile_upload_fail || '프로필 사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.');
             } finally {
                 _profileUploadInFlight = false;
             }
@@ -4796,18 +4801,18 @@ async function loadProfileImage(event) {
             } catch (e) {
                 _plog('G-FAIL', `saveUserData 실패: ${e.code || ''} ${e.message || e}`);
                 console.error('[Profile] 프로필 사진 DB 저장 실패:', e);
-                alert(lang === 'ko' ? '프로필 사진 저장에 실패했습니다. 다시 시도해주세요.' : 'Failed to save profile picture. Please try again.');
+                alert(i18n[lang]?.profile_save_fail || '프로필 사진 저장에 실패했습니다. 다시 시도해주세요.');
             }
         };
         img.onerror = () => {
             console.error('[Profile] 이미지 로드 실패');
-            alert(lang === 'ko' ? '이미지를 불러올 수 없습니다. 다른 파일을 선택해주세요.' : 'Unable to load image. Please select a different file.');
+            alert(i18n[lang]?.image_load_fail || '이미지를 불러올 수 없습니다. 다른 파일을 선택해주세요.');
         };
         img.src = e.target.result;
     };
     reader.onerror = () => {
         console.error('[Profile] 파일 읽기 실패');
-        alert(lang === 'ko' ? '파일을 읽을 수 없습니다. 다시 시도해주세요.' : 'Unable to read file. Please try again.');
+        alert(i18n[lang]?.file_read_fail || '파일을 읽을 수 없습니다. 다시 시도해주세요.');
     };
     reader.readAsDataURL(file);
 }
@@ -7478,7 +7483,7 @@ window.copyPrevDayTasks = function(checked) {
     const prevDate = getPrevDateStr(diarySelectedDate);
     const prevEntry = getDiaryEntry(prevDate);
     if (!prevEntry || !prevEntry.tasks || !Array.isArray(prevEntry.tasks)) {
-        alert('전일 플랜 데이터가 없습니다.');
+        alert(i18n[AppState.currentLang]?.copy_prev_plan_empty || '전일 플랜 데이터가 없습니다.');
         document.getElementById('chk-copy-prev-tasks').checked = false;
         return;
     }
@@ -7497,7 +7502,7 @@ window.copyPrevDaySchedule = function(checked) {
     const prevDate = getPrevDateStr(diarySelectedDate);
     const prevEntry = getDiaryEntry(prevDate);
     if (!prevEntry || !prevEntry.blocks || Object.keys(prevEntry.blocks).length === 0) {
-        alert('전일 시간표 데이터가 없습니다.');
+        alert(i18n[AppState.currentLang]?.copy_prev_schedule_empty || '전일 시간표 데이터가 없습니다.');
         document.getElementById('chk-copy-prev-schedule').checked = false;
         return;
     }
@@ -7929,7 +7934,7 @@ async function savePlannerEntry() {
                 AppLogger.error('[Planner] 사진 Storage 업로드 실패: ' + (e.message || e));
                 // 업로드 실패 시 사진 없이 저장 (base64 Firestore 저장 방지)
                 photoValue = null;
-                alert(AppState.currentLang === 'ko' ? '사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.' : 'Photo upload failed. Please check your network and try again.');
+                alert(i18n[AppState.currentLang]?.photo_upload_fail || '사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.');
             }
         }
 
@@ -7946,7 +7951,7 @@ async function savePlannerEntry() {
             localStorage.setItem('diary_entries', JSON.stringify(diaries));
         } catch(storageErr) {
             AppLogger.error('[Planner] localStorage 저장 실패: ' + storageErr.message);
-            alert('저장 공간이 부족합니다. 오래된 데이터를 정리해 주세요.');
+            alert(i18n[AppState.currentLang]?.storage_full || '저장 공간이 부족합니다. 오래된 데이터를 정리해 주세요.');
             return;
         }
 
@@ -7965,7 +7970,7 @@ async function savePlannerEntry() {
         AppLogger.info('[Planner] 플래너 저장 완료: ' + dateStr);
     } catch(e) {
         AppLogger.error('[Planner] Save error: ' + (e.stack || e.message));
-        alert('저장 중 오류가 발생했습니다: ' + e.message);
+        alert((i18n[AppState.currentLang]?.save_error || '저장 중 오류가 발생했습니다: ') + e.message);
         return;
     } finally {
         // 저장 완료 후 버튼 재활성화
@@ -8419,7 +8424,7 @@ async function postToReels() {
         }
 
         if (uploadFailed) {
-            alert(lang === 'ko' ? '사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.' : 'Photo upload failed. Please check your network and try again.');
+            alert(i18n[lang]?.photo_upload_fail || '사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.');
             // 버튼 재활성화 후 중단
             updateReelsResetTimer();
             return;
@@ -10660,7 +10665,7 @@ function renderDDayList() {
 function openDDayAddModal() {
     const ddays = AppState.ddays || [];
     if (ddays.length >= DDAY_MAX) {
-        alert(`D-Day는 최대 ${DDAY_MAX}개까지 설정할 수 있습니다.`);
+        alert((i18n[AppState.currentLang]?.dday_limit || 'D-Day는 최대 {max}개까지 설정할 수 있습니다.').replace('{max}', DDAY_MAX));
         return;
     }
     _openDDayFormModal(-1);
@@ -10757,8 +10762,8 @@ function saveDDayFromModal(editIdx) {
     const typeBtn = document.querySelector('.dday-type-btn.active');
     const type = typeBtn ? typeBtn.dataset.type : 'dday';
 
-    if (!title) { alert('제목을 입력하세요.'); return; }
-    if (!date) { alert('날짜를 선택하세요.'); return; }
+    if (!title) { alert(i18n[AppState.currentLang]?.dday_title_required || '제목을 입력하세요.'); return; }
+    if (!date) { alert(i18n[AppState.currentLang]?.dday_date_required || '날짜를 선택하세요.'); return; }
 
     if (!AppState.ddays) AppState.ddays = [];
 
@@ -10769,7 +10774,7 @@ function saveDDayFromModal(editIdx) {
         AppState.ddays[editIdx] = entry;
     } else {
         if (AppState.ddays.length >= DDAY_MAX) {
-            alert(`D-Day는 최대 ${DDAY_MAX}개까지 설정할 수 있습니다.`);
+            alert((i18n[AppState.currentLang]?.dday_limit || 'D-Day는 최대 {max}개까지 설정할 수 있습니다.').replace('{max}', DDAY_MAX));
             return;
         }
         AppState.ddays.push(entry);
@@ -10782,7 +10787,7 @@ function saveDDayFromModal(editIdx) {
 }
 
 function deleteDDay(idx) {
-    if (!confirm('이 D-Day를 삭제하시겠습니까?')) return;
+    if (!confirm(i18n[AppState.currentLang]?.dday_delete_confirm || '이 D-Day를 삭제하시겠습니까?')) return;
     AppState.ddays.splice(idx, 1);
     closeDDayModal();
     renderDDayList();
@@ -11124,12 +11129,12 @@ function saveLifeStatusFromModal() {
     const expectAge = parseInt(document.getElementById('ls-input-expect-age')?.value) || 80;
     const remainUnit = document.getElementById('ls-input-remain-unit')?.value || 'hours';
 
-    if (!birthday) { alert('생년월일을 입력하세요.'); return; }
+    if (!birthday) { alert(i18n[AppState.currentLang]?.birthday_required || '생년월일을 입력하세요.'); return; }
 
     // 개인정보 동의 여부 확인
     const hasConsent = localStorage.getItem('life_status_privacy_consent');
     if (!hasConsent) {
-        alert('개인정보 수집 및 이용에 동의해야 저장할 수 있습니다.');
+        alert(i18n[AppState.currentLang]?.privacy_consent_required || '개인정보 수집 및 이용에 동의해야 저장할 수 있습니다.');
         return;
     }
 
@@ -11242,7 +11247,7 @@ function closeLifeStatusPrivacyModal() {
 }
 
 function resetLifeStatus() {
-    if (!confirm('Life Status 정보를 초기화하시겠습니까?\n개인정보 수집 동의도 함께 철회됩니다.')) return;
+    if (!confirm(i18n[AppState.currentLang]?.life_status_reset_confirm || 'Life Status 정보를 초기화하시겠습니까?\n개인정보 수집 동의도 함께 철회됩니다.')) return;
     localStorage.removeItem(LIFE_STATUS_STORAGE_KEY);
     localStorage.removeItem('life_status_privacy_consent');
     closeLifeStatusModal();
@@ -14015,7 +14020,7 @@ window.renderLifeStatus = renderLifeStatus;
         var isbn = (input ? input.value : '').trim().replace(/[-\s]/g, '');
         if (window.AppLogger) AppLogger.info('[ISBN] Manual lookup: ' + isbn);
         if (!isbn || isbn.length < 10) {
-            alert('ISBN을 정확히 입력해주세요 (10자리 또는 13자리)');
+            alert(i18n[AppState.currentLang]?.isbn_invalid || 'ISBN을 정확히 입력해주세요 (10자리 또는 13자리)');
             return;
         }
         // Normalize ISBN-10 to ISBN-13 for API compatibility
