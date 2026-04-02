@@ -7148,23 +7148,7 @@ async function positionNativeAd(tabId) {
 
         const rect = placeholder.getBoundingClientRect();
 
-        // 던전/플래너탭: 최하단 고정 위치 계산
-        if (tabId === 'dungeon' || tabId === 'diary') {
-            const navHeight = 65;
-            const adHeight = rect.height || 280;
-            const fixedY = window.innerHeight - navHeight - adHeight;
-            await NativeAd.showAd({
-                x: 0,
-                y: fixedY,
-                width: window.innerWidth,
-                height: adHeight,
-                clipTop: 0,
-            });
-            _nativeAdVisible = true;
-            return;
-        }
-
-        // 소셜탭: sticky header 기준 클리핑, Day1탭: 앱 header 기준 클리핑
+        // 소셜탭: sticky header 기준 클리핑, 그 외: 앱 header 기준 클리핑
         let clipTop = 0;
         if (tabId === 'social') {
             const sh = document.querySelector('.social-sticky-header');
@@ -7193,9 +7177,6 @@ async function positionNativeAd(tabId) {
  */
 function setupNativeAdScrollSync(tabId) {
     cleanupNativeAdScrollSync();
-
-    // 던전/플래너탭: 최하단 고정이므로 스크롤 동기화 불필요 (항상 표시)
-    if (tabId === 'dungeon' || tabId === 'diary') return;
 
     const mainEl = document.querySelector('main');
     const placeholderId = 'native-ad-placeholder-' + tabId;
