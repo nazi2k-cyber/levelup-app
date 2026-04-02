@@ -911,7 +911,7 @@ function initStatusCardReorder() {
 
 // --- 햄버거 메뉴 & 상태창 편집 ---
 const STATUS_CARD_LABELS = {
-    'step-count': { name: '걸음수', icon: '🚶' },
+    'step-count': { name_key: 'card_step_count', name: '걸음수', icon: '🚶' },
     'stat-radar': { name: 'STAT RADAR', icon: '📊' },
     'bonus-exp': { name_key: 'card_bonus_exp', name: '보너스 EXP', icon: '🎬' },
     'pomodoro': { name: 'POMODORO', icon: '🍅' },
@@ -10620,7 +10620,7 @@ function renderDDayList() {
 
     if (ddays.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding:15px 0; color:var(--text-sub); font-size:0.8rem;">
-            D-Day를 추가하여 중요한 날을 관리하세요.
+            ${i18n[AppState.currentLang]?.dday_empty || 'D-Day를 추가하여 중요한 날을 관리하세요.'}
         </div>`;
         return;
     }
@@ -14870,11 +14870,13 @@ window.renderLifeStatus = renderLifeStatus;
         if (!el) return;
         var list = loadRcHistory();
         if (list.length === 0) { el.innerHTML = ''; return; }
+        var _t = i18n[AppState.currentLang] || {};
+        var _locale = getDateLocale();
         var maxShow = Math.min(list.length, 3);
-        var html = '<div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:4px;">최근 기록</div>';
+        var html = '<div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:4px;">' + (_t.history_recent || '최근 기록') + '</div>';
         for (var i = 0; i < maxShow; i++) {
             var item = list[i];
-            var dateStr = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+            var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric' });
             if (item.type === 'vdot') {
                 html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
                     '<span>' + dateStr + ' · ' + item.dist + ' ' + item.unit + '</span>' +
@@ -14971,6 +14973,8 @@ window.renderLifeStatus = renderLifeStatus;
 
     function renderRcHistory() {
         var list = loadRcHistory();
+        var _t = i18n[AppState.currentLang] || {};
+        var _locale = getDateLocale();
         var paceItems = [];
         var vdotItems = [];
         list.forEach(function(e, i) {
@@ -14983,15 +14987,15 @@ window.renderLifeStatus = renderLifeStatus;
         var paceClearBtn = document.getElementById('rc-pace-history-clear');
         if (paceListEl) {
             if (paceItems.length === 0) {
-                paceListEl.innerHTML = '<div class="calc-history-empty">저장된 기록이 없습니다</div>';
+                paceListEl.innerHTML = '<div class="calc-history-empty">' + (_t.history_empty || '저장된 기록이 없습니다') + '</div>';
                 if (paceClearBtn) paceClearBtn.style.display = 'none';
             } else {
                 if (paceClearBtn) paceClearBtn.style.display = '';
                 var html = '';
                 paceItems.forEach(function(obj) {
                     var item = obj.item;
-                    var dateStr = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    var modeLabel = item.type === 'pace' ? '페이스' : item.type === 'distance' ? '거리' : '시간';
+                    var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    var modeLabel = item.type === 'pace' ? (_t.history_mode_pace || '페이스') : item.type === 'distance' ? (_t.history_mode_distance || '거리') : (_t.history_mode_time || '시간');
                     html += '<div class="calc-history-item">' +
                         '<div class="calc-history-info">' +
                         '<div class="calc-history-main">' + item.dist + ' ' + item.unit + ' / ' + item.time + '</div>' +
@@ -15010,14 +15014,14 @@ window.renderLifeStatus = renderLifeStatus;
         var vdotClearBtn = document.getElementById('rc-vdot-history-clear');
         if (vdotListEl) {
             if (vdotItems.length === 0) {
-                vdotListEl.innerHTML = '<div class="calc-history-empty">저장된 기록이 없습니다</div>';
+                vdotListEl.innerHTML = '<div class="calc-history-empty">' + (_t.history_empty || '저장된 기록이 없습니다') + '</div>';
                 if (vdotClearBtn) vdotClearBtn.style.display = 'none';
             } else {
                 if (vdotClearBtn) vdotClearBtn.style.display = '';
                 var html2 = '';
                 vdotItems.forEach(function(obj) {
                     var item = obj.item;
-                    var dateStr = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                     html2 += '<div class="calc-history-item">' +
                         '<div class="calc-history-info">' +
                         '<div class="calc-history-main">' + item.dist + ' ' + item.unit + ' / ' + item.time + '</div>' +
@@ -15202,13 +15206,18 @@ window.renderLifeStatus = renderLifeStatus;
         if (!el) return;
         var list = loadOrmHistory();
         if (list.length === 0) { el.innerHTML = ''; return; }
+        var _t = i18n[AppState.currentLang] || {};
+        var _en = getExerciseNames();
+        var _locale = getDateLocale();
+        var repUnit = _t.history_rep_unit || '회';
         var maxShow = Math.min(list.length, 3);
-        var html = '<div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:4px;">최근 기록</div>';
+        var html = '<div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:4px;">' + (_t.history_recent || '최근 기록') + '</div>';
         for (var i = 0; i < maxShow; i++) {
             var item = list[i];
-            var dateStr = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+            var eName = _en[item.exercise] || item.exerciseName || item.exercise;
+            var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric' });
             html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
-                '<span>' + dateStr + ' · ' + item.exerciseName + ' ' + item.weight + 'kg×' + item.reps + '회</span>' +
+                '<span>' + dateStr + ' · ' + eName + ' ' + item.weight + 'kg×' + item.reps + repUnit + '</span>' +
                 '<span style="color:var(--neon-red); font-weight:700;">' + item.result1rm + ' kg</span></div>';
         }
         el.innerHTML = html;
@@ -15217,7 +15226,14 @@ window.renderLifeStatus = renderLifeStatus;
     // --- 1RM Calc History ---
     var ORM_HISTORY_KEY = 'orm_calc_history';
     var ORM_HISTORY_MAX = 10;
-    var exerciseNames = { squat: '스쿼트', bench: '벤치프레스', deadlift: '데드리프트' };
+    function getExerciseNames() {
+        var _t = i18n[AppState.currentLang] || {};
+        return { squat: _t.orm_squat || '스쿼트', bench: _t.orm_bench || '벤치프레스', deadlift: _t.orm_deadlift || '데드리프트' };
+    }
+    function getDateLocale() {
+        var lang = AppState.currentLang || 'ko';
+        return lang === 'ja' ? 'ja-JP' : lang === 'en' ? 'en-US' : 'ko-KR';
+    }
 
     function loadOrmHistory() {
         try { return JSON.parse(localStorage.getItem(ORM_HISTORY_KEY)) || []; }
@@ -15231,7 +15247,7 @@ window.renderLifeStatus = renderLifeStatus;
         var list = loadOrmHistory();
         list.unshift({
             exercise: exercise,
-            exerciseName: exerciseNames[exercise] || exercise,
+            exerciseName: getExerciseNames()[exercise] || exercise,
             weight: weight,
             reps: reps,
             result1rm: result1rm,
@@ -15262,9 +15278,13 @@ window.renderLifeStatus = renderLifeStatus;
         var listEl = document.getElementById('orm-history-list');
         var clearBtn = document.getElementById('orm-history-clear');
         if (!listEl) return;
+        var _t = i18n[AppState.currentLang] || {};
+        var _en = getExerciseNames();
+        var _locale = getDateLocale();
+        var repUnit = _t.history_rep_unit || '회';
 
         if (list.length === 0) {
-            listEl.innerHTML = '<div class="calc-history-empty">저장된 기록이 없습니다</div>';
+            listEl.innerHTML = '<div class="calc-history-empty">' + (_t.history_empty || '저장된 기록이 없습니다') + '</div>';
             if (clearBtn) clearBtn.style.display = 'none';
             return;
         }
@@ -15272,10 +15292,11 @@ window.renderLifeStatus = renderLifeStatus;
         if (clearBtn) clearBtn.style.display = '';
         var html = '';
         list.forEach(function(item, idx) {
-            var dateStr = new Date(item.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            var eName = _en[item.exercise] || item.exerciseName || item.exercise;
+            var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             html += '<div class="calc-history-item">' +
                 '<div class="calc-history-info">' +
-                '<div class="calc-history-main">' + item.exerciseName + ' · ' + item.weight + 'kg × ' + item.reps + '회</div>' +
+                '<div class="calc-history-main">' + eName + ' · ' + item.weight + 'kg × ' + item.reps + repUnit + '</div>' +
                 '<div class="calc-history-sub">' + dateStr + '</div>' +
                 '</div>' +
                 '<div class="calc-history-value" style="color:var(--neon-red);">' + item.result1rm + ' <span style="font-size:0.7rem;color:var(--text-sub);">kg</span></div>' +
