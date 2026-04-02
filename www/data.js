@@ -520,6 +520,18 @@ const i18n = {
         card_my_library: "내 서재",
         card_running_calc: "러닝 계산기",
         card_orm_calc: "1RM 계산기",
+        card_step_count: "걸음수",
+
+        // History labels
+        history_recent: "최근 기록",
+        history_empty: "저장된 기록이 없습니다",
+        history_rep_unit: "회",
+        history_mode_pace: "페이스",
+        history_mode_distance: "거리",
+        history_mode_time: "시간",
+
+        // D-Day empty
+        dday_empty: "D-Day를 추가하여 중요한 날을 관리하세요.",
 
         // Running Calculator time units
         rc_time_unit_min: "분",
@@ -1043,8 +1055,20 @@ const i18n = {
         card_my_library: "My Library",
         card_running_calc: "Running Calculator",
         card_orm_calc: "1RM Calculator",
+        card_step_count: "Steps",
 
-        // Running Calculator time units
+        // History labels
+        history_recent: "Recent Records",
+        history_empty: "No saved records",
+        history_rep_unit: "rep(s)",
+        history_mode_pace: "Pace",
+        history_mode_distance: "Distance",
+        history_mode_time: "Time",
+
+        // D-Day empty
+        dday_empty: "Add a D-Day to track important dates.",
+
+        // Running Calculator time units (en already uses data-i18n keys rc_min/rc_sec/rc_hour)
         rc_time_unit_min: "min",
         rc_time_unit_sec: "sec",
         rc_time_unit_hour: "hr"
@@ -1566,6 +1590,18 @@ const i18n = {
         card_my_library: "マイ書斎",
         card_running_calc: "ランニング計算機",
         card_orm_calc: "1RM計算機",
+        card_step_count: "歩数",
+
+        // 履歴ラベル
+        history_recent: "最近の記録",
+        history_empty: "保存された記録がありません",
+        history_rep_unit: "回",
+        history_mode_pace: "ペース",
+        history_mode_distance: "距離",
+        history_mode_time: "時間",
+
+        // D-Day空状態
+        dday_empty: "D-Dayを追加して大切な日を管理しましょう。",
 
         // ランニング計算機の時間単位
         rc_time_unit_min: "分",
