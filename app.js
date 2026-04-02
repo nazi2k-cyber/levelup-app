@@ -913,15 +913,15 @@ function initStatusCardReorder() {
 const STATUS_CARD_LABELS = {
     'step-count': { name: '걸음수', icon: '🚶' },
     'stat-radar': { name: 'STAT RADAR', icon: '📊' },
-    'bonus-exp': { name: '보너스 EXP', icon: '🎬' },
+    'bonus-exp': { name_key: 'card_bonus_exp', name: '보너스 EXP', icon: '🎬' },
     'pomodoro': { name: 'POMODORO', icon: '🍅' },
     'life-status': { name: 'LIFE STATUS', icon: '📅' },
     'dday': { name: 'D-DAY', icon: '⏰' },
-    'dday-caption': { name: '목표/좌우명', icon: '💬' },
-    'daily-quote': { name: '오늘의 명언', icon: '❝' },
-    'my-library': { name: '내 서재', icon: '📚' },
-    'running-calc': { name: '러닝 계산기', icon: '🏃' },
-    'orm-calc': { name: '1RM 계산기', icon: '🏋️' }
+    'dday-caption': { name_key: 'card_dday_caption', name: '목표/좌우명', icon: '💬' },
+    'daily-quote': { name_key: 'card_daily_quote', name: '오늘의 명언', icon: '❝' },
+    'my-library': { name_key: 'card_my_library', name: '내 서재', icon: '📚' },
+    'running-calc': { name_key: 'card_running_calc', name: '러닝 계산기', icon: '🏃' },
+    'orm-calc': { name_key: 'card_orm_calc', name: '1RM 계산기', icon: '🏋️' }
 };
 const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
@@ -1062,7 +1062,7 @@ function renderEditorCardList() {
             <span class="editor-card-drag-handle">⋮⋮</span>
             <div class="editor-card-icon">${info.icon}</div>
             <div class="editor-card-info">
-                <div class="editor-card-name">${info.name}</div>
+                <div class="editor-card-name">${(info.name_key && i18n[AppState.currentLang]?.[info.name_key]) || info.name}</div>
             </div>
             ${isFixed ? '' : `<button class="editor-card-remove-btn" data-remove-card="${cardId}">−</button>`}
         `;
@@ -1195,7 +1195,7 @@ function openCardSelectModal() {
         item.className = 'card-select-item';
         item.innerHTML = `
             <input type="checkbox" value="${cardId}">
-            <span class="card-select-item-label">${info.name}</span>
+            <span class="card-select-item-label">${(info.name_key && i18n[AppState.currentLang]?.[info.name_key]) || info.name}</span>
         `;
         list.appendChild(item);
     });
@@ -10678,6 +10678,7 @@ function openDDayEditModal(idx) {
 function _openDDayFormModal(editIdx) {
     const isEdit = editIdx >= 0;
     const dd = isEdit ? AppState.ddays[editIdx] : null;
+    const _t = i18n[AppState.currentLang] || {};
 
     const overlay = document.createElement('div');
     overlay.className = 'report-modal-overlay';
@@ -10693,33 +10694,33 @@ function _openDDayFormModal(editIdx) {
     <div class="report-modal-content" style="max-width:340px; padding:20px;">
         <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">${isEdit ? 'D-Day 수정' : 'D-Day 추가'}</div>
         <div style="margin-bottom:10px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">제목</label>
-            <input id="dday-input-title" type="text" maxlength="20" placeholder="예: 시험일, 금연 시작" value="${isEdit ? sanitizeAttr(dd.title) : ''}"
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${_t.dday_modal_title_label || '제목'}</label>
+            <input id="dday-input-title" type="text" maxlength="20" placeholder="${_t.dday_modal_title_placeholder || '예: 시험일, 금연 시작'}" value="${isEdit ? sanitizeAttr(dd.title) : ''}"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
         </div>
         <div style="margin-bottom:10px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">유형</label>
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${_t.dday_modal_type_label || '유형'}</label>
             <div style="display:flex; gap:8px;">
                 <button class="dday-type-btn ${(!isEdit || dd.type === 'dday') ? 'active' : ''}" data-type="dday" onclick="selectDDayType('dday')" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.8rem; cursor:pointer;">📅 D-Day</button>
                 <button class="dday-type-btn ${isDDayPlus ? 'active' : ''}" data-type="ddayplus" onclick="selectDDayType('ddayplus')" style="flex:1; padding:8px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.8rem; cursor:pointer;">🔥 D-Day+</button>
             </div>
-            <div id="dday-type-desc" style="font-size:0.65rem; color:var(--text-sub); margin-top:4px;">${(!isEdit || dd.type === 'dday') ? '목표일까지 남은 날을 카운트합니다.' : '시작일로부터 경과한 날을 카운트합니다.'}</div>
+            <div id="dday-type-desc" style="font-size:0.65rem; color:var(--text-sub); margin-top:4px;">${(!isEdit || dd.type === 'dday') ? (_t.dday_type_desc_dday || '목표일까지 남은 날을 카운트합니다.') : (_t.dday_type_desc_plus || '시작일로부터 경과한 날을 카운트합니다.')}</div>
         </div>
         <div style="margin-bottom:10px;">
-            <label id="dday-date-label" style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${isDDayPlus ? '시작 날짜' : '목표 날짜'}</label>
+            <label id="dday-date-label" style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${isDDayPlus ? (_t.dday_start_date || '시작 날짜') : (_t.dday_target_date || '목표 날짜')}</label>
             <input id="dday-input-date" type="date" value="${isEdit ? dd.date : todayStr}"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
         </div>
         <div id="dday-push-row" style="margin-bottom:14px; ${isDDayPlus ? 'opacity:0.4;' : ''}">
             <label style="display:flex; align-items:center; gap:8px; cursor:${isDDayPlus ? 'not-allowed' : 'pointer'};">
                 <input id="dday-input-push" type="checkbox" ${pushChecked} ${pushDisabled}>
-                <span style="font-size:0.8rem; color:var(--text-main);">🔔 D-Day 당일 오전 9시 푸시 알림</span>
+                <span style="font-size:0.8rem; color:var(--text-main);">${_t.dday_push_label || '🔔 D-Day 당일 오전 9시 푸시 알림'}</span>
             </label>
         </div>
         <div style="display:flex; gap:8px;">
-            ${isEdit ? `<button onclick="deleteDDay(${editIdx})" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">삭제</button>` : ''}
-            <button onclick="closeDDayModal()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">취소</button>
-            <button onclick="saveDDayFromModal(${editIdx})" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${isEdit ? '저장' : '추가'}</button>
+            ${isEdit ? `<button onclick="deleteDDay(${editIdx})" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">${_t.dday_btn_delete || '삭제'}</button>` : ''}
+            <button onclick="closeDDayModal()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">${_t.dday_btn_cancel || '취소'}</button>
+            <button onclick="saveDDayFromModal(${editIdx})" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${isEdit ? (_t.dday_btn_save || '저장') : (_t.dday_btn_add || '추가')}</button>
         </div>
     </div>`;
 
@@ -10737,12 +10738,13 @@ function selectDDayType(type) {
     const pushInput = document.getElementById('dday-input-push');
     const isDDayPlus = type === 'ddayplus';
 
+    const _t = i18n[AppState.currentLang] || {};
     if (type === 'dday') {
-        if (desc) desc.textContent = '목표일까지 남은 날을 카운트합니다.';
-        if (dateLabel) dateLabel.textContent = '목표 날짜';
+        if (desc) desc.textContent = _t.dday_type_desc_dday || '목표일까지 남은 날을 카운트합니다.';
+        if (dateLabel) dateLabel.textContent = _t.dday_target_date || '목표 날짜';
     } else {
-        if (desc) desc.textContent = '시작일로부터 경과한 날을 카운트합니다.';
-        if (dateLabel) dateLabel.textContent = '시작 날짜';
+        if (desc) desc.textContent = _t.dday_type_desc_plus || '시작일로부터 경과한 날을 카운트합니다.';
+        if (dateLabel) dateLabel.textContent = _t.dday_start_date || '시작 날짜';
     }
 
     // D-Day+는 특정 목표일이 없으므로 푸시 알림 비활성화
@@ -10844,14 +10846,15 @@ async function scheduleDDayNotifications() {
             const scheduleDate = new Date(dd.date + 'T09:00:00');
             if (scheduleDate <= now) return; // 이미 지난 날짜는 스케줄하지 않음
 
+            const _nt = i18n[AppState.currentLang] || {};
             notifications.push({
-                title: '📅 D-Day 알림',
-                body: `오늘은 [${dd.title}] D-Day 입니다!`,
+                title: _nt.dday_notif_title || '📅 D-Day 알림',
+                body: (_nt.dday_notif_body || '오늘은 [{title}] D-Day 입니다!').replace('{title}', dd.title),
                 id: 9000 + idx,
                 schedule: { at: scheduleDate },
                 sound: 'default',
                 channelId: 'dday-notifications',
-                largeBody: `오늘은 [${dd.title}] D-Day 입니다! 목표를 향해 화이팅!`,
+                largeBody: (_nt.dday_notif_large || '오늘은 [{title}] D-Day 입니다! 목표를 향해 화이팅!').replace('{title}', dd.title),
                 summaryText: 'D-Day'
             });
         });
@@ -10895,7 +10898,8 @@ function renderDDayCaption() {
     if (caption) {
         display.innerHTML = '<span class="dday-caption-text">' + sanitizeText(caption) + '</span>';
     } else {
-        display.innerHTML = '<span class="dday-caption-placeholder">나의 목표 / 좌우명을 입력하세요</span>';
+        const _t = i18n[AppState.currentLang] || {};
+        display.innerHTML = '<span class="dday-caption-placeholder">' + (_t.dday_caption_placeholder || '나의 목표 / 좌우명을 입력하세요') + '</span>';
     }
 }
 
@@ -10909,14 +10913,14 @@ function openDDayCaptionEdit() {
     overlay.className = 'report-modal-overlay';
     overlay.innerHTML = `
         <div class="report-modal-content" style="max-width:360px; padding:24px;">
-            <h3 style="margin:0 0 16px 0; font-size:1rem; color:var(--neon-blue);">목표 / 좌우명</h3>
-            <textarea id="dday-caption-input" class="dday-caption-input-field" maxlength="100" placeholder="나의 목표 또는 좌우명을 입력하세요...">${sanitizeText(currentCaption)}</textarea>
+            <h3 style="margin:0 0 16px 0; font-size:1rem; color:var(--neon-blue);">${(i18n[AppState.currentLang] || {}).dday_caption_title || '목표 / 좌우명'}</h3>
+            <textarea id="dday-caption-input" class="dday-caption-input-field" maxlength="100" placeholder="${(i18n[AppState.currentLang] || {}).dday_caption_input_placeholder || '나의 목표 또는 좌우명을 입력하세요...'}">${sanitizeText(currentCaption)}</textarea>
             <div style="font-size:0.7rem; color:var(--text-sub); margin-top:4px; text-align:right;">
                 <span id="dday-caption-char-count">${currentCaption.length}</span> / 100
             </div>
             <div style="display:flex; gap:8px; margin-top:16px;">
-                <button class="btn-info-sm" style="flex:1; padding:10px;" onclick="window.closeDDayCaptionModal()">취소</button>
-                <button class="btn-info-sm" style="flex:1; padding:10px; background:var(--neon-blue); color:#000; font-weight:bold;" onclick="window.saveDDayCaption()">저장</button>
+                <button class="btn-info-sm" style="flex:1; padding:10px;" onclick="window.closeDDayCaptionModal()">${(i18n[AppState.currentLang] || {}).dday_btn_cancel || '취소'}</button>
+                <button class="btn-info-sm" style="flex:1; padding:10px; background:var(--neon-blue); color:#000; font-weight:bold;" onclick="window.saveDDayCaption()">${(i18n[AppState.currentLang] || {}).dday_btn_save || '저장'}</button>
             </div>
         </div>
     `;
@@ -10977,10 +10981,11 @@ function renderLifeStatus() {
 
     const config = getLifeStatusConfig();
 
+    const _t = i18n[AppState.currentLang] || {};
     if (!config || !config.birthday) {
         container.innerHTML = `<div style="text-align:center; padding:20px 0; color:var(--text-sub); font-size:0.85rem; line-height:1.6;">
-            생년월일을 설정하여 나의 인생 현황을 확인하세요.
-            <div style="margin-top:6px; font-size:0.75rem;">🔒 저장 시 개인정보 수집에 동의하게 됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.</div>
+            ${_t.ls_empty || '생년월일을 설정하여 나의 인생 현황을 확인하세요.'}
+            <div style="margin-top:6px; font-size:0.75rem;">${_t.ls_privacy_hint || '🔒 저장 시 개인정보 수집에 동의하게 됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.'}</div>
         </div>`;
         return;
     }
@@ -11011,11 +11016,11 @@ function renderLifeStatus() {
     const remainUnit = config.remainUnit || 'hours';
     let remainDetail = '';
     if (remainUnit === 'hours') {
-        remainDetail = `${Math.floor(remainMs / (1000 * 60 * 60)).toLocaleString()}시간`;
+        remainDetail = `${Math.floor(remainMs / (1000 * 60 * 60)).toLocaleString()}${_t.ls_unit_hours || '시간'}`;
     } else if (remainUnit === 'days') {
-        remainDetail = `${remainDays.toLocaleString()}일`;
+        remainDetail = `${remainDays.toLocaleString()}${_t.ls_unit_days || '일'}`;
     } else if (remainUnit === 'weeks') {
-        remainDetail = `${Math.floor(remainDays / 7).toLocaleString()}주`;
+        remainDetail = `${Math.floor(remainDays / 7).toLocaleString()}${_t.ls_unit_weeks || '주'}`;
     }
 
     // 인생 진행률
@@ -11025,25 +11030,25 @@ function renderLifeStatus() {
     container.innerHTML = `
         <div class="life-status-item">
             <div>
-                <div class="ls-label">📅 살아온 날</div>
-                <div class="ls-sub">현재 나이: ${currentAge}세</div>
+                <div class="ls-label">${_t.ls_days_lived || '📅 살아온 날'}</div>
+                <div class="ls-sub">${(_t.ls_current_age || '현재 나이: {age}세').replace('{age}', currentAge)}</div>
             </div>
-            <div class="ls-value blue">${daysLived.toLocaleString()}일</div>
+            <div class="ls-value blue">${daysLived.toLocaleString()}${_t.ls_unit_days || '일'}</div>
         </div>
         <div class="life-status-item">
             <div>
-                <div class="ls-label">⏳ 남은 시간</div>
-                <div class="ls-sub">${expectAge}세 기준</div>
+                <div class="ls-label">${_t.ls_remaining || '⏳ 남은 시간'}</div>
+                <div class="ls-sub">${(_t.ls_based_on_age || '{age}세 기준').replace('{age}', expectAge)}</div>
             </div>
             <div style="text-align:right;">
-                <div class="ls-value gold">${remainYears}년 ${remainMonths}개월</div>
+                <div class="ls-value gold">${(_t.ls_years_months || '{years}년 {months}개월').replace('{years}', remainYears).replace('{months}', remainMonths)}</div>
                 <div style="font-size:0.75rem; color:var(--neon-blue); margin-top:2px;">(${remainDetail})</div>
             </div>
         </div>
         <div class="life-status-item">
             <div style="width:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="ls-label">📊 인생 진행률 (${expectAge}세)</div>
+                    <div class="ls-label">${(_t.ls_progress || '📊 인생 진행률 ({age}세)').replace('{age}', expectAge)}</div>
                     <div class="ls-value gold" style="font-size:1rem;">${progress.toFixed(1)}%</div>
                 </div>
                 <div class="life-status-progress-bar">
@@ -11064,50 +11069,52 @@ function openLifeStatusSettings() {
     const savedAge = config.expectAge || 80;
     const savedUnit = config.remainUnit || 'hours';
 
+    const _t = i18n[AppState.currentLang] || {};
+    const ageSuffix = _t.ls_unit_years_suffix || '세';
     const ageOptions = [60,65,70,75,80,85,90,95,100].map(a =>
-        `<option value="${a}" ${a === savedAge ? 'selected' : ''}>${a}세</option>`
+        `<option value="${a}" ${a === savedAge ? 'selected' : ''}>${a}${ageSuffix}</option>`
     ).join('');
 
     const unitOptions = [
-        { value: 'hours', label: '시간' },
-        { value: 'days', label: '일' },
-        { value: 'weeks', label: '주' }
+        { value: 'hours', label: _t.ls_unit_hours || '시간' },
+        { value: 'days', label: _t.ls_unit_days || '일' },
+        { value: 'weeks', label: _t.ls_unit_weeks || '주' }
     ].map(u => `<option value="${u.value}" ${u.value === savedUnit ? 'selected' : ''}>${u.label}</option>`).join('');
 
     overlay.innerHTML = `
     <div class="report-modal-content" style="max-width:340px; padding:20px;">
-        <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">Life Status 설정</div>
+        <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">${_t.ls_settings_title || 'Life Status 설정'}</div>
         <div style="margin-bottom:12px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">생년월일</label>
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${_t.ls_birthday_label || '생년월일'}</label>
             <input id="ls-input-birthday" type="date" value="${savedBirthday}" max="${todayStr}"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
         </div>
         <div style="margin-bottom:12px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">기대 나이</label>
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${_t.ls_expect_age_label || '기대 나이'}</label>
             <select id="ls-input-expect-age"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
                 ${ageOptions}
             </select>
         </div>
         <div style="margin-bottom:14px;">
-            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">남은 시간 단위</label>
+            <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">${_t.ls_remain_unit_label || '남은 시간 단위'}</label>
             <select id="ls-input-remain-unit"
                 style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border-color); background:var(--panel-bg); color:var(--text-main); font-size:0.85rem; box-sizing:border-box;">
                 ${unitOptions}
             </select>
         </div>
-        <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:10px;">🔒 생년월일은 계정 동기화를 위해 서버에 암호화 저장됩니다.</div>
+        <div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:10px;">${_t.ls_security_notice || '🔒 생년월일은 계정 동기화를 위해 서버에 암호화 저장됩니다.'}</div>
         <div style="margin-bottom:14px;">
             <label id="ls-consent-checkbox-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.75rem; color:var(--text-main);">
                 <input type="checkbox" id="ls-consent-checkbox" ${localStorage.getItem('life_status_privacy_consent') ? 'checked' : ''} style="accent-color:var(--neon-blue); width:16px; height:16px; cursor:pointer;" readonly>
-                📋 개인정보 수집 및 이용 동의서
+                ${_t.ls_consent_label || '📋 개인정보 수집 및 이용 동의서'}
             </label>
         </div>
-        <div id="ls-loading-msg" style="display:none; text-align:center; padding:8px 0; font-size:0.8rem; color:var(--neon-blue);">계산 중입니다...</div>
+        <div id="ls-loading-msg" style="display:none; text-align:center; padding:8px 0; font-size:0.8rem; color:var(--neon-blue);">${_t.ls_loading || '계산 중입니다...'}</div>
         <div style="display:flex; gap:8px;">
-            ${config.birthday ? `<button onclick="resetLifeStatus()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">초기화</button>` : ''}
-            <button onclick="closeLifeStatusModal()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">취소</button>
-            <button onclick="saveLifeStatusFromModal()" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">저장</button>
+            ${config.birthday ? `<button onclick="resetLifeStatus()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--neon-red); background:transparent; color:var(--neon-red); font-size:0.85rem; font-weight:bold; cursor:pointer;">${_t.ls_btn_reset || '초기화'}</button>` : ''}
+            <button onclick="closeLifeStatusModal()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">${_t.ls_btn_cancel || '취소'}</button>
+            <button onclick="saveLifeStatusFromModal()" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${_t.ls_btn_save || '저장'}</button>
         </div>
     </div>`;
 
@@ -11168,50 +11175,51 @@ function openLifeStatusPrivacyModal(onAgreeCallback) {
     overlay.className = 'report-modal-overlay';
     overlay.id = 'life-status-privacy-overlay';
 
+    const _t = i18n[AppState.currentLang] || {};
     overlay.innerHTML = `
     <div class="report-modal-content" style="max-width:380px; padding:20px; max-height:80vh; overflow-y:auto;">
-        <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">개인정보 수집 및 이용 동의서</div>
+        <div style="font-size:1rem; font-weight:bold; color:var(--neon-blue); margin-bottom:14px;">${_t.ls_privacy_title || '개인정보 수집 및 이용 동의서'}</div>
 
         <div style="font-size:0.78rem; color:var(--text-main); line-height:1.7; margin-bottom:14px;">
             <p style="margin:0 0 10px 0; color:var(--text-sub);">
-                LevelUp은 「개인정보 보호법」에 따라 아래와 같이 개인정보를 수집·이용하고자 합니다. 내용을 확인 후 동의 여부를 결정해 주세요.
+                ${_t.ls_privacy_intro || 'LevelUp은 「개인정보 보호법」에 따라 아래와 같이 개인정보를 수집·이용하고자 합니다. 내용을 확인 후 동의 여부를 결정해 주세요.'}
             </p>
 
             <table style="width:100%; border-collapse:collapse; font-size:0.75rem; margin-bottom:12px;">
                 <thead>
                     <tr style="background:rgba(0,180,255,0.1);">
-                        <th style="border:1px solid var(--border-color); padding:8px; text-align:left; color:var(--neon-blue);">항목</th>
-                        <th style="border:1px solid var(--border-color); padding:8px; text-align:left; color:var(--neon-blue);">내용</th>
+                        <th style="border:1px solid var(--border-color); padding:8px; text-align:left; color:var(--neon-blue);">${_t.ls_privacy_th_item || '항목'}</th>
+                        <th style="border:1px solid var(--border-color); padding:8px; text-align:left; color:var(--neon-blue);">${_t.ls_privacy_th_content || '내용'}</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">수집 항목</td>
-                        <td style="border:1px solid var(--border-color); padding:8px;">생년월일, 기대 수명 설정값</td>
+                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">${_t.ls_privacy_collect_label || '수집 항목'}</td>
+                        <td style="border:1px solid var(--border-color); padding:8px;">${_t.ls_privacy_collect_value || '생년월일, 기대 수명 설정값'}</td>
                     </tr>
                     <tr>
-                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">수집 목적</td>
-                        <td style="border:1px solid var(--border-color); padding:8px;">Life Status(인생 현황) 기능 제공 및 기기 간 데이터 동기화</td>
+                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">${_t.ls_privacy_purpose_label || '수집 목적'}</td>
+                        <td style="border:1px solid var(--border-color); padding:8px;">${_t.ls_privacy_purpose_value || 'Life Status(인생 현황) 기능 제공 및 기기 간 데이터 동기화'}</td>
                     </tr>
                     <tr>
-                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">보유 기간</td>
-                        <td style="border:1px solid var(--border-color); padding:8px;">회원 탈퇴 시 또는 이용자가 직접 초기화 시 즉시 파기</td>
+                        <td style="border:1px solid var(--border-color); padding:8px; color:var(--text-sub); white-space:nowrap;">${_t.ls_privacy_period_label || '보유 기간'}</td>
+                        <td style="border:1px solid var(--border-color); padding:8px;">${_t.ls_privacy_period_value || '회원 탈퇴 시 또는 이용자가 직접 초기화 시 즉시 파기'}</td>
                     </tr>
                 </tbody>
             </table>
 
             <div style="background:var(--panel-bg); border:1px solid var(--border-color); border-radius:6px; padding:10px; margin-bottom:12px; font-size:0.72rem; color:var(--text-sub); line-height:1.6;">
-                <div style="margin-bottom:4px; font-weight:bold; color:var(--text-main);">안내 사항</div>
-                • 수집된 정보는 Firebase 서버에 암호화되어 저장됩니다.<br>
-                • 수집된 정보는 위 목적 외 다른 용도로 사용되지 않습니다.<br>
-                • 동의를 거부할 수 있으며, 거부 시 Life Status 기능 이용이 제한됩니다.<br>
-                • 설정 화면의 [초기화] 버튼으로 언제든지 정보를 삭제하고 동의를 철회할 수 있습니다.
+                <div style="margin-bottom:4px; font-weight:bold; color:var(--text-main);">${_t.ls_privacy_notice_title || '안내 사항'}</div>
+                • ${_t.ls_privacy_notice_1 || '수집된 정보는 Firebase 서버에 암호화되어 저장됩니다.'}<br>
+                • ${_t.ls_privacy_notice_2 || '수집된 정보는 위 목적 외 다른 용도로 사용되지 않습니다.'}<br>
+                • ${_t.ls_privacy_notice_3 || '동의를 거부할 수 있으며, 거부 시 Life Status 기능 이용이 제한됩니다.'}<br>
+                • ${_t.ls_privacy_notice_4 || '설정 화면의 [초기화] 버튼으로 언제든지 정보를 삭제하고 동의를 철회할 수 있습니다.'}
             </div>
         </div>
 
         <div style="display:flex; gap:8px;">
-            <button id="ls-privacy-disagree-btn" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">동의하지 않음</button>
-            <button id="ls-privacy-agree-btn" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">동의</button>
+            <button id="ls-privacy-disagree-btn" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-sub); font-size:0.85rem; cursor:pointer;">${_t.ls_privacy_disagree || '동의하지 않음'}</button>
+            <button id="ls-privacy-agree-btn" style="flex:1; padding:10px; border-radius:6px; border:none; background:var(--neon-blue); color:#000; font-size:0.85rem; font-weight:bold; cursor:pointer;">${_t.ls_privacy_agree || '동의'}</button>
         </div>
     </div>`;
 

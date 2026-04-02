@@ -449,7 +449,82 @@ const i18n = {
         raid_loot: "전리품 획득",
 
         // Bonus EXP button label
-        bonus_exp_btn_label: "🎬 광고 보고 EXP 받기"
+        bonus_exp_btn_label: "🎬 광고 보고 EXP 받기",
+
+        // Life Status
+        ls_empty: "생년월일을 설정하여 나의 인생 현황을 확인하세요.",
+        ls_privacy_hint: "🔒 저장 시 개인정보 수집에 동의하게 됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.",
+        ls_days_lived: "📅 살아온 날",
+        ls_current_age: "현재 나이: {age}세",
+        ls_remaining: "⏳ 남은 시간",
+        ls_based_on_age: "{age}세 기준",
+        ls_years_months: "{years}년 {months}개월",
+        ls_progress: "📊 인생 진행률 ({age}세)",
+        ls_unit_hours: "시간",
+        ls_unit_days: "일",
+        ls_unit_weeks: "주",
+        ls_unit_years_suffix: "세",
+        ls_settings_title: "Life Status 설정",
+        ls_birthday_label: "생년월일",
+        ls_expect_age_label: "기대 나이",
+        ls_remain_unit_label: "남은 시간 단위",
+        ls_security_notice: "🔒 생년월일은 계정 동기화를 위해 서버에 암호화 저장됩니다.",
+        ls_consent_label: "📋 개인정보 수집 및 이용 동의서",
+        ls_loading: "계산 중입니다...",
+        ls_btn_reset: "초기화",
+        ls_btn_cancel: "취소",
+        ls_btn_save: "저장",
+        ls_privacy_title: "개인정보 수집 및 이용 동의서",
+        ls_privacy_intro: "LevelUp은 「개인정보 보호법」에 따라 아래와 같이 개인정보를 수집·이용하고자 합니다. 내용을 확인 후 동의 여부를 결정해 주세요.",
+        ls_privacy_th_item: "항목",
+        ls_privacy_th_content: "내용",
+        ls_privacy_collect_label: "수집 항목",
+        ls_privacy_collect_value: "생년월일, 기대 수명 설정값",
+        ls_privacy_purpose_label: "수집 목적",
+        ls_privacy_purpose_value: "Life Status(인생 현황) 기능 제공 및 기기 간 데이터 동기화",
+        ls_privacy_period_label: "보유 기간",
+        ls_privacy_period_value: "회원 탈퇴 시 또는 이용자가 직접 초기화 시 즉시 파기",
+        ls_privacy_notice_title: "안내 사항",
+        ls_privacy_notice_1: "수집된 정보는 Firebase 서버에 암호화되어 저장됩니다.",
+        ls_privacy_notice_2: "수집된 정보는 위 목적 외 다른 용도로 사용되지 않습니다.",
+        ls_privacy_notice_3: "동의를 거부할 수 있으며, 거부 시 Life Status 기능 이용이 제한됩니다.",
+        ls_privacy_notice_4: "설정 화면의 [초기화] 버튼으로 언제든지 정보를 삭제하고 동의를 철회할 수 있습니다.",
+        ls_privacy_disagree: "동의하지 않음",
+        ls_privacy_agree: "동의",
+
+        // D-Day modal
+        dday_modal_title_label: "제목",
+        dday_modal_title_placeholder: "예: 시험일, 금연 시작",
+        dday_modal_type_label: "유형",
+        dday_type_desc_dday: "목표일까지 남은 날을 카운트합니다.",
+        dday_type_desc_plus: "시작일로부터 경과한 날을 카운트합니다.",
+        dday_target_date: "목표 날짜",
+        dday_start_date: "시작 날짜",
+        dday_push_label: "🔔 D-Day 당일 오전 9시 푸시 알림",
+        dday_btn_delete: "삭제",
+        dday_btn_cancel: "취소",
+        dday_btn_save: "저장",
+        dday_btn_add: "추가",
+        dday_notif_title: "📅 D-Day 알림",
+        dday_notif_body: "오늘은 [{title}] D-Day 입니다!",
+        dday_notif_large: "오늘은 [{title}] D-Day 입니다! 목표를 향해 화이팅!",
+
+        // D-Day Caption
+        dday_caption_title: "목표 / 좌우명",
+        dday_caption_input_placeholder: "나의 목표 또는 좌우명을 입력하세요...",
+
+        // Card names (home editor)
+        card_bonus_exp: "보너스 EXP",
+        card_dday_caption: "목표/좌우명",
+        card_daily_quote: "오늘의 명언",
+        card_my_library: "내 서재",
+        card_running_calc: "러닝 계산기",
+        card_orm_calc: "1RM 계산기",
+
+        // Running Calculator time units
+        rc_time_unit_min: "분",
+        rc_time_unit_sec: "초",
+        rc_time_unit_hour: "시간"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -897,7 +972,82 @@ const i18n = {
         raid_loot: "Claim Loot",
 
         // Bonus EXP button label
-        bonus_exp_btn_label: "🎬 Watch Ad for EXP"
+        bonus_exp_btn_label: "🎬 Watch Ad for EXP",
+
+        // Life Status
+        ls_empty: "Set your date of birth to view your life status.",
+        ls_privacy_hint: "🔒 By saving, you agree to the collection of personal information. See the [📋 Privacy] button for details.",
+        ls_days_lived: "📅 Days Lived",
+        ls_current_age: "Current Age: {age}",
+        ls_remaining: "⏳ Time Remaining",
+        ls_based_on_age: "Based on age {age}",
+        ls_years_months: "{years}y {months}m",
+        ls_progress: "📊 Life Progress ({age})",
+        ls_unit_hours: "hours",
+        ls_unit_days: "days",
+        ls_unit_weeks: "weeks",
+        ls_unit_years_suffix: "",
+        ls_settings_title: "Life Status Settings",
+        ls_birthday_label: "Date of Birth",
+        ls_expect_age_label: "Expected Age",
+        ls_remain_unit_label: "Remaining Time Unit",
+        ls_security_notice: "🔒 Your date of birth is encrypted and stored on the server for account sync.",
+        ls_consent_label: "📋 Consent for Personal Information Collection",
+        ls_loading: "Calculating...",
+        ls_btn_reset: "Reset",
+        ls_btn_cancel: "Cancel",
+        ls_btn_save: "Save",
+        ls_privacy_title: "Personal Information Collection & Use Agreement",
+        ls_privacy_intro: "LevelUp collects and uses personal information as described below in accordance with privacy laws. Please review and decide whether to consent.",
+        ls_privacy_th_item: "Item",
+        ls_privacy_th_content: "Details",
+        ls_privacy_collect_label: "Collected Items",
+        ls_privacy_collect_value: "Date of birth, expected lifespan setting",
+        ls_privacy_purpose_label: "Purpose",
+        ls_privacy_purpose_value: "Life Status feature and cross-device data synchronization",
+        ls_privacy_period_label: "Retention Period",
+        ls_privacy_period_value: "Immediately deleted upon account deletion or user-initiated reset",
+        ls_privacy_notice_title: "Notice",
+        ls_privacy_notice_1: "Collected information is encrypted and stored on Firebase servers.",
+        ls_privacy_notice_2: "Collected information is not used for purposes other than stated above.",
+        ls_privacy_notice_3: "You may refuse consent; Life Status features will be limited if refused.",
+        ls_privacy_notice_4: "You can delete your information and withdraw consent at any time using the [Reset] button in settings.",
+        ls_privacy_disagree: "Disagree",
+        ls_privacy_agree: "Agree",
+
+        // D-Day modal
+        dday_modal_title_label: "Title",
+        dday_modal_title_placeholder: "e.g., Exam day, Quit smoking",
+        dday_modal_type_label: "Type",
+        dday_type_desc_dday: "Counts days remaining until the target date.",
+        dday_type_desc_plus: "Counts days elapsed since the start date.",
+        dday_target_date: "Target Date",
+        dday_start_date: "Start Date",
+        dday_push_label: "🔔 Push notification at 9 AM on D-Day",
+        dday_btn_delete: "Delete",
+        dday_btn_cancel: "Cancel",
+        dday_btn_save: "Save",
+        dday_btn_add: "Add",
+        dday_notif_title: "📅 D-Day Alert",
+        dday_notif_body: "Today is [{title}] D-Day!",
+        dday_notif_large: "Today is [{title}] D-Day! Go for your goal!",
+
+        // D-Day Caption
+        dday_caption_title: "Goal / Motto",
+        dday_caption_input_placeholder: "Enter your goal or motto...",
+
+        // Card names (home editor)
+        card_bonus_exp: "Bonus EXP",
+        card_dday_caption: "Goal/Motto",
+        card_daily_quote: "Daily Quote",
+        card_my_library: "My Library",
+        card_running_calc: "Running Calculator",
+        card_orm_calc: "1RM Calculator",
+
+        // Running Calculator time units
+        rc_time_unit_min: "min",
+        rc_time_unit_sec: "sec",
+        rc_time_unit_hour: "hr"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -1345,7 +1495,82 @@ const i18n = {
         raid_loot: "戦利品獲得",
 
         // ボーナスEXPボタンラベル
-        bonus_exp_btn_label: "🎬 広告を見てEXP獲得"
+        bonus_exp_btn_label: "🎬 広告を見てEXP獲得",
+
+        // Life Status
+        ls_empty: "生年月日を設定して、自分の人生の現況を確認しましょう。",
+        ls_privacy_hint: "🔒 保存時に個人情報の収集に同意することになります。詳細は[📋 個人情報]ボタンをご確認ください。",
+        ls_days_lived: "📅 生きてきた日数",
+        ls_current_age: "現在の年齢: {age}歳",
+        ls_remaining: "⏳ 残り時間",
+        ls_based_on_age: "{age}歳基準",
+        ls_years_months: "{years}年 {months}ヶ月",
+        ls_progress: "📊 人生進捗率 ({age}歳)",
+        ls_unit_hours: "時間",
+        ls_unit_days: "日",
+        ls_unit_weeks: "週",
+        ls_unit_years_suffix: "歳",
+        ls_settings_title: "Life Status 設定",
+        ls_birthday_label: "生年月日",
+        ls_expect_age_label: "期待年齢",
+        ls_remain_unit_label: "残り時間の単位",
+        ls_security_notice: "🔒 生年月日はアカウント同期のためサーバーに暗号化保存されます。",
+        ls_consent_label: "📋 個人情報の収集及び利用同意書",
+        ls_loading: "計算中です...",
+        ls_btn_reset: "リセット",
+        ls_btn_cancel: "キャンセル",
+        ls_btn_save: "保存",
+        ls_privacy_title: "個人情報の収集及び利用同意書",
+        ls_privacy_intro: "LevelUpは個人情報保護法に基づき、以下のとおり個人情報を収集・利用いたします。内容をご確認の上、同意の可否をお決めください。",
+        ls_privacy_th_item: "項目",
+        ls_privacy_th_content: "内容",
+        ls_privacy_collect_label: "収集項目",
+        ls_privacy_collect_value: "生年月日、期待寿命設定値",
+        ls_privacy_purpose_label: "収集目的",
+        ls_privacy_purpose_value: "Life Status（人生現況）機能の提供及びデバイス間データ同期",
+        ls_privacy_period_label: "保有期間",
+        ls_privacy_period_value: "退会時またはユーザーによるリセット時に即時削除",
+        ls_privacy_notice_title: "ご案内",
+        ls_privacy_notice_1: "収集された情報はFirebaseサーバーに暗号化して保存されます。",
+        ls_privacy_notice_2: "収集された情報は上記の目的以外には使用されません。",
+        ls_privacy_notice_3: "同意を拒否することができます。拒否した場合、Life Status機能の利用が制限されます。",
+        ls_privacy_notice_4: "設定画面の[リセット]ボタンでいつでも情報を削除し、同意を撤回できます。",
+        ls_privacy_disagree: "同意しない",
+        ls_privacy_agree: "同意する",
+
+        // D-Dayモーダル
+        dday_modal_title_label: "タイトル",
+        dday_modal_title_placeholder: "例: 試験日、禁煙開始",
+        dday_modal_type_label: "タイプ",
+        dday_type_desc_dday: "目標日までの残り日数をカウントします。",
+        dday_type_desc_plus: "開始日からの経過日数をカウントします。",
+        dday_target_date: "目標日",
+        dday_start_date: "開始日",
+        dday_push_label: "🔔 D-Day当日午前9時にプッシュ通知",
+        dday_btn_delete: "削除",
+        dday_btn_cancel: "キャンセル",
+        dday_btn_save: "保存",
+        dday_btn_add: "追加",
+        dday_notif_title: "📅 D-Dayアラート",
+        dday_notif_body: "今日は [{title}] D-Dayです！",
+        dday_notif_large: "今日は [{title}] D-Dayです！目標に向かって頑張りましょう！",
+
+        // D-Dayキャプション
+        dday_caption_title: "目標 / 座右の銘",
+        dday_caption_input_placeholder: "目標や座右の銘を入力してください...",
+
+        // カード名（ホーム編集）
+        card_bonus_exp: "ボーナスEXP",
+        card_dday_caption: "目標/座右の銘",
+        card_daily_quote: "今日の名言",
+        card_my_library: "マイ書斎",
+        card_running_calc: "ランニング計算機",
+        card_orm_calc: "1RM計算機",
+
+        // ランニング計算機の時間単位
+        rc_time_unit_min: "分",
+        rc_time_unit_sec: "秒",
+        rc_time_unit_hour: "時間"
     }
 };
 
