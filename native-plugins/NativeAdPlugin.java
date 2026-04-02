@@ -154,6 +154,7 @@ public class NativeAdPlugin extends Plugin {
         double width = call.getDouble("width", 0.0);
         double height = call.getDouble("height", 0.0);
         double clipTop = call.getDouble("clipTop", 0.0);
+        double clipBottom = call.getDouble("clipBottom", 0.0);
 
         Activity activity = getActivity();
         if (activity == null) {
@@ -199,18 +200,38 @@ public class NativeAdPlugin extends Plugin {
                     .findViewById(android.R.id.content);
                 rootView.addView(adContainer);
 
-                // 초기 클리핑 적용 (sticky header 아래로만 보이도록)
+                // 클리핑 적용 (상단: sticky header 아래, 하단: nav bar 위로만 보이도록)
                 int pxClipTop = (int) (clipTop * density);
-                if (pxClipTop > 0 && pxY < pxClipTop) {
-                    int clipOffset = pxClipTop - pxY;
-                    adContainer.post(() -> {
-                        int adH = adContainer.getHeight();
-                        int adW = adContainer.getWidth();
-                        if (adH > 0 && clipOffset < adH) {
-                            adContainer.setClipBounds(new Rect(0, clipOffset, adW > 0 ? adW : 9999, adH));
+                int pxClipBottom = (clipBottom > 0) ? (int) (clipBottom * density) : 0;
+                adContainer.post(() -> {
+                    int adH = adContainer.getHeight();
+                    int adW = adContainer.getWidth();
+                    if (adW <= 0) adW = 9999;
+                    if (adH <= 0) return;
+
+                    int localTop = 0;
+                    int localBottom = adH;
+
+                    // 상단 클리핑
+                    if (pxClipTop > 0 && pxY < pxClipTop) {
+                        localTop = pxClipTop - pxY;
+                    }
+
+                    // 하단 클리핑
+                    if (pxClipBottom > 0) {
+                        int bottomInLocal = pxClipBottom - pxY;
+                        if (bottomInLocal < localBottom) {
+                            localBottom = Math.max(0, bottomInLocal);
                         }
-                    });
-                }
+                    }
+
+                    // 클리핑 적용 (보이는 영역이 없으면 숨김)
+                    if (localTop >= localBottom) {
+                        adContainer.setClipBounds(new Rect(0, 0, 0, 0));
+                    } else if (localTop > 0 || localBottom < adH) {
+                        adContainer.setClipBounds(new Rect(0, localTop, adW, localBottom));
+                    }
+                });
 
                 adVisible = true;
                 call.resolve();
@@ -229,6 +250,7 @@ public class NativeAdPlugin extends Plugin {
     public void updatePosition(PluginCall call) {
         double y = call.getDouble("y", 0.0);
         double clipTop = call.getDouble("clipTop", 0.0);
+        double clipBottom = call.getDouble("clipBottom", 0.0);
 
         if (adContainer == null || !adVisible) {
             call.resolve();
@@ -247,6 +269,7 @@ public class NativeAdPlugin extends Plugin {
                 float density = dm.density;
                 int pxY = (int) (y * density);
                 int pxClipTop = (int) (clipTop * density);
+                int pxClipBottom = (clipBottom > 0) ? (int) (clipBottom * density) : 0;
 
                 FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) adContainer.getLayoutParams();
                 if (params != null) {
@@ -254,21 +277,38 @@ public class NativeAdPlugin extends Plugin {
                     adContainer.setLayoutParams(params);
                 }
 
-                // 상단 클리핑: 광고가 sticky header 아래로만 보이도록 처리
-                if (pxClipTop > 0 && pxY < pxClipTop) {
-                    int clipOffset = pxClipTop - pxY;
-                    int adHeight = adContainer.getHeight();
-                    int adWidth = adContainer.getWidth();
-                    if (adHeight > 0 && clipOffset < adHeight) {
-                        // 상단을 clipOffset만큼 잘라냄
-                        adContainer.setClipBounds(new Rect(0, clipOffset, adWidth > 0 ? adWidth : 9999, adHeight));
-                    } else if (clipOffset >= adHeight) {
-                        // 완전히 가려짐 — 숨김
-                        adContainer.setClipBounds(new Rect(0, 0, 0, 0));
-                    }
+                // 상단+하단 클리핑: 광고가 sticky header 아래, nav bar 위로만 보이도록 처리
+                int adHeight = adContainer.getHeight();
+                int adWidth = adContainer.getWidth();
+                if (adWidth <= 0) adWidth = 9999;
+
+                if (adHeight <= 0) {
+                    // 높이 미측정 — 스킵
                 } else {
-                    // 클리핑 해제 (전체 보이기)
-                    adContainer.setClipBounds(null);
+                    int localTop = 0;
+                    int localBottom = adHeight;
+
+                    // 상단 클리핑
+                    if (pxClipTop > 0 && pxY < pxClipTop) {
+                        localTop = pxClipTop - pxY;
+                    }
+
+                    // 하단 클리핑
+                    if (pxClipBottom > 0) {
+                        int bottomInLocal = pxClipBottom - pxY;
+                        if (bottomInLocal < localBottom) {
+                            localBottom = Math.max(0, bottomInLocal);
+                        }
+                    }
+
+                    // 클리핑 적용
+                    if (localTop >= localBottom || localTop >= adHeight) {
+                        adContainer.setClipBounds(new Rect(0, 0, 0, 0));
+                    } else if (localTop > 0 || localBottom < adHeight) {
+                        adContainer.setClipBounds(new Rect(0, localTop, adWidth, localBottom));
+                    } else {
+                        adContainer.setClipBounds(null);
+                    }
                 }
             } catch (Exception e) {
                 Log.w(TAG, "위치 업데이트 오류: " + e.getMessage());
