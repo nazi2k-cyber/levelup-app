@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.158] - 2026-04-03
+
+### 변경
+- docs: 스트릭 푸시 알림 실패 분석 및 수정 내용 문서화
+
 ## [1.0.157] - 2026-04-03
 
 ### 변경
