@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.146] - 2026-04-03
+
+### 변경
+- fix: getDateLocale 스코프 오류 및 releaseUsername 권한 오류 수정
+
 ## [1.0.145] - 2026-04-03
 
 ### 변경
