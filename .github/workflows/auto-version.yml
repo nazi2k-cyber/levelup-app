@@ -22,14 +22,16 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 
-      # 2. [skip ci] 체크 — 해당 시 종료
-      - name: Skip CI 확인
+      # 2. 자동 버전/동기화 커밋 체크 — 해당 시 종료 (무한 루프 방지)
+      #    [auto-version] 마커 또는 sync: 접두사가 포함된 커밋은 스킵
+      #    참고: [skip ci]는 pr-check.yml까지 차단하여 자동 머지 불가 → 커스텀 마커 사용
+      - name: 자동 버전/동기화 커밋 확인
         id: skip_check
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
-          if echo "$COMMIT_MSG" | grep -qi '\[skip ci\]'; then
+          if echo "$COMMIT_MSG" | grep -qE '(\[auto-version\]|^sync:)'; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "ℹ️ [skip ci] 감지 — 버전 업데이트 스킵"
+            echo "ℹ️ 자동 버전 또는 동기화 커밋 감지 — 버전 업데이트 스킵"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -168,7 +170,7 @@ jobs:
           git add sw.js www/sw.js 2>/dev/null || true
 
           if ! git diff --cached --quiet; then
-            git commit -m "chore: v${NEW_VERSION} 자동 버전 업데이트"
+            git commit -m "chore: v${NEW_VERSION} 자동 버전 업데이트 [auto-version]"
             git push origin "${BRANCH_NAME}"
             echo "✅ 브랜치 ${BRANCH_NAME} push 완료"
           else
@@ -210,7 +212,9 @@ jobs:
           echo "✅ PR 생성: ${PR_URL}"
 
           # 자동 머지 활성화 (상태 체크 통과 후 자동으로 머지)
-          gh pr merge "${BRANCH_NAME}" --auto --squash --delete-branch || echo "⚠️ 자동 머지 설정 실패 — 수동 머지 필요"
+          gh pr merge "${BRANCH_NAME}" --auto --squash --delete-branch \
+            --squash-merge-commit-title "chore: v${NEW_VERSION} 자동 버전 업데이트 [auto-version]" \
+            || echo "⚠️ 자동 머지 설정 실패 — 수동 머지 필요"
 
       # 9. 태그 생성
       - name: 태그 생성

@@ -111,7 +111,7 @@ jobs:
             fi
           done
           if [ "$CHANGED_ROOT" = true ]; then
-            git commit -m "sync: www/ 최신 수정사항을 루트에 반영 (양방향 동기화)"
+            git commit -m "sync: www/ 최신 수정사항을 루트에 반영 [auto-version]"
             git push || (git pull --rebase && git push)
             echo "✅ 루트 파일 갱신 커밋 완료"
           fi
@@ -119,7 +119,7 @@ jobs:
           # 루트 → www/로 갱신된 파일 커밋
           if ! git diff --quiet www/ 2>/dev/null; then
             git add www/
-            git commit -m "sync: 루트 최신 수정사항을 www/에 반영 (양방향 동기화)"
+            git commit -m "sync: 루트 최신 수정사항을 www/에 반영 [auto-version]"
             git push || (git pull --rebase && git push)
             echo "✅ www/ 파일 갱신 커밋 완료"
           else
