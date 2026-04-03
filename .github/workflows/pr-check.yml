@@ -1,0 +1,172 @@
+name: PR 검증
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened ]
+
+permissions:
+  contents: read
+
+jobs:
+  # 1. 파일 구조 및 구문 검증
+  validate:
+    name: 파일 검증
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v5
+
+      - name: JSON 파일 구문 검증
+        run: |
+          echo "📋 JSON 파일 검증 시작..."
+          ERRORS=0
+          for f in package.json firebase.json capacitor.config.json firestore.indexes.json manifest.json google-services.json; do
+            if [ -f "$f" ]; then
+              if python3 -m json.tool "$f" > /dev/null 2>&1; then
+                echo "  ✅ $f"
+              else
+                echo "  ❌ $f — JSON 구문 오류"
+                ERRORS=$((ERRORS + 1))
+              fi
+            fi
+          done
+          if [ $ERRORS -gt 0 ]; then
+            echo "::error::JSON 구문 오류가 ${ERRORS}개 발견되었습니다."
+            exit 1
+          fi
+          echo "✅ 모든 JSON 파일 검증 통과"
+
+      - name: VERSION 파일 형식 검증
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION 파일이 올바른 시맨틱 버전 형식(X.Y.Z)이 아닙니다: '$VERSION'"
+            exit 1
+          fi
+          echo "✅ VERSION 파일 형식 OK: $VERSION"
+
+      - name: 필수 파일 존재 확인
+        run: |
+          MISSING=0
+          for f in app.html app.js style.css data.js package.json VERSION firebase.json; do
+            if [ ! -f "$f" ]; then
+              echo "::error::필수 파일이 누락되었습니다: $f"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          if [ $MISSING -gt 0 ]; then
+            exit 1
+          fi
+          echo "✅ 필수 파일 모두 존재"
+
+  # 2. Firestore 보안 규칙 검증
+  firestore-rules:
+    name: Firestore 규칙 검증
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v5
+
+      - name: Firestore 규칙 구문 검증
+        run: |
+          if [ ! -f firestore.rules ]; then
+            echo "::error::firestore.rules 파일이 없습니다."
+            exit 1
+          fi
+          # 기본적인 구문 검증: match 블록 균형 확인
+          OPEN=$(grep -c '{' firestore.rules || true)
+          CLOSE=$(grep -c '}' firestore.rules || true)
+          if [ "$OPEN" -ne "$CLOSE" ]; then
+            echo "::error::firestore.rules에 중괄호 불균형이 있습니다. 열기: $OPEN, 닫기: $CLOSE"
+            exit 1
+          fi
+          echo "✅ Firestore 규칙 구문 검증 통과 (중괄호 균형: $OPEN)"
+
+  # 3. 민감 정보 유출 방지
+  secret-scan:
+    name: 민감 정보 스캔
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v5
+
+      - name: 민감 정보 패턴 스캔
+        run: |
+          echo "🔍 민감 정보 패턴 스캔 시작..."
+          FOUND=0
+
+          # API 키, 시크릿, 토큰 패턴 검사 (알려진 안전한 패턴 제외)
+          # firebase config의 공개 키는 제외 (apiKey는 클라이언트용 공개 값)
+          PATTERNS=(
+            "-----BEGIN (RSA |EC )?PRIVATE KEY-----"
+            "AKIA[0-9A-Z]{16}"
+            "sk_live_[a-zA-Z0-9]+"
+            "ghp_[a-zA-Z0-9]{36}"
+            "xoxb-[0-9]+-[0-9]+-[a-zA-Z0-9]+"
+          )
+
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rE "$pattern" --include="*.js" --include="*.html" --include="*.json" --include="*.yml" --include="*.yaml" --include="*.rules" . 2>/dev/null | grep -v node_modules | grep -v ".git/"; then
+              echo "::error::민감 정보 패턴이 발견되었습니다: $pattern"
+              FOUND=$((FOUND + 1))
+            fi
+          done
+
+          if [ $FOUND -gt 0 ]; then
+            echo "::error::${FOUND}개의 민감 정보 패턴이 발견되었습니다. 커밋에서 제거해주세요."
+            exit 1
+          fi
+          echo "✅ 민감 정보 패턴 스캔 통과"
+
+      - name: .env 파일 커밋 방지
+        run: |
+          if find . -name ".env" -o -name ".env.local" -o -name ".env.production" | grep -v node_modules | grep -q .; then
+            echo "::error::.env 파일이 저장소에 포함되어 있습니다. .gitignore에 추가해주세요."
+            exit 1
+          fi
+          echo "✅ .env 파일 없음"
+
+  # 4. Android 빌드 검증 (선택적 - 빌드 깨짐 방지)
+  build-check:
+    name: 빌드 검증
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: npm 패키지 설치
+        run: npm ci
+
+      - name: JavaScript 기본 구문 검증
+        run: |
+          echo "📋 JavaScript 구문 검증..."
+          ERRORS=0
+          for f in app.js data.js logger.js sw.js firebase-messaging-sw.js; do
+            if [ -f "$f" ]; then
+              if node --check "$f" 2>/dev/null; then
+                echo "  ✅ $f"
+              else
+                echo "  ❌ $f — 구문 오류"
+                ERRORS=$((ERRORS + 1))
+              fi
+            fi
+          done
+          if [ $ERRORS -gt 0 ]; then
+            echo "::error::JavaScript 구문 오류가 ${ERRORS}개 발견되었습니다."
+            exit 1
+          fi
+          echo "✅ JavaScript 구문 검증 통과"
+
+      - name: www 동기화 검증
+        run: |
+          bash sync-www.sh
+          echo "✅ www 동기화 스크립트 정상 실행"
