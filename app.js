@@ -7000,8 +7000,10 @@ function stopBonusExpTimer() {
 
 function renderBonusExp() {
     const btn = document.getElementById('btn-bonus-exp');
+    const btnTitle = document.getElementById('bonus-exp-btn-title');
     const statusText = document.getElementById('bonus-exp-status');
     const timerEl = document.getElementById('bonus-exp-timer');
+    const iconEl = document.getElementById('bonus-exp-icon');
     if (!btn || !statusText) return;
 
     const lang = AppState.currentLang;
@@ -7009,17 +7011,27 @@ function renderBonusExp() {
 
     if (status === 'used') {
         btn.disabled = true;
-        btn.textContent = i18n[lang].bonus_exp_used;
-        btn.style.opacity = '0.4';
-        statusText.textContent = i18n[lang].bonus_exp_used;
-        statusText.style.color = 'var(--text-sub)';
+        btn.style.opacity = '0.5';
+        btn.style.background = 'linear-gradient(135deg, #888, #666)';
+        btn.style.borderColor = 'rgba(136,136,136,0.4)';
+        btn.style.boxShadow = 'none';
+        btn.style.cursor = 'default';
+        if (btnTitle) btnTitle.textContent = i18n[lang].bonus_exp_used;
+        statusText.textContent = i18n[lang].bonus_exp_next || '';
+        statusText.style.color = 'rgba(255,255,255,0.5)';
+        if (iconEl) iconEl.textContent = '✅';
         startBonusExpTimer();
     } else {
         btn.disabled = false;
-        btn.textContent = i18n[lang].bonus_exp_btn;
         btn.style.opacity = '1';
+        btn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+        btn.style.borderColor = 'rgba(255,215,0,0.6)';
+        btn.style.boxShadow = '0 2px 12px rgba(255,215,0,0.25)';
+        btn.style.cursor = 'pointer';
+        if (btnTitle) btnTitle.textContent = i18n[lang].bonus_exp_btn;
         statusText.textContent = i18n[lang].bonus_exp_desc;
-        statusText.style.color = 'var(--neon-gold)';
+        statusText.style.color = 'rgba(26,26,46,0.7)';
+        if (iconEl) iconEl.textContent = '🎬';
         stopBonusExpTimer();
         if (timerEl) timerEl.style.display = 'none';
     }
@@ -7033,7 +7045,9 @@ window.claimBonusExp = async function() {
 
     // ★ 즉시 잠금 — 중복 클릭/이벤트 방지
     _bonusExpInProgress = true;
-    if (btn) { btn.disabled = true; btn.textContent = i18n[lang].bonus_exp_loading; }
+    const btnTitle = document.getElementById('bonus-exp-btn-title');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    if (btnTitle) { btnTitle.textContent = i18n[lang].bonus_exp_loading; }
 
     // 네이티브가 아닌 경우 (웹 테스트) — 광고 없이 바로 보상 지급
     if (!isNativePlatform) {
