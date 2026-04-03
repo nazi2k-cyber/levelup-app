@@ -4155,6 +4155,7 @@ function changeLanguage(langCode) {
         renderQuote();
         renderDDayList();
         renderDDayCaption();
+        renderLifeStatus();
         updatePointUI();
         updateDungeonStatus();
         loadPlayerName();
