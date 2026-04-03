@@ -214,7 +214,9 @@ jobs:
 
       # 9. 태그 생성
       - name: 태그 생성
+        id: tag_step
         if: steps.skip_check.outputs.skip == 'false' && steps.bootstrap.outputs.bootstrapped == 'false' && steps.check_pr.outputs.exists == 'false' && env.no_changes != 'true'
+        continue-on-error: true
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
 
@@ -227,8 +229,13 @@ jobs:
 
           # 새 태그 생성 및 push
           git tag -a "v${NEW_VERSION}" -m "릴리즈 v${NEW_VERSION}"
-          git push origin "v${NEW_VERSION}"
-          echo "✅ v${NEW_VERSION} 태그 생성 및 push 완료"
+          if git push origin "v${NEW_VERSION}"; then
+            echo "✅ v${NEW_VERSION} 태그 생성 및 push 완료"
+            echo "tag_created=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::태그 v${NEW_VERSION} push 실패 — 리포지토리 규칙(rulesets)에서 태그 생성이 제한되어 있습니다. Settings > Rules 에서 태그 생성 권한을 확인하세요."
+            echo "tag_created=false" >> "$GITHUB_OUTPUT"
+          fi
 
       # 10. 결과 요약
       - name: 결과 요약
@@ -241,7 +248,11 @@ jobs:
           echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
           echo "| 새 버전 | \`v${NEW_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 증가 유형 | \`${{ steps.bump_type.outputs.bump }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| 태그 | \`v${NEW_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.tag_step.outputs.tag_created }}" == "true" ]; then
+            echo "| 태그 | ✅ \`v${NEW_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 태그 | ⚠️ 생성 실패 (리포지토리 규칙 제한) |" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 업데이트된 파일" >> $GITHUB_STEP_SUMMARY
           echo "- \`VERSION\`" >> $GITHUB_STEP_SUMMARY
