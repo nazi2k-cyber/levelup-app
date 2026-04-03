@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.148] - 2026-04-03
+
+### 변경
+- feat: main 브랜치 보호 방안 마련 — PR 검증 워크플로우, CODEOWNERS, 설정 가이드
+
 ## [1.0.147] - 2026-04-03
 
 ### 변경
