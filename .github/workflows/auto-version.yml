@@ -168,7 +168,7 @@ jobs:
           git add sw.js www/sw.js 2>/dev/null || true
 
           if ! git diff --cached --quiet; then
-            git commit -m "chore: v${NEW_VERSION} 자동 버전 업데이트 [skip ci]"
+            git commit -m "chore: v${NEW_VERSION} 자동 버전 업데이트"
             git push origin "${BRANCH_NAME}"
             echo "✅ 브랜치 ${BRANCH_NAME} push 완료"
           else
