@@ -391,6 +391,54 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .cal-day.planner-selected .cal-name,
 .cal-day.planner-selected .cal-date { color: var(--neon-gold); }
 
+/* 주간 캘린더 네비게이션 버튼 */
+.planner-week-nav-btn {
+    background: transparent; border: 1px solid var(--border-color); color: var(--text-sub);
+    width: 28px; height: 28px; border-radius: 50%; font-size: 0.7rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.planner-week-nav-btn:hover { border-color: var(--neon-blue); color: var(--neon-blue); }
+.planner-week-nav-btn:active { background: rgba(0, 217, 255, 0.1); }
+
+/* 월간 캘린더 진입 버튼 */
+.planner-monthly-btn {
+    background: rgba(255, 204, 0, 0.1); border: 1px solid var(--neon-gold); color: var(--neon-gold);
+    padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+}
+.planner-monthly-btn:hover { background: rgba(255, 204, 0, 0.2); }
+.planner-monthly-btn:active { background: rgba(255, 204, 0, 0.3); }
+
+/* 월간 캘린더 요일 헤더 */
+.monthly-cal-header {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px;
+}
+.monthly-cal-header span {
+    text-align: center; font-size: 0.65rem; font-weight: bold; color: var(--text-sub); padding: 4px 0;
+}
+
+/* 월간 캘린더 날짜 그리드 */
+.monthly-cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+}
+.monthly-cal-day {
+    text-align: center; padding: 8px 0; font-size: 0.75rem; color: var(--text-main);
+    border-radius: 6px; cursor: pointer; transition: all 0.15s; border: 1px solid transparent;
+    position: relative;
+}
+.monthly-cal-day.empty { cursor: default; }
+.monthly-cal-day:not(.empty):hover { background: rgba(255,255,255,0.05); }
+.monthly-cal-day.today {
+    background: rgba(0, 217, 255, 0.1); border-color: var(--neon-blue); font-weight: bold; color: var(--neon-blue);
+}
+.monthly-cal-day.selected {
+    background: rgba(255, 204, 0, 0.15); border-color: var(--neon-gold); font-weight: bold; color: var(--neon-gold);
+}
+.monthly-cal-day.has-entry::after {
+    content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--neon-gold);
+}
+
 /* 플래너 탭 바 */
 .planner-tab-bar { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
 .planner-tab-btn {

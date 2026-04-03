@@ -4023,12 +4023,9 @@ function switchTab(tabId, el) {
         cleanupNativeAd();
     }
 
-    // 배너 광고 제거 → 네이티브 광고로 전환 (dungeon/diary 포함)
+    // 네이티브 광고 (dungeon만 — diary는 보상형 광고로 전환)
     if (tabId === 'dungeon') {
         setTimeout(() => loadAndShowNativeAd('dungeon'), 300);
-    }
-    if (tabId === 'diary') {
-        setTimeout(() => loadAndShowNativeAd('diary'), 300);
     }
 
     if(tabId === 'social') fetchSocialData();
@@ -7387,6 +7384,10 @@ async function cleanupNativeAd() {
 
 // --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
 let diarySelectedDate = getTodayStr();
+let plannerWeekOffset = 0; // 주간 캘린더 주 오프셋 (0 = 현재 주, -1 = 전주, 1 = 다음주)
+let monthlyCalendarYear = new Date().getFullYear();
+let monthlyCalendarMonth = new Date().getMonth();
+let _monthlyCalendarUnlocked = false; // 오늘 보상형 광고 시청 완료 여부
 // plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯)
 let plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
 
@@ -7407,15 +7408,16 @@ function getAllDiaryEntries() {
     } catch { return {}; }
 }
 
-// 주간 플래너 캘린더 렌더링 (퀘스트 탭 주간 진척도 형태)
+// 주간 플래너 캘린더 렌더링 (이전/다음 주 네비게이션 지원)
 function renderPlannerCalendar() {
     const container = document.getElementById('planner-calendar-grid');
     if (!container) return;
 
     const today = new Date();
+    const todayStr = dateToStr(today);
     const currentDay = today.getDay();
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - currentDay);
+    startOfWeek.setDate(today.getDate() - currentDay + (plannerWeekOffset * 7));
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthEl = document.getElementById('planner-cal-month');
@@ -7433,7 +7435,7 @@ function renderPlannerCalendar() {
         const iterDate = new Date(startOfWeek);
         iterDate.setDate(startOfWeek.getDate() + i);
         const dateStr = dateToStr(iterDate);
-        const isToday = (i === currentDay);
+        const isToday = dateStr === todayStr;
         const isSelected = dateStr === diarySelectedDate;
         const entry = allEntries[dateStr];
         const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
@@ -7448,6 +7450,191 @@ function renderPlannerCalendar() {
         `;
     }).join('');
 }
+
+// 주간 캘린더 이전/다음 주 이동
+window.changePlannerWeek = function(delta) {
+    plannerWeekOffset += delta;
+    renderPlannerCalendar();
+};
+
+// --- ★ 월간 캘린더 기능 ★ ---
+
+// 월간 캘린더 렌더링
+function renderMonthlyCalendar(year, month) {
+    const container = document.getElementById('monthly-calendar-grid');
+    if (!container) return;
+
+    const lang = AppState.currentLang;
+    const today = new Date();
+    const todayStr = dateToStr(today);
+
+    const monthNames = {
+        ko: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+        en: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+        ja: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
+    };
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["S","M","T","W","T","F","S"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+
+    const titleEl = document.getElementById('monthly-cal-title');
+    if (titleEl) titleEl.innerText = `${year} ${(monthNames[lang] || monthNames.en)[month]}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const allEntries = getAllDiaryEntries();
+
+    // 요일 헤더
+    let headerHTML = '<div class="monthly-cal-header">';
+    (dayNames[lang] || dayNames.en).forEach(d => { headerHTML += `<span>${d}</span>`; });
+    headerHTML += '</div>';
+
+    // 날짜 그리드
+    let gridHTML = '<div class="monthly-cal-grid">';
+    for (let i = 0; i < firstDay; i++) gridHTML += '<div class="monthly-cal-day empty"></div>';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        const isSelected = dateStr === diarySelectedDate;
+        const entry = allEntries[dateStr];
+        const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
+        const classes = ['monthly-cal-day'];
+        if (isToday) classes.push('today');
+        if (isSelected) classes.push('selected');
+        if (hasEntry) classes.push('has-entry');
+
+        gridHTML += `<div class="${classes.join(' ')}" onclick="window.selectMonthlyDate('${dateStr}')">${d}</div>`;
+    }
+    gridHTML += '</div>';
+
+    container.innerHTML = headerHTML + gridHTML;
+}
+
+// 월간 캘린더에서 날짜 선택 → 주간 뷰로 복귀 + 해당 주로 이동
+window.selectMonthlyDate = function(dateStr) {
+    // 선택 날짜가 속한 주로 weekOffset 계산
+    const selected = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    const todayStart = new Date(today);
+    todayStart.setDate(today.getDate() - today.getDay()); // 이번 주 일요일
+    todayStart.setHours(0,0,0,0);
+    const selectedStart = new Date(selected);
+    selectedStart.setDate(selected.getDate() - selected.getDay()); // 선택 날짜의 주 일요일
+    selectedStart.setHours(0,0,0,0);
+    const diffDays = Math.round((selectedStart - todayStart) / (1000 * 60 * 60 * 24));
+    plannerWeekOffset = Math.round(diffDays / 7);
+
+    // 월간 캘린더 닫고 주간으로 복귀
+    closeMonthlyCalendar();
+
+    // 날짜 선택 및 로드
+    window.selectPlannerDate(dateStr);
+};
+
+// 이전/다음 월 이동
+window.changeMonthlyCalendar = function(delta) {
+    monthlyCalendarMonth += delta;
+    if (monthlyCalendarMonth > 11) { monthlyCalendarMonth = 0; monthlyCalendarYear++; }
+    if (monthlyCalendarMonth < 0) { monthlyCalendarMonth = 11; monthlyCalendarYear--; }
+    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
+};
+
+// 월간 캘린더 열기 (보상형 광고 게이트)
+window.openMonthlyCalendar = async function() {
+    const lang = AppState.currentLang;
+    const todayStr = getTodayStr();
+
+    // 오늘 이미 광고 시청했는지 확인
+    const adDate = localStorage.getItem('monthly_cal_ad_date');
+    if (adDate === todayStr || _monthlyCalendarUnlocked) {
+        _showMonthlyCalendar();
+        return;
+    }
+
+    // 웹(비네이티브) 환경에서는 광고 없이 바로 진입
+    if (!isNativePlatform) {
+        _monthlyCalendarUnlocked = true;
+        localStorage.setItem('monthly_cal_ad_date', todayStr);
+        _showMonthlyCalendar();
+        return;
+    }
+
+    // 보상형 광고 표시
+    if (!_admobInitialized) {
+        await initAdMob();
+    }
+
+    const { AdMob } = window.Capacitor.Plugins;
+    if (!AdMob) {
+        alert(i18n[lang].monthly_cal_ad_fail);
+        return;
+    }
+
+    if (!_rewardedAdReady) {
+        try {
+            await AdMob.prepareRewardVideoAd({
+                adId: REWARDED_AD_UNIT_ID,
+                isTesting: false,
+                npa: !canShowPersonalizedAds(),
+            });
+            _rewardedAdReady = true;
+        } catch (e) {
+            alert(i18n[lang].monthly_cal_ad_fail);
+            return;
+        }
+    }
+
+    // 콜백 설정
+    _rewardedAdContext = 'monthlyCalendar';
+    _rewardedAdOnSuccess = function() {
+        _monthlyCalendarUnlocked = true;
+        localStorage.setItem('monthly_cal_ad_date', todayStr);
+        _showMonthlyCalendar();
+        if (window.AppLogger) AppLogger.info('[MonthlyCalendar] 보상형 광고 시청 완료 → 월간 캘린더 해제');
+    };
+    _rewardedAdOnFail = function() {
+        alert(i18n[lang].monthly_cal_ad_fail);
+    };
+
+    try {
+        await AdMob.showRewardVideoAd();
+    } catch (e) {
+        console.warn('[MonthlyCalendar] 보상형 광고 표시 실패:', e);
+        _rewardedAdContext = 'bonusExp';
+        _rewardedAdOnSuccess = null;
+        _rewardedAdOnFail = null;
+        _rewardedAdReady = false;
+        preloadRewardedAd._retryCount = 0;
+        preloadRewardedAd();
+        alert(i18n[lang].monthly_cal_ad_fail);
+    }
+};
+
+// 월간 캘린더 실제 표시
+function _showMonthlyCalendar() {
+    const now = new Date();
+    monthlyCalendarYear = now.getFullYear();
+    monthlyCalendarMonth = now.getMonth();
+    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
+
+    const weeklyCard = document.getElementById('weekly-calendar-card');
+    const monthlyCard = document.getElementById('monthly-calendar-card');
+    if (weeklyCard) weeklyCard.classList.add('d-none');
+    if (monthlyCard) monthlyCard.classList.remove('d-none');
+}
+
+// 월간 캘린더 닫기 → 주간 복귀
+function closeMonthlyCalendar() {
+    const weeklyCard = document.getElementById('weekly-calendar-card');
+    const monthlyCard = document.getElementById('monthly-calendar-card');
+    if (weeklyCard) weeklyCard.classList.remove('d-none');
+    if (monthlyCard) monthlyCard.classList.add('d-none');
+    renderPlannerCalendar();
+}
+window.closeMonthlyCalendar = closeMonthlyCalendar;
 
 // 선택 날짜가 미래인지 확인
 function isSelectedDateFuture() {
