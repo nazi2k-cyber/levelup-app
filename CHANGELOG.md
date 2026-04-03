@@ -5,6 +5,31 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.154] - 2026-04-03
+
+### 변경
+- fix: use PAT_TOKEN for tag creation to bypass repository ruleset restriction
+- fix: make tag creation step graceful in auto-version workflow
+- fix: clean up stale remote branch before push in auto-version workflow
+- docs: PR 머지 차단 해결 방법 및 write 권한 팀원 확인 방법 추가
+- fix: handle GitHub Actions PR creation permission gracefully
+- fix: auto-version workflow to use PRs instead of direct push to main
+- fix: 민감 정보 스캔에서 tesseract-core wasm 파일 제외
+- fix: count actual brace characters instead of lines in firestore rules validation
+- feat: 플래너 덮어쓰기 기능 추가 — 선택 날짜 플랜을 오늘에 적용
+
+## [1.0.153] - 2026-04-03
+
+### 변경
+- fix: make tag creation step graceful in auto-version workflow
+- fix: clean up stale remote branch before push in auto-version workflow
+- docs: PR 머지 차단 해결 방법 및 write 권한 팀원 확인 방법 추가
+- fix: handle GitHub Actions PR creation permission gracefully
+- fix: auto-version workflow to use PRs instead of direct push to main
+- fix: 민감 정보 스캔에서 tesseract-core wasm 파일 제외
+- fix: count actual brace characters instead of lines in firestore rules validation
+- feat: 플래너 덮어쓰기 기능 추가 — 선택 날짜 플랜을 오늘에 적용
+
 ## [1.0.152] - 2026-04-03
 
 ### 변경
