@@ -138,7 +138,84 @@ PR이 생성/업데이트될 때 자동으로 실행되는 4단계 검증:
    - build 워크플로우가 자동으로 APK 빌드
 ```
 
-## 6. 체크리스트
+## 6. PR 머지 차단 원인 및 해결 방법
+
+### 증상
+
+PR 페이지에서 아래와 같은 메시지가 표시되며 머지 버튼이 비활성화됩니다:
+
+```
+⚠ Review required
+  At least 1 approving review is required by reviewers with write access.
+
+✅ All checks have passed (5 successful checks)
+
+🔴 Merging is blocked
+  At least 1 approving review is required by reviewers with write access.
+```
+
+### 원인
+
+브랜치 보호 규칙에서 **"Require a pull request before merging"** + **"Required approvals: 1"** 이 설정되어 있어, **write 권한 이상을 가진 리뷰어의 Approve**가 최소 1건 필요합니다.
+
+### 해결 방법
+
+| 방법 | 설명 | 권한 요구 |
+|------|------|-----------|
+| **리뷰어에게 승인 요청** | write 권한이 있는 팀원에게 PR 리뷰 및 Approve 요청 | - |
+| **Bypass rules 체크박스 사용** | PR 하단의 "Merge without waiting for requirements to be met (bypass rules)" 체크 후 머지 | Admin 또는 Bypass 권한 |
+| **브랜치 보호 규칙 수정** | Settings → Branches에서 approval 요구 조건을 해제하거나 수를 0으로 변경 | Admin |
+| **Self-approval 허용** | Settings → Branches → "Allow specified actors to bypass required pull requests" 에 본인 추가 | Admin |
+
+### 개인 프로젝트(1인 개발)인 경우
+
+리뷰어가 본인뿐이라면 아래 중 하나를 적용하세요:
+
+1. **Required approvals를 0으로 변경** — PR은 필수지만 승인 없이 머지 가능
+2. **"Require a pull request before merging" 자체를 해제** — main에 직접 push 가능
+3. **Bypass list에 본인 추가** — 규칙은 유지하되 본인은 우회 가능
+
+## 7. Write 권한 팀원 확인 방법
+
+### GitHub 웹에서 확인
+
+1. **레포지토리 Settings 페이지 접속**
+   ```
+   https://github.com/nazi2k-cyber/levelup-app/settings/access
+   ```
+
+2. **Collaborators and teams** 섹션에서 확인 가능한 정보:
+   - 초대된 collaborator 목록
+   - 각 collaborator의 역할(Role): `Read`, `Triage`, `Write`, `Maintain`, `Admin`
+   - 팀 단위로 추가된 경우 팀 이름과 권한
+
+3. **Write 이상 권한을 가진 사용자**만 PR Approve가 유효합니다:
+   - `Write` — 코드 push 및 PR 승인 가능
+   - `Maintain` — Write + 일부 관리 기능
+   - `Admin` — 모든 권한
+
+### Organization 소속 레포인 경우
+
+**Settings → Manage access → Teams** 에서 팀별 권한을 확인하세요:
+```
+예시:
+  @org/developers  →  Write
+  @org/reviewers   →  Maintain
+  @org/admins      →  Admin
+```
+
+### 새 Collaborator 추가 방법
+
+```
+Settings → Collaborators → Add people
+→ GitHub 사용자명 또는 이메일 입력
+→ Role을 "Write" 이상으로 설정
+→ Add to repository
+```
+
+> **참고:** Free 플랜의 private 레포지토리는 collaborator 수에 제한이 있을 수 있습니다.
+
+## 8. 체크리스트
 
 GitHub 설정에서 아래 항목을 순서대로 적용하세요:
 
