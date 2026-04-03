@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.144] - 2026-04-03
+
+### 변경
+- refactor: 상태창 보상형 광고를 텍스트에서 버튼 UI로 변경
+
 ## [1.0.143] - 2026-04-03
 
 ### 변경
