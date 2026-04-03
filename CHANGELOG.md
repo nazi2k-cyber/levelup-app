@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.147] - 2026-04-03
+
+### 변경
+- feat: 플래너 개편 - 월간 캘린더 추가, 주간 네비게이션, 보상형 광고 게이트
+
 ## [1.0.146] - 2026-04-03
 
 ### 변경
