@@ -2299,6 +2299,8 @@ async function loadUserDataFromDB(user) {
             }
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
             document.getElementById('privacy-toggle').checked = AppState.user.privateAccount;
+            const privacyWarningEl = document.getElementById('private-account-warning');
+            if (privacyWarningEl) privacyWarningEl.style.display = AppState.user.privateAccount ? 'block' : 'none';
             updateCameraToggleUI();
             const loadedName = data.name || user.displayName || "신규 헌터";
             // ── 기존 유저 닉네임 마이그레이션: usernames 컬렉션에 예약 ──
@@ -9522,8 +9524,18 @@ async function toggleHealthSync() {
 // --- 비공개 계정 토글 ---
 function togglePrivateAccount() {
     const toggle = document.getElementById('privacy-toggle');
+    const warningEl = document.getElementById('private-account-warning');
+    if (toggle.checked) {
+        const lang = i18n[AppState.currentLang];
+        const msg = lang.private_account_confirm || '비공개 계정을 활성화하시겠습니까?';
+        if (!confirm(msg)) {
+            toggle.checked = false;
+            return;
+        }
+    }
     AppState.user.privateAccount = toggle.checked;
     AppState._privateAccountExplicit = true;
+    if (warningEl) warningEl.style.display = toggle.checked ? 'block' : 'none';
     saveUserData();
     if (window.AppLogger) AppLogger.info('[Privacy] privateAccount set to ' + toggle.checked);
 }
