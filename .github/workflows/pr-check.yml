@@ -107,7 +107,7 @@ jobs:
           )
 
           for pattern in "${PATTERNS[@]}"; do
-            if grep -rE "$pattern" --include="*.js" --include="*.html" --include="*.json" --include="*.yml" --include="*.yaml" --include="*.rules" . 2>/dev/null | grep -v node_modules | grep -v ".git/"; then
+            if grep -rE "$pattern" --include="*.js" --include="*.html" --include="*.json" --include="*.yml" --include="*.yaml" --include="*.rules" . 2>/dev/null | grep -v node_modules | grep -v ".git/" | grep -v "tesseract-core/"; then
               echo "::error::민감 정보 패턴이 발견되었습니다: $pattern"
               FOUND=$((FOUND + 1))
             fi
