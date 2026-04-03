@@ -74,13 +74,49 @@ main
 또는 **Branch protection rule에서:**
 - "Restrict who can push to matching branches" → `github-actions[bot]` 허용
 
-### 3-3. Tag 보호
-**Settings → Tags → Add rule**
+### 3-3. Tag 보호 (Ruleset)
+**Settings → Rules → Rulesets → "Tag 보호"**
 
+현재 설정:
+```yaml
+이름: Tag 보호
+대상: v* (모든 버전 태그)
+Enforcement: Active
+Bypass list:
+  - Repository admin (Always allow)
+규칙:
+  - Restrict creations     # 태그 생성 제한
+  - Restrict deletions     # 태그 삭제 제한
+  - Block force pushes     # force push 차단
 ```
-패턴: v*
-설명: 릴리즈 태그 보호 — auto-version 워크플로우만 생성 가능
+
+#### ⚠️ auto-version 워크플로우 태그 생성 실패 해결
+
+기본 `GITHUB_TOKEN`은 Ruleset의 바이패스 목록에 추가할 수 없어서,
+auto-version 워크플로우가 `v*` 태그를 생성할 때 권한 오류가 발생합니다.
+
+**해결 방법: PAT(Personal Access Token) 사용**
+
+1. GitHub **프로필 아이콘** → **Settings** (개인 계정 설정) → 왼쪽 사이드바 맨 아래 **Developer settings**
+2. **Personal access tokens → Fine-grained tokens → Generate new token**
+   - Token name: `auto-version-tag`
+   - Repository access: **Only select repositories** → `levelup-app`
+   - Permissions: **Contents** → Read and Write
+3. Repository **Settings → Secrets and variables → Actions → New repository secret**
+   - Name: `PAT_TOKEN`
+   - Secret: 생성한 PAT 붙여넣기
+
+워크플로우(`auto-version.yml`)의 checkout 단계에서 PAT를 사용하도록 설정되어 있습니다:
+```yaml
+- name: 소스코드 체크아웃
+  uses: actions/checkout@v5
+  with:
+    fetch-depth: 0
+    token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 ```
+
+> **참고:** PAT 소유자가 Repository admin 역할이면 Ruleset의 "Restrict creations"를 바이패스할 수 있습니다.
+> Fine-grained token이 보이지 않는 경우, **Classic token** (`repo` 스코프)을 사용해도 됩니다.
 
 ## 4. 구현된 자동화 보호
 
