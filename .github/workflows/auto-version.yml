@@ -174,7 +174,7 @@ jobs:
       - name: PR 생성 및 자동 머지
         if: steps.skip_check.outputs.skip == 'false' && steps.bootstrap.outputs.bootstrapped == 'false' && steps.check_pr.outputs.exists == 'false' && env.no_changes != 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           BRANCH_NAME="auto-version/v${NEW_VERSION}"
@@ -195,14 +195,18 @@ jobs:
           - \`functions/package.json\`
           - \`sw.js\` / \`www/sw.js\`
 
-          > 이 PR은 자동 생성되었습니다. 상태 체크 통과 후 자동 머지됩니다.")
+          > 이 PR은 자동 생성되었습니다. 상태 체크 통과 후 자동 머지됩니다." 2>&1) || {
+            echo "::warning::PR 생성 실패. 리포지토리 설정에서 'Allow GitHub Actions to create and approve pull requests'를 활성화하거나 PAT_TOKEN 시크릿을 설정하세요."
+            echo "::warning::브랜치 '${BRANCH_NAME}'가 push되었습니다. 수동으로 PR을 생성할 수 있습니다: https://github.com/${{ github.repository }}/compare/main...${BRANCH_NAME}"
+            exit 0
+          }
 
           echo "✅ PR 생성: ${PR_URL}"
 
           # 자동 머지 활성화 (상태 체크 통과 후 자동으로 머지)
           gh pr merge "${BRANCH_NAME}" --auto --squash --delete-branch || echo "⚠️ 자동 머지 설정 실패 — 수동 머지 필요"
 
-      # 9. 태그 생성 (PR 머지 후 태그는 별도로 생성)
+      # 9. 태그 생성
       - name: 태그 생성
         if: steps.skip_check.outputs.skip == 'false' && steps.bootstrap.outputs.bootstrapped == 'false' && steps.check_pr.outputs.exists == 'false' && env.no_changes != 'true'
         run: |
