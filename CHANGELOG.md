@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.162] - 2026-04-03
+
+### 변경
+- fix: apply valid Firebase API key as inline fallback config
+- fix: remove expired API key, add config generator, fix idToken null-safety
+
 ## [1.0.161] - 2026-04-03
 
 ### 변경
