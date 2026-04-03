@@ -74,9 +74,9 @@ jobs:
             echo "::error::firestore.rules 파일이 없습니다."
             exit 1
           fi
-          # 기본적인 구문 검증: match 블록 균형 확인
-          OPEN=$(grep -c '{' firestore.rules || true)
-          CLOSE=$(grep -c '}' firestore.rules || true)
+          # 기본적인 구문 검증: match 블록 균형 확인 (문자 단위로 카운트)
+          OPEN=$(tr -cd '{' < firestore.rules | wc -c)
+          CLOSE=$(tr -cd '}' < firestore.rules | wc -c)
           if [ "$OPEN" -ne "$CLOSE" ]; then
             echo "::error::firestore.rules에 중괄호 불균형이 있습니다. 열기: $OPEN, 닫기: $CLOSE"
             exit 1
