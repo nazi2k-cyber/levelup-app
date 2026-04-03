@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.157] - 2026-04-03
+
+### 변경
+- fix: 스트릭 푸시 알림 반복 실패 수정 (토큰 정리 개선)
+
 ## [1.0.156] - 2026-04-03
 
 ### 변경
