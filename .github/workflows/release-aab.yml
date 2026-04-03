@@ -186,8 +186,9 @@ jobs:
             echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
             echo "✅ GOOGLE_SERVICES_JSON 시크릿 사용"
           else
-            cp google-services.json android/app/google-services.json
-            echo "⚠️ 템플릿 google-services.json 사용"
+            echo "❌ GOOGLE_SERVICES_JSON 시크릿이 설정되지 않았습니다."
+            echo "GitHub Settings → Secrets → GOOGLE_SERVICES_JSON에 google-services.json 내용을 등록하세요."
+            exit 1
           fi
 
       # 11. 네이티브 플러그인 소스 주입

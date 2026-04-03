@@ -209,6 +209,26 @@ jobs:
         if: steps.detect.outputs.deploy_functions == 'true'
         run: firebase deploy --only functions --project ${{ env.FIREBASE_PROJECT }} --force
 
+      - name: Firebase 클라이언트 설정 생성 (firebase-config.js)
+        if: steps.detect.outputs.deploy_hosting == 'true'
+        env:
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+        run: |
+          cat > firebase-config.js <<JSEOF
+          var __FIREBASE_CONFIG = {
+              apiKey: "${FIREBASE_WEB_API_KEY}",
+              authDomain: "levelup-app-53d02.firebaseapp.com",
+              projectId: "levelup-app-53d02",
+              storageBucket: "levelup-app-53d02.firebasestorage.app",
+              messagingSenderId: "233040099152",
+              appId: "1:233040099152:web:82310514d26c8c6d52de55",
+              measurementId: "G-4DBGG03CCJ"
+          };
+          JSEOF
+          sed -i 's/^[[:space:]]*//' firebase-config.js
+          cp firebase-config.js www/firebase-config.js
+          echo "✅ firebase-config.js 생성 완료"
+
       - name: push-test.html 동기화 (root → www)
         if: steps.detect.outputs.deploy_hosting == 'true'
         run: |
