@@ -8,15 +8,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
 
-const firebaseConfig = self.__FIREBASE_CONFIG || {
-    apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
-    authDomain: "levelup-app-53d02.firebaseapp.com",
-    projectId: "levelup-app-53d02",
-    storageBucket: "levelup-app-53d02.firebasestorage.app",
-    messagingSenderId: "233040099152",
-    appId: "1:233040099152:web:82310514d26c8c6d52de55",
-    measurementId: "G-4DBGG03CCJ"
-};
+if (!self.__FIREBASE_CONFIG) {
+    throw new Error('firebase-config.js 누락: npm run generate-config 실행 또는 firebase-config.example.js를 참고하여 firebase-config.js를 생성하세요.');
+}
+const firebaseConfig = self.__FIREBASE_CONFIG;
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);

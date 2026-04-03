@@ -27,39 +27,40 @@ const FIREBASE_CDN = [
 // --- Firebase Cloud Messaging (기존 firebase-messaging-sw.js 기능 통합) ---
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
-try { importScripts('./firebase-config.js'); } catch (e) { /* firebase-config.js missing — use fallback */ }
+try { importScripts('./firebase-config.js'); } catch (e) {
+    console.warn('[SW] firebase-config.js 로드 실패 — FCM 비활성화');
+}
 
-firebase.initializeApp(self.__FIREBASE_CONFIG || {
-    apiKey: "AIzaSyDxNjHzj7ybZNLhG-EcbA5HKp9Sg4QhAno",
-    authDomain: "levelup-app-53d02.firebaseapp.com",
-    projectId: "levelup-app-53d02",
-    storageBucket: "levelup-app-53d02.firebasestorage.app",
-    messagingSenderId: "233040099152",
-    appId: "1:233040099152:web:82310514d26c8c6d52de55",
-    measurementId: "G-4DBGG03CCJ"
-});
+if (self.__FIREBASE_CONFIG) {
+    firebase.initializeApp(self.__FIREBASE_CONFIG);
+} else {
+    console.warn('[SW] Firebase 설정 없음 — 백그라운드 메시징 비활성화');
+}
 
-const messaging = firebase.messaging();
+let messaging = null;
+if (self.__FIREBASE_CONFIG) {
+    messaging = firebase.messaging();
 
-// 백그라운드 메시지 처리
-messaging.onBackgroundMessage((payload) => {
-    console.log('[SW] 백그라운드 메시지 수신:', payload);
+    // 백그라운드 메시지 처리
+    messaging.onBackgroundMessage((payload) => {
+        console.log('[SW] 백그라운드 메시지 수신:', payload);
 
-    const notificationTitle = payload.notification?.title || 'LEVEL UP: REBOOT';
-    const notificationOptions = {
-        body: payload.notification?.body || '',
-        icon: '/play_store_512.png',
-        badge: '/play_store_512.png',
-        tag: payload.data?.tag || 'levelup-notification',
-        data: payload.data || {},
-        actions: [
-            { action: 'open', title: '열기' }
-        ],
-        vibrate: [200, 100, 200]
-    };
+        const notificationTitle = payload.notification?.title || 'LEVEL UP: REBOOT';
+        const notificationOptions = {
+            body: payload.notification?.body || '',
+            icon: '/play_store_512.png',
+            badge: '/play_store_512.png',
+            tag: payload.data?.tag || 'levelup-notification',
+            data: payload.data || {},
+            actions: [
+                { action: 'open', title: '열기' }
+            ],
+            vibrate: [200, 100, 200]
+        };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
-});
+        self.registration.showNotification(notificationTitle, notificationOptions);
+    });
+}
 
 // --- Service Worker 라이프사이클 ---
 

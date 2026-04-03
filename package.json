@@ -9,6 +9,7 @@
     "sync": "bash sync-www.sh && cap sync android",
     "add-android": "cap add android",
     "build-apk": "bash sync-www.sh && cd android && chmod +x ./gradlew && ./gradlew assembleDebug",
+    "generate-config": "bash scripts/generate-firebase-config.sh",
     "version-bump": "bash scripts/version-bump.sh",
     "version-sync": "bash scripts/version-bump.sh"
   },
