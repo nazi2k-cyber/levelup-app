@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.165] - 2026-04-04
+
+### 변경
+- feat: 월간 날짜선택 시 자동전환 제거 + DIY퀘스트 태스크 목록 통합
+
 ## [1.0.164] - 2026-04-04
 
 ### 변경
