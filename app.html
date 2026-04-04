@@ -671,6 +671,21 @@
                         <div class="cal-grid" id="planner-calendar-grid"></div>
                     </div>
 
+                    <!-- 월간 플래너 캘린더 (기본 숨김, 주간과 같은 위치) -->
+                    <div class="calendar-wrapper d-none" id="monthly-calendar-card" style="margin-bottom:12px;">
+                        <div class="cal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <button class="planner-week-nav-btn" onclick="window.changeMonthlyCalendar(-1)">◀</button>
+                            <span id="monthly-cal-title" style="font-weight:bold;"></span>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <button class="planner-week-nav-btn" onclick="window.changeMonthlyCalendar(1)">▶</button>
+                                <button class="planner-monthly-btn" onclick="window.closeMonthlyCalendar()">
+                                    📋 <span data-i18n="planner_weekly_short">주간</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="monthly-calendar-grid" class="monthly-calendar-grid"></div>
+                    </div>
+
                     <!-- 플래너 탭 버튼 -->
                     <div class="planner-tab-bar">
                         <button class="planner-tab-btn active" data-planner-tab="priority" data-i18n="planner_tab_priority">⭐ 우선순위 태스크</button>
@@ -684,6 +699,12 @@
                                 <button class="btn-add-task" id="btn-add-task" data-i18n="planner_add_btn">+ 추가</button>
                             </div>
                             <div id="planner-tasks-list"></div>
+                        </div>
+
+                        <!-- DIY 퀘스트 플래너 연동 -->
+                        <div id="planner-diy-quest-section" class="planner-diy-quest-section d-none" style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
+                            <div style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold; margin-bottom:6px;" data-i18n="diy_quest_title">DIY Quests</div>
+                            <div id="planner-diy-quest-list"></div>
                         </div>
                     </div>
 
@@ -768,20 +789,6 @@
                     </div>
                 </div>
 
-                <!-- 월간 플래너 캘린더 (기본 숨김, 우선순위/시간표 하단) -->
-                <div class="system-card calendar-wrapper d-none" id="monthly-calendar-card">
-                    <div class="cal-header" style="display:flex; justify-content:space-between; align-items:center;">
-                        <button class="planner-week-nav-btn" onclick="window.changeMonthlyCalendar(-1)">◀</button>
-                        <span id="monthly-cal-title" style="font-weight:bold;"></span>
-                        <div style="display:flex; align-items:center; gap:4px;">
-                            <button class="planner-week-nav-btn" onclick="window.changeMonthlyCalendar(1)">▶</button>
-                            <button class="planner-monthly-btn" onclick="window.closeMonthlyCalendar()">
-                                📋 <span data-i18n="planner_weekly_short">주간</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="monthly-calendar-grid" class="monthly-calendar-grid"></div>
-                </div>
             </section>
 
             <section id="reels" class="view-section">

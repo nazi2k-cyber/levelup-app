@@ -451,6 +451,11 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .planner-tab-content { display: none; }
 .planner-tab-content.active { display: block; }
 
+/* 플래너 내 DIY 퀘스트 컴팩트 스타일 */
+.planner-diy-quest-section .quest-row { padding: 8px 6px; margin-bottom: 4px; }
+.planner-diy-quest-section .quest-title { font-size: 0.8rem; }
+.planner-diy-quest-section .quest-checkbox { min-width: 20px; min-height: 20px; width: 20px; height: 20px; }
+
 /* Quest subtab bar (mirrors planner-tab-bar) */
 .quest-tab-bar { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
 .quest-tab-btn {

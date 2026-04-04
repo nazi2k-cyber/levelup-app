@@ -3077,6 +3077,35 @@ function renderDiyQuestList() {
     }).join('');
 }
 
+// 플래너 내 DIY 퀘스트 체크 목록 렌더링
+function renderPlannerDiyQuests() {
+    const container = document.getElementById('planner-diy-quest-list');
+    const section = document.getElementById('planner-diy-quest-section');
+    if (!container || !section) return;
+
+    checkDiyDailyReset();
+    const defs = AppState.diyQuests.definitions;
+    const isToday = diarySelectedDate === getTodayStr();
+
+    if (!isToday || defs.length === 0) {
+        section.classList.add('d-none');
+        return;
+    }
+    section.classList.remove('d-none');
+
+    container.innerHTML = defs.map(q => {
+        const isDone = AppState.diyQuests.completedToday[q.id] || false;
+        return `
+            <div class="quest-row ${isDone ? 'done' : ''}" onclick="window.toggleDiyQuest('${q.id}')">
+                <div>
+                    <div class="quest-title"><span class="quest-stat-tag">${sanitizeText(q.stat)}</span>${sanitizeText(q.title)}</div>
+                </div>
+                <div class="quest-checkbox"></div>
+            </div>
+        `;
+    }).join('');
+}
+
 window.toggleDiyQuest = (questId) => {
     const q = AppState.diyQuests.definitions.find(d => d.id === questId);
     if (!q) return;
@@ -3110,6 +3139,7 @@ window.toggleDiyQuest = (questId) => {
     updateQuestHistory();
     saveUserData();
     renderDiyQuestList();
+    renderPlannerDiyQuests();
     renderCalendar();
     updatePointUI();
     renderRoulette();
@@ -8215,6 +8245,9 @@ function loadPlannerForDate(dateStr) {
 
     // 오늘 적용 버튼 상태 업데이트
     updateApplyTodayButton();
+
+    // DIY 퀘스트 플래너 연동 렌더링
+    renderPlannerDiyQuests();
 }
 
 let _plannerSaving = false; // 플래너 저장 진행 중 플래그
