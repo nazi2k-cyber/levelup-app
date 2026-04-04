@@ -918,8 +918,21 @@ const functions = getFunctions(app, "asia-northeast3");
 const provider = new GoogleAuthProvider();
 tok("Init", "Firebase initialized (project: " + firebaseConfig.projectId + ", region: asia-northeast3)");
 
+async function syncClaimsFromServer(user) {
+    try {
+        const syncClaims = httpsCallable(functions, "syncClaims");
+        const result = await syncClaims();
+        if (result.data.updated) {
+            tlog("Auth", "Claims updated, refreshing token...");
+            await user.getIdToken(true);
+        }
+    } catch (e) {
+        console.warn("[syncClaims]", e.message);
+    }
+}
+
 async function isAdminUser(user) {
-    const tokenResult = await getIdTokenResult(user);
+    const tokenResult = await getIdTokenResult(user, true);
     return tokenResult.claims.admin === true;
 }
 
@@ -972,6 +985,8 @@ window.doLogin = async function() {
         } else {
             tlog("Auth", "Google login popup...");
             const result = await signInWithPopup(auth, provider);
+            tlog("Auth", "Syncing claims for " + result.user.email + "...");
+            await syncClaimsFromServer(result.user);
             if (!(await isAdminUser(result.user))) {
                 twarn("Auth", "Access denied: " + result.user.email);
                 await signOut(auth);
@@ -989,6 +1004,8 @@ window.doLogin = async function() {
 // Handle redirect result (모바일 Google 로그인 복귀 시)
 getRedirectResult(auth).then(async (result) => {
     if (result && result.user) {
+        tlog("Auth", "Syncing claims for " + result.user.email + " (redirect)...");
+        await syncClaimsFromServer(result.user);
         if (!(await isAdminUser(result.user))) {
             twarn("Auth", "Access denied: " + result.user.email);
             await signOut(auth);
@@ -1005,21 +1022,28 @@ getRedirectResult(auth).then(async (result) => {
 window.doLogout = function() { tlog("Auth", "Logging out..."); signOut(auth); };
 
 onAuthStateChanged(auth, async (user) => {
-    if (user && (await isAdminUser(user))) {
-        tok("Auth", "Authenticated: " + user.email + " (uid: " + user.uid.substring(0, 12) + "...)");
-        document.getElementById("login-section").style.display = "none";
-        document.getElementById("admin-section").style.display = "block";
-        document.getElementById("user-email").textContent = user.email;
-        pingFunctions();
-        loadDashboard();
-        loadUsers();
-        loadLogs();
-        loadFeedback();
-        initPermissionsTab();
-        updatePreview();
-        refreshConditionsStatus();
+    if (user) {
+        await syncClaimsFromServer(user);
+        if (await isAdminUser(user)) {
+            tok("Auth", "Authenticated: " + user.email + " (uid: " + user.uid.substring(0, 12) + "...)");
+            document.getElementById("login-section").style.display = "none";
+            document.getElementById("admin-section").style.display = "block";
+            document.getElementById("user-email").textContent = user.email;
+            pingFunctions();
+            loadDashboard();
+            loadUsers();
+            loadLogs();
+            loadFeedback();
+            initPermissionsTab();
+            updatePreview();
+            refreshConditionsStatus();
+        } else {
+            tlog("Auth", "Non-admin user: " + user.email);
+            document.getElementById("login-section").style.display = "block";
+            document.getElementById("admin-section").style.display = "none";
+        }
     } else {
-        tlog("Auth", user ? "Non-admin user: " + user.email : "Not authenticated");
+        tlog("Auth", "Not authenticated");
         document.getElementById("login-section").style.display = "block";
         document.getElementById("admin-section").style.display = "none";
     }
