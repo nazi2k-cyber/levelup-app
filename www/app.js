@@ -3079,25 +3079,7 @@ function renderDiyQuestList() {
 
 // 플래너 내 DIY 퀘스트를 우선순위 태스크 형태로 렌더링
 function renderPlannerDiyQuests() {
-    const container = document.getElementById('planner-diy-quest-list');
-    if (!container) return;
-
-    checkDiyDailyReset();
-    const defs = AppState.diyQuests.definitions;
-    const isToday = diarySelectedDate === getTodayStr();
-
-    if (!isToday || defs.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-
-    container.innerHTML = defs.map(q => {
-        const isDone = AppState.diyQuests.completedToday[q.id] || false;
-        return `<div class="planner-task-item planner-diy-task${isDone ? ' diy-done' : ''}" onclick="window.toggleDiyQuest('${q.id}')">
-            <span class="diy-task-check">${isDone ? '✅' : '⬜'}</span>
-            <span class="diy-task-label"><span class="diy-task-stat">${sanitizeText(q.stat)}</span>${sanitizeText(q.title)}</span>
-        </div>`;
-    }).join('');
+    // DIY 퀘스트는 loadPlannerForDate에서 plannerTasks에 통합되므로 별도 렌더링 불필요
 }
 
 window.toggleDiyQuest = (questId) => {
@@ -3133,7 +3115,7 @@ window.toggleDiyQuest = (questId) => {
     updateQuestHistory();
     saveUserData();
     renderDiyQuestList();
-    renderPlannerDiyQuests();
+    renderPlannerTasks();
     renderCalendar();
     updatePointUI();
     renderRoulette();
@@ -7713,17 +7695,29 @@ function renderPlannerTasks() {
         const rankLabel = rankNum ? rankNum : '·';
         const isRanked = !!rankNum;
         const canRemove = idx >= 6;
-        return `<div class="planner-task-item">
+        const isDiy = !!task.diyQuestId;
+        const diyQuest = isDiy ? AppState.diyQuests.definitions.find(d => d.id === task.diyQuestId) : null;
+        const isDiyDone = isDiy && (AppState.diyQuests.completedToday[task.diyQuestId] || false);
+
+        let diyCheckBtn = '';
+        let diyStatTag = '';
+        if (isDiy && diyQuest) {
+            diyCheckBtn = `<button class="diy-check-btn${isDiyDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleDiyQuest('${task.diyQuestId}')" ${isFuture ? 'disabled' : ''}>${isDiyDone ? '✅' : '⬜'}</button>`;
+            diyStatTag = `<span class="diy-task-stat-inline">${sanitizeText(diyQuest.stat)}</span>`;
+        }
+
+        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isDiyDone ? ' diy-done' : ''}">
             <button class="task-rank-btn${isRanked ? ' ranked' : ''}"
                     onclick="window.toggleTaskRank(${idx})"
                     ${isFuture ? 'disabled' : ''}>${rankLabel}</button>
-            <input class="planner-task-input" type="text"
+            ${diyStatTag}<input class="planner-task-input${isDiyDone ? ' diy-done-input' : ''}" type="text"
                    value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
                    placeholder="${i18n[AppState.currentLang]?.planner_task_placeholder || '할 일 입력...'}"
                    maxlength="50"
                    oninput="window.updateTaskText(${idx}, this.value)"
                    ${isFuture ? 'disabled' : ''}>
-            ${canRemove ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
+            ${diyCheckBtn}
+            ${canRemove && !isDiy ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
         </div>`;
     }).join('');
 
@@ -8154,6 +8148,25 @@ function loadPlannerForDate(dateStr) {
         }
     } else {
         plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+    }
+
+    // DIY 퀘스트를 빈 태스크 슬롯에 기본값으로 채우기 (오늘 날짜만)
+    if (dateStr === getTodayStr()) {
+        checkDiyDailyReset();
+        const diyDefs = AppState.diyQuests.definitions || [];
+        diyDefs.forEach(q => {
+            // 이미 동일한 텍스트가 있으면 스킵
+            const already = plannerTasks.some(t => t.text === q.title);
+            if (already) return;
+            // 빈 슬롯 찾아서 채우기
+            const emptySlot = plannerTasks.findIndex(t => !t.text.trim());
+            if (emptySlot >= 0) {
+                plannerTasks[emptySlot].text = q.title;
+                plannerTasks[emptySlot].diyQuestId = q.id;
+            } else {
+                plannerTasks.push({ text: q.title, ranked: false, rankOrder: 0, diyQuestId: q.id });
+            }
+        });
     }
 
     // 캡션 복원
