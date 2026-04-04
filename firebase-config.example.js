@@ -3,7 +3,7 @@
 // firebase-config.js is gitignored and will not be committed
 var __FIREBASE_CONFIG = {
     apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    authDomain: "bravecat.studio",
     projectId: "YOUR_PROJECT",
     storageBucket: "YOUR_PROJECT.firebasestorage.app",
     messagingSenderId: "YOUR_SENDER_ID",

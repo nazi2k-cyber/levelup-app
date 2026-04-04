@@ -16,7 +16,7 @@ fi
 cat > firebase-config.js <<EOF
 var __FIREBASE_CONFIG = {
     apiKey: "${FIREBASE_WEB_API_KEY}",
-    authDomain: "levelup-app-53d02.firebaseapp.com",
+    authDomain: "bravecat.studio",
     projectId: "levelup-app-53d02",
     storageBucket: "levelup-app-53d02.firebasestorage.app",
     messagingSenderId: "233040099152",
