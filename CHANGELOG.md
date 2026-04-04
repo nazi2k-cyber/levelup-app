@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.175] - 2026-04-04
+
+### 변경
+- fix: admin Firebase API 키 유효성 검증 및 auth persistence 명시 설정
+
 ## [1.0.174] - 2026-04-04
 
 ### 변경
