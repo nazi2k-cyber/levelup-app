@@ -229,6 +229,15 @@ jobs:
           cp firebase-config.js www/firebase-config.js
           echo "✅ firebase-config.js 생성 완료"
 
+      - name: firebase-config.js API 키 검증
+        if: steps.detect.outputs.deploy_hosting == 'true'
+        run: |
+          if grep -q 'apiKey: ""' www/firebase-config.js; then
+            echo "::error::FIREBASE_WEB_API_KEY secret이 비어있습니다! firebase-config.js에 빈 apiKey가 포함되어 있습니다."
+            exit 1
+          fi
+          echo "✅ firebase-config.js API 키 검증 완료"
+
       - name: push-test.html 동기화 (root → www)
         if: steps.detect.outputs.deploy_hosting == 'true'
         run: |
