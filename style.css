@@ -451,20 +451,21 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .planner-tab-content { display: none; }
 .planner-tab-content.active { display: block; }
 
-/* 플래너 내 DIY 퀘스트 태스크 스타일 */
-.planner-diy-task {
-    cursor: pointer; border: 1px solid rgba(255,204,0,0.2); border-radius: 8px;
-    background: rgba(255,204,0,0.04); transition: all 0.15s;
+/* 플래너 내 DIY 퀘스트 통합 스타일 */
+.planner-diy-item { border: 1px solid rgba(255,204,0,0.15); border-radius: 8px; background: rgba(255,204,0,0.03); }
+.planner-diy-item.diy-done { opacity: 0.5; }
+.planner-diy-item .diy-done-input { text-decoration: line-through; }
+.diy-task-stat-inline {
+    font-size: 0.6rem; font-weight: bold; color: var(--neon-gold);
+    background: rgba(255,204,0,0.12); padding: 2px 5px; border-radius: 4px;
+    white-space: nowrap;
 }
-.planner-diy-task:hover { background: rgba(255,204,0,0.08); }
-.planner-diy-task.diy-done { opacity: 0.5; text-decoration: line-through; }
-.diy-task-check { font-size: 1rem; min-width: 24px; text-align: center; cursor: pointer; }
-.diy-task-label { font-size: 0.85rem; color: var(--text-main); flex: 1; }
-.diy-task-stat {
-    display: inline-block; font-size: 0.6rem; font-weight: bold; color: var(--neon-gold);
-    background: rgba(255,204,0,0.12); padding: 1px 5px; border-radius: 4px; margin-right: 6px;
-    vertical-align: middle;
+.diy-check-btn {
+    background: transparent; border: none; font-size: 1rem; cursor: pointer;
+    padding: 2px 4px; transition: transform 0.15s;
 }
+.diy-check-btn:hover { transform: scale(1.2); }
+.diy-check-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Quest subtab bar (mirrors planner-tab-bar) */
 .quest-tab-bar { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
