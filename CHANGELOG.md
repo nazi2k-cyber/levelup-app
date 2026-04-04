@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.166] - 2026-04-04
+
+### 변경
+- feat: DIY퀘스트를 우선순위 태스크와 완전 통합
+
 ## [1.0.165] - 2026-04-04
 
 ### 변경
