@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.164] - 2026-04-04
+
+### 변경
+- feat: 월간 캘린더 위치 수정 + DIY퀘스트 플래너 연동
+
 ## [1.0.163] - 2026-04-03
 
 ### 변경
