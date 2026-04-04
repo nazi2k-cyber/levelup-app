@@ -3077,32 +3077,26 @@ function renderDiyQuestList() {
     }).join('');
 }
 
-// 플래너 내 DIY 퀘스트 체크 목록 렌더링
+// 플래너 내 DIY 퀘스트를 우선순위 태스크 형태로 렌더링
 function renderPlannerDiyQuests() {
     const container = document.getElementById('planner-diy-quest-list');
-    const section = document.getElementById('planner-diy-quest-section');
-    if (!container || !section) return;
+    if (!container) return;
 
     checkDiyDailyReset();
     const defs = AppState.diyQuests.definitions;
     const isToday = diarySelectedDate === getTodayStr();
 
     if (!isToday || defs.length === 0) {
-        section.classList.add('d-none');
+        container.innerHTML = '';
         return;
     }
-    section.classList.remove('d-none');
 
     container.innerHTML = defs.map(q => {
         const isDone = AppState.diyQuests.completedToday[q.id] || false;
-        return `
-            <div class="quest-row ${isDone ? 'done' : ''}" onclick="window.toggleDiyQuest('${q.id}')">
-                <div>
-                    <div class="quest-title"><span class="quest-stat-tag">${sanitizeText(q.stat)}</span>${sanitizeText(q.title)}</div>
-                </div>
-                <div class="quest-checkbox"></div>
-            </div>
-        `;
+        return `<div class="planner-task-item planner-diy-task${isDone ? ' diy-done' : ''}" onclick="window.toggleDiyQuest('${q.id}')">
+            <span class="diy-task-check">${isDone ? '✅' : '⬜'}</span>
+            <span class="diy-task-label"><span class="diy-task-stat">${sanitizeText(q.stat)}</span>${sanitizeText(q.title)}</span>
+        </div>`;
     }).join('');
 }
 
@@ -7541,25 +7535,25 @@ function renderMonthlyCalendar(year, month) {
     container.innerHTML = headerHTML + gridHTML;
 }
 
-// 월간 캘린더에서 날짜 선택 → 주간 뷰로 복귀 + 해당 주로 이동
+// 월간 캘린더에서 날짜 선택 → 월간 유지, 해당 날짜 데이터 로드
 window.selectMonthlyDate = function(dateStr) {
-    // 선택 날짜가 속한 주로 weekOffset 계산
+    // 선택 날짜가 속한 주로 weekOffset 계산 (주간 복귀 시 사용)
     const selected = new Date(dateStr + 'T00:00:00');
     const today = new Date();
     const todayStart = new Date(today);
-    todayStart.setDate(today.getDate() - today.getDay()); // 이번 주 일요일
+    todayStart.setDate(today.getDate() - today.getDay());
     todayStart.setHours(0,0,0,0);
     const selectedStart = new Date(selected);
-    selectedStart.setDate(selected.getDate() - selected.getDay()); // 선택 날짜의 주 일요일
+    selectedStart.setDate(selected.getDate() - selected.getDay());
     selectedStart.setHours(0,0,0,0);
     const diffDays = Math.round((selectedStart - todayStart) / (1000 * 60 * 60 * 24));
     plannerWeekOffset = Math.round(diffDays / 7);
 
-    // 월간 캘린더 닫고 주간으로 복귀
-    closeMonthlyCalendar();
-
-    // 날짜 선택 및 로드
+    // 날짜 선택 및 데이터 로드 (월간 캘린더 유지)
     window.selectPlannerDate(dateStr);
+
+    // 월간 캘린더 선택 상태 갱신
+    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
 };
 
 // 이전/다음 월 이동
