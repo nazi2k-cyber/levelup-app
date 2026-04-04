@@ -7698,25 +7698,30 @@ function renderPlannerTasks() {
         const isDiy = !!task.diyQuestId;
         const diyQuest = isDiy ? AppState.diyQuests.definitions.find(d => d.id === task.diyQuestId) : null;
         const isDiyDone = isDiy && (AppState.diyQuests.completedToday[task.diyQuestId] || false);
+        const isDone = isDiy ? isDiyDone : !!task.done;
 
-        let diyCheckBtn = '';
-        let diyStatTag = '';
-        if (isDiy && diyQuest) {
-            diyCheckBtn = `<button class="diy-check-btn${isDiyDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleDiyQuest('${task.diyQuestId}')" ${isFuture ? 'disabled' : ''}>${isDiyDone ? '✅' : '⬜'}</button>`;
-            diyStatTag = `<span class="diy-task-stat-inline">${sanitizeText(diyQuest.stat)}</span>`;
+        // 스탯 태그 (DIY만)
+        const statTag = (isDiy && diyQuest) ? `<span class="diy-task-stat-inline">${sanitizeText(diyQuest.stat)}</span>` : '';
+
+        // 체크 버튼 (모든 태스크 공통)
+        let checkBtn = '';
+        if (isDiy) {
+            checkBtn = `<button class="task-check-btn${isDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleDiyQuest('${task.diyQuestId}')" ${isFuture ? 'disabled' : ''}>${isDone ? '✅' : '⬜'}</button>`;
+        } else {
+            checkBtn = `<button class="task-check-btn${isDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleTaskDone(${idx})" ${isFuture ? 'disabled' : ''}>${isDone ? '✅' : '⬜'}</button>`;
         }
 
-        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isDiyDone ? ' diy-done' : ''}">
+        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isDone ? ' task-done' : ''}">
             <button class="task-rank-btn${isRanked ? ' ranked' : ''}"
                     onclick="window.toggleTaskRank(${idx})"
                     ${isFuture ? 'disabled' : ''}>${rankLabel}</button>
-            ${diyStatTag}<input class="planner-task-input${isDiyDone ? ' diy-done-input' : ''}" type="text"
+            ${statTag}<input class="planner-task-input${isDone ? ' task-done-input' : ''}" type="text"
                    value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
                    placeholder="${i18n[AppState.currentLang]?.planner_task_placeholder || '할 일 입력...'}"
                    maxlength="50"
                    oninput="window.updateTaskText(${idx}, this.value)"
                    ${isFuture ? 'disabled' : ''}>
-            ${diyCheckBtn}
+            ${checkBtn}
             ${canRemove && !isDiy ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
         </div>`;
     }).join('');
@@ -7733,6 +7738,12 @@ window.toggleTaskRank = function(idx) {
         plannerTasks[idx].ranked = true;
         plannerTasks[idx].rankOrder = maxOrder + 1;
     }
+    renderPlannerTasks();
+};
+
+window.toggleTaskDone = function(idx) {
+    if (idx < 0 || idx >= plannerTasks.length) return;
+    plannerTasks[idx].done = !plannerTasks[idx].done;
     renderPlannerTasks();
 };
 
@@ -8127,7 +8138,11 @@ function loadPlannerForDate(dateStr) {
 
     // 태스크 로드 (새 형식 우선, 구 형식 마이그레이션)
     if (saved && saved.tasks && Array.isArray(saved.tasks)) {
-        plannerTasks = saved.tasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+        plannerTasks = saved.tasks.map(t => {
+            const d = { text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0, done: !!t.done };
+            if (t.diyQuestId) d.diyQuestId = t.diyQuestId;
+            return d;
+        });
         while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
     } else if (saved && (saved.priorities || saved.brainDump)) {
         // 구 형식 마이그레이션: priorities(3개) + brainDump 텍스트
@@ -8155,9 +8170,12 @@ function loadPlannerForDate(dateStr) {
         checkDiyDailyReset();
         const diyDefs = AppState.diyQuests.definitions || [];
         diyDefs.forEach(q => {
-            // 이미 동일한 텍스트가 있으면 스킵
-            const already = plannerTasks.some(t => t.text === q.title);
-            if (already) return;
+            // 이미 diyQuestId로 연결된 항목이 있으면 스킵
+            const alreadyById = plannerTasks.some(t => t.diyQuestId === q.id);
+            if (alreadyById) return;
+            // 동일한 텍스트가 있으면 diyQuestId 연결만 추가
+            const sameText = plannerTasks.find(t => t.text === q.title && !t.diyQuestId);
+            if (sameText) { sameText.diyQuestId = q.id; return; }
             // 빈 슬롯 찾아서 채우기
             const emptySlot = plannerTasks.findIndex(t => !t.text.trim());
             if (emptySlot >= 0) {
@@ -8281,8 +8299,12 @@ async function savePlannerEntry() {
         if (val) blocks[sel.dataset.time] = val;
     });
 
-    // 태스크 데이터 수집
-    const tasksData = plannerTasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+    // 태스크 데이터 수집 (diyQuestId, done 포함)
+    const tasksData = plannerTasks.map(t => {
+        const d = { text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0, done: !!t.done };
+        if (t.diyQuestId) d.diyQuestId = t.diyQuestId;
+        return d;
+    });
     // 하위 호환 priorities 배열 (순위 지정된 항목만 순서대로)
     const rankedByOrder = tasksData
         .filter(t => t.ranked && t.text)
