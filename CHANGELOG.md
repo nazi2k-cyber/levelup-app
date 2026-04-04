@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.171] - 2026-04-04
+
+### 변경
+- fix: authDomain을 firebaseapp.com으로 복원하여 관리자 로그인 에러 해결
+
 ## [1.0.170] - 2026-04-04
 
 ### 변경
