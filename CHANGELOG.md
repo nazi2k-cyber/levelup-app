@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.167] - 2026-04-04
+
+### 변경
+- feat: 모든 태스크 체크리스트 기능 + DIY퀘스트 저장 상태 보존
+
 ## [1.0.166] - 2026-04-04
 
 ### 변경
