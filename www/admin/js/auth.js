@@ -98,12 +98,16 @@ async function syncClaimsFromServer(user) {
     try {
         const syncClaims = httpsCallable(functions, "syncClaims");
         const result = await syncClaims();
+        console.log("[syncClaims] Result:", JSON.stringify(result.data));
         if (result.data.updated) {
             console.log("[syncClaims] Claims updated, refreshing token...");
             await user.getIdToken(true); // Force refresh to pick up new claims
         }
     } catch (e) {
-        console.warn("[syncClaims] Sync failed:", e.message);
+        console.warn("[syncClaims] Sync failed:", e.code || 'unknown', e.message);
+        if (e.code === 'functions/unauthenticated') {
+            console.error("[syncClaims] Auth token invalid. firebase-config.js의 API 키(FIREBASE_WEB_API_KEY)를 확인하세요.");
+        }
     }
 }
 
