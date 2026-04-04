@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.174] - 2026-04-04
+
+### 변경
+- revert: 모바일앱 공식 도메인(bravecat.studio) canonical URL 복원
+- 관리자 진단 로그 상세화 및 도메인 주소 Firebase Hosting으로 변경
+
 ## [1.0.173] - 2026-04-04
 
 ### 변경
