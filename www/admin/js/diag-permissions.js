@@ -4,10 +4,11 @@ import {
     collection, doc, getDoc, getDocs, query, where, limit, httpsCallable, getIdTokenResult
 } from "./firebase-init.js";
 import { getCurrentUser, checkAdminClaim, ensureFreshToken } from "./auth.js";
-import { tlog, tok, twarn, terror } from "./log-panel.js";
+import { tlog, tok, twarn, terror, timed } from "./log-panel.js";
 import { esc } from "./utils.js";
 
 const CHECKS = [
+    { id: "env",        title: "환경 정보 확인" },
     { id: "auth",       title: "인증 상태 확인" },
     { id: "admin",      title: "Admin Claim 확인" },
     { id: "token",      title: "토큰 신선도 확인" },
@@ -64,6 +65,44 @@ function setStatus(checkId, status, detail) {
     if (detailEl) detailEl.innerHTML = detail;
 }
 
+async function checkEnvironment() {
+    const hostname = location.hostname;
+    const url = location.href;
+    const ua = navigator.userAgent;
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    const isFirebaseHosting = hostname.includes("web.app") || hostname.includes("firebaseapp.com");
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+
+    // Check Firebase config
+    const configOk = !!self.__FIREBASE_CONFIG;
+    const projectId = configOk ? self.__FIREBASE_CONFIG.projectId : "N/A";
+    const authDomain = configOk ? self.__FIREBASE_CONFIG.authDomain : "N/A";
+
+    let envStatus = "pass";
+    let details = [];
+
+    details.push(`호스트: <code>${esc(hostname)}</code>`);
+    details.push(`URL: <code>${esc(url)}</code>`);
+    details.push(`플랫폼: ${isMobile ? "모바일" : "데스크탑"}`);
+    details.push(`Firebase 호스팅: ${isFirebaseHosting ? "✓" : isLocalhost ? "로컬" : "✗ (외부 도메인)"}`);
+    details.push(`Firebase Config: ${configOk ? "✓ 로드됨" : "✗ 미로드"}`);
+    details.push(`프로젝트: <code>${esc(projectId)}</code>`);
+    details.push(`Auth Domain: <code>${esc(authDomain)}</code>`);
+
+    if (!configOk) {
+        envStatus = "fail";
+        terror("Diag", "Firebase config가 로드되지 않았습니다", { hostname, url });
+    } else if (!isFirebaseHosting && !isLocalhost) {
+        envStatus = "warn";
+        twarn("Diag", `외부 도메인에서 실행 중: ${hostname} — Firebase 승인 도메인 확인 필요`, { hostname, authDomain });
+    } else {
+        tok("Diag", `환경 확인 완료: ${hostname} (${isMobile ? "모바일" : "데스크탑"})`, { projectId, authDomain });
+    }
+
+    setStatus("env", envStatus, details.join("<br>"));
+    return configOk;
+}
+
 async function checkAuth() {
     const user = auth.currentUser;
     if (!user) {
@@ -71,10 +110,13 @@ async function checkAuth() {
         terror("Diag", "Auth check failed: not logged in");
         return false;
     }
+    const provider = user.providerData[0]?.providerId || "unknown";
+    const created = user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleString("ko-KR") : "N/A";
+    const lastLogin = user.metadata?.lastSignInTime ? new Date(user.metadata.lastSignInTime).toLocaleString("ko-KR") : "N/A";
     setStatus("auth", "pass",
-        `UID: <code>${esc(user.uid)}</code><br>Email: <code>${esc(user.email || "없음")}</code><br>Provider: ${user.providerData[0]?.providerId || "unknown"}`
+        `UID: <code>${esc(user.uid)}</code><br>Email: <code>${esc(user.email || "없음")}</code><br>Provider: ${provider}<br>가입일: ${created}<br>마지막 로그인: ${lastLogin}`
     );
-    tok("Diag", "Auth check passed: " + user.email);
+    tok("Diag", `Auth check passed: ${user.email}`, { uid: user.uid, provider });
     return true;
 }
 
@@ -160,7 +202,7 @@ async function checkCloudFunctions() {
                 `오류: <code>${esc(code)}</code><br>${esc(msg)}`
             );
         }
-        terror("Diag", "Cloud Functions error: " + code + " " + msg);
+        terror("Diag", "Cloud Functions error: " + code + " " + msg, { code, region: "asia-northeast3" });
         return false;
     }
 }
@@ -189,7 +231,7 @@ async function checkFirestoreRead(collectionName, checkId, requireAdmin) {
         } else {
             setStatus(checkId, "fail", `오류: <code>${esc(msg)}</code>`);
         }
-        terror("Diag", `Firestore read ${collectionName}: ${msg}`);
+        terror("Diag", `Firestore read ${collectionName}: ${msg}`, { collection: collectionName, requireAdmin, isPermError });
         return false;
     }
 }
@@ -218,28 +260,35 @@ window._runAllDiag = async function() {
     const btn = document.getElementById("btn-run-diag");
     btn.disabled = true;
     btn.textContent = "진단 중...";
+    const diagStart = performance.now();
     tlog("Diag", "=== 전체 진단 시작 ===");
 
     // Reset all to pending
     CHECKS.forEach(c => setStatus(c.id, "pending", "대기 중..."));
 
-    const authOk = await checkAuth();
+    // 1. Environment check
+    await timed("Diag", "환경 정보 확인", checkEnvironment);
+
+    // 2. Auth check
+    const authOk = await timed("Diag", "인증 상태 확인", checkAuth);
     if (!authOk) {
-        CHECKS.slice(1).forEach(c => setStatus(c.id, "fail", "로그인이 필요합니다."));
+        CHECKS.slice(2).forEach(c => setStatus(c.id, "fail", "로그인이 필요합니다."));
         btn.disabled = false;
         btn.textContent = "전체 진단 실행";
         return;
     }
 
-    await checkAdminClaimStatus();
-    await checkTokenFreshness();
-    await checkCloudFunctions();
-    await checkFirestoreRead("users", "read_users", false);
-    await checkFirestoreRead("push_logs", "read_admin", true);
-    await checkFirestoreRead("app_config", "read_config", false);
+    // 3~8. Remaining checks with timing
+    await timed("Diag", "Admin Claim 확인", checkAdminClaimStatus);
+    await timed("Diag", "토큰 신선도 확인", checkTokenFreshness);
+    await timed("Diag", "Cloud Functions 연결", checkCloudFunctions);
+    await timed("Diag", "Firestore 읽기: users", () => checkFirestoreRead("users", "read_users", false));
+    await timed("Diag", "Firestore 읽기: push_logs", () => checkFirestoreRead("push_logs", "read_admin", true));
+    await timed("Diag", "Firestore 읽기: app_config", () => checkFirestoreRead("app_config", "read_config", false));
     await checkRepairStatus();
 
-    tlog("Diag", "=== 진단 완료 ===");
+    const totalMs = (performance.now() - diagStart).toFixed(0);
+    tlog("Diag", `=== 전체 진단 완료 (총 ${totalMs}ms) ===`);
     btn.disabled = false;
     btn.textContent = "전체 진단 실행";
 };

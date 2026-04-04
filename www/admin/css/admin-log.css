@@ -64,4 +64,36 @@
 .log-ok .log-level { color: var(--success); }
 .log-warn .log-level { color: var(--warning); }
 .log-error .log-level { color: var(--error); }
+/* ─── Log Filter Bar ─── */
+.log-filter-bar {
+    display: flex;
+    gap: 4px;
+    padding: 4px 16px;
+    background: #0d0d18;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.log-filter-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-sub);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.65rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+}
+.log-filter-btn:hover { border-color: var(--accent); color: var(--text); }
+.log-filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.log-filter-btn[data-filter="ERROR"].active { background: var(--error); border-color: var(--error); }
+.log-filter-btn[data-filter="WARN"].active { background: var(--warning); border-color: var(--warning); color: #000; }
+.log-filter-btn[data-filter="OK"].active { background: var(--success); border-color: var(--success); color: #000; }
+
+/* ─── Elapsed & Extra ─── */
+.log-elapsed { color: #444; min-width: 55px; font-size: 0.7rem; }
+.log-extra { color: #555; font-size: 0.68rem; margin-left: 8px; word-break: break-all; }
+.log-badge-warn { background: var(--warning) !important; color: #000 !important; }
+.log-badge-error { background: var(--error) !important; color: #fff !important; }
+
 .log-panel-spacer { height: 50px; }

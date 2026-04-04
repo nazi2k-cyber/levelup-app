@@ -62,7 +62,7 @@
     </div>
 </div>
 
-<!-- LEVEL UP: REBOOT — Admin Diagnostics v2.1 -->
+<!-- LEVEL UP: REBOOT — Admin Diagnostics v2.2 -->
 <div id="log-panel" class="log-panel collapsed">
     <div class="log-header" onclick="toggleLogPanel()">
         <span>로그 <span class="log-badge" id="log-count">0</span></span>
@@ -72,6 +72,13 @@
             <button onclick="event.stopPropagation(); clearLogs()">지우기</button>
         </div>
     </div>
+    <div class="log-filter-bar" onclick="event.stopPropagation()">
+        <button class="log-filter-btn active" data-filter="ALL" onclick="filterLogs('ALL')">전체</button>
+        <button class="log-filter-btn" data-filter="ERROR" onclick="filterLogs('ERROR')">ERROR</button>
+        <button class="log-filter-btn" data-filter="WARN" onclick="filterLogs('WARN')">WARN</button>
+        <button class="log-filter-btn" data-filter="OK" onclick="filterLogs('OK')">OK</button>
+        <button class="log-filter-btn" data-filter="INFO" onclick="filterLogs('INFO')">INFO</button>
+    </div>
     <div class="log-entries" id="log-entries"></div>
 </div>
 <div class="log-panel-spacer"></div>
@@ -80,7 +87,7 @@
 <script type="module">
 import { auth } from "./js/firebase-init.js";
 import { onAdminAuth, doLogin, doLogout, isAdmin, isMaster } from "./js/auth.js";
-import { initLogPanel, tlog, tok } from "./js/log-panel.js";
+import { initLogPanel, tlog, tok, timed } from "./js/log-panel.js";
 import { initTabs } from "./js/tab-nav.js";
 import { initDiagPermissions } from "./js/diag-permissions.js";
 import { initDiagRules } from "./js/diag-rules.js";
