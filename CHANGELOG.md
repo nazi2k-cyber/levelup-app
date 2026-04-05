@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.176] - 2026-04-05
+
+### 변경
+- fix: 모바일 로그인 popup 우선 전략 + redirect fallback 및 진단 로그 강화
+
 ## [1.0.175] - 2026-04-04
 
 ### 변경
