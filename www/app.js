@@ -2192,6 +2192,13 @@ async function loadUserDataFromDB(user) {
             if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
             if(data.privateAccount !== undefined) { AppState.user.privateAccount = data.privateAccount; AppState._privateAccountExplicit = true; }
             if(data.fcmToken !== undefined) AppState.user.fcmToken = data.fcmToken || null;
+            // 언어 설정 복원 (로그아웃 시 localStorage.clear() 대응)
+            if(data.lang) {
+                AppState.currentLang = data.lang;
+                try { localStorage.setItem('lang', data.lang); } catch(e) {}
+                const langSelect = document.getElementById('lang-select');
+                if (langSelect) langSelect.value = data.lang;
+            }
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.nameLastChanged != null) AppState.user.nameLastChanged = data.nameLastChanged;
