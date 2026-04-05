@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.181] - 2026-04-05
+
+### 변경
+- Add calendar date filtering and rewarded ad gate for running calculator
+
 ## [1.0.180] - 2026-04-05
 
 ### 변경
