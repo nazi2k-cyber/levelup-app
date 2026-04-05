@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.187] - 2026-04-05
+
+### 변경
+- fix: saveUserData() payload에 lang 필드 추가
+
 ## [1.0.186] - 2026-04-05
 
 ### 변경
