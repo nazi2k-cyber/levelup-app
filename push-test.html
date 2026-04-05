@@ -1234,6 +1234,7 @@ window.loadUsers = async function() {
                     uid: doc.id,
                     displayName: data.name || data.displayName || doc.id.substring(0, 8),
                     nickname: data.name || null,
+                    email: data.email || null,
                     lang: data.lang || "ko",
                     fcmToken: data.fcmToken || null,
                     lastActiveDate,
@@ -1254,7 +1255,7 @@ window.loadUsers = async function() {
         return;
     }
 
-    let html = '<table><thead><tr><th>User</th><th>Nickname</th><th>Lang</th><th>Streak Stage</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>User</th><th>Email</th><th>Lang</th><th>Streak Stage</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
     for (const u of usersCache) {
         const diffClass = u.diffDays === null ? "" : u.diffDays >= 3 ? "badge-error" : u.diffDays >= 2 ? "badge-warning" : "badge-active";
         const diffText = u.diffDays === null ? "-" : u.diffDays === 0 ? "Today" : u.diffDays + "d ago";
@@ -1269,7 +1270,7 @@ window.loadUsers = async function() {
 
         html += `<tr>
             <td><strong>${esc(u.displayName)}</strong><br><span class="user-email">${esc(u.uid.substring(0, 12))}...</span></td>
-            <td>${esc(u.nickname || '-')}</td>
+            <td>${esc(u.email || '-')}</td>
             <td>${esc(u.lang)}</td>
             <td><span class="badge ${stageClass}">${stageLabel}</span></td>
             <td><span class="badge ${diffClass}">${diffText}</span></td>
