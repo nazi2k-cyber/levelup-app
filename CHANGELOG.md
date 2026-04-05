@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.184] - 2026-04-05
+
+### 변경
+- fix: Google 로그인 idToken 추출 시 v3.4.x 응답 구조 호환성 추가
+
 ## [1.0.183] - 2026-04-05
 
 ### 변경
