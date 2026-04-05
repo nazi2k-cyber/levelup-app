@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.190] - 2026-04-05
+
+### 변경
+- feat: 고객 약관/개인정보처리방침/이용정책/계정삭제 페이지 최신 개발사항 반영
+
 ## [1.0.189] - 2026-04-05
 
 ### 변경
