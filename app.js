@@ -1546,8 +1546,19 @@ function showEmailLoginFields() {
 
 // --- 온보딩 가이드 (최초 1회 노출) ---
 const ONBOARDING_STORAGE_KEY = 'levelup_onboarding_seen';
-const ONBOARDING_TOTAL_SLIDES = 5;
+const ONBOARDING_TOTAL_SLIDES = 7;
 let _obCurrentSlide = 0;
+
+function _obBuildDots() {
+    const dotsEl = document.getElementById('ob-dots');
+    if (!dotsEl) return;
+    dotsEl.innerHTML = '';
+    for (let i = 0; i < ONBOARDING_TOTAL_SLIDES; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'ob-dot' + (i === 0 ? ' active' : '');
+        dotsEl.appendChild(dot);
+    }
+}
 
 function showOnboardingGuide() {
     if (localStorage.getItem(ONBOARDING_STORAGE_KEY)) return;
@@ -1555,10 +1566,14 @@ function showOnboardingGuide() {
     if (!guide) return;
     guide.classList.remove('d-none');
     _obCurrentSlide = 0;
-    // 온보딩 언어 적용 (슬라이드 업데이트 전에 텍스트 설정)
     if (typeof changeLanguage === 'function') changeLanguage(AppState.currentLang);
-    // DOM 레이아웃 완료 후 슬라이드 위치 적용
-    requestAnimationFrame(() => { _obUpdateSlides(); });
+    _obBuildDots();
+    requestAnimationFrame(() => {
+        _obUpdateSlides();
+        // 첫 슬라이드 스태거 애니메이션
+        const firstSlide = guide.querySelector('.onboarding-slide[data-slide="0"]');
+        if (firstSlide) firstSlide.classList.add('ob-animate');
+    });
     _obBindEvents();
 }
 
@@ -1566,7 +1581,6 @@ function dismissOnboardingGuide() {
     const guide = document.getElementById('onboarding-guide');
     if (guide) guide.classList.add('d-none');
     localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
-    // 온보딩 종료 후 안드로이드 권한 동의 팝업 표시
     if (window._pendingPermissionPrompts) {
         window._pendingPermissionPrompts = false;
         setTimeout(() => showPermissionPrompts(), 300);
@@ -1578,15 +1592,25 @@ function _obUpdateSlides() {
     slides.forEach((slide, i) => {
         const offset = (i - _obCurrentSlide) * 100;
         slide.style.transform = `translateX(${offset}%)`;
-        // 현재 + 인접 슬라이드 visible (전환 애니메이션용)
         if (Math.abs(i - _obCurrentSlide) <= 1) {
             slide.classList.add('active');
         } else {
             slide.classList.remove('active');
         }
+        // 스태거 애니메이션: 현재 슬라이드만 활성화
+        if (i === _obCurrentSlide) {
+            slide.classList.remove('ob-animate');
+            void slide.offsetWidth; // reflow 트리거
+            slide.classList.add('ob-animate');
+        } else {
+            slide.classList.remove('ob-animate');
+        }
     });
-    const pageEl = document.getElementById('onboarding-page');
-    if (pageEl) pageEl.textContent = `${_obCurrentSlide + 1} / ${ONBOARDING_TOTAL_SLIDES}`;
+    // 도트 인디케이터 업데이트
+    const dots = document.querySelectorAll('#ob-dots .ob-dot');
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === _obCurrentSlide);
+    });
     const prevBtn = document.getElementById('onboarding-prev');
     const nextBtn = document.getElementById('onboarding-next');
     if (prevBtn) prevBtn.disabled = _obCurrentSlide === 0;
