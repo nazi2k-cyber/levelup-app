@@ -4965,9 +4965,9 @@ function openProfileStatsModal(userId) {
                 : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue); flex-shrink:0;"></div>`}
             <div>
                 ${titleBadgeHTML}
-                <div style="display:flex; align-items:center; gap:6px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                     <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
-                    <button onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" style="background:none; border:1px solid var(--neon-blue); border-radius:4px; padding:2px 6px; cursor:pointer; font-size:0.7rem; color:var(--neon-blue); display:inline-flex; align-items:center; gap:2px;" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">📋</button>
+                    <button onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" style="background:none; border:1px solid var(--neon-blue); border-radius:4px; padding:2px 8px; cursor:pointer; font-size:0.7rem; color:var(--neon-blue); display:inline-flex; align-items:center; gap:2px; white-space:nowrap; flex-shrink:0;" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
                 <div class="profile-follow-stats" style="margin-top:4px;">
@@ -5003,7 +5003,7 @@ window.openProfileStatsModal = openProfileStatsModal;
 window.closeProfileStatsModal = closeProfileStatsModal;
 
 // --- 프로필 모달에서 당일 플래너 열람 ---
-function viewUserTodayPlanner(userId) {
+async function viewUserTodayPlanner(userId) {
     const lang = AppState.currentLang;
     const isMe = userId === auth.currentUser?.uid;
     let blocks = null;
@@ -5040,6 +5040,15 @@ function viewUserTodayPlanner(userId) {
         return;
     }
 
+    // ★ 보상형 광고: 최초 및 매 10회 열람 시
+    let viewCount = parseInt(localStorage.getItem('planner_view_count') || '0', 10);
+    viewCount++;
+    localStorage.setItem('planner_view_count', String(viewCount));
+    const shouldShowAd = (viewCount === 1) || (viewCount % 10 === 0);
+    if (shouldShowAd && typeof isNativePlatform !== 'undefined' && isNativePlatform && _admobInitialized) {
+        try { await _showPlannerRewardedAd(lang); } catch (e) { console.warn('[PlannerAd] Ad failed:', e); }
+    }
+
     // 시간표 렌더링
     const mergedBlocks = mergeConsecutiveBlocks(blocks);
     const scheduleLabel = i18n[lang]?.planner_tab_schedule || '시간표';
@@ -5061,6 +5070,53 @@ function viewUserTodayPlanner(userId) {
     m.classList.add('d-flex');
 }
 window.viewUserTodayPlanner = viewUserTodayPlanner;
+
+// --- ★ 플래너 열람 보상형 광고 ---
+function _showPlannerRewardedAd(lang) {
+    return new Promise(async (resolve) => {
+        try {
+            const { AdMob } = window.Capacitor.Plugins;
+            if (!AdMob) { resolve(); return; }
+
+            if (!_rewardedAdReady) {
+                try {
+                    await AdMob.prepareRewardVideoAd({
+                        adId: REWARDED_AD_UNIT_ID,
+                        isTesting: false,
+                        npa: !canShowPersonalizedAds(),
+                    });
+                    _rewardedAdReady = true;
+                } catch (e) {
+                    console.warn('[PlannerAd] 광고 준비 실패:', e);
+                    resolve();
+                    return;
+                }
+            }
+
+            _rewardedAdContext = 'plannerView';
+            _rewardEarned = false;
+            _rewardedAdOnSuccess = function() {
+                if (window.AppLogger) AppLogger.info('[PlannerAd] 보상형 광고 시청 완료');
+                resolve();
+            };
+            _rewardedAdOnFail = function() {
+                if (window.AppLogger) AppLogger.info('[PlannerAd] 보상형 광고 이탈/실패');
+                resolve();
+            };
+
+            await AdMob.showRewardVideoAd();
+        } catch (e) {
+            console.warn('[PlannerAd] 광고 표시 실패:', e);
+            _rewardedAdContext = 'bonusExp';
+            _rewardedAdOnSuccess = null;
+            _rewardedAdOnFail = null;
+            _rewardedAdReady = false;
+            preloadRewardedAd._retryCount = 0;
+            preloadRewardedAd();
+            resolve();
+        }
+    });
+}
 
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
 function closeInfoModal() {
