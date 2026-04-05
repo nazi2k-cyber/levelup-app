@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.182] - 2026-04-05
+
+### 변경
+- feat: 러닝 계산기/1RM 계산기 STR 보상시스템 추가
+
 ## [1.0.181] - 2026-04-05
 
 ### 변경
