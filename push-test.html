@@ -1334,7 +1334,8 @@ window.loadLogs = async function() {
                     sender: data.sender || null,
                     uid: data.uid || null,
                     userName: null,
-                    userNickname: null
+                    userNickname: null,
+                    userEmail: null
                 });
             });
             // Attempt to resolve user names from usersCache for fallback
@@ -1353,6 +1354,7 @@ window.loadLogs = async function() {
                     if (matched) {
                         l.userName = matched.displayName;
                         l.userNickname = matched.nickname || null;
+                        l.userEmail = matched.email || null;
                     }
                 }
             }
@@ -1414,7 +1416,7 @@ window.applyLogFilters = function() {
         return;
     }
 
-    let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th><th>User</th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th><th>ID</th><th>Email</th><th>User</th></tr></thead><tbody>';
     for (const l of filtered) {
         const time = new Date(l.timestamp).toLocaleString("ko-KR", { hour12: false });
         const badge = l.success ? '<span class="badge badge-success">OK</span>' : '<span class="badge badge-error">FAIL</span>';
@@ -1427,6 +1429,7 @@ window.applyLogFilters = function() {
             <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis;">${esc(l.target)}</td>
             <td>${badge}</td>
             <td style="font-size:0.7rem; color:var(--text-sub); max-width:140px; overflow:hidden; text-overflow:ellipsis;">${id}</td>
+            <td style="font-size:0.75rem;">${l.userEmail ? esc(l.userEmail) : '<span style="color:var(--text-sub)">-</span>'}</td>
             <td>${l.userName ? `<strong>${esc(l.userName)}</strong>` + (uidShort ? `<br><span class="user-email">${uidShort}</span>` : '') : '<span style="color:var(--text-sub)">-</span>'}</td>
         </tr>`;
     }
