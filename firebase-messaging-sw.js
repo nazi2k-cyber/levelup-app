@@ -17,6 +17,8 @@ messaging.onBackgroundMessage((payload) => {
     console.log('[SW] 백그라운드 메시지 수신:', payload);
 
     const notificationTitle = payload.notification?.title || 'LEVEL UP: REBOOT';
+    const actionTitles = { ko: '열기', en: 'Open', ja: '開く' };
+    const lang = payload.data?.lang || 'ko';
     const notificationOptions = {
         body: payload.notification?.body || '',
         icon: '/play_store_512.png',
@@ -24,7 +26,7 @@ messaging.onBackgroundMessage((payload) => {
         tag: payload.data?.tag || 'levelup-notification',
         data: payload.data || {},
         actions: [
-            { action: 'open', title: '열기' }
+            { action: 'open', title: actionTitles[lang] || '열기' }
         ],
         vibrate: [200, 100, 200]
     };

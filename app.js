@@ -4131,8 +4131,14 @@ function refreshSettingsStatusMessages() {
 }
 
 function changeLanguage(langCode) {
+    const oldLang = AppState.currentLang;
     AppState.currentLang = langCode;
     try { localStorage.setItem('lang', langCode); } catch(e) {}
+
+    // 언어 변경 시 푸시 토픽 재구독
+    if (oldLang !== langCode && AppState.user && AppState.user.pushEnabled) {
+        updateTopicSubscriptionForLanguage(oldLang, langCode);
+    }
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (i18n[langCode][key]) el.innerHTML = i18n[langCode][key];
@@ -10591,6 +10597,19 @@ async function initPushNotifications() {
             if (window.AppLogger) AppLogger.warn('[FCM] 시작 시 토큰 갱신 실패: ' + (e.message || ''));
         }
 
+        // 레거시 토픽 → 언어별 토픽 마이그레이션 (1회 실행)
+        const migrated = localStorage.getItem('push_topic_v2');
+        if (!migrated && isNative) {
+            const cap = window.Capacitor;
+            if (cap && cap.Plugins && cap.Plugins.FCMPlugin) {
+                try { await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic: 'raid_alerts' }); } catch(e) {}
+                try { await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic: 'daily_reminder' }); } catch(e) {}
+                await subscribeNativeTopics();
+                if (window.AppLogger) AppLogger.info('[FCM] 레거시 토픽 → 언어별 토픽 마이그레이션 완료');
+            }
+            try { localStorage.setItem('push_topic_v2', '1'); } catch(e) {}
+        }
+
         if (statusDiv) {
             statusDiv.style.display = 'flex';
             const lang = i18n[AppState.currentLang];
@@ -11033,12 +11052,13 @@ async function setupWebPushListeners() {
     });
 }
 
-/** 네이티브 기본 토픽 구독 (레이드 알림, 일일 리마인더 등) */
+/** 네이티브 기본 토픽 구독 (언어별 레이드 알림, 일일 리마인더 등) */
 async function subscribeNativeTopics() {
     const cap = window.Capacitor;
     if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
 
-    const topics = ['raid_alerts', 'daily_reminder', 'announcements'];
+    const lang = AppState.currentLang || localStorage.getItem('lang') || 'ko';
+    const topics = [`raid_alerts_${lang}`, `daily_reminder_${lang}`, 'announcements'];
     for (const topic of topics) {
         try {
             await cap.Plugins.FCMPlugin.subscribeTopic({ topic });
@@ -11049,12 +11069,23 @@ async function subscribeNativeTopics() {
     }
 }
 
-/** 네이티브 토픽 구독 해제 */
+/** 네이티브 토픽 구독 해제 (모든 언어 토픽 + 레거시 토픽 해제) */
 async function unsubscribeNativeTopics() {
     const cap = window.Capacitor;
     if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
 
-    const topics = ['raid_alerts', 'daily_reminder', 'announcements'];
+    const langs = ['ko', 'en', 'ja'];
+    const baseTopics = ['raid_alerts', 'daily_reminder'];
+    const topics = [];
+    for (const base of baseTopics) {
+        for (const lang of langs) {
+            topics.push(`${base}_${lang}`);
+        }
+    }
+    topics.push('announcements');
+    // 레거시 토픽도 해제
+    topics.push('raid_alerts', 'daily_reminder');
+
     for (const topic of topics) {
         try {
             await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic });
@@ -11062,6 +11093,20 @@ async function unsubscribeNativeTopics() {
             if (window.AppLogger) AppLogger.warn('[FCM] 토픽 해제 실패: ' + topic);
         }
     }
+}
+
+/** 언어 변경 시 푸시 토픽 재구독 (이전 언어 해제 → 새 언어 구독) */
+async function updateTopicSubscriptionForLanguage(oldLang, newLang) {
+    if (oldLang === newLang) return;
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const baseTopics = ['raid_alerts', 'daily_reminder'];
+    for (const base of baseTopics) {
+        try { await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic: `${base}_${oldLang}` }); } catch (e) {}
+        try { await cap.Plugins.FCMPlugin.subscribeTopic({ topic: `${base}_${newLang}` }); } catch (e) {}
+    }
+    if (window.AppLogger) AppLogger.info(`[FCM] 토픽 언어 변경: ${oldLang} → ${newLang}`);
 }
 
 /** 인앱 알림 표시 (포그라운드 수신 시) */

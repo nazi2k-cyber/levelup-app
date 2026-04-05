@@ -1464,34 +1464,52 @@ async function handleRaidAlert() {
     else if (kstHour <= 13) slotLabel = "11:30~13:30";
     else slotLabel = "19:00~21:00";
 
-    // 토픽 기반 발송 (pushEnabled 유저가 구독 중)
-    const message = {
-        topic: "raid_alerts",
-        notification: {
-            title: MESSAGES.raid_start.ko.title,
-            body: MESSAGES.raid_start.ko.body
-        },
-        data: {
-            tab: "dungeon",
-            target: "dungeon",
-            type: "raid_alert",
-            slot: slotLabel,
-            link: "levelup://tab/dungeon"
-        },
-        android: {
-            priority: "high",
+    // 언어별 토픽 발송 (raid_alerts_ko, raid_alerts_en, raid_alerts_ja)
+    const langs = ["ko", "en", "ja"];
+    for (const lang of langs) {
+        const msg = getLocalizedMessage("raid_start", lang);
+        const message = {
+            topic: `raid_alerts_${lang}`,
             notification: {
-                channelId: "raid_alerts",
-                sound: "default"
+                title: msg.title,
+                body: msg.body
+            },
+            data: {
+                tab: "dungeon",
+                target: "dungeon",
+                type: "raid_alert",
+                slot: slotLabel,
+                lang: lang,
+                link: "levelup://tab/dungeon"
+            },
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: "raid_alerts",
+                    sound: "default"
+                }
             }
-        }
-    };
+        };
 
+        try {
+            const response = await messaging.send(message);
+            console.log(`[레이드 알림][${lang}] ${slotLabel} 발송 완료:`, response);
+        } catch (e) {
+            console.error(`[레이드 알림][${lang}] 발송 실패:`, e);
+        }
+    }
+
+    // 레거시 토픽 하위호환 (마이그레이션 미완료 유저용 — 추후 제거)
+    const legacyMsg = getLocalizedMessage("raid_start", "ko");
     try {
-        const response = await messaging.send(message);
-        console.log(`[레이드 알림] ${slotLabel} 발송 완료:`, response);
+        await messaging.send({
+            topic: "raid_alerts",
+            notification: { title: legacyMsg.title, body: legacyMsg.body },
+            data: { tab: "dungeon", target: "dungeon", type: "raid_alert", slot: slotLabel, lang: "ko", link: "levelup://tab/dungeon" },
+            android: { priority: "high", notification: { channelId: "raid_alerts", sound: "default" } }
+        });
     } catch (e) {
-        console.error("[레이드 알림] 발송 실패:", e);
+        console.warn("[레이드 알림][레거시] 발송 실패:", e);
     }
 }
 
@@ -1508,32 +1526,51 @@ exports.sendDailyReminder = onSchedule({
     timeZone: "Asia/Seoul",
     region: "asia-northeast3"
 }, async () => {
-    const message = {
-        topic: "daily_reminder",
-        notification: {
-            title: MESSAGES.daily_reminder.ko.title,
-            body: MESSAGES.daily_reminder.ko.body
-        },
-        data: {
-            tab: "quests",
-            target: "quests",
-            type: "daily_reminder",
-            link: "levelup://tab/quests"
-        },
-        android: {
-            priority: "high",
+    // 언어별 토픽 발송 (daily_reminder_ko, daily_reminder_en, daily_reminder_ja)
+    const langs = ["ko", "en", "ja"];
+    for (const lang of langs) {
+        const msg = getLocalizedMessage("daily_reminder", lang);
+        const message = {
+            topic: `daily_reminder_${lang}`,
             notification: {
-                channelId: "daily_reminder",
-                sound: "default"
+                title: msg.title,
+                body: msg.body
+            },
+            data: {
+                tab: "quests",
+                target: "quests",
+                type: "daily_reminder",
+                lang: lang,
+                link: "levelup://tab/quests"
+            },
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: "daily_reminder",
+                    sound: "default"
+                }
             }
-        }
-    };
+        };
 
+        try {
+            const response = await messaging.send(message);
+            console.log(`[일일 리마인더][${lang}] 발송 완료:`, response);
+        } catch (e) {
+            console.error(`[일일 리마인더][${lang}] 발송 실패:`, e);
+        }
+    }
+
+    // 레거시 토픽 하위호환 (마이그레이션 미완료 유저용 — 추후 제거)
+    const legacyMsg = getLocalizedMessage("daily_reminder", "ko");
     try {
-        const response = await messaging.send(message);
-        console.log("[일일 리마인더] 발송 완료:", response);
+        await messaging.send({
+            topic: "daily_reminder",
+            notification: { title: legacyMsg.title, body: legacyMsg.body },
+            data: { tab: "quests", target: "quests", type: "daily_reminder", lang: "ko", link: "levelup://tab/quests" },
+            android: { priority: "high", notification: { channelId: "daily_reminder", sound: "default" } }
+        });
     } catch (e) {
-        console.error("[일일 리마인더] 발송 실패:", e);
+        console.warn("[일일 리마인더][레거시] 발송 실패:", e);
     }
 });
 
