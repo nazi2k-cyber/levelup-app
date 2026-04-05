@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.188] - 2026-04-05
+
+### 변경
+- fix: 언어 변경 시 Firestore에 lang 저장되도록 saveUserData() 호출 추가
+
 ## [1.0.187] - 2026-04-05
 
 ### 변경
