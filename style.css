@@ -2419,6 +2419,89 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 [data-theme="light"] .rc-results { background: rgba(0,0,0,0.02); }
 [data-theme="light"] .rc-result-row + .rc-result-row { border-top-color: rgba(0,0,0,0.06); }
 
+/* Mileage Summary */
+.rc-mileage-summary {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    border-radius: 10px; padding: 14px;
+}
+.rc-mileage-row {
+    display: flex; align-items: center; gap: 12px;
+}
+.rc-mileage-info {
+    display: flex; flex-direction: column; align-items: center; flex: 1;
+}
+.rc-mileage-label {
+    font-size: 0.68rem; color: var(--text-sub); font-weight: 500;
+}
+.rc-mileage-value {
+    font-size: 1.05rem; font-weight: 800; color: var(--neon-cyan, #00d9ff);
+    margin-top: 2px;
+}
+.rc-mileage-divider {
+    width: 1px; height: 32px; background: var(--border-color);
+}
+.rc-calendar-toggle-btn {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: rgba(0,217,255,0.08); border: 1px solid var(--border-color);
+    color: var(--text-sub); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+}
+.rc-calendar-toggle-btn.active {
+    background: rgba(0,217,255,0.2); border-color: var(--neon-cyan, #00d9ff);
+    color: var(--neon-cyan, #00d9ff);
+}
+.rc-calendar-toggle-btn:active { opacity: 0.7; }
+
+/* Running Calendar */
+.rc-calendar-container {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+.rc-calendar-container.d-none { display: none !important; }
+.rc-calendar-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+}
+.rc-calendar-nav-btn {
+    background: none; border: none; color: var(--text-sub);
+    font-size: 0.85rem; cursor: pointer; padding: 4px 8px;
+}
+.rc-calendar-nav-btn:active { color: var(--neon-cyan); }
+.rc-calendar-month-title {
+    font-size: 0.85rem; font-weight: 700; color: var(--text-main);
+}
+.rc-cal-header {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    text-align: center; margin-bottom: 4px;
+}
+.rc-cal-header span {
+    font-size: 0.65rem; color: var(--text-sub); font-weight: 600; padding: 4px 0;
+}
+.rc-cal-days {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+}
+.rc-cal-day {
+    text-align: center; font-size: 0.75rem; padding: 6px 0;
+    border-radius: 6px; color: var(--text-sub); position: relative;
+}
+.rc-cal-day.empty { visibility: hidden; }
+.rc-cal-day.today {
+    color: var(--text-main); font-weight: 700;
+    background: rgba(0,217,255,0.1);
+}
+.rc-cal-day.has-record {
+    color: var(--neon-green, #00e676); font-weight: 700;
+}
+.rc-cal-day.has-record::after {
+    content: ''; position: absolute; bottom: 2px; left: 50%;
+    transform: translateX(-50%); width: 4px; height: 4px;
+    border-radius: 50%; background: var(--neon-green, #00e676);
+}
+[data-theme="light"] .rc-calendar-toggle-btn { background: rgba(0,102,204,0.05); }
+[data-theme="light"] .rc-calendar-toggle-btn.active { background: rgba(0,102,204,0.12); }
+[data-theme="light"] .rc-cal-day.today { background: rgba(0,102,204,0.08); }
+
 /* 1RM Calculator */
 .orm-toc {
     background: var(--panel-bg); border: 1px solid var(--border-color);

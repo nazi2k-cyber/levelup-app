@@ -15512,6 +15512,176 @@ window.renderLifeStatus = renderLifeStatus;
         }
     }
 
+    // --- Mileage Summary ---
+    function getDistInKm(item) {
+        var d = parseFloat(item.dist) || 0;
+        if (item.unit === 'mi') d = d * 1.60934;
+        return d;
+    }
+
+    function calcMileageTotals(list, isMi) {
+        var now = new Date();
+        var currentYear = now.getFullYear();
+        var currentMonth = now.getMonth();
+        var monthlyKm = 0, yearlyKm = 0;
+        for (var i = 0; i < list.length; i++) {
+            var item = list[i];
+            if (item.type === 'vdot') continue; // only pace records count
+            var ts = new Date(item.timestamp);
+            var distKm = getDistInKm(item);
+            if (ts.getFullYear() === currentYear) {
+                yearlyKm += distKm;
+                if (ts.getMonth() === currentMonth) {
+                    monthlyKm += distKm;
+                }
+            }
+        }
+        if (isMi) {
+            return { monthly: (monthlyKm / 1.60934).toFixed(1), yearly: (yearlyKm / 1.60934).toFixed(1), unit: 'mi' };
+        }
+        return { monthly: monthlyKm.toFixed(1), yearly: yearlyKm.toFixed(1), unit: 'km' };
+    }
+
+    function renderMileageSummary() {
+        var list = loadRcHistory();
+        var isMi = _rcDisplayUnit === 'mi';
+        var totals = calcMileageTotals(list, isMi);
+
+        // Pace tab mileage
+        var monthlyEl = document.getElementById('rc-pace-monthly-km');
+        var yearlyEl = document.getElementById('rc-pace-yearly-km');
+        if (monthlyEl) monthlyEl.textContent = totals.monthly + ' ' + totals.unit;
+        if (yearlyEl) yearlyEl.textContent = totals.yearly + ' ' + totals.unit;
+
+        // VDOT tab mileage (same data)
+        var vMonthlyEl = document.getElementById('rc-vdot-monthly-km');
+        var vYearlyEl = document.getElementById('rc-vdot-yearly-km');
+        if (vMonthlyEl) vMonthlyEl.textContent = totals.monthly + ' ' + totals.unit;
+        if (vYearlyEl) vYearlyEl.textContent = totals.yearly + ' ' + totals.unit;
+    }
+
+    function renderSummaryMileage() {
+        var el = document.getElementById('rc-summary-mileage');
+        if (!el) return;
+        var list = loadRcHistory();
+        var totals = calcMileageTotals(list, false);
+        if (parseFloat(totals.yearly) === 0) { el.innerHTML = ''; return; }
+        var _t = i18n[AppState.currentLang] || {};
+        el.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; font-size:0.72rem;">' +
+            '<span style="color:var(--text-sub);">' + (_t.rc_yearly_mileage || '연간') + '</span>' +
+            '<span style="color:var(--neon-cyan, #00d9ff); font-weight:700;">' + totals.yearly + ' ' + totals.unit + '</span></div>';
+    }
+
+    // --- Calendar ---
+    var _rcCalendarState = {
+        pace: { year: new Date().getFullYear(), month: new Date().getMonth(), open: false },
+        vdot: { year: new Date().getFullYear(), month: new Date().getMonth(), open: false }
+    };
+
+    window.toggleRcCalendar = function(tab) {
+        var state = _rcCalendarState[tab];
+        state.open = !state.open;
+        var calEl = document.getElementById('rc-' + tab + '-calendar');
+        var toggleBtn = document.getElementById('rc-' + tab + '-calendar-toggle');
+        if (calEl) {
+            if (state.open) {
+                calEl.classList.remove('d-none');
+                if (toggleBtn) toggleBtn.classList.add('active');
+                state.year = new Date().getFullYear();
+                state.month = new Date().getMonth();
+                renderRcCalendar(tab);
+            } else {
+                calEl.classList.add('d-none');
+                if (toggleBtn) toggleBtn.classList.remove('active');
+            }
+        }
+    };
+
+    window.changeRcCalendar = function(tab, delta) {
+        var state = _rcCalendarState[tab];
+        state.month += delta;
+        if (state.month > 11) { state.month = 0; state.year++; }
+        if (state.month < 0) { state.month = 11; state.year--; }
+        renderRcCalendar(tab);
+    };
+
+    function renderRcCalendar(tab) {
+        var state = _rcCalendarState[tab];
+        var gridEl = document.getElementById('rc-' + tab + '-cal-grid');
+        var titleEl = document.getElementById('rc-' + tab + '-cal-title');
+        if (!gridEl) return;
+
+        var year = state.year, month = state.month;
+        var lang = AppState.currentLang || 'ko';
+
+        var monthNames = {
+            ko: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+            en: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+            ja: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
+        };
+        var dayNames = {
+            ko: ["일","월","화","수","목","금","토"],
+            en: ["S","M","T","W","T","F","S"],
+            ja: ["日","月","火","水","木","金","土"]
+        };
+
+        if (titleEl) titleEl.textContent = year + ' ' + (monthNames[lang] || monthNames.en)[month];
+
+        // Build set of dates that have records
+        var list = loadRcHistory();
+        var recordDates = {};
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].type === 'vdot') continue;
+            var ts = new Date(list[i].timestamp);
+            var key = ts.getFullYear() + '-' + String(ts.getMonth() + 1).padStart(2, '0') + '-' + String(ts.getDate()).padStart(2, '0');
+            recordDates[key] = true;
+        }
+
+        var today = new Date();
+        var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+        var firstDay = new Date(year, month, 1).getDay();
+        var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        var html = '<div class="rc-cal-header">';
+        var dn = dayNames[lang] || dayNames.en;
+        for (var d = 0; d < 7; d++) html += '<span>' + dn[d] + '</span>';
+        html += '</div><div class="rc-cal-days">';
+
+        for (var e = 0; e < firstDay; e++) html += '<div class="rc-cal-day empty"></div>';
+
+        for (var day = 1; day <= daysInMonth; day++) {
+            var dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            var classes = 'rc-cal-day';
+            if (dateStr === todayStr) classes += ' today';
+            if (recordDates[dateStr]) classes += ' has-record';
+            html += '<div class="' + classes + '">' + day + '</div>';
+        }
+        html += '</div>';
+        gridEl.innerHTML = html;
+    }
+
+    // Override updateSummaryCard to include mileage
+    var _origUpdateSummary = updateSummaryCard;
+    updateSummaryCard = function() {
+        _origUpdateSummary();
+        renderSummaryMileage();
+    };
+
+    // Override renderRcHistory to also update mileage
+    var _origRenderRcHistory = renderRcHistory;
+    renderRcHistory = function() {
+        _origRenderRcHistory();
+        renderMileageSummary();
+    };
+
+    // Override toggleRcDisplayUnit to refresh mileage
+    var _origToggleUnit = window.toggleRcDisplayUnit;
+    window.toggleRcDisplayUnit = function() {
+        _origToggleUnit();
+        renderMileageSummary();
+    };
+
     // Init on page load
     document.addEventListener('DOMContentLoaded', function() {
         window.calcPace();
