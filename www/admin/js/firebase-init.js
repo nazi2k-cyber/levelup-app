@@ -28,16 +28,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 console.log('[App] Firebase initialized. Project:', firebaseConfig.projectId, '| apiKey length:', firebaseConfig.apiKey.length);
 
-// Explicitly set persistence to survive page reloads
-setPersistence(auth, browserLocalPersistence).catch(e => {
-    console.warn('[App] Auth persistence 설정 실패:', e.message);
-});
+// Explicitly set persistence to survive page reloads — export promise so auth.js can await it
+const authReady = setPersistence(auth, browserLocalPersistence)
+    .then(() => console.log('[App] Auth persistence: browserLocalPersistence 설정 완료'))
+    .catch(e => console.warn('[App] Auth persistence 설정 실패:', e.message));
 const db = getFirestore(app);
 const functions = getFunctions(app, "asia-northeast3");
 const provider = new GoogleAuthProvider();
 
 export {
-    app, auth, db, functions, provider, firebaseConfig,
+    app, auth, db, functions, provider, firebaseConfig, authReady,
     // Re-export commonly used Firebase utilities
     GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, getIdTokenResult,
     collection, doc, getDoc, getDocs, addDoc, setDoc, query, where, orderBy, limit, Timestamp,
