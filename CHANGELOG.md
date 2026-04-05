@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.178] - 2026-04-05
+
+### 변경
+- History 탭: ID 칼럼 옆에 유저 이메일 칼럼 추가
+- 푸시 테스트 페이지: Nickname 컬럼을 Email로 변경
+
 ## [1.0.177] - 2026-04-05
 
 ### 변경
