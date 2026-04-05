@@ -449,6 +449,10 @@ const i18n = {
         orm_faq_q3: "Q. 3대 운동 합산 기준은?",
         orm_faq_a3: "A. 일반적으로 체중의 <strong>3배 이상</strong>이면 중급, <strong>5배 이상</strong>이면 상급으로 분류됩니다.",
 
+        // Calculator Rewards
+        running_calc_reward: "🏃 러닝 기록 저장! +10P & STR +0.5",
+        orm_calc_reward: "🏋️ 1RM 기록 저장! +10P & STR +0.5",
+
         // Raid UI
         raid_anomaly_title: "이상 현상 발생",
         raid_anomaly_desc: "목표를 달성하여 시스템 붕괴를 막으십시오.",
@@ -997,6 +1001,10 @@ const i18n = {
         orm_faq_q3: "Q. What are the standards for Big 3 totals?",
         orm_faq_a3: "A. Generally, <strong>3x bodyweight</strong> is considered intermediate, and <strong>5x bodyweight</strong> is advanced.",
 
+        // Calculator Rewards
+        running_calc_reward: "🏃 Running record saved! +10P & STR +0.5",
+        orm_calc_reward: "🏋️ 1RM record saved! +10P & STR +0.5",
+
         // Raid UI
         raid_anomaly_title: "Anomaly Detected",
         raid_anomaly_desc: "Achieve the target to prevent system collapse.",
@@ -1544,6 +1552,10 @@ const i18n = {
         orm_faq_a2: "A. BrzyckiとEpley公式が最も広く検証されています。本計算機は複数の公式の平均を使用して精度を高めています。",
         orm_faq_q3: "Q. BIG3の合計基準は？",
         orm_faq_a3: "A. 一般的に体重の<strong>3倍以上</strong>で中級、<strong>5倍以上</strong>で上級に分類されます。",
+
+        // 計算機報酬
+        running_calc_reward: "🏃 ランニング記録保存！ +10P & STR +0.5",
+        orm_calc_reward: "🏋️ 1RM記録保存！ +10P & STR +0.5",
 
         // レイドUI
         raid_anomaly_title: "異常現象発生",

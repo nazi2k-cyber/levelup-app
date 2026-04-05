@@ -15454,6 +15454,23 @@ window.renderLifeStatus = renderLifeStatus;
         if (list.length > RC_HISTORY_MAX) list = list.slice(0, RC_HISTORY_MAX);
         saveRcHistoryToStorage(list);
         renderRcHistory();
+
+        // --- Running Calculator Reward (daily limit: +10P & STR +0.5) ---
+        var rcRewardDate = new Date().toISOString().slice(0, 10);
+        var rcRewards = {};
+        try { rcRewards = JSON.parse(localStorage.getItem('running_calc_rewards') || '{}'); } catch(e) {}
+        if (!rcRewards[rcRewardDate]) {
+            rcRewards[rcRewardDate] = true;
+            localStorage.setItem('running_calc_rewards', JSON.stringify(rcRewards));
+            AppState.user.points += 10;
+            AppState.user.pendingStats.str += 0.5;
+            updatePointUI();
+            drawRadarChart();
+            if (window.AppLogger) AppLogger.info('[RunningCalc] 보상 지급: +10P, STR +0.5');
+            var _rcLang = AppState.currentLang || 'ko';
+            alert(i18n[_rcLang].running_calc_reward || '🏃 러닝 기록 저장! +10P & STR +0.5');
+        }
+
         if (typeof saveUserData === 'function') saveUserData();
     };
 
@@ -16088,6 +16105,23 @@ window.renderLifeStatus = renderLifeStatus;
         if (list.length > ORM_HISTORY_MAX) list = list.slice(0, ORM_HISTORY_MAX);
         saveOrmHistoryToStorage(list);
         renderOrmHistory();
+
+        // --- 1RM Calculator Reward (daily limit: +10P & STR +0.5) ---
+        var ormRewardDate = new Date().toISOString().slice(0, 10);
+        var ormRewards = {};
+        try { ormRewards = JSON.parse(localStorage.getItem('orm_calc_rewards') || '{}'); } catch(e) {}
+        if (!ormRewards[ormRewardDate]) {
+            ormRewards[ormRewardDate] = true;
+            localStorage.setItem('orm_calc_rewards', JSON.stringify(ormRewards));
+            AppState.user.points += 10;
+            AppState.user.pendingStats.str += 0.5;
+            updatePointUI();
+            drawRadarChart();
+            if (window.AppLogger) AppLogger.info('[ORM Calc] 보상 지급: +10P, STR +0.5');
+            var _ormLang = AppState.currentLang || 'ko';
+            alert(i18n[_ormLang].orm_calc_reward || '🏋️ 1RM 기록 저장! +10P & STR +0.5');
+        }
+
         if (typeof saveUserData === 'function') saveUserData();
     }
 
