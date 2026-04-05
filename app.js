@@ -4580,9 +4580,10 @@ async function simulateGoogleLogin() {
                 // refresh 실패 시 (최초 로그인 등) 대화형 로그인 진행
                 googleUser = await GoogleAuth.signIn();
             }
-            const idToken = googleUser?.authentication?.idToken;
+            // v3.4.x: idToken이 최상위 또는 authentication 하위에 위치할 수 있음
+            const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
             if (!idToken) {
-                throw new Error('Google 인증에서 idToken을 받지 못했습니다. authentication=' + JSON.stringify(googleUser?.authentication));
+                throw new Error('Google 인증에서 idToken을 받지 못했습니다. authentication=' + JSON.stringify(googleUser?.authentication) + ', keys=' + Object.keys(googleUser || {}).join(','));
             }
             const credential = GoogleAuthProvider.credential(idToken);
             const result = await signInWithCredential(auth, credential);
