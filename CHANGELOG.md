@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.189] - 2026-04-05
+
+### 변경
+- fix: 로그인 시 Firestore에서 언어 설정 복원
+
 ## [1.0.188] - 2026-04-05
 
 ### 변경
