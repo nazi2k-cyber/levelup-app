@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.193] - 2026-04-05
+
+### 변경
+- docs: 개인정보 보유 기간을 실제 코드 동작에 맞춰 업데이트 (ko/en/ja)
+
 ## [1.0.192] - 2026-04-05
 
 ### 변경
