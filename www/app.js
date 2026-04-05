@@ -15477,17 +15477,56 @@ window.renderLifeStatus = renderLifeStatus;
         if (typeof saveUserData === 'function') saveUserData();
     };
 
+    function _getRecordDateStr(item) {
+        var ts = new Date(item.timestamp);
+        return ts.getFullYear() + '-' + String(ts.getMonth() + 1).padStart(2, '0') + '-' + String(ts.getDate()).padStart(2, '0');
+    }
+
+    function _matchesFilter(item, filterDate, calState) {
+        if (!calState || !calState.open) return true; // calendar closed → show all
+        var dateStr = _getRecordDateStr(item);
+        if (filterDate) {
+            return dateStr === filterDate; // specific date
+        }
+        // No date selected → show all for displayed month
+        var ts = new Date(item.timestamp);
+        return ts.getFullYear() === calState.year && ts.getMonth() === calState.month;
+    }
+
     function renderRcHistory() {
         var list = loadRcHistory();
         var _t = i18n[AppState.currentLang] || {};
         var _locale = getDateLocale();
         var displayUnit = _rcDisplayUnit || 'km';
+
+        var paceState = _rcCalendarState.pace;
+        var vdotState = _rcCalendarState.vdot;
+        var paceFilter = _rcFilterDate.pace;
+        var vdotFilter = _rcFilterDate.vdot;
+
         var paceItems = [];
         var vdotItems = [];
         list.forEach(function(e, i) {
-            if (e.type === 'vdot') vdotItems.push({ item: e, idx: i });
-            else paceItems.push({ item: e, idx: i });
+            if (e.type === 'vdot') {
+                if (_matchesFilter(e, vdotFilter, vdotState)) vdotItems.push({ item: e, idx: i });
+            } else {
+                if (_matchesFilter(e, paceFilter, paceState)) paceItems.push({ item: e, idx: i });
+            }
         });
+
+        // Update history section titles
+        var paceTitleEl = document.getElementById('rc-pace-history-title');
+        var vdotTitleEl = document.getElementById('rc-vdot-history-title');
+        if (paceTitleEl) {
+            paceTitleEl.textContent = paceState.open
+                ? (_t.rc_daily_monthly_history || '일별/월별 기록')
+                : (_t.rc_recent_history || '최근 기록');
+        }
+        if (vdotTitleEl) {
+            vdotTitleEl.textContent = vdotState.open
+                ? (_t.rc_daily_monthly_history || '일별/월별 기록')
+                : (_t.rc_recent_history || '최근 기록');
+        }
 
         // Pace history
         var paceListEl = document.getElementById('rc-pace-history-list');
@@ -15617,23 +15656,114 @@ window.renderLifeStatus = renderLifeStatus;
         pace: { year: new Date().getFullYear(), month: new Date().getMonth(), open: false },
         vdot: { year: new Date().getFullYear(), month: new Date().getMonth(), open: false }
     };
+    var _rcFilterDate = { pace: null, vdot: null };
+    var _rcCalendarAdUnlocked = false;
+    var _rcCalendarPendingTab = null;
 
-    window.toggleRcCalendar = function(tab) {
+    function _rcCalendarAdKey() {
+        var uid = (window.auth && auth.currentUser) ? auth.currentUser.uid : '_anon';
+        return 'rc_calendar_ad_date_' + uid;
+    }
+
+    function _openRcCalendar(tab) {
         var state = _rcCalendarState[tab];
-        state.open = !state.open;
+        state.open = true;
+        _rcFilterDate[tab] = null;
         var calEl = document.getElementById('rc-' + tab + '-calendar');
         var toggleBtn = document.getElementById('rc-' + tab + '-calendar-toggle');
-        if (calEl) {
-            if (state.open) {
-                calEl.classList.remove('d-none');
-                if (toggleBtn) toggleBtn.classList.add('active');
-                state.year = new Date().getFullYear();
-                state.month = new Date().getMonth();
-                renderRcCalendar(tab);
-            } else {
-                calEl.classList.add('d-none');
-                if (toggleBtn) toggleBtn.classList.remove('active');
+        if (calEl) calEl.classList.remove('d-none');
+        if (toggleBtn) toggleBtn.classList.add('active');
+        state.year = new Date().getFullYear();
+        state.month = new Date().getMonth();
+        renderRcCalendar(tab);
+        renderRcHistory();
+    }
+
+    window.toggleRcCalendar = async function(tab) {
+        var state = _rcCalendarState[tab];
+
+        // Close path
+        if (state.open) {
+            state.open = false;
+            var calEl = document.getElementById('rc-' + tab + '-calendar');
+            var toggleBtn = document.getElementById('rc-' + tab + '-calendar-toggle');
+            if (calEl) calEl.classList.add('d-none');
+            if (toggleBtn) toggleBtn.classList.remove('active');
+            _rcFilterDate[tab] = null;
+            renderRcHistory();
+            return;
+        }
+
+        // Open path — check ad gate (once per day)
+        var todayStr = getTodayKST();
+        var adDateKey = _rcCalendarAdKey();
+        var adDate = localStorage.getItem(adDateKey);
+
+        if (adDate === todayStr || _rcCalendarAdUnlocked) {
+            _openRcCalendar(tab);
+            return;
+        }
+
+        // Web (non-native) — skip ad
+        if (!isNativePlatform) {
+            _rcCalendarAdUnlocked = true;
+            localStorage.setItem(adDateKey, todayStr);
+            _openRcCalendar(tab);
+            return;
+        }
+
+        // Native — show rewarded ad
+        var lang = AppState.currentLang;
+        var _t = i18n[lang] || {};
+
+        if (!_admobInitialized) {
+            await initAdMob();
+        }
+
+        var AdMobPlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+        if (!AdMobPlugin) {
+            alert(_t.rc_calendar_ad_fail || '광고를 불러올 수 없습니다');
+            return;
+        }
+
+        if (!_rewardedAdReady) {
+            try {
+                await AdMobPlugin.prepareRewardVideoAd({
+                    adId: REWARDED_AD_UNIT_ID,
+                    isTesting: false,
+                    npa: !canShowPersonalizedAds(),
+                });
+                _rewardedAdReady = true;
+            } catch (e) {
+                alert(_t.rc_calendar_ad_fail || '광고를 불러올 수 없습니다');
+                return;
             }
+        }
+
+        // Set callbacks
+        _rcCalendarPendingTab = tab;
+        _rewardedAdContext = 'rcCalendar';
+        _rewardedAdOnSuccess = function() {
+            _rcCalendarAdUnlocked = true;
+            localStorage.setItem(adDateKey, todayStr);
+            _openRcCalendar(_rcCalendarPendingTab || tab);
+            if (window.AppLogger) AppLogger.info('[RcCalendar] 보상형 광고 시청 완료 → 달력 해제');
+        };
+        _rewardedAdOnFail = function() {
+            alert(_t.rc_calendar_ad_fail || '광고를 불러올 수 없습니다');
+        };
+
+        try {
+            await AdMobPlugin.showRewardVideoAd();
+        } catch (e) {
+            console.warn('[RcCalendar] 보상형 광고 표시 실패:', e);
+            _rewardedAdContext = 'bonusExp';
+            _rewardedAdOnSuccess = null;
+            _rewardedAdOnFail = null;
+            _rewardedAdReady = false;
+            preloadRewardedAd._retryCount = 0;
+            preloadRewardedAd();
+            alert(_t.rc_calendar_ad_fail || '광고를 불러올 수 없습니다');
         }
     };
 
@@ -15642,7 +15772,19 @@ window.renderLifeStatus = renderLifeStatus;
         state.month += delta;
         if (state.month > 11) { state.month = 0; state.year++; }
         if (state.month < 0) { state.month = 11; state.year--; }
+        _rcFilterDate[tab] = null;
         renderRcCalendar(tab);
+        renderRcHistory();
+    };
+
+    window.filterRcHistoryByDate = function(tab, dateStr) {
+        if (_rcFilterDate[tab] === dateStr) {
+            _rcFilterDate[tab] = null;
+        } else {
+            _rcFilterDate[tab] = dateStr;
+        }
+        renderRcCalendar(tab);
+        renderRcHistory();
     };
 
     function renderRcCalendar(tab) {
@@ -15679,6 +15821,7 @@ window.renderLifeStatus = renderLifeStatus;
 
         var today = new Date();
         var todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        var selectedDate = _rcFilterDate[tab];
 
         var firstDay = new Date(year, month, 1).getDay();
         var daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -15695,7 +15838,8 @@ window.renderLifeStatus = renderLifeStatus;
             var classes = 'rc-cal-day';
             if (dateStr === todayStr) classes += ' today';
             if (recordDates[dateStr]) classes += ' has-record';
-            html += '<div class="' + classes + '">' + day + '</div>';
+            if (dateStr === selectedDate) classes += ' selected';
+            html += '<div class="' + classes + '" onclick="window.filterRcHistoryByDate(\'' + tab + '\',\'' + dateStr + '\')">' + day + '</div>';
         }
         html += '</div>';
         gridEl.innerHTML = html;
