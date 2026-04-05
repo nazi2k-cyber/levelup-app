@@ -4964,7 +4964,10 @@ function openProfileStatsModal(userId) {
                 : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue); flex-shrink:0;"></div>`}
             <div>
                 ${titleBadgeHTML}
-                <div style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
+                    <button onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" style="background:none; border:1px solid var(--neon-blue); border-radius:4px; padding:2px 6px; cursor:pointer; font-size:0.7rem; color:var(--neon-blue); display:inline-flex; align-items:center; gap:2px;" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">📋</button>
+                </div>
                 <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
                 <div class="profile-follow-stats" style="margin-top:4px;">
                     <span class="follow-stat-item"><strong>${formatFollowCount(followingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span>
@@ -4997,6 +5000,66 @@ function closeProfileStatsModal() {
 
 window.openProfileStatsModal = openProfileStatsModal;
 window.closeProfileStatsModal = closeProfileStatsModal;
+
+// --- 프로필 모달에서 당일 플래너 열람 ---
+function viewUserTodayPlanner(userId) {
+    const lang = AppState.currentLang;
+    const isMe = userId === auth.currentUser?.uid;
+    let blocks = null;
+    let tasks = null;
+
+    if (isMe) {
+        // 현재 유저: localStorage에서 오늘 플래너 가져오기
+        const todayStr = getTodayStr();
+        const entry = getDiaryEntry(todayStr);
+        if (entry && entry.blocks && Object.keys(entry.blocks).length > 0) {
+            blocks = entry.blocks;
+            tasks = entry.tasks || [];
+        }
+    } else {
+        // 다른 유저: 오늘 날짜의 릴스 포스트에서 가져오기
+        const todayKST = getTodayKST();
+        if (Array.isArray(_reelsCachedPosts)) {
+            const post = _reelsCachedPosts.find(p => p.uid === userId && p.dateKST === todayKST);
+            if (post && post.blocks && Object.keys(post.blocks).length > 0) {
+                blocks = post.blocks;
+                tasks = post.tasks || [];
+            }
+        }
+    }
+
+    if (!blocks) {
+        // 당일 플랜 없음 안내 팝업
+        const noPlanner = i18n[lang]?.profile_no_today_plan || '당일 플랜이 없습니다.';
+        const m = document.getElementById('infoModal');
+        document.getElementById('info-modal-title').textContent = i18n[lang]?.profile_view_planner || '당일 플래너';
+        document.getElementById('info-modal-body').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sub); font-size:0.9rem;">${noPlanner}</div>`;
+        m.classList.remove('d-none');
+        m.classList.add('d-flex');
+        return;
+    }
+
+    // 시간표 렌더링
+    const mergedBlocks = mergeConsecutiveBlocks(blocks);
+    const scheduleLabel = i18n[lang]?.planner_tab_schedule || '시간표';
+    let scheduleHTML = mergedBlocks.map(({time, task}) =>
+        `<div style="display:flex; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span style="color:var(--neon-blue); font-size:0.8rem; white-space:nowrap; min-width:100px;">${time}</span>
+            <span style="color:var(--text-main); font-size:0.8rem;">${sanitizeText(task)}</span>
+        </div>`
+    ).join('');
+
+    const m = document.getElementById('infoModal');
+    document.getElementById('info-modal-title').textContent = i18n[lang]?.profile_view_planner || '당일 플래너';
+    document.getElementById('info-modal-body').innerHTML = `
+        <div style="padding:8px 0;">
+            <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:8px;">📋 ${scheduleLabel}</div>
+            ${scheduleHTML}
+        </div>`;
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+window.viewUserTodayPlanner = viewUserTodayPlanner;
 
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
 function closeInfoModal() {
