@@ -317,7 +317,7 @@
                                 </div>
                             </div>
                             <div style="text-align:right;">
-                                <div style="font-size:0.65rem; color:var(--text-sub);" data-i18n="rc_km_pace">km 페이스</div>
+                                <div style="font-size:0.65rem; color:var(--text-sub);" data-i18n="rc_pace">페이스</div>
                                 <div style="font-size:1.1rem; font-weight:900; color:var(--neon-green, #00e676);" id="rc-summary-pace">- /km</div>
                             </div>
                         </div>
@@ -1118,10 +1118,11 @@
             </div>
         </div>
 
-        <!-- Main Tabs: 페이스 계산기 / VDOT 계산기 -->
+        <!-- Main Tabs: 페이스 계산기 / VDOT 계산기 / 트레드밀 -->
         <div class="rc-main-tabs">
             <button class="rc-main-tab active" data-rc-tab="pace" onclick="window.switchRunningCalcTab('pace')" data-i18n="rc_pace_calc">페이스 계산기</button>
             <button class="rc-main-tab" data-rc-tab="vdot" onclick="window.switchRunningCalcTab('vdot')" data-i18n="rc_vdot_calc">VDOT 계산기</button>
+            <button class="rc-main-tab" data-rc-tab="treadmill" onclick="window.switchRunningCalcTab('treadmill')" data-i18n="rc_treadmill">트레드밀</button>
         </div>
 
         <div class="rc-content" id="rc-content">
@@ -1268,39 +1269,6 @@
                     </div>
                 </div>
 
-                <!-- 트레드밀 계산기 -->
-                <div class="rc-section-card" style="margin-top:20px;">
-                    <h3 class="rc-section-title" data-i18n="rc_treadmill">트레드밀 계산기</h3>
-                    <div class="rc-section-desc" data-i18n="rc_treadmill_desc">트레드밀 속도를 페이스로 계산</div>
-                    <div class="rc-input-row" style="margin-top:10px;">
-                        <input type="number" id="rc-treadmill-speed" class="rc-input" value="9.8" min="0.1" step="0.1" oninput="window.calcTreadmill()">
-                        <span class="rc-unit-label" id="rc-tm-speed-label">km/h</span>
-                        <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(-0.1)">−</button>
-                        <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(0.1)">+</button>
-                    </div>
-                    <div class="rc-results" id="rc-treadmill-results" style="margin-top:12px;">
-                        <div class="rc-result-row" id="rc-tm-pace-row">
-                            <span class="rc-result-label" id="rc-tm-pace-label" data-i18n="rc_pace">페이스</span>
-                            <span class="rc-result-value" id="rc-tm-pace">6:07 <span class="rc-result-unit">/km</span></span>
-                        </div>
-                        <div class="rc-result-row d-none" id="rc-tm-pace2-row">
-                            <span class="rc-result-label" data-i18n="rc_km_pace">km 페이스</span>
-                            <span class="rc-result-value" id="rc-tm-pace2"></span>
-                        </div>
-                        <div class="rc-result-row">
-                            <span class="rc-result-label" data-i18n="rc_10k_time">10K 완주 시간</span>
-                            <span class="rc-result-value" id="rc-tm-10k">1:01:13</span>
-                        </div>
-                        <div class="rc-result-row">
-                            <span class="rc-result-label" data-i18n="rc_half_time">하프 완주 시간</span>
-                            <span class="rc-result-value" id="rc-tm-half">2:09:10</span>
-                        </div>
-                        <div class="rc-result-row">
-                            <span class="rc-result-label" data-i18n="rc_full_time">풀 완주 시간</span>
-                            <span class="rc-result-value" id="rc-tm-full">4:18:16</span>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- ===== VDOT 계산기 탭 ===== -->
@@ -1435,6 +1403,42 @@
                     </div>
                     <div id="rc-vdot-history-list" class="calc-history-list">
                         <div class="calc-history-empty" data-i18n="rc_no_history">저장된 기록이 없습니다</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 트레드밀 계산기 탭 ===== -->
+            <div class="rc-tab-panel" id="rc-panel-treadmill">
+                <div class="rc-section-desc" data-i18n="rc_treadmill_desc">트레드밀 속도를 페이스로 계산</div>
+                <div class="rc-input-group">
+                    <label class="rc-label" data-i18n="rc_speed">시속</label>
+                    <div class="rc-input-row">
+                        <input type="number" id="rc-treadmill-speed" class="rc-input" value="9.8" min="0.1" step="0.1" oninput="window.calcTreadmill()">
+                        <span class="rc-unit-label" id="rc-tm-speed-label">km/h</span>
+                        <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(-0.1)">−</button>
+                        <button class="rc-time-btn" onclick="window.rcAdjustTreadmill(0.1)">+</button>
+                    </div>
+                </div>
+                <div class="rc-results" id="rc-treadmill-results" style="margin-top:12px;">
+                    <div class="rc-result-row" id="rc-tm-pace-row">
+                        <span class="rc-result-label" id="rc-tm-pace-label" data-i18n="rc_pace">페이스</span>
+                        <span class="rc-result-value" id="rc-tm-pace">6:07 <span class="rc-result-unit">/km</span></span>
+                    </div>
+                    <div class="rc-result-row d-none" id="rc-tm-pace2-row">
+                        <span class="rc-result-label" data-i18n="rc_km_pace">km 페이스</span>
+                        <span class="rc-result-value" id="rc-tm-pace2"></span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label" data-i18n="rc_10k_time">10K 완주 시간</span>
+                        <span class="rc-result-value" id="rc-tm-10k">1:01:13</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label" data-i18n="rc_half_time">하프 완주 시간</span>
+                        <span class="rc-result-value" id="rc-tm-half">2:09:10</span>
+                    </div>
+                    <div class="rc-result-row">
+                        <span class="rc-result-label" data-i18n="rc_full_time">풀 완주 시간</span>
+                        <span class="rc-result-value" id="rc-tm-full">4:18:16</span>
                     </div>
                 </div>
             </div>

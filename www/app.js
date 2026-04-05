@@ -14807,6 +14807,7 @@ window.renderLifeStatus = renderLifeStatus;
         var panel = document.getElementById('rc-panel-' + tab);
         if (panel) panel.classList.add('active');
         if (tab === 'vdot') window.calcVDOT();
+        if (tab === 'treadmill') window.calcTreadmill();
     };
 
     // --- Pace sub-tab switching ---
@@ -15315,12 +15316,35 @@ window.renderLifeStatus = renderLifeStatus;
         document.getElementById('rc-vdot-pred-full-pace').textContent = formatPace(isMi ? paceFull * 1.60934 : paceFull) + paceUnit;
     };
 
+    // --- Unit conversion helpers for display ---
+    function convertRecordDist(item, targetUnit) {
+        var d = parseFloat(item.dist) || 0;
+        var srcUnit = item.unit || 'km';
+        if (srcUnit === targetUnit) return d;
+        if (srcUnit === 'km' && targetUnit === 'mi') return d / 1.60934;
+        if (srcUnit === 'mi' && targetUnit === 'km') return d * 1.60934;
+        return d;
+    }
+    function convertRecordPace(item, targetUnit) {
+        // pace is stored as "M:SS" in item.unit; convert to targetUnit
+        if (!item.pace) return '--:--';
+        var srcUnit = item.unit || 'km';
+        if (srcUnit === targetUnit) return item.pace;
+        // Parse pace string
+        var parts = item.pace.split(':');
+        var totalSec = parseInt(parts[0]) * 60 + parseInt(parts[1] || 0);
+        if (srcUnit === 'km' && targetUnit === 'mi') totalSec = totalSec * 1.60934;
+        else if (srcUnit === 'mi' && targetUnit === 'km') totalSec = totalSec / 1.60934;
+        return formatPace(totalSec);
+    }
+
     // --- Update summary card on status screen ---
     function updateSummaryCard() {
         var list = loadRcHistory();
         var el1 = document.getElementById('rc-summary-dist');
         var el2 = document.getElementById('rc-summary-time');
         var el3 = document.getElementById('rc-summary-pace');
+        var displayUnit = _rcDisplayUnit || 'km';
 
         // Show most recent pace record in main summary
         var latestPace = null;
@@ -15328,13 +15352,15 @@ window.renderLifeStatus = renderLifeStatus;
             if (list[i].type !== 'vdot') { latestPace = list[i]; break; }
         }
         if (latestPace) {
-            if (el1) el1.textContent = latestPace.dist + ' ' + (latestPace.unit || 'km');
+            var convDist = convertRecordDist(latestPace, displayUnit);
+            var convPace = convertRecordPace(latestPace, displayUnit);
+            if (el1) el1.textContent = (Math.round(convDist * 10) / 10) + ' ' + displayUnit;
             if (el2) el2.textContent = latestPace.time;
-            if (el3) el3.textContent = latestPace.pace + ' /' + (latestPace.unit || 'km');
+            if (el3) el3.textContent = convPace + ' /' + displayUnit;
         } else {
-            if (el1) el1.textContent = '- km';
+            if (el1) el1.textContent = '- ' + displayUnit;
             if (el2) el2.textContent = '-';
-            if (el3) el3.textContent = '- /km';
+            if (el3) el3.textContent = '- /' + displayUnit;
         }
         renderRcSummaryHistory();
     }
@@ -15348,19 +15374,23 @@ window.renderLifeStatus = renderLifeStatus;
         if (list.length === 0) { el.innerHTML = ''; return; }
         var _t = i18n[AppState.currentLang] || {};
         var _locale = getDateLocale();
+        var displayUnit = _rcDisplayUnit || 'km';
         var maxShow = Math.min(list.length, 3);
         var html = '<div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:4px;">' + (_t.history_recent || '최근 기록') + '</div>';
         for (var i = 0; i < maxShow; i++) {
             var item = list[i];
             var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric' });
             if (item.type === 'vdot') {
+                var vDist = Math.round(convertRecordDist(item, displayUnit) * 10) / 10;
                 html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
-                    '<span>' + dateStr + ' · ' + item.dist + ' ' + item.unit + '</span>' +
+                    '<span>' + dateStr + ' · ' + vDist + ' ' + displayUnit + '</span>' +
                     '<span style="color:var(--neon-cyan, #00d9ff); font-weight:700;">VDOT ' + item.vdot + '</span></div>';
             } else {
+                var pDist = Math.round(convertRecordDist(item, displayUnit) * 10) / 10;
+                var pPace = convertRecordPace(item, displayUnit);
                 html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
-                    '<span>' + dateStr + ' · ' + item.dist + ' ' + item.unit + ' / ' + item.time + '</span>' +
-                    '<span style="color:var(--neon-green, #00e676); font-weight:700;">' + item.pace + ' /' + item.unit + '</span></div>';
+                    '<span>' + dateStr + ' · ' + pDist + ' ' + displayUnit + ' / ' + item.time + '</span>' +
+                    '<span style="color:var(--neon-green, #00e676); font-weight:700;">' + pPace + ' /' + displayUnit + '</span></div>';
             }
         }
         el.innerHTML = html;
@@ -15451,6 +15481,7 @@ window.renderLifeStatus = renderLifeStatus;
         var list = loadRcHistory();
         var _t = i18n[AppState.currentLang] || {};
         var _locale = getDateLocale();
+        var displayUnit = _rcDisplayUnit || 'km';
         var paceItems = [];
         var vdotItems = [];
         list.forEach(function(e, i) {
@@ -15472,12 +15503,14 @@ window.renderLifeStatus = renderLifeStatus;
                     var item = obj.item;
                     var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                     var modeLabel = item.type === 'pace' ? (_t.history_mode_pace || '페이스') : item.type === 'distance' ? (_t.history_mode_distance || '거리') : (_t.history_mode_time || '시간');
+                    var convDist = Math.round(convertRecordDist(item, displayUnit) * 10) / 10;
+                    var convPace = convertRecordPace(item, displayUnit);
                     html += '<div class="calc-history-item">' +
                         '<div class="calc-history-info">' +
-                        '<div class="calc-history-main">' + item.dist + ' ' + item.unit + ' / ' + item.time + '</div>' +
+                        '<div class="calc-history-main">' + convDist + ' ' + displayUnit + ' / ' + item.time + '</div>' +
                         '<div class="calc-history-sub">' + modeLabel + ' · ' + dateStr + '</div>' +
                         '</div>' +
-                        '<div class="calc-history-value" style="color:var(--neon-green, #00e676);">' + item.pace + ' <span style="font-size:0.7rem;color:var(--text-sub);">/' + item.unit + '</span></div>' +
+                        '<div class="calc-history-value" style="color:var(--neon-green, #00e676);">' + convPace + ' <span style="font-size:0.7rem;color:var(--text-sub);">/' + displayUnit + '</span></div>' +
                         '<button class="calc-history-delete" onclick="window.deleteRunningCalcHistory(' + obj.idx + ')">✕</button>' +
                         '</div>';
                 });
@@ -15498,9 +15531,10 @@ window.renderLifeStatus = renderLifeStatus;
                 vdotItems.forEach(function(obj) {
                     var item = obj.item;
                     var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    var convDist2 = Math.round(convertRecordDist(item, displayUnit) * 10) / 10;
                     html2 += '<div class="calc-history-item">' +
                         '<div class="calc-history-info">' +
-                        '<div class="calc-history-main">' + item.dist + ' ' + item.unit + ' / ' + item.time + '</div>' +
+                        '<div class="calc-history-main">' + convDist2 + ' ' + displayUnit + ' / ' + item.time + '</div>' +
                         '<div class="calc-history-sub">VDOT · ' + dateStr + '</div>' +
                         '</div>' +
                         '<div class="calc-history-value" style="color:var(--neon-cyan, #00d9ff);">' + item.vdot + '</div>' +
@@ -15564,12 +15598,18 @@ window.renderLifeStatus = renderLifeStatus;
         var el = document.getElementById('rc-summary-mileage');
         if (!el) return;
         var list = loadRcHistory();
-        var totals = calcMileageTotals(list, false);
-        if (parseFloat(totals.yearly) === 0) { el.innerHTML = ''; return; }
+        var displayUnit = _rcDisplayUnit || 'km';
+        var totals = calcMileageTotals(list, displayUnit === 'mi');
+        if (parseFloat(totals.yearly) === 0 && parseFloat(totals.monthly) === 0) { el.innerHTML = ''; return; }
         var _t = i18n[AppState.currentLang] || {};
-        el.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; font-size:0.72rem;">' +
-            '<span style="color:var(--text-sub);">' + (_t.rc_yearly_mileage || '연간') + '</span>' +
-            '<span style="color:var(--neon-cyan, #00d9ff); font-weight:700;">' + totals.yearly + ' ' + totals.unit + '</span></div>';
+        el.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">' +
+            '<div style="display:flex; align-items:center; gap:12px;">' +
+            '<div><div style="font-size:0.6rem; color:var(--text-sub);">' + (_t.rc_monthly_mileage || '월간') + '</div>' +
+            '<div style="font-size:0.8rem; font-weight:700; color:var(--neon-cyan, #00d9ff);">' + totals.monthly + ' ' + totals.unit + '</div></div>' +
+            '<div style="color:var(--text-sub);">|</div>' +
+            '<div><div style="font-size:0.6rem; color:var(--text-sub);">' + (_t.rc_yearly_mileage || '연간') + '</div>' +
+            '<div style="font-size:0.8rem; font-weight:700; color:var(--neon-cyan, #00d9ff);">' + totals.yearly + ' ' + totals.unit + '</div></div>' +
+            '</div></div>';
     }
 
     // --- Calendar ---
@@ -15675,11 +15715,13 @@ window.renderLifeStatus = renderLifeStatus;
         renderMileageSummary();
     };
 
-    // Override toggleRcDisplayUnit to refresh mileage
+    // Override toggleRcDisplayUnit to refresh mileage and re-render history with new unit
     var _origToggleUnit = window.toggleRcDisplayUnit;
     window.toggleRcDisplayUnit = function() {
         _origToggleUnit();
         renderMileageSummary();
+        renderRcHistory();
+        updateSummaryCard();
     };
 
     // Init on page load
