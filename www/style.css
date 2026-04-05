@@ -2493,6 +2493,10 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .rc-cal-day.has-record {
     color: var(--neon-green, #00e676); font-weight: 700;
 }
+.rc-cal-day.selected {
+    background: rgba(0,217,255,0.25);
+    border: 1px solid var(--neon-cyan, #00d9ff);
+}
 .rc-cal-day.has-record::after {
     content: ''; position: absolute; bottom: 2px; left: 50%;
     transform: translateX(-50%); width: 4px; height: 4px;
