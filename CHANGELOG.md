@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.192] - 2026-04-05
+
+### 변경
+- feat: 온보딩 페이지 리뉴얼 - 7슬라이드 + 모던 미니멀 디자인
+
 ## [1.0.191] - 2026-04-05
 
 ### 변경
