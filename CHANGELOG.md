@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.191] - 2026-04-05
+
+### 변경
+- feat: 약관/개인정보/이용정책 영어·일본어 번역 및 번역 면책사항 추가
+
 ## [1.0.190] - 2026-04-05
 
 ### 변경
