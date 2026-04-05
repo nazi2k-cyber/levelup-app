@@ -4140,6 +4140,11 @@ function changeLanguage(langCode) {
     if (oldLang !== langCode && AppState.user && AppState.user.pushEnabled) {
         updateTopicSubscriptionForLanguage(oldLang, langCode);
     }
+
+    // 언어 변경 시 Firestore에 저장 (서버 측 언어별 발송에 필요)
+    if (oldLang !== langCode && auth.currentUser) {
+        saveUserData();
+    }
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (i18n[langCode][key]) el.innerHTML = i18n[langCode][key];
