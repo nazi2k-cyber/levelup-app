@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.183] - 2026-04-05
+
+### 변경
+- feat: 프로필 모달 닉네임 우측에 당일 플래너 열람 버튼 추가
+
 ## [1.0.182] - 2026-04-05
 
 ### 변경
