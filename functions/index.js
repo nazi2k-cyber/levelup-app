@@ -303,11 +303,17 @@ async function handleGetTestUsers(request) {
                 else if (diffDays >= 2) streakStage = "2d";
             }
 
+            let email = null;
+            try {
+                const authUser = await getAuth().getUser(doc.id);
+                email = authUser.email || null;
+            } catch (_) { /* user may not exist in Auth */ }
+
             users.push({
                 uid: String(doc.id),
                 displayName: String(data.name || data.displayName || doc.id.substring(0, 8)),
                 nickname: data.name ? String(data.name) : null,
-                email: data.email ? String(data.email) : null,
+                email,
                 lang: String(data.lang || "ko"),
                 fcmToken: data.fcmToken ? String(data.fcmToken) : null,
                 lastActiveDate,
@@ -338,11 +344,16 @@ async function handleGetPushLogs(request) {
     const tokenToUser = {};
     for (const uDoc of usersSnap.docs) {
         const uData = uDoc.data();
+        let email = null;
+        try {
+            const authUser = await getAuth().getUser(uDoc.id);
+            email = authUser.email || null;
+        } catch (_) { /* user may not exist in Auth */ }
         const info = {
             uid: uDoc.id,
             displayName: String(uData.name || uData.displayName || uDoc.id.substring(0, 8)),
             nickname: uData.name ? String(uData.name) : null,
-            email: uData.email ? String(uData.email) : null
+            email
         };
         uidToUser[uDoc.id] = info;
         if (uData.fcmToken) {
