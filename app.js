@@ -13181,9 +13181,14 @@ window.renderLifeStatus = renderLifeStatus;
         var compact = text.replace(/\s+/g, '');
         // e.g. ISBN..., SBN..., or long numeric sequences often seen in OCR output
         if (/I?SBN/i.test(compact)) return true;
-        // Lower threshold: 5+ digits is a signal (was 8 — too strict for dark backgrounds)
-        var digitCount = (compact.match(/\d/g) || []).length;
-        return digitCount >= 5;
+        // Require at least one cluster of 3+ consecutive digits.
+        // Scattered single digits from Korean/CJK misrecognition don't count —
+        // real ISBNs always contain consecutive digit sequences (978, 979, etc.)
+        var clusters = compact.match(/\d{3,}/g);
+        if (!clusters) return false;
+        var clusterDigits = 0;
+        for (var i = 0; i < clusters.length; i++) clusterDigits += clusters[i].length;
+        return clusterDigits >= 5;
     }
 
     async function ocrCaptureFrame() {
@@ -13309,7 +13314,9 @@ window.renderLifeStatus = renderLifeStatus;
             var confidence = Math.round(result.data.confidence || 0);
 
             // ── Region lock-on management ──
-            var hasSignal = hasIsbnLikeSignal(ocrText);
+            // Require minimum confidence for lock-on to avoid locking onto garbled
+            // output from Korean/CJK text misrecognized as digits
+            var hasSignal = hasIsbnLikeSignal(ocrText) && confidence >= 15;
             if (hasSignal && _lockedCropIndex < 0) {
                 _lockedCropIndex = cropIndex;
                 _lockMissCount = 0;
