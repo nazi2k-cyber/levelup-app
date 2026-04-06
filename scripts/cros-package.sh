@@ -9,7 +9,10 @@
 #   4. Git 이력 요약 (창작일·창작과정 입증)
 # ============================================================
 # 사용법:
-#   bash scripts/cros-package.sh
+#   bash scripts/cros-package.sh                          # 기본 (일부 공개)
+#   bash scripts/cros-package.sh --mode full              # 전체 공개
+#   bash scripts/cros-package.sh --mode partial            # 일부 공개 (핵심 로직 마스킹)
+#   bash scripts/cros-package.sh --mode sealed             # 비공개 봉인
 #   bash scripts/cros-package.sh --author "홍길동"
 #   bash scripts/cros-package.sh --company "BRAVECAT STUDIOS"
 # ============================================================
@@ -24,6 +27,7 @@ APP_NAME="LEVEL UP: REBOOT"
 PACKAGE_ID="com.levelup.reboot"
 COMPANY="BRAVECAT STUDIOS"
 AUTHOR=""
+SUBMIT_MODE="partial"  # full | partial | sealed
 TIMESTAMP=$(date +"%Y%m%d")
 VERSION=$(cat VERSION 2>/dev/null | tr -d '[:space:]' || echo "unknown")
 
@@ -42,8 +46,13 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --author)   AUTHOR="$2"; shift 2 ;;
         --company)  COMPANY="$2"; shift 2 ;;
+        --mode)     SUBMIT_MODE="$2"; shift 2 ;;
         --help|-h)
             echo "사용법: bash scripts/cros-package.sh [옵션]"
+            echo "  --mode <모드>      제출 방식 (기본: partial)"
+            echo "                     full    = 전체 공개 (소스코드 전문 제출)"
+            echo "                     partial = 일부 공개 (핵심 알고리즘 마스킹)"
+            echo "                     sealed  = 비공개 봉인 (암호화 ZIP, 분쟁 시 개봉)"
             echo "  --author <이름>    저작자 실명"
             echo "  --company <법인명>  저작권자 법인명 (기본: BRAVECAT STUDIOS)"
             exit 0 ;;
@@ -65,6 +74,11 @@ log_info " CROS 저작권등록 제출 패키지 생성"
 log_info "=========================================="
 log_info "앱: ${APP_NAME} v${VERSION}"
 log_info "저작권자: ${COMPANY}"
+case $SUBMIT_MODE in
+    full)    log_info "제출 방식: 전체 공개 (소스코드 전문)" ;;
+    partial) log_info "제출 방식: 일부 공개 (핵심 알고리즘 마스킹)" ;;
+    sealed)  log_info "제출 방식: 비공개 봉인 (암호화 ZIP)" ;;
+esac
 echo ""
 
 # ============================================================
@@ -120,11 +134,188 @@ cp www/admin/index.html "$SOURCE_DIR/www/admin/" 2>/dev/null || true
 mkdir -p "$SOURCE_DIR/www/modules"
 cp www/modules/*.js "$SOURCE_DIR/www/modules/" 2>/dev/null || true
 
-# 소스코드 ZIP 생성
+# ── 제출 방식별 처리 ──
+if [ "$SUBMIT_MODE" = "partial" ]; then
+    log_info "핵심 알고리즘 마스킹 처리 중..."
+
+    # ── 마스킹 대상 정의 ──
+    # [HIGH] 게이미피케이션 핵심 로직 (app.js 내 레벨업/경험치/스트릭/보상)
+    # [HIGH] 운동 계산 공식 커스텀 계수 (exercise-calc.js)
+    # [MEDIUM] 이미지 스크리닝 임계값 (functions/index.js)
+
+    MASKING_NOTICE="/* ================================================================
+ * [영업비밀 보호] 이 영역의 코드는 저작권 등록 시 마스킹 처리되었습니다.
+ * 마스킹 사유: 핵심 알고리즘 및 독자적 수치 계수 보호
+ * 원본 코드는 비공개 봉인본에 포함되어 있으며, 분쟁 시 개봉됩니다.
+ * ================================================================ */"
+
+    # app.js - 경험치/레벨업 관련 함수 마스킹
+    if [ -f "$SOURCE_DIR/app.js" ]; then
+        # calcXP, addXP, levelUp 등 경험치 계산 로직 마스킹
+        sed -i -E "/function\s+(calcXP|calcExpNeeded|addXP|levelUp|calcLevelReward|calcStreakBonus|getStreakMultiplier)/,/^    \}|^  \}|^\}/ {
+            /function\s+(calcXP|calcExpNeeded|addXP|levelUp|calcLevelReward|calcStreakBonus|getStreakMultiplier)/! {
+                /^    \}|^  \}|^\}/! s/.*/    \/\/ [MASKED - 영업비밀 보호]/
+            }
+        }" "$SOURCE_DIR/app.js" 2>/dev/null || true
+        log_ok "app.js 핵심 로직 마스킹 완료"
+    fi
+
+    # exercise-calc.js - VO2max 계수, VDOT 공식 마스킹
+    if [ -f "$SOURCE_DIR/www/modules/exercise-calc.js" ]; then
+        # 독자적 계수를 [MASKED]로 치환
+        sed -i \
+            -e 's/0\.182258/[MASKED_COEFF]/g' \
+            -e 's/0\.000104/[MASKED_COEFF]/g' \
+            -e 's/0\.1894393/[MASKED_COEFF]/g' \
+            -e 's/0\.012778/[MASKED_COEFF]/g' \
+            -e 's/0\.2989558/[MASKED_COEFF]/g' \
+            -e 's/0\.1932605/[MASKED_COEFF]/g' \
+            -e 's/2\.67123/[MASKED_COEFF]/g' \
+            "$SOURCE_DIR/www/modules/exercise-calc.js" 2>/dev/null || true
+        log_ok "exercise-calc.js 계산 계수 마스킹 완료"
+    fi
+
+    # functions/index.js - 스크리닝 임계값 마스킹
+    if [ -f "$SOURCE_DIR/functions/index.js" ]; then
+        sed -i \
+            -e 's/> 0\.80/> [MASKED_THRESHOLD]/g' \
+            -e 's/> 0\.90/> [MASKED_THRESHOLD]/g' \
+            -e 's/> 0\.30/> [MASKED_THRESHOLD]/g' \
+            -e 's/> 0\.85/> [MASKED_THRESHOLD]/g' \
+            -e 's/> 0\.65/> [MASKED_THRESHOLD]/g' \
+            -e 's/> 0\.35/> [MASKED_THRESHOLD]/g' \
+            -e 's/> 0\.15/> [MASKED_THRESHOLD]/g' \
+            -e 's/>= 5/>= [MASKED_SEVERITY]/g' \
+            -e 's/>= 4/>= [MASKED_SEVERITY]/g' \
+            -e 's/>= 2/>= [MASKED_SEVERITY]/g' \
+            -e 's/>= 1/>= [MASKED_SEVERITY]/g' \
+            "$SOURCE_DIR/functions/index.js" 2>/dev/null || true
+        log_ok "functions/index.js 임계값 마스킹 완료"
+    fi
+
+    # 마스킹 목록 문서 생성
+    cat > "$DOC_DIR/마스킹_목록.txt" << MASKEOF
+================================================================
+마스킹 처리 목록
+================================================================
+저작물: ${APP_NAME} v${VERSION}
+제출 방식: 일부 공개 (핵심 알고리즘 마스킹)
+생성일: $(date +'%Y-%m-%d')
+
+본 문서는 저작권 등록 시 영업비밀 보호를 위해 마스킹 처리된
+코드 영역을 기록합니다.
+
+================================================================
+마스킹 대상 및 사유
+================================================================
+
+[위험도: HIGH] 게이미피케이션 핵심 알고리즘
+  파일: app.js
+  대상: 경험치 계산, 레벨업 공식, 스트릭 보너스, 보상 시스템
+  사유: 앱의 핵심 차별화 요소이며, 게임 밸런스에 직결되는
+       독자적 수치 체계로 영업비밀에 해당
+
+[위험도: HIGH] 운동 과학 계산 계수
+  파일: www/modules/exercise-calc.js
+  대상: VO2max 계산 계수, VDOT 공식 파라미터, 운동 강도 구간
+  사유: 커스터마이징된 운동 과학 공식의 독자적 계수값으로
+       경쟁 서비스 대비 차별화 핵심 요소
+
+[위험도: MEDIUM] 콘텐츠 스크리닝 임계값
+  파일: functions/index.js
+  대상: NSFW 감지 임계값, Azure Content Safety 심각도 매핑
+  사유: 콘텐츠 필터링 정확도를 결정하는 튜닝 파라미터로
+       서비스 품질에 직접적 영향
+
+================================================================
+마스킹 방법
+================================================================
+
+- 함수 본문: 내부 코드를 "// [MASKED - 영업비밀 보호]"로 치환
+- 수치 계수: 구체적 값을 "[MASKED_COEFF]"로 치환
+- 임계값:    구체적 값을 "[MASKED_THRESHOLD]"로 치환
+- 심각도:    구체적 값을 "[MASKED_SEVERITY]"로 치환
+
+※ 원본 코드는 비공개 봉인본에 별도 보관됩니다.
+※ 마스킹은 저작물의 존재와 구조를 증명하면서도
+  핵심 영업비밀을 보호하기 위한 조치입니다.
+================================================================
+MASKEOF
+    log_ok "마스킹 목록 문서 생성 완료"
+fi
+
+# 소스코드 ZIP 생성 (공개용)
 cd "$OUTPUT_DIR"
 zip -r "01_소스코드_${APP_NAME// /_}_v${VERSION}.zip" 01_소스코드/ > /dev/null
 SOURCE_ZIP_SIZE=$(du -h "01_소스코드_${APP_NAME// /_}_v${VERSION}.zip" | cut -f1)
-log_ok "소스코드 ZIP: ${SOURCE_ZIP_SIZE}"
+log_ok "소스코드 ZIP (공개용): ${SOURCE_ZIP_SIZE}"
+
+# ── 비공개 봉인 처리 ──
+if [ "$SUBMIT_MODE" = "sealed" ] || [ "$SUBMIT_MODE" = "partial" ]; then
+    log_info "비공개 봉인본 생성 중..."
+
+    SEALED_DIR="${OUTPUT_DIR}/04_비공개봉인"
+    mkdir -p "$SEALED_DIR"
+
+    # 원본 소스코드 (마스킹 없는 원본) 복사
+    SEALED_SOURCE="${SEALED_DIR}/원본_소스코드"
+    mkdir -p "$SEALED_SOURCE"
+    for f in "${SOURCE_FILES[@]}"; do
+        [ -f "$PROJECT_DIR/$f" ] && cp "$PROJECT_DIR/$f" "$SEALED_SOURCE/"
+    done
+    cp -r "$PROJECT_DIR/native-plugins/" "$SEALED_SOURCE/native-plugins/" 2>/dev/null || true
+    mkdir -p "$SEALED_SOURCE/functions"
+    cp "$PROJECT_DIR/functions/index.js" "$SEALED_SOURCE/functions/" 2>/dev/null || true
+    mkdir -p "$SEALED_SOURCE/www/modules"
+    cp "$PROJECT_DIR/www/modules/exercise-calc.js" "$SEALED_SOURCE/www/modules/" 2>/dev/null || true
+
+    # SHA256 해시 생성 (무결성 검증용)
+    {
+        echo "================================================================"
+        echo "비공개 봉인본 SHA256 해시 목록"
+        echo "================================================================"
+        echo "생성일: $(date +'%Y-%m-%d %H:%M:%S')"
+        echo "용도: 봉인 해제 시 원본 무결성 검증"
+        echo ""
+        find "$SEALED_SOURCE" -type f | sort | while read -r f; do
+            sha256sum "$f" | sed "s|$SEALED_SOURCE/||"
+        done
+    } > "$SEALED_DIR/SHA256_해시목록.txt"
+
+    # 봉인 안내문
+    cat > "$SEALED_DIR/봉인_안내문.txt" << SEALEOF
+================================================================
+비공개 봉인 안내문
+================================================================
+
+본 폴더에 포함된 소스코드는 저작권법 제53조에 의거하여
+비공개 봉인 형태로 제출됩니다.
+
+봉인 조건:
+  - 저작권 분쟁 발생 시 한국저작권위원회의 요청에 의해서만 개봉
+  - 개봉 시 SHA256 해시를 통해 원본 무결성 검증
+
+저작물 정보:
+  저작물명:   ${APP_NAME}
+  버전:       v${VERSION}
+  저작권자:   ${COMPANY}
+  $([ -n "$AUTHOR" ] && echo "저작자:     ${AUTHOR}")
+  봉인일:     $(date +'%Y년 %m월 %d일')
+
+================================================================
+SEALEOF
+
+    # 봉인 ZIP (비밀번호 보호)
+    cd "$SEALED_DIR"
+    SEAL_PASS="CROS-${COMPANY// /-}-$(date +%Y%m%d)"
+    zip -r -P "$SEAL_PASS" "../04_비공개봉인_${APP_NAME// /_}_v${VERSION}.zip" . > /dev/null
+    cd "$OUTPUT_DIR"
+    rm -rf "$SEALED_DIR"  # 원본 폴더 삭제 (ZIP만 유지)
+
+    log_ok "비공개 봉인본 생성 완료 (비밀번호 보호)"
+    log_warn "봉인 비밀번호: ${SEAL_PASS}"
+    log_warn "이 비밀번호는 안전한 곳에 별도 보관하세요!"
+fi
 
 cd "$PROJECT_DIR"
 
@@ -399,9 +590,17 @@ echo "  │   └── *.zip             소스코드 압축 파일"
 echo "  ├── 02_프로그램설명서/"
 echo "  │   ├── 프로그램_설명서.txt    기능·구조·실행환경 설명"
 echo "  │   └── 소스코드_목록.txt      파일별 라인 수 통계"
-echo "  └── 03_창작증빙자료/"
-echo "      ├── Git_커밋이력.txt       커밋 로그 (창작일 입증)"
-echo "      └── Git_상세이력.txt       변경 파일 포함 상세 이력"
+echo "  ├── 03_창작증빙자료/"
+echo "  │   ├── Git_커밋이력.txt       커밋 로그 (창작일 입증)"
+echo "  │   └── Git_상세이력.txt       변경 파일 포함 상세 이력"
+if [ "$SUBMIT_MODE" = "partial" ]; then
+echo "  │   └── 마스킹_목록.txt        마스킹 처리 대상 및 사유"
+echo "  └── 04_비공개봉인_*.zip    원본 소스코드 (비밀번호 보호)"
+elif [ "$SUBMIT_MODE" = "sealed" ]; then
+echo "  └── 04_비공개봉인_*.zip    원본 소스코드 (비밀번호 보호)"
+else
+echo "  └── (전체 공개 - 봉인 없음)"
+fi
 echo ""
 echo -e "${YELLOW}[주의]${NC} 추가 준비 필요:"
 echo "  1. 주요 화면 스크린샷 (5~10장) → 02_프로그램설명서/에 추가"
