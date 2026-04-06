@@ -1766,17 +1766,19 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: var(--bg-dark); z-index: 200;
     display: flex; flex-direction: column; align-items: center;
-    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overflow: hidden;
 }
 .isbn-scanner-overlay.d-none { display: none !important; }
 .isbn-scanner-content {
     width: 100%; max-width: 500px; display: flex; flex-direction: column;
-    align-items: center; padding: 0; padding-bottom: 40px;
+    align-items: center; padding: 0; padding-bottom: 12px;
+    height: 100%;
 }
 .isbn-scanner-header {
     display: flex; align-items: center; justify-content: center;
-    width: 100%; padding: 16px; position: relative;
+    width: 100%; padding: 12px 16px; position: relative;
     font-size: 1rem; font-weight: bold; color: var(--text-main);
+    flex-shrink: 0;
 }
 .isbn-scanner-close {
     position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
@@ -1784,9 +1786,13 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     font-size: 1.6rem; cursor: pointer; line-height: 1;
 }
 .isbn-scanner-reader {
-    width: 92%; max-width: 420px; min-height: 280px;
+    width: 92%; max-width: 420px;
+    max-height: 52vh; min-height: 200px;
     border-radius: 12px; overflow: hidden; background: #111;
-    position: relative;
+    position: relative; flex-shrink: 1;
+}
+.isbn-scanner-reader video {
+    max-height: 52vh !important; object-fit: cover;
 }
 .isbn-scanner-reader::after {
     content: '';
@@ -1800,12 +1806,12 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     box-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
 }
 .isbn-scanner-status {
-    margin-top: 16px; font-size: 0.85rem; color: var(--neon-blue);
-    text-align: center;
+    margin-top: 12px; font-size: 0.85rem; color: var(--neon-blue);
+    text-align: center; flex-shrink: 0;
 }
 .isbn-manual-input {
-    display: flex; gap: 8px; margin-top: 16px; padding: 0 20px; width: 100%;
-    max-width: 400px;
+    display: flex; gap: 8px; margin-top: 12px; padding: 0 20px; width: 100%;
+    max-width: 400px; flex-shrink: 0;
 }
 .isbn-manual-input input {
     flex: 1; padding: 10px 12px; border-radius: 8px;
