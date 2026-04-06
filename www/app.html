@@ -1515,21 +1515,13 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
             </button>
             <span class="rc-header-title" data-i18n="orm_full_title">1RM 계산기</span>
-            <div style="width:24px;"></div>
+            <div class="rc-unit-toggle orm-unit-toggle" id="orm-unit-toggle" onclick="window.toggleOrmDisplayUnit()">
+                <span class="rc-unit-toggle-btn active" data-unit="kg">kg</span>
+                <span class="rc-unit-toggle-btn" data-unit="lb">lb</span>
+            </div>
         </div>
 
         <div class="rc-content">
-            <!-- 목차 -->
-            <div class="orm-toc">
-                <h3 style="margin:0 0 10px 0; font-size:0.85rem; color:var(--text-main);" data-i18n="orm_toc">목차</h3>
-                <ol style="margin:0; padding-left:20px; font-size:0.8rem; line-height:2;">
-                    <li><a href="#orm-section-calc" class="orm-toc-link" data-i18n="orm_toc_calc">1RM 계산하기</a></li>
-                    <li><a href="#orm-section-what" class="orm-toc-link" data-i18n="orm_toc_what">1RM이란?</a></li>
-                    <li><a href="#orm-section-method" class="orm-toc-link" data-i18n="orm_toc_method">계산 방법</a></li>
-                    <li><a href="#orm-section-guide" class="orm-toc-link" data-i18n="orm_toc_guide">1RM 기반 훈련 가이드</a></li>
-                    <li><a href="#orm-section-faq" class="orm-toc-link" data-i18n="orm_toc_faq">자주 묻는 질문</a></li>
-                </ol>
-            </div>
 
             <!-- 1RM 계산하기 -->
             <div id="orm-section-calc" style="margin-top:24px;">
@@ -1563,7 +1555,7 @@
                 </div>
 
                 <div class="rc-input-group">
-                    <label class="rc-label" data-i18n="orm_weight_label">무게 (kg)</label>
+                    <label class="rc-label" id="orm-weight-label" data-i18n="orm_weight_label">무게 (kg)</label>
                     <input type="number" id="orm-weight" class="rc-input" placeholder="무게 (kg)" data-i18n-placeholder="orm_weight_placeholder" min="1" step="0.5" style="width:100%; box-sizing:border-box;">
                 </div>
 

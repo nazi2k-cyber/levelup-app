@@ -2352,6 +2352,9 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .rc-unit-toggle-btn.active {
     background: var(--neon-green); color: #000;
 }
+.orm-unit-toggle .rc-unit-toggle-btn.active {
+    background: var(--neon-red); color: #fff;
+}
 .rc-preset-row {
     display: flex; gap: 8px; margin-bottom: 2px;
 }

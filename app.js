@@ -16203,6 +16203,59 @@ window.renderLifeStatus = renderLifeStatus;
         if (saved) _ormData = JSON.parse(saved);
     } catch(e) {}
 
+    // --- kg/lb unit toggle ---
+    var _ormDisplayUnit = localStorage.getItem('orm_display_unit') || 'kg';
+    var KG_TO_LB = 2.20462;
+
+    function ormDisplayWeight(kgValue) {
+        var v = (_ormDisplayUnit === 'lb') ? kgValue * KG_TO_LB : kgValue;
+        return Math.round(v * 10) / 10;
+    }
+    function ormUnitLabel() { return _ormDisplayUnit; }
+
+    function syncOrmToggleUI() {
+        var toggleBtns = document.querySelectorAll('#orm-unit-toggle .rc-unit-toggle-btn');
+        toggleBtns.forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-unit') === _ormDisplayUnit);
+        });
+        var unit = ormUnitLabel();
+        var _t = i18n[AppState.currentLang] || {};
+        var labelEl = document.getElementById('orm-weight-label');
+        if (labelEl) labelEl.textContent = (_t.orm_weight_label_base || '무게') + ' (' + unit + ')';
+        var inputEl = document.getElementById('orm-weight');
+        if (inputEl) inputEl.placeholder = (_t.orm_weight_placeholder_base || '무게') + ' (' + unit + ')';
+    }
+
+    window.toggleOrmDisplayUnit = function() {
+        var oldUnit = _ormDisplayUnit;
+        _ormDisplayUnit = (oldUnit === 'kg') ? 'lb' : 'kg';
+        localStorage.setItem('orm_display_unit', _ormDisplayUnit);
+
+        syncOrmToggleUI();
+
+        // Convert current input value
+        var inputEl = document.getElementById('orm-weight');
+        if (inputEl) {
+            var val = parseFloat(inputEl.value);
+            if (val && val > 0) {
+                if (oldUnit === 'kg' && _ormDisplayUnit === 'lb') val = val * KG_TO_LB;
+                else if (oldUnit === 'lb' && _ormDisplayUnit === 'kg') val = val / KG_TO_LB;
+                inputEl.value = Math.round(val * 10) / 10;
+            }
+        }
+
+        // Re-render all displays
+        updateTotalDisplay();
+        updateSummaryCard();
+        renderOrmHistory();
+
+        // If results are visible, re-trigger calculation
+        var resultsEl = document.getElementById('orm-results');
+        if (resultsEl && !resultsEl.classList.contains('d-none')) {
+            window.calcOneRM();
+        }
+    };
+
     function saveOrmData() {
         try { localStorage.setItem('orm_data', JSON.stringify(_ormData)); } catch(e) {}
     }
@@ -16211,6 +16264,7 @@ window.renderLifeStatus = renderLifeStatus;
     window.openOrmCalcView = function() {
         var overlay = document.getElementById('orm-calc-overlay');
         if (overlay) overlay.classList.remove('d-none');
+        syncOrmToggleUI();
         updateTotalDisplay();
         renderOrmHistory();
     };
@@ -16246,22 +16300,26 @@ window.renderLifeStatus = renderLifeStatus;
         var weight = parseFloat(document.getElementById('orm-weight').value);
         if (!weight || weight <= 0) return;
 
-        var epley = calcEpley(weight, reps);
-        var brzycki = calcBrzycki(weight, reps);
-        var lander = calcLander(weight, reps);
-        var lombardi = calcLombardi(weight, reps);
-        var oconner = calcOconner(weight, reps);
+        // Convert to kg for calculation if input is in lb
+        var weightKg = (_ormDisplayUnit === 'lb') ? weight / KG_TO_LB : weight;
+
+        var epley = calcEpley(weightKg, reps);
+        var brzycki = calcBrzycki(weightKg, reps);
+        var lander = calcLander(weightKg, reps);
+        var lombardi = calcLombardi(weightKg, reps);
+        var oconner = calcOconner(weightKg, reps);
         var avg = (epley + brzycki + lander + lombardi + oconner) / 5;
 
         // Round to 1 decimal
         function r1(v) { return Math.round(v * 10) / 10; }
 
-        document.getElementById('orm-result-1rm').textContent = r1(avg) + ' kg';
-        document.getElementById('orm-res-epley').textContent = r1(epley) + ' kg';
-        document.getElementById('orm-res-brzycki').textContent = r1(brzycki) + ' kg';
-        document.getElementById('orm-res-lander').textContent = r1(lander) + ' kg';
-        document.getElementById('orm-res-lombardi').textContent = r1(lombardi) + ' kg';
-        document.getElementById('orm-res-oconner').textContent = r1(oconner) + ' kg';
+        var u = ormUnitLabel();
+        document.getElementById('orm-result-1rm').textContent = ormDisplayWeight(avg) + ' ' + u;
+        document.getElementById('orm-res-epley').textContent = ormDisplayWeight(epley) + ' ' + u;
+        document.getElementById('orm-res-brzycki').textContent = ormDisplayWeight(brzycki) + ' ' + u;
+        document.getElementById('orm-res-lander').textContent = ormDisplayWeight(lander) + ' ' + u;
+        document.getElementById('orm-res-lombardi').textContent = ormDisplayWeight(lombardi) + ' ' + u;
+        document.getElementById('orm-res-oconner').textContent = ormDisplayWeight(oconner) + ' ' + u;
 
         // Show results
         document.getElementById('orm-results').classList.remove('d-none');
@@ -16270,22 +16328,21 @@ window.renderLifeStatus = renderLifeStatus;
         var pctContainer = document.getElementById('orm-pct-rows');
         pctContainer.innerHTML = '';
         rmPct.forEach(function(item) {
-            var estWeight = r1(avg * item.pct / 100);
             var row = document.createElement('div');
             row.className = 'rc-result-row';
             row.innerHTML = '<span class="rc-result-label">' + item.reps + 'RM (' + item.pct + '%)</span>' +
-                '<span class="rc-result-value">' + estWeight + ' <span class="rc-result-unit">kg</span></span>';
+                '<span class="rc-result-value">' + ormDisplayWeight(avg * item.pct / 100) + ' <span class="rc-result-unit">' + u + '</span></span>';
             pctContainer.appendChild(row);
         });
         document.getElementById('orm-pct-table').classList.remove('d-none');
 
-        // Save to exercise data
+        // Save to exercise data (always in kg)
         _ormData[exercise] = r1(avg);
         saveOrmData();
         updateTotalDisplay();
 
-        // Save to history
-        saveOrmHistory(exercise, weight, reps, r1(avg));
+        // Save to history (always in kg)
+        saveOrmHistory(exercise, r1(weightKg), reps, r1(avg));
     };
 
     // --- Update total display in overlay ---
@@ -16293,13 +16350,14 @@ window.renderLifeStatus = renderLifeStatus;
         var sq = _ormData.squat;
         var bp = _ormData.bench;
         var dl = _ormData.deadlift;
+        var u = ormUnitLabel();
 
-        document.getElementById('orm-total-squat').textContent = sq ? sq + ' kg' : '- kg';
-        document.getElementById('orm-total-bench').textContent = bp ? bp + ' kg' : '- kg';
-        document.getElementById('orm-total-dead').textContent = dl ? dl + ' kg' : '- kg';
+        document.getElementById('orm-total-squat').textContent = sq ? ormDisplayWeight(sq) + ' ' + u : '- ' + u;
+        document.getElementById('orm-total-bench').textContent = bp ? ormDisplayWeight(bp) + ' ' + u : '- ' + u;
+        document.getElementById('orm-total-dead').textContent = dl ? ormDisplayWeight(dl) + ' ' + u : '- ' + u;
 
         var total = (sq || 0) + (bp || 0) + (dl || 0);
-        document.getElementById('orm-total-sum').textContent = (sq || bp || dl) ? Math.round(total * 10) / 10 + ' kg' : '- kg';
+        document.getElementById('orm-total-sum').textContent = (sq || bp || dl) ? ormDisplayWeight(total) + ' ' + u : '- ' + u;
     }
 
     // --- Rebuild _ormData from history if localStorage orm_data is missing ---
@@ -16335,12 +16393,13 @@ window.renderLifeStatus = renderLifeStatus;
         var el3 = document.getElementById('orm-summary-dead');
         var el4 = document.getElementById('orm-summary-total');
 
-        if (el1) el1.textContent = sq ? sq + ' kg' : '- kg';
-        if (el2) el2.textContent = bp ? bp + ' kg' : '- kg';
-        if (el3) el3.textContent = dl ? dl + ' kg' : '- kg';
+        var u = ormUnitLabel();
+        if (el1) el1.textContent = sq ? ormDisplayWeight(sq) + ' ' + u : '- ' + u;
+        if (el2) el2.textContent = bp ? ormDisplayWeight(bp) + ' ' + u : '- ' + u;
+        if (el3) el3.textContent = dl ? ormDisplayWeight(dl) + ' ' + u : '- ' + u;
 
         var total = (sq || 0) + (bp || 0) + (dl || 0);
-        if (el4) el4.textContent = (sq || bp || dl) ? Math.round(total * 10) / 10 + ' kg' : '- kg';
+        if (el4) el4.textContent = (sq || bp || dl) ? ormDisplayWeight(total) + ' ' + u : '- ' + u;
 
         renderOrmSummaryHistory();
     }
@@ -16363,8 +16422,8 @@ window.renderLifeStatus = renderLifeStatus;
             var eName = _en[item.exercise] || item.exerciseName || item.exercise;
             var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric' });
             html += '<div style="display:flex; justify-content:space-between; padding:3px 8px; font-size:0.72rem; color:var(--text-sub); border-top:1px solid rgba(255,255,255,0.04);">' +
-                '<span>' + dateStr + ' · ' + eName + ' ' + item.weight + 'kg×' + item.reps + repUnit + '</span>' +
-                '<span style="color:var(--neon-red); font-weight:700;">' + item.result1rm + ' kg</span></div>';
+                '<span>' + dateStr + ' · ' + eName + ' ' + ormDisplayWeight(item.weight) + ormUnitLabel() + '×' + item.reps + repUnit + '</span>' +
+                '<span style="color:var(--neon-red); font-weight:700;">' + ormDisplayWeight(item.result1rm) + ' ' + ormUnitLabel() + '</span></div>';
         }
         el.innerHTML = html;
     }
@@ -16459,10 +16518,10 @@ window.renderLifeStatus = renderLifeStatus;
             var dateStr = new Date(item.timestamp).toLocaleDateString(_locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             html += '<div class="calc-history-item">' +
                 '<div class="calc-history-info">' +
-                '<div class="calc-history-main">' + eName + ' · ' + item.weight + 'kg × ' + item.reps + repUnit + '</div>' +
+                '<div class="calc-history-main">' + eName + ' · ' + ormDisplayWeight(item.weight) + ormUnitLabel() + ' × ' + item.reps + repUnit + '</div>' +
                 '<div class="calc-history-sub">' + dateStr + '</div>' +
                 '</div>' +
-                '<div class="calc-history-value" style="color:var(--neon-red);">' + item.result1rm + ' <span style="font-size:0.7rem;color:var(--text-sub);">kg</span></div>' +
+                '<div class="calc-history-value" style="color:var(--neon-red);">' + ormDisplayWeight(item.result1rm) + ' <span style="font-size:0.7rem;color:var(--text-sub);">' + ormUnitLabel() + '</span></div>' +
                 '<button class="calc-history-delete" onclick="window.deleteOrmCalcHistory(' + idx + ')">✕</button>' +
                 '</div>';
         });
