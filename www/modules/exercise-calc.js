@@ -183,7 +183,7 @@
     };
 
     // --- Display unit state (km or mi) ---
-    var _rcDisplayUnit = 'km';
+    var _rcDisplayUnit = localStorage.getItem('rc_display_unit') || 'km';
 
     // Preset definitions per unit (dynamically resolved via i18n)
     function _getRcPresetsKm() {
@@ -236,6 +236,7 @@
     window.toggleRcDisplayUnit = function() {
         var oldUnit = _rcDisplayUnit;
         _rcDisplayUnit = (oldUnit === 'km') ? 'mi' : 'km';
+        localStorage.setItem('rc_display_unit', _rcDisplayUnit);
         var toggleBtns = document.querySelectorAll('#rc-unit-toggle .rc-unit-toggle-btn');
         toggleBtns.forEach(function(btn) {
             btn.classList.toggle('active', btn.getAttribute('data-unit') === _rcDisplayUnit);
@@ -688,12 +689,10 @@
         renderRcHistory();
 
         // --- Running Calculator Reward (daily limit: +10P & STR +0.5) ---
-        var rcRewardDate = new Date().toISOString().slice(0, 10);
-        var rcRewards = {};
-        try { rcRewards = JSON.parse(localStorage.getItem('running_calc_rewards') || '{}'); } catch(e) {}
-        if (!rcRewards[rcRewardDate]) {
-            rcRewards[rcRewardDate] = true;
-            localStorage.setItem('running_calc_rewards', JSON.stringify(rcRewards));
+        var rcRewardDate = (typeof window.getTodayKST === 'function') ? window.getTodayKST() : new Date().toISOString().slice(0, 10);
+        var rcLastReward = localStorage.getItem('rc_last_reward_date') || '';
+        if (rcLastReward !== rcRewardDate) {
+            localStorage.setItem('rc_last_reward_date', rcRewardDate);
             window.AppState.user.points += 10;
             window.AppState.user.pendingStats.str += 0.5;
             window.updatePointUI();
@@ -1403,12 +1402,10 @@
         renderOrmHistory();
 
         // --- 1RM Calculator Reward (daily limit: +10P & STR +0.5) ---
-        var ormRewardDate = new Date().toISOString().slice(0, 10);
-        var ormRewards = {};
-        try { ormRewards = JSON.parse(localStorage.getItem('orm_calc_rewards') || '{}'); } catch(e) {}
-        if (!ormRewards[ormRewardDate]) {
-            ormRewards[ormRewardDate] = true;
-            localStorage.setItem('orm_calc_rewards', JSON.stringify(ormRewards));
+        var ormRewardDate = (typeof window.getTodayKST === 'function') ? window.getTodayKST() : new Date().toISOString().slice(0, 10);
+        var ormLastReward = localStorage.getItem('orm_last_reward_date') || '';
+        if (ormLastReward !== ormRewardDate) {
+            localStorage.setItem('orm_last_reward_date', ormRewardDate);
             window.AppState.user.points += 10;
             window.AppState.user.pendingStats.str += 0.5;
             window.updatePointUI();

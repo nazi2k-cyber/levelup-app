@@ -1958,7 +1958,10 @@ async function _doSaveUserData() {
             lifeStatusStr: localStorage.getItem('life_status_config') || '',
             libraryStr: JSON.stringify(AppState.library || { books: [] }),
             runningCalcHistoryStr: localStorage.getItem('running_calc_history') || '[]',
-            ormCalcHistoryStr: localStorage.getItem('orm_calc_history') || '[]'
+            ormCalcHistoryStr: localStorage.getItem('orm_calc_history') || '[]',
+            rcLastRewardDate: localStorage.getItem('rc_last_reward_date') || '',
+            ormLastRewardDate: localStorage.getItem('orm_last_reward_date') || '',
+            onboardingSeen: localStorage.getItem(ONBOARDING_STORAGE_KEY) || ''
         };
         // Firestore 보안 규칙 크기 제한에 맞춰 클라이언트에서 사전 검증/절삭
         const _strLimits = {
@@ -2255,6 +2258,17 @@ async function loadUserDataFromDB(user) {
             // 1RM 계산기 기록 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.ormCalcHistoryStr) {
                 localStorage.setItem('orm_calc_history', data.ormCalcHistoryStr);
+            }
+            // 계산기 보상 날짜 복원 (재설치/로그아웃 시 무한 보상 방지)
+            if (data.rcLastRewardDate) {
+                localStorage.setItem('rc_last_reward_date', data.rcLastRewardDate);
+            }
+            if (data.ormLastRewardDate) {
+                localStorage.setItem('orm_last_reward_date', data.ormLastRewardDate);
+            }
+            // 온보딩 완료 상태 복원 (재설치 시 재노출 방지)
+            if (data.onboardingSeen) {
+                localStorage.setItem(ONBOARDING_STORAGE_KEY, data.onboardingSeen);
             }
             // 계산기 상태창 메인 데이터 갱신 (Firebase 복원 후)
             if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();

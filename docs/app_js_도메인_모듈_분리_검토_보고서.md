@@ -451,3 +451,67 @@ EventBus.on('tab:quest', () => renderQuestList());
 - Phase 1에서 IIFE 4개 추출로 **즉시 4,476줄 (27%) 감소** — 가장 안전한 성과
 - Phase 1+2 완료 시 **13개 모듈 분리**, app.js에서 약 **8,700줄 제거 (53%)**
 - Phase 3-5는 Phase 1+2 안정화 후 후속 작업으로 분리 권장
+
+---
+
+## 13) Phase 1 최소 적용 실행 기록
+
+### 13-1. 적용 일시
+
+**2026-04-06 (UTC 기준)**
+
+### 13-2. 적용 범위
+
+Phase 1의 8개 대상 모듈 중 **영향도 최소인 Exercise Calculator IIFE 2개만 우선 추출**.
+
+| 항목 | 내용 |
+|---|---|
+| 대상 모듈 | Running Calculator (1,125줄) + 1RM Calculator (341줄) |
+| 추출 방식 | **Window Bridge 패턴** — core 모듈 분리 없이 `window.*`로 의존성 노출 |
+| 모듈 로딩 | 동적 `import()` — app.js 본문 실행 후 비동기 로드 |
+| DOMContentLoaded 대응 | `document.readyState` 체크 + 즉시 실행 fallback |
+
+### 13-3. 변경 파일
+
+| 파일 | 변경 내용 |
+|---|---|
+| `app.js` | Window Bridge 추가 (8줄) + 동적 import (1줄) + IIFE 삭제 (~1,470줄) |
+| `modules/exercise-calc.js` | **신규 생성** — 2개 IIFE 이동 + 내부 참조 `window.*` 변환 |
+| `sync-www.sh` | `modules/` 디렉토리 rsync 동기화 로직 추가 |
+| `app.html` | **변경 없음** |
+
+### 13-4. app.js 라인 수 변화
+
+| 시점 | 라인 수 |
+|---|---:|
+| 적용 전 | 16,537줄 |
+| 적용 후 | **15,077줄** |
+| 감소량 | **1,460줄 (8.8%)** |
+
+### 13-5. Window Bridge 노출 목록
+
+```javascript
+window.AppState = AppState;
+window.saveUserData = saveUserData;
+window.updatePointUI = updatePointUI;
+window.drawRadarChart = drawRadarChart;
+window.getTodayKST = getTodayKST;
+window.isNativePlatform = isNativePlatform;
+window._auth = auth;
+```
+
+### 13-6. 동시 수정 — 버그 수정 3건
+
+| # | 버그 | 원인 | 수정 내용 |
+|---:|---|---|---|
+| 1 | 계산기 일일보상 무한 지급 | 보상 날짜가 UTC 기준 + localStorage만 사용 (로그아웃/재설치 시 초기화) | KST 날짜(`getTodayKST()`) 사용 + 단일 키(`rc_last_reward_date`, `orm_last_reward_date`)로 변경 + Firestore 저장/복원 추가 |
+| 2 | 러닝 계산기 단위(km/mi) 미저장 | `_rcDisplayUnit` 초기값이 항상 `'km'`으로 하드코딩, localStorage 미사용 | `localStorage.getItem('rc_display_unit')` 복원 + `toggleRcDisplayUnit()` 시 저장 추가 (1RM은 기존 정상) |
+| 3 | 온보딩 가이드 재노출 | `ONBOARDING_STORAGE_KEY`가 localStorage만 의존 (로그아웃 시 `localStorage.clear()` 호출) | `onboardingSeen` 필드를 Firestore payload에 추가, `loadUserDataFromDB()`에서 복원 |
+
+### 13-7. 향후 추출 대상 (동일 Window Bridge 패턴 적용 가능)
+
+| IIFE | 라인 수 | 비고 |
+|---|---:|---|
+| Pomodoro Timer | 445줄 | `AppState.currentLang`, `i18n`, `isNativePlatform` 의존 |
+| Library/Book Scanner | 2,565줄 | `AppState`, `i18n`, `auth`, `db`, `saveUserData` 의존 |
+| **합계 (미추출)** | **3,010줄** | 추가 추출 시 app.js → ~12,067줄 (총 27% 감소) |
