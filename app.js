@@ -14761,7 +14761,8 @@ window.renderLifeStatus = renderLifeStatus;
                     if (track) {
                         await track.applyConstraints({
                             width: { ideal: 1920, min: 1280 },
-                            height: { ideal: 1080, min: 720 }
+                            height: { ideal: 1080, min: 720 },
+                            focusMode: { ideal: 'continuous' }
                         });
                         var settings = track.getSettings();
                         if (window.AppLogger) AppLogger.info('[ISBN] Camera resolution: ' + settings.width + 'x' + settings.height);
@@ -14793,7 +14794,7 @@ window.renderLifeStatus = renderLifeStatus;
                     var _nativeDetector = new BarcodeDetector({
                         formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e']
                     });
-                    var _nativeVideoEl = document.querySelector('#isbn-scanner-container video');
+                    var _nativeVideoEl = document.querySelector('#isbn-scanner-reader video');
                     var _nativeRunning = true;
                     if (window.AppLogger) AppLogger.info('[ISBN] Native BarcodeDetector enabled');
 
