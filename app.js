@@ -14730,6 +14730,15 @@ window.renderLifeStatus = renderLifeStatus;
                                 }
                             }
                         );
+                    }).then(function() {
+                        // Re-apply HD resolution after full-frame restart
+                        try {
+                            var vEl = document.querySelector('#isbn-scanner-reader video');
+                            if (vEl && vEl.srcObject) {
+                                var trk = vEl.srcObject.getVideoTracks()[0];
+                                if (trk) trk.applyConstraints({ width: { ideal: 1920, min: 1280 }, height: { ideal: 1080, min: 720 } });
+                            }
+                        } catch(e) {}
                     }).catch(function() {});
                 }
             };
@@ -14741,17 +14750,37 @@ window.renderLifeStatus = renderLifeStatus;
                 _onBarcodeError
             );
 
-            // Log actual camera resolution for debugging
+            // Request HD resolution — default WebView resolution (often 640x480) is too
+            // low for barcode detection (bars become 1-2px) and OCR (text too small).
+            // Uses applyConstraints on the live track since Html5Qrcode doesn't pass
+            // resolution hints through its start() API.
             try {
-                var videoEl = document.querySelector('#isbn-scanner-container video');
+                var videoEl = document.querySelector('#isbn-scanner-reader video');
                 if (videoEl && videoEl.srcObject) {
                     var track = videoEl.srcObject.getVideoTracks()[0];
                     if (track) {
+                        await track.applyConstraints({
+                            width: { ideal: 1920, min: 1280 },
+                            height: { ideal: 1080, min: 720 }
+                        });
                         var settings = track.getSettings();
                         if (window.AppLogger) AppLogger.info('[ISBN] Camera resolution: ' + settings.width + 'x' + settings.height);
                     }
                 }
-            } catch(resErr) {}
+            } catch(resErr) {
+                // applyConstraints may fail on some devices — log but continue with default resolution
+                if (window.AppLogger) AppLogger.warn('[ISBN] HD resolution request failed: ' + (resErr.message || resErr));
+                try {
+                    var fallbackEl = document.querySelector('#isbn-scanner-reader video');
+                    if (fallbackEl && fallbackEl.srcObject) {
+                        var fbTrack = fallbackEl.srcObject.getVideoTracks()[0];
+                        if (fbTrack) {
+                            var fbSettings = fbTrack.getSettings();
+                            if (window.AppLogger) AppLogger.info('[ISBN] Camera resolution (fallback): ' + fbSettings.width + 'x' + fbSettings.height);
+                        }
+                    }
+                } catch(e2) {}
+            }
 
             if (window.AppLogger) AppLogger.info('[ISBN] Camera started successfully');
             AppState.user.cameraEnabled = true;
