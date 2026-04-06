@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.198] - 2026-04-06
+
+### 변경
+- refactor: app.js에서 Exercise Calculator IIFE 모듈 분리 (Phase 1 최소 적용)
+
 ## [1.0.197] - 2026-04-06
 
 ### 변경
