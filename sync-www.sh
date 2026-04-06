@@ -98,5 +98,16 @@ for f in "${FILES[@]}"; do
   fi
 done
 
+# modules/ 디렉토리 동기화
+if [ -d "$SCRIPT_DIR/modules" ]; then
+    mkdir -p "$WWW_DIR/modules"
+    rsync -a --delete "$SCRIPT_DIR/modules/" "$WWW_DIR/modules/"
+    echo "  SYNC modules/ 디렉토리 (root → www)"
+elif [ -d "$WWW_DIR/modules" ]; then
+    mkdir -p "$SCRIPT_DIR/modules"
+    rsync -a --delete "$WWW_DIR/modules/" "$SCRIPT_DIR/modules/"
+    echo "  SYNC modules/ (www → root)"
+fi
+
 echo ""
 echo "완료: www/ ${WWW_UPDATED}개 갱신, 루트 ${ROOT_UPDATED}개 갱신, ${SKIPPED}개 이미 동일"
