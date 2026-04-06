@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.204] - 2026-04-06
+
+### 변경
+- fix: native BarcodeDetector broken by wrong video element selector
+
 ## [1.0.203] - 2026-04-06
 
 ### 변경
