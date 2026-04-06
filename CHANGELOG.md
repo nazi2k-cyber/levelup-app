@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.205] - 2026-04-06
+
+### 변경
+- fix: ISBN 스캐너/OCR 전면 개선 — UI 레이아웃, 바코드 성능, 한국책 지원, OCR 최적화
+
 ## [1.0.204] - 2026-04-06
 
 ### 변경
