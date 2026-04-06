@@ -12853,6 +12853,8 @@ window.renderLifeStatus = renderLifeStatus;
 
         // Step 1: Grayscale using max(R,G,B) — better for colored backgrounds
         // Orange bg: R=high → max=high → white; Dark text: all low → max=low → dark
+        // Save original RGBA in case max-channel produces low contrast (e.g. blue backgrounds)
+        var origRgba = new Uint8Array(data);
         var histogram = new Array(256).fill(0);
         var minGray = 255, maxGray = 0;
         var graySum = 0;
@@ -12862,6 +12864,20 @@ window.renderLifeStatus = renderLifeStatus;
             graySum += gray;
             if (gray < minGray) minGray = gray;
             if (gray > maxGray) maxGray = gray;
+        }
+
+        // Step 1 fallback: if max-channel grayscale produced low contrast (< 80 range),
+        // retry with luminosity weighting — fixes blue/cool-toned backgrounds where
+        // max(R,G,B) maps both background and text to similar high values
+        if ((maxGray - minGray) < 80) {
+            minGray = 255; maxGray = 0; graySum = 0;
+            for (var i = 0; i < data.length; i += 4) {
+                var gray = Math.round(0.299 * origRgba[i] + 0.587 * origRgba[i + 1] + 0.114 * origRgba[i + 2]);
+                data[i] = data[i + 1] = data[i + 2] = gray;
+                graySum += gray;
+                if (gray < minGray) minGray = gray;
+                if (gray > maxGray) maxGray = gray;
+            }
         }
 
         // Step 1a: Adaptive dark background handling
