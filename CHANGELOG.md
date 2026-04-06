@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.195] - 2026-04-06
+
+### 변경
+- docs: 루트 ↔ www/ 중복 파일 및 양방향 동기화 리뷰 문서 추가
+
 ## [1.0.194] - 2026-04-06
 
 ### 변경
