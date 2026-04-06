@@ -98,5 +98,18 @@ for f in "${FILES[@]}"; do
   fi
 done
 
+# --- modules/ 디렉토리 동기화 ---
+if [ -d "$SCRIPT_DIR/modules" ]; then
+    # ROOT→WWW: modules/ 전체 복사
+    rm -rf "$WWW_DIR/modules"
+    cp -r "$SCRIPT_DIR/modules" "$WWW_DIR/modules"
+    echo "  SYNC  modules/ 디렉토리 (ROOT→WWW)"
+elif [ -d "$WWW_DIR/modules" ]; then
+    # WWW→ROOT: modules/ 전체 복사
+    rm -rf "$SCRIPT_DIR/modules"
+    cp -r "$WWW_DIR/modules" "$SCRIPT_DIR/modules"
+    echo "  SYNC  modules/ 디렉토리 (WWW→ROOT)"
+fi
+
 echo ""
 echo "완료: www/ ${WWW_UPDATED}개 갱신, 루트 ${ROOT_UPDATED}개 갱신, ${SKIPPED}개 이미 동일"
