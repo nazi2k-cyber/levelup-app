@@ -11,7 +11,12 @@
     "build-apk": "bash sync-www.sh && cd android && chmod +x ./gradlew && ./gradlew assembleDebug",
     "generate-config": "bash scripts/generate-firebase-config.sh",
     "version-bump": "bash scripts/version-bump.sh",
-    "version-sync": "bash scripts/version-bump.sh"
+    "version-sync": "bash scripts/version-bump.sh",
+    "backup": "bash scripts/backup.sh",
+    "backup:zip": "bash scripts/backup.sh --zip",
+    "backup:full": "bash scripts/backup.sh --full",
+    "backup:git": "bash scripts/github-backup.sh",
+    "backup:bundle": "bash scripts/github-backup.sh --bundle"
   },
   "dependencies": {
     "@capacitor-community/admob": "^6.2.0",
