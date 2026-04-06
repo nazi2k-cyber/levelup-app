@@ -12843,6 +12843,24 @@ window.renderLifeStatus = renderLifeStatus;
         }
     }
 
+    // ── Otsu inter-class variance (measures how well a histogram separates into two groups) ──
+    function _otsuVariance(hist, total) {
+        var sumAll = 0;
+        for (var t = 0; t < 256; t++) sumAll += t * hist[t];
+        var sumBg = 0, wBg = 0, maxVar = 0;
+        for (var t = 0; t < 256; t++) {
+            wBg += hist[t];
+            if (wBg === 0) continue;
+            var wFg = total - wBg;
+            if (wFg === 0) break;
+            sumBg += t * hist[t];
+            var diff = (sumBg / wBg) - ((sumAll - sumBg) / wFg);
+            var v = wBg * wFg * diff * diff;
+            if (v > maxVar) maxVar = v;
+        }
+        return maxVar;
+    }
+
     // ── OCR Image Preprocessing (grayscale → sharpen → adaptive binarization → upscale) ──
     function preprocessForOcr(srcCanvas) {
         var w = srcCanvas.width;
@@ -12851,10 +12869,11 @@ window.renderLifeStatus = renderLifeStatus;
         var imgData = ctx.getImageData(0, 0, w, h);
         var data = imgData.data;
 
-        // Step 1: Grayscale using max(R,G,B) — better for colored backgrounds
+        // Step 1: Grayscale using max(R,G,B) — better for warm-colored backgrounds
         // Orange bg: R=high → max=high → white; Dark text: all low → max=low → dark
-        // Save original RGBA in case max-channel produces low contrast (e.g. blue backgrounds)
+        // Save original RGBA to compare with luminosity method
         var origRgba = new Uint8Array(data);
+        var maxHist = new Array(256).fill(0);
         var histogram = new Array(256).fill(0);
         var minGray = 255, maxGray = 0;
         var graySum = 0;
@@ -12862,27 +12881,43 @@ window.renderLifeStatus = renderLifeStatus;
             var gray = Math.max(data[i], data[i + 1], data[i + 2]);
             data[i] = data[i + 1] = data[i + 2] = gray;
             graySum += gray;
+            maxHist[gray]++;
             if (gray < minGray) minGray = gray;
             if (gray > maxGray) maxGray = gray;
         }
 
-        // Step 1 fallback: if max-channel grayscale produced low contrast (< 80 range),
-        // retry with luminosity weighting — fixes blue/cool-toned backgrounds where
-        // max(R,G,B) maps both background and text to similar high values
-        if ((maxGray - minGray) < 80) {
-            minGray = 255; maxGray = 0; graySum = 0;
+        // Step 1 fallback: compare Otsu inter-class variance between max(RGB) and luminosity.
+        // max(RGB) fails on blue/cool backgrounds where B≈high maps both background and
+        // white text to similar high values. Luminosity preserves that contrast.
+        // Use Otsu variance as the decision metric — it measures how well pixels
+        // separate into two groups, which directly predicts binarization quality.
+        var totalPixels = w * h;
+        var lumHist = new Array(256).fill(0);
+        var lumMin = 255, lumMax = 0, lumSum = 0;
+        for (var i = 0; i < origRgba.length; i += 4) {
+            var lum = Math.round(0.299 * origRgba[i] + 0.587 * origRgba[i + 1] + 0.114 * origRgba[i + 2]);
+            lumHist[lum]++;
+            lumSum += lum;
+            if (lum < lumMin) lumMin = lum;
+            if (lum > lumMax) lumMax = lum;
+        }
+        // Quick Otsu variance for both methods
+        var maxOtsu = _otsuVariance(maxHist, totalPixels);
+        var lumOtsu = _otsuVariance(lumHist, totalPixels);
+        if (lumOtsu > maxOtsu) {
+            // Luminosity gives better text/background separation — apply it
+            minGray = lumMin; maxGray = lumMax; graySum = lumSum;
+            histogram = lumHist;
             for (var i = 0; i < data.length; i += 4) {
-                var gray = Math.round(0.299 * origRgba[i] + 0.587 * origRgba[i + 1] + 0.114 * origRgba[i + 2]);
-                data[i] = data[i + 1] = data[i + 2] = gray;
-                graySum += gray;
-                if (gray < minGray) minGray = gray;
-                if (gray > maxGray) maxGray = gray;
+                var lum = Math.round(0.299 * origRgba[i] + 0.587 * origRgba[i + 1] + 0.114 * origRgba[i + 2]);
+                data[i] = data[i + 1] = data[i + 2] = lum;
             }
+        } else {
+            histogram = maxHist;
         }
 
         // Step 1a: Adaptive dark background handling
         // If mean brightness < 100, image is likely white text on dark bg → invert early
-        var totalPixels = w * h;
         var meanGray = graySum / totalPixels;
         if (meanGray < 100) {
             for (var i = 0; i < data.length; i += 4) {
@@ -13231,51 +13266,54 @@ window.renderLifeStatus = renderLifeStatus;
                 cropIndex = _ocrFrameIndex % 7;
             }
 
-            // 7 high-yield OCR regions (removed low-yield middle/full-frame regions)
+            // 7 high-yield OCR regions — interleaved horizontal/rotated so both
+            // orientations are tried within the first 4 frames (~2-3 seconds).
+            // Old order: 0-bottom, 1-center, 2-lower, 3-right, 4-bottom-rot, 5-right-wide, 6-left
+            // New order: 0-bottom, 1-right, 2-lower, 3-right-wide, 4-center, 5-bottom-rot, 6-left
             cropX = 0;
             cropW = w;
             cropY = 0;
             cropH = h;
             rotation = 0; // 0 = none, 1 = 90° CW, -1 = 90° CCW
             if (cropIndex === 0) {
-                // Bottom horizontal strip (most common ISBN location)
+                // Bottom horizontal strip (most common ISBN location — Western books)
                 cropY = Math.floor(h * 0.78);
                 cropH = Math.floor(h * 0.20);
                 psmMode = '7';
             } else if (cropIndex === 1) {
-                // Center-bottom narrow strip
-                cropX = Math.floor(w * 0.20);
-                cropW = Math.floor(w * 0.60);
-                cropY = Math.floor(h * 0.80);
-                cropH = Math.floor(h * 0.16);
-                psmMode = '7';
-            } else if (cropIndex === 2) {
-                // Lower region wider
-                cropY = Math.floor(h * 0.72);
-                cropH = Math.floor(h * 0.24);
-                psmMode = '6';
-            } else if (cropIndex === 3) {
-                // Right vertical strip (Korean vertical barcodes)
+                // Right vertical strip (Korean vertical barcodes) — tried 2nd now
                 cropX = Math.floor(w * 0.85);
                 cropW = Math.floor(w * 0.15);
                 cropY = Math.floor(h * 0.05);
                 cropH = Math.floor(h * 0.90);
                 rotation = -1;
                 psmMode = '6';
-            } else if (cropIndex === 4) {
-                // Bottom with rotation
-                cropY = Math.floor(h * 0.70);
-                cropH = Math.floor(h * 0.28);
-                rotation = 1;
+            } else if (cropIndex === 2) {
+                // Lower region wider
+                cropY = Math.floor(h * 0.72);
+                cropH = Math.floor(h * 0.24);
                 psmMode = '6';
-            } else if (cropIndex === 5) {
-                // Right wider vertical strip
+            } else if (cropIndex === 3) {
+                // Right wider vertical strip — tried 4th now
                 cropX = Math.floor(w * 0.75);
                 cropW = Math.floor(w * 0.25);
                 cropY = Math.floor(h * 0.10);
                 cropH = Math.floor(h * 0.80);
                 rotation = -1;
                 psmMode = '7';
+            } else if (cropIndex === 4) {
+                // Center-bottom narrow strip (was index 1)
+                cropX = Math.floor(w * 0.20);
+                cropW = Math.floor(w * 0.60);
+                cropY = Math.floor(h * 0.80);
+                cropH = Math.floor(h * 0.16);
+                psmMode = '7';
+            } else if (cropIndex === 5) {
+                // Bottom with rotation (was index 4)
+                cropY = Math.floor(h * 0.70);
+                cropH = Math.floor(h * 0.28);
+                rotation = 1;
+                psmMode = '6';
             } else {
                 // Left vertical strip
                 cropX = 0;
