@@ -119,19 +119,11 @@
         });
 
         // 네트워크/리소스 로드 오류 (이미지·스크립트 등)
-        // 비치명적 외부 스크립트: Firebase Auth/Analytics가 내부적으로 로드 시도하며
-        // Android WebView/네트워크 정책/광고차단 환경에서 간헐 실패 (앱 기능에 영향 없음)
-        var NON_CRITICAL_SCRIPTS = [
-            'apis.google.com/js/api.js',
-            'www.googletagmanager.com/gtag/js'
-        ];
         window.addEventListener('error', function (event) {
             if (event.target && event.target !== window) {
                 const tag = event.target.tagName || 'unknown';
                 const src = event.target.src || event.target.href || '';
-                var isNonCritical = NON_CRITICAL_SCRIPTS.some(function (u) { return src.indexOf(u) !== -1; });
-                var level = isNonCritical ? 'DEBUG' : 'WARN';
-                addEntry(level, `[ResourceError] <${tag}> 로드 실패: ${src}`, '');
+                addEntry('WARN', `[ResourceError] <${tag}> 로드 실패: ${src}`, '');
             }
         }, true /* capture */);
     }
