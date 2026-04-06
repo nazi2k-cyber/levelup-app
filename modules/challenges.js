@@ -125,24 +125,6 @@ function canSpinRoulette() {
     return anyDone ? 'ready' : 'locked';
 }
 
-// KST 자정까지 남은 시간(ms) 계산
-function getMsUntilNextKSTMidnight() {
-    const now = new Date();
-    const kstOffset = 9 * 60 * 60 * 1000;
-    const kstNow = new Date(now.getTime() + kstOffset + now.getTimezoneOffset() * 60 * 1000);
-    const kstTomorrow = new Date(kstNow.getFullYear(), kstNow.getMonth(), kstNow.getDate() + 1, 0, 0, 0, 0);
-    return kstTomorrow.getTime() - kstNow.getTime();
-}
-
-// 남은 시간을 HH:MM:SS 포맷으로 변환
-function formatCountdown(ms) {
-    const totalSec = Math.max(0, Math.floor(ms / 1000));
-    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
-    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
-    const s = String(totalSec % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
-
 let _rouletteTimerInterval = null;
 
 function startRouletteTimer() {
