@@ -374,11 +374,80 @@ fi
 
 ---
 
-## 10) 구현 우선순위 권장
+## 10) 추가 분석: IIFE 패턴 모듈 및 핵심 결합점
+
+### 10-1. 기존 IIFE 자체 격리 모듈 (가장 안전한 추출 대상)
+
+app.js 하단에 4개의 IIFE(즉시 실행 함수 표현식)가 이미 자체 격리 스코프로 구현되어 있음. 이들은 `window.*` 등록과 `AppState` 읽기만으로 외부와 통신하므로, **Phase 1에서 가장 우선적으로 추출 가능**.
+
+| IIFE | app.js 라인 범위 | 크기 | 외부 의존 |
+|---|---|---:|---|
+| Pomodoro Timer | 12049-12494 | 445줄 | `AppState.currentLang`, `i18n`, `isNativePlatform` |
+| Library/Book Scanner | 12499-15064 | 2,565줄 | `AppState`, `i18n`, `auth`, `db`, `saveUserData` |
+| Running Calculator | 15067-16192 | 1,125줄 | `AppState.currentLang`, `i18n`, `saveUserData` |
+| 1RM Calculator | 16195-16536 | 341줄 | `AppState.currentLang`, `i18n`, `saveUserData` |
+
+**IIFE 4개 합계: 4,476줄 (app.js의 27%)** — 행동 변경 없이 모듈 변환 가능
+
+### 10-2. 핵심 결합점: `switchTab()` 함수
+
+`switchTab()` (line 4040)은 탭 전환 시 각 도메인의 render 함수를 직접 호출하는 **앱 전체의 핵심 결합점**.
+
+```
+switchTab() → renderQuestList(), renderDungeon(), fetchSocialData(),
+              renderReelsFeed(), renderPlannerCalendar(), renderBonusExp(),
+              loadAndShowNativeAd(), ...
+```
+
+**대응 전략:**
+- 초기: `switchTab()`에서 각 모듈의 render 함수를 직접 import
+- 향후: EventBus 패턴으로 전환 (모듈이 탭 전환 이벤트를 구독)
+
+```javascript
+// 향후 EventBus 패턴 예시 (modules/core.js)
+export const EventBus = {
+    _handlers: {},
+    on(event, fn) { (this._handlers[event] ??= []).push(fn); },
+    emit(event, ...args) { (this._handlers[event] || []).forEach(fn => fn(...args)); }
+};
+
+// modules/quest.js
+EventBus.on('tab:quest', () => renderQuestList());
+```
+
+### 10-3. `data.js` 전역 상수 처리
+
+`data.js`는 `<script>` (비모듈)로 app.js보다 먼저 로드되어 `i18n`, `statKeys`, `weeklyQuestData`, `seoulStations` 등을 전역에 노출.
+
+**권장:** data.js는 현 상태 유지. ES6 모듈 코드에서 전역 변수로 직접 접근 가능. 모든 모듈이 `i18n`을 참조하므로 data.js의 모듈 변환은 저우선순위.
+
+### 10-4. 성능 고려사항
+
+- 모듈 파일 27개 = HTTP 요청 27개 추가
+- **Capacitor WebView**: 로컬 파일시스템에서 서빙 → 지연 무시 가능
+- **웹 버전**: HTTP/2 멀티플렉싱으로 병렬 로드 → 영향 미미
+- **향후 필요 시**: 번들러(Vite 등) 도입으로 단일 파일 빌드 가능 (소스 코드 변경 없이)
+
+---
+
+## 11) 리스크 완화 방안
+
+| 리스크 | 영향 | 완화 전략 |
+|---|---|---|
+| 모듈 로딩 순서 | 초기화 실패 | ES6 모듈은 import 그래프 순서대로 실행. data.js는 일반 script로 먼저 로드되어 안전 |
+| 순환 의존 | 런타임 에러 | EventBus 패턴으로 도메인 간 간접 통신. core → domain → ui 단방향 원칙 |
+| `window.*` 함수 누락 | onclick 핸들러 미작동 | 각 모듈에서 window 등록 유지. 추출 시 등록 목록 체크리스트 확인 |
+| `saveUserData` 참조 단절 | 데이터 미저장 | persistence.js를 Phase 3까지 app.js에 유지. 모든 소비 모듈 이전 완료 후 추출 |
+| Capacitor 호환성 | 앱 크래시 | Phase별 `npm run build-apk` + 기기 테스트 필수 |
+
+---
+
+## 12) 구현 우선순위 권장
 
 보고서 권고안에 따라 **Phase 1 (core 기반 + 저결합) → Phase 2 (온보딩/레이드/광고/소셜)** 순서로 우선 진행.
 
 - Phase 1은 Phase 2의 **필수 전제 조건** (core 모듈 없이 도메인 모듈 분리 불가)
 - Phase 2가 보고서의 **핵심 권고 사항** (4대 도메인)
-- Phase 1+2 완료 시 **13개 모듈 분리**, app.js에서 약 **4,300줄 제거**
+- Phase 1에서 IIFE 4개 추출로 **즉시 4,476줄 (27%) 감소** — 가장 안전한 성과
+- Phase 1+2 완료 시 **13개 모듈 분리**, app.js에서 약 **8,700줄 제거 (53%)**
 - Phase 3-5는 Phase 1+2 안정화 후 후속 작업으로 분리 권장
