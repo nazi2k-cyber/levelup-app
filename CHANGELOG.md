@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.200] - 2026-04-06
+
+### 변경
+- fix: use luminosity fallback for OCR grayscale on blue backgrounds
+
 ## [1.0.199] - 2026-04-06
 
 ### 변경
