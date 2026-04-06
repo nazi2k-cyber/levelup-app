@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.206] - 2026-04-06
+
+### 변경
+- docs: 모바일앱 저작권 등록방안 보고서 추가
+
 ## [1.0.205] - 2026-04-06
 
 ### 변경
