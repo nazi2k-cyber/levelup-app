@@ -391,6 +391,9 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                 <div class="stat-card"><div class="number" id="stat-push">-</div><div class="label">Push ON</div></div>
                 <div class="stat-card"><div class="number" id="stat-token">-</div><div class="label">Active Tokens</div></div>
                 <div class="stat-card"><div class="number" id="stat-warn">-</div><div class="label">Streak Risk</div></div>
+                <div class="stat-card"><div class="number" id="stat-cb24h">-</div><div class="label">Comeback 24h</div></div>
+                <div class="stat-card"><div class="number" id="stat-cb72h">-</div><div class="label">Comeback 72h</div></div>
+                <div class="stat-card"><div class="number" id="stat-cb7d">-</div><div class="label">Comeback 7d</div></div>
             </div>
         </div>
     </div>
@@ -1165,6 +1168,7 @@ async function loadDashboard() {
     try {
         const usersSnap = await getDocs(collection(db, "users"));
         let total = 0, pushOn = 0, hasToken = 0, atRisk = 0;
+        let cb24h = 0, cb72h = 0, cb7d = 0;
         const now = new Date();
 
         usersSnap.forEach(doc => {
@@ -1177,6 +1181,11 @@ async function loadDashboard() {
                 if (s.lastActiveDate) {
                     const diff = Math.floor((now - new Date(s.lastActiveDate)) / 86400000);
                     if (diff >= 2) atRisk++;
+                    if (d.fcmToken && d.pushEnabled) {
+                        if (diff === 1) cb24h++;
+                        if (diff === 3) cb72h++;
+                        if (diff >= 7 && diff < 30) cb7d++;
+                    }
                 }
             } catch {}
         });
@@ -1185,7 +1194,10 @@ async function loadDashboard() {
         document.getElementById("stat-push").textContent = pushOn;
         document.getElementById("stat-token").textContent = hasToken;
         document.getElementById("stat-warn").textContent = atRisk;
-        tok("Dashboard", `Total: ${total}, PushON: ${pushOn}, Tokens: ${hasToken}, AtRisk: ${atRisk}`);
+        document.getElementById("stat-cb24h").textContent = cb24h;
+        document.getElementById("stat-cb72h").textContent = cb72h;
+        document.getElementById("stat-cb7d").textContent = cb7d;
+        tok("Dashboard", `Total: ${total}, PushON: ${pushOn}, Tokens: ${hasToken}, AtRisk: ${atRisk}, CB24h: ${cb24h}, CB72h: ${cb72h}, CB7d: ${cb7d}`);
     } catch (e) {
         terror("Dashboard", e.code + " — " + e.message);
     }
@@ -1338,7 +1350,7 @@ window.loadUsers = async function() {
         return;
     }
 
-    let html = '<table><thead><tr><th>User</th><th>Email</th><th>Lang</th><th>Streak Stage</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
+    let html = '<table><thead><tr><th>User</th><th>Email</th><th>Lang</th><th>Streak Stage</th><th>Comeback</th><th>Last Active</th><th>Token</th><th></th></tr></thead><tbody>';
     for (const u of usersCache) {
         const diffClass = u.diffDays === null ? "" : u.diffDays >= 3 ? "badge-error" : u.diffDays >= 2 ? "badge-warning" : "badge-active";
         const diffText = u.diffDays === null ? "-" : u.diffDays === 0 ? "Today" : u.diffDays + "d ago";
@@ -1351,11 +1363,18 @@ window.loadUsers = async function() {
         else if (stage === "2d") { stageLabel = "2일 미접속"; stageClass = "badge-warning"; }
         else { stageLabel = "미해당"; stageClass = ""; }
 
+        // Comeback tier display
+        let cbLabel = "-", cbClass = "";
+        if (u.diffDays === 1) { cbLabel = "24h"; cbClass = "badge-success"; }
+        else if (u.diffDays === 3) { cbLabel = "72h"; cbClass = "badge-warning"; }
+        else if (u.diffDays !== null && u.diffDays >= 7 && u.diffDays < 30) { cbLabel = "7d"; cbClass = "badge-error"; }
+
         html += `<tr>
             <td><strong>${esc(u.displayName)}</strong><br><span class="user-email">${esc(u.uid.substring(0, 12))}...</span></td>
             <td>${esc(u.email || '-')}</td>
             <td>${esc(u.lang)}</td>
             <td><span class="badge ${stageClass}">${stageLabel}</span></td>
+            <td><span class="badge ${cbClass}">${cbLabel}</span></td>
             <td><span class="badge ${diffClass}">${diffText}</span></td>
             <td><span class="token-masked">${esc(tokenShort)}</span></td>
             <td>${u.fcmToken ? `<button class="btn btn-primary btn-sm" onclick="sendToUser('${esc(u.fcmToken)}')">Send</button>` : '-'}</td>
