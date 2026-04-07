@@ -14352,6 +14352,7 @@ window._setDoc = setDoc;
 window._doc = doc;
 window._analytics = analytics;
 window._fbLogEvent = fbLogEvent;
+window.i18n = i18n;
 window.getMsUntilNextKSTMidnight = getMsUntilNextKSTMidnight;
 window.formatCountdown = formatCountdown;
 window.applyBonusExpReward = applyBonusExpReward;
