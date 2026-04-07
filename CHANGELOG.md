@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.223] - 2026-04-07
+
+### 변경
+- fix: Library 모듈 누락된 외부 참조 4건 추가 수정
+- fix: Library 모듈 httpsCallable/functions 외부 참조 누락 수정
+
 ## [1.0.222] - 2026-04-07
 
 ### 변경
