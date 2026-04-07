@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.210] - 2026-04-07
+
+### 변경
+- Fix profile header text wrapping and layout issues
+
 ## [1.0.209] - 2026-04-07
 
 ### 변경
