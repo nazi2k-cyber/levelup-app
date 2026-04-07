@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.212] - 2026-04-07
+
+### 변경
+- feat: 복귀 푸시(24h/72h/7d) 정책 고도화
+
 ## [1.0.211] - 2026-04-07
 
 ### 변경
