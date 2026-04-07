@@ -1484,7 +1484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderWeeklyChallenges();
             renderRoulette();
-            renderBonusExp();
+            if (window.AdManager) window.AdManager.renderBonusExp();
             updateReelsResetTimer();
 
             updateStepCountUI();
@@ -1948,7 +1948,7 @@ async function _doSaveUserData() {
             streakStr: JSON.stringify(AppState.user.streak ?? {}),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
-            lastBonusExpDate: localStorage.getItem(_bonusExpKey()) || '',
+            lastBonusExpDate: localStorage.getItem(`bonus_exp_date_${auth.currentUser ? auth.currentUser.uid : '_anon'}`) || '',
             lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests ?? []),
             questHistoryStr: JSON.stringify(AppState.questHistory ?? []),
@@ -4041,11 +4041,11 @@ window.completeDungeon = () => {
     alert(`[SYSTEM] ${i18n[lang]?.boss_defeated || 'Boss Defeated!'}\n+${pts} P\n${target.toUpperCase()} +${statInc}`);
 
     // ★ 보상형 전면 광고 — 던전 클리어 추가 보상 (일일 제한)
-    if (_rewardedInterstitialReady && isNativePlatform && getRiDungeonCountToday() < RI_DUNGEON_DAILY_MAX) {
+    if (window.AdManager && window.AdManager.isRewardedInterstitialReady() && isNativePlatform && window.AdManager.getRiDungeonCountToday() < window.AdManager.RI_DUNGEON_DAILY_MAX) {
         const watchAd = confirm(i18n[lang].ri_dungeon_prompt || '광고를 시청하면 추가 보상을 받을 수 있습니다. 시청하시겠습니까?');
         if (watchAd) {
-            incrementRiDungeonCount();
-            showRewardedInterstitial('dungeon');
+            window.AdManager.incrementRiDungeonCount();
+            window.AdManager.showRewardedInterstitial('dungeon');
         }
     }
 };
@@ -4060,19 +4060,19 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus(); renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount();
+        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus(); if (window.AdManager) window.AdManager.renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount();
     } else {
         mainEl.style.overflowY = 'auto';
     }
-    
+
     // 네이티브 광고: 현재 활성 탭이 아닌 다른 탭으로 이동 시 정리
-    if (_nativeAdActiveTab && _nativeAdActiveTab !== tabId) {
-        cleanupNativeAd();
+    if (window.AdManager && window.AdManager.nativeAdActiveTab && window.AdManager.nativeAdActiveTab !== tabId) {
+        window.AdManager.cleanupNativeAd();
     }
 
     // 네이티브 광고 (dungeon만 — diary는 보상형 광고로 전환)
     if (tabId === 'dungeon') {
-        setTimeout(() => loadAndShowNativeAd('dungeon'), 300);
+        setTimeout(() => { if (window.AdManager) window.AdManager.loadNativeAd('dungeon'); }, 300);
     }
 
     if(tabId === 'social') fetchSocialData();
@@ -4478,15 +4478,15 @@ function renderUsers(criteria, btn = null) {
         }
 
         // 네이티브 광고 placeholder 삽입 (N번째 유저 카드 뒤)
-        if (i === NATIVE_AD_POSITION - 1 && list.length >= NATIVE_AD_POSITION) {
+        if (window.AdManager && i === window.AdManager.NATIVE_AD_POSITION - 1 && list.length >= window.AdManager.NATIVE_AD_POSITION) {
             return cardHTML + `<div id="native-ad-placeholder-social" class="native-ad-slot"><span class="ad-loading-text">광고</span></div>`;
         }
         return cardHTML;
     }).join('');
 
     // 네이티브 광고 로드 (placeholder가 삽입된 경우)
-    if (list.length >= NATIVE_AD_POSITION && isNativePlatform) {
-        setTimeout(() => loadAndShowNativeAd('social'), 300);
+    if (window.AdManager && list.length >= window.AdManager.NATIVE_AD_POSITION && isNativePlatform) {
+        setTimeout(() => { if (window.AdManager) window.AdManager.loadNativeAd('social'); }, 300);
     }
 }
 
@@ -4829,7 +4829,7 @@ function showPhotoSourceSheet(inputId) {
     document.body.appendChild(overlay);
 
     // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
-    if (isNativePlatform && _nativeAdVisible) {
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
         try {
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) NativeAd.hideAd();
@@ -4839,7 +4839,7 @@ function showPhotoSourceSheet(inputId) {
     function close() {
         overlay.remove();
         // ★ 네이티브 광고 복원
-        if (isNativePlatform && _nativeAdLoaded && _nativeAdActiveTab) {
+        if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
             try {
                 const { NativeAd } = window.Capacitor.Plugins;
                 if (NativeAd) NativeAd.resumeAd();
@@ -4999,7 +4999,7 @@ function openProfileStatsModal(userId) {
     if (!u) return;
 
     // ★ 네이티브 광고 숨김 (모달 위에 겹치지 않도록)
-    if (isNativePlatform && _nativeAdVisible) {
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
         try {
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) NativeAd.hideAd();
@@ -5048,7 +5048,7 @@ function closeProfileStatsModal() {
     m.classList.remove('d-flex');
 
     // ★ 네이티브 광고 복원
-    if (isNativePlatform && _nativeAdLoaded && _nativeAdActiveTab) {
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
         try {
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) NativeAd.resumeAd();
@@ -5102,8 +5102,8 @@ async function viewUserTodayPlanner(userId) {
     viewCount++;
     localStorage.setItem('planner_view_count', String(viewCount));
     const shouldShowAd = (viewCount === 1) || (viewCount % 10 === 0);
-    if (shouldShowAd && typeof isNativePlatform !== 'undefined' && isNativePlatform && _admobInitialized) {
-        try { await _showPlannerRewardedAd(lang); } catch (e) { console.warn('[PlannerAd] Ad failed:', e); }
+    if (shouldShowAd && typeof isNativePlatform !== 'undefined' && isNativePlatform && window.AdManager) {
+        try { await window.AdManager.showPlannerRewardedAd(lang); } catch (e) { console.warn('[PlannerAd] Ad failed:', e); }
     }
 
     // 시간표 렌더링
@@ -5128,53 +5128,6 @@ async function viewUserTodayPlanner(userId) {
 }
 window.viewUserTodayPlanner = viewUserTodayPlanner;
 
-// --- ★ 플래너 열람 보상형 광고 ---
-function _showPlannerRewardedAd(lang) {
-    return new Promise(async (resolve) => {
-        try {
-            const { AdMob } = window.Capacitor.Plugins;
-            if (!AdMob) { resolve(); return; }
-
-            if (!_rewardedAdReady) {
-                try {
-                    await AdMob.prepareRewardVideoAd({
-                        adId: REWARDED_AD_UNIT_ID,
-                        isTesting: false,
-                        npa: !canShowPersonalizedAds(),
-                    });
-                    _rewardedAdReady = true;
-                } catch (e) {
-                    console.warn('[PlannerAd] 광고 준비 실패:', e);
-                    resolve();
-                    return;
-                }
-            }
-
-            _rewardedAdContext = 'plannerView';
-            _rewardEarned = false;
-            _rewardedAdOnSuccess = function() {
-                if (window.AppLogger) AppLogger.info('[PlannerAd] 보상형 광고 시청 완료');
-                resolve();
-            };
-            _rewardedAdOnFail = function() {
-                if (window.AppLogger) AppLogger.info('[PlannerAd] 보상형 광고 이탈/실패');
-                resolve();
-            };
-
-            await AdMob.showRewardVideoAd();
-        } catch (e) {
-            console.warn('[PlannerAd] 광고 표시 실패:', e);
-            _rewardedAdContext = 'bonusExp';
-            _rewardedAdOnSuccess = null;
-            _rewardedAdOnFail = null;
-            _rewardedAdReady = false;
-            preloadRewardedAd._retryCount = 0;
-            preloadRewardedAd();
-            resolve();
-        }
-    });
-}
-
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
 function closeInfoModal() {
     const m = document.getElementById('infoModal');
@@ -5182,7 +5135,7 @@ function closeInfoModal() {
     m.classList.remove('d-flex');
 
     // ★ 네이티브 광고 복원
-    if (isNativePlatform && _nativeAdLoaded && _nativeAdActiveTab) {
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
         try {
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) NativeAd.resumeAd();
@@ -5656,7 +5609,7 @@ function openDungeonInfoModal() {
     m.classList.add('d-flex');
 
     // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
-    if (isNativePlatform && _nativeAdVisible) {
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
         try {
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) NativeAd.hideAd();
@@ -5722,7 +5675,7 @@ function openPlannerInfoModal() {
     m.classList.add('d-flex');
 
     // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
-    if (isNativePlatform && _nativeAdVisible) {
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
         try {
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) NativeAd.hideAd();
@@ -5784,7 +5737,7 @@ window.openLibraryInfoModal = function() {
     m.classList.add('d-flex');
 
     // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
-    if (isNativePlatform && _nativeAdVisible) {
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
         try {
             const { NativeAd } = window.Capacitor.Plugins;
             if (NativeAd) NativeAd.hideAd();
@@ -6833,10 +6786,10 @@ window.spinRoulette = function() {
 
         // ★ 보상형 전면 광고 — 스핀 보상 2배 기회
         localStorage.setItem('_ri_last_spin_idx', String(resultIdx));
-        if (_rewardedInterstitialReady && isNativePlatform) {
+        if (window.AdManager && window.AdManager.isRewardedInterstitialReady() && isNativePlatform) {
             const watchAd = confirm(i18n[lang].ri_spin_prompt || '광고를 시청하면 보상을 한 번 더 받을 수 있습니다. 시청하시겠습니까?');
             if (watchAd) {
-                showRewardedInterstitial('spin');
+                window.AdManager.showRewardedInterstitial('spin');
             }
         }
 
@@ -6846,389 +6799,9 @@ window.spinRoulette = function() {
     }, 3200);
 };
 
-// --- ★ P5: 보상형 광고 일일 보너스 EXP (AdMob Rewarded Ad) ★ ---
-const REWARDED_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8552907541';
-const REWARDED_AD_TEST_ID = 'ca-app-pub-3940256099942544/5224354917';
+// --- ★ 광고 관련 게임 로직 콜백 (AdManager 모듈에서 호출) ★ ---
 const BONUS_EXP_AMOUNT = 50;
 
-// --- ★ P6: 배너 광고 (AdMob Banner Ad) — 던전 탭 ★ ---
-const BANNER_AD_UNIT_ID = 'ca-app-pub-6654057059754695/2995161826';
-const BANNER_AD_TEST_ID = 'ca-app-pub-3940256099942544/6300978111';
-let _bannerAdLoaded = false;
-let _bannerAdVisible = false;
-
-// --- ★ P5-B: 보상형 전면 광고 (AdMob Rewarded Interstitial) ★ ---
-const REWARDED_INTERSTITIAL_AD_UNIT_ID = 'ca-app-pub-6654057059754695/6916027284';
-let _rewardedInterstitialReady = false;
-let _rewardedInterstitialListenersRegistered = false;
-let _riRewardEarned = false;
-let _riContext = null; // 'spin' | 'dungeon'
-const RI_DUNGEON_DAILY_MAX = 2;
-
-// AdMob 초기화 상태
-let _admobInitialized = false;
-let _rewardedAdReady = false;
-let _rewardedAdListenersRegistered = false;
-let _rewardEarned = false; // 광고 시청 완료 시 true
-let _consentStatus = 'UNKNOWN'; // 'UNKNOWN' | 'REQUIRED' | 'NOT_REQUIRED' | 'OBTAINED'
-let _rewardedAdContext = 'bonusExp'; // 'bonusExp' | 'libraryImage'
-let _rewardedAdOnSuccess = null; // 광고 시청 완료 후 콜백
-let _rewardedAdOnFail = null; // 광고 중도 이탈/실패 시 콜백
-
-// ★ 동의 상태 리셋 (테스트/디버그용)
-async function resetAdMobConsent() {
-    if (!isNativePlatform) return;
-    try {
-        const { AdMob } = window.Capacitor.Plugins;
-        if (!AdMob) return;
-        await AdMob.resetConsentInfo();
-        _consentStatus = 'UNKNOWN';
-        if (window.AppLogger) AppLogger.info('[AdMob] 동의 상태 리셋 완료');
-    } catch (e) {
-        if (window.AppLogger) AppLogger.warn('[AdMob] 동의 리셋 실패: ' + (e.message || ''));
-    }
-}
-
-// ★ 개인 맞춤 광고 허용 여부
-function canShowPersonalizedAds() {
-    return _consentStatus === 'OBTAINED' || _consentStatus === 'NOT_REQUIRED';
-}
-
-async function initAdMob() {
-    if (_admobInitialized) return;
-    if (!isNativePlatform) return;
-    try {
-        const { AdMob } = window.Capacitor.Plugins;
-        if (!AdMob) return;
-
-        // ★ GDPR/UMP 동의 상태 확인 및 동의 양식 표시
-        try {
-            const consentInfo = await AdMob.requestConsentInfo();
-            _consentStatus = consentInfo.status || 'UNKNOWN';
-            if (window.AppLogger) AppLogger.info('[AdMob] 동의 상태: ' + _consentStatus +
-                (consentInfo.isConsentFormAvailable ? ' (양식 사용 가능)' : ' (양식 없음)'));
-
-            if (_consentStatus === 'REQUIRED' && consentInfo.isConsentFormAvailable) {
-                try {
-                    await AdMob.showConsentForm();
-                    _consentStatus = 'OBTAINED';
-                    if (window.AppLogger) AppLogger.info('[AdMob] GDPR 동의 양식 표시 완료');
-                } catch (formErr) {
-                    const errMsg = formErr.message || formErr.errorMessage || '';
-                    if (window.AppLogger) AppLogger.warn('[AdMob] 동의 양식 표시 실패: ' + errMsg);
-                }
-            } else if (_consentStatus === 'REQUIRED' && !consentInfo.isConsentFormAvailable) {
-                // ★ 동의가 필요하지만 양식이 없음 → Firebase 콘솔에서 동의 양식 미설정
-                if (window.AppLogger) AppLogger.error(
-                    '[AdMob] 동의 양식 미설정 (Publisher misconfiguration 가능). ' +
-                    'Firebase 콘솔 → Privacy & messaging → GDPR 에서 동의 양식을 생성하세요. ' +
-                    'App ID: ca-app-pub-6654057059754695~3529972498'
-                );
-            }
-        } catch (consentErr) {
-            const errMsg = consentErr.message || consentErr.errorMessage || '';
-            const isMisconfiguration = errMsg.toLowerCase().includes('misconfigur') ||
-                errMsg.toLowerCase().includes('form unavailable') ||
-                errMsg.toLowerCase().includes('no matching form');
-            if (isMisconfiguration) {
-                if (window.AppLogger) AppLogger.error(
-                    '[AdMob] Publisher misconfiguration — 동의 양식이 AdMob 콘솔에 설정되지 않았습니다. ' +
-                    'Firebase 콘솔 → Privacy & messaging 에서 GDPR 메시지를 생성하세요. ' +
-                    'App ID: ca-app-pub-6654057059754695~3529972498'
-                );
-            } else {
-                // 동의 확인 실패 시에도 광고 초기화는 계속 진행
-                if (window.AppLogger) AppLogger.warn('[AdMob] 동의 확인 실패: ' + errMsg);
-            }
-        }
-
-        await AdMob.initialize({
-            initializeForTesting: false,
-            // ★ COPPA: 13세 미만 대상 아님 (만 18세 이상 서비스)
-            tagForChildDirectedTreatment: false,
-            // ★ 만 18세 미만 사용자 대상 아님
-            tagForUnderAgeOfConsent: false,
-            maxAdContentRating: 'G',
-        });
-        _admobInitialized = true;
-        if (window.AppLogger) AppLogger.info('[AdMob] 초기화 완료');
-
-        // 보상형 광고 이벤트 리스너 등록 (1회만)
-        if (!_rewardedAdListenersRegistered) {
-            _rewardedAdListenersRegistered = true;
-
-            // 광고 시청 완료 → 보상 획득
-            AdMob.addListener('onRewardedVideoAdReward', (reward) => {
-                console.log('[AdMob] 보상 획득:', reward);
-                if (window.AppLogger) AppLogger.info('[AdMob] 보상 획득: ' + JSON.stringify(reward));
-                _rewardEarned = true;
-            });
-
-            // 광고 닫힘 (시청 완료 또는 중도 이탈 모두)
-            AdMob.addListener('onRewardedVideoAdDismissed', () => {
-                console.log('[AdMob] 광고 닫힘, 보상 획득 여부:', _rewardEarned, '컨텍스트:', _rewardedAdContext);
-                if (window.AppLogger) AppLogger.info('[AdMob] 광고 닫힘, rewarded=' + _rewardEarned + ', ctx=' + _rewardedAdContext);
-
-                _rewardedAdReady = false;
-                preloadRewardedAd._retryCount = 0;
-                preloadRewardedAd(); // 다음 광고 프리로드
-
-                if (_rewardEarned) {
-                    _rewardEarned = false;
-                    if (_rewardedAdOnSuccess) {
-                        _rewardedAdOnSuccess();
-                    } else {
-                        applyBonusExpReward();
-                    }
-                } else {
-                    if (_rewardedAdOnFail) {
-                        _rewardedAdOnFail();
-                    } else {
-                        // 기본: 보너스 EXP 중도 이탈 처리
-                        localStorage.removeItem(_bonusExpKey());
-                        _bonusExpInProgress = false;
-                        const lang = AppState.currentLang;
-                        alert(i18n[lang].bonus_exp_fail);
-                        renderBonusExp();
-                    }
-                }
-                _rewardedAdContext = 'bonusExp';
-                _rewardedAdOnSuccess = null;
-                _rewardedAdOnFail = null;
-            });
-
-            // 광고 표시 실패
-            AdMob.addListener('onRewardedVideoAdFailedToShow', (error) => {
-                console.warn('[AdMob] 광고 표시 실패:', error);
-                if (window.AppLogger) AppLogger.warn('[AdMob] 표시 실패: ' + JSON.stringify(error));
-                _rewardedAdReady = false;
-                _rewardEarned = false;
-                preloadRewardedAd._retryCount = 0;
-                preloadRewardedAd();
-                if (_rewardedAdOnFail) {
-                    _rewardedAdOnFail();
-                } else {
-                    // 기본: 보너스 EXP 실패 처리
-                    localStorage.removeItem(_bonusExpKey());
-                    _bonusExpInProgress = false;
-                    const lang = AppState.currentLang;
-                    alert(i18n[lang].bonus_exp_not_ready);
-                    renderBonusExp();
-                }
-                _rewardedAdContext = 'bonusExp';
-                _rewardedAdOnSuccess = null;
-                _rewardedAdOnFail = null;
-            });
-
-            // 광고 로드 완료
-            AdMob.addListener('onRewardedVideoAdLoaded', () => {
-                _rewardedAdReady = true;
-                if (window.AppLogger) AppLogger.info('[AdMob] 보상형 광고 로드 완료');
-            });
-
-            // 광고 로드 실패
-            AdMob.addListener('onRewardedVideoAdFailedToLoad', (error) => {
-                _rewardedAdReady = false;
-                console.warn('[AdMob] 보상형 광고 로드 실패:', error);
-                if (window.AppLogger) AppLogger.warn('[AdMob] 로드 실패: ' + JSON.stringify(error));
-            });
-        }
-
-        preloadRewardedAd();
-
-        // ★ 보상형 전면 광고 리스너 등록
-        if (!_rewardedInterstitialListenersRegistered) {
-            _rewardedInterstitialListenersRegistered = true;
-
-            AdMob.addListener('onRewardedInterstitialAdLoaded', () => {
-                _rewardedInterstitialReady = true;
-                if (window.AppLogger) AppLogger.info('[AdMob] 보상형 전면 광고 로드 완료');
-            });
-
-            AdMob.addListener('onRewardedInterstitialAdFailedToLoad', (error) => {
-                _rewardedInterstitialReady = false;
-                if (window.AppLogger) AppLogger.warn('[AdMob] 보상형 전면 광고 로드 실패: ' + JSON.stringify(error));
-            });
-
-            AdMob.addListener('onRewardedInterstitialAdReward', (reward) => {
-                _riRewardEarned = true;
-                if (window.AppLogger) AppLogger.info('[AdMob] 보상형 전면 보상 획득: ' + JSON.stringify(reward));
-            });
-
-            AdMob.addListener('onRewardedInterstitialAdDismissed', () => {
-                _rewardedInterstitialReady = false;
-                preloadRewardedInterstitial._retryCount = 0;
-                preloadRewardedInterstitial();
-                if (_riRewardEarned) {
-                    _riRewardEarned = false;
-                    applyRewardedInterstitialBonus(_riContext);
-                }
-                _riContext = null;
-            });
-
-            AdMob.addListener('onRewardedInterstitialAdFailedToShow', (error) => {
-                if (window.AppLogger) AppLogger.warn('[AdMob] 보상형 전면 표시 실패: ' + JSON.stringify(error));
-                _rewardedInterstitialReady = false;
-                _riRewardEarned = false;
-                _riContext = null;
-                preloadRewardedInterstitial._retryCount = 0;
-                preloadRewardedInterstitial();
-            });
-        }
-
-        // ★ 배너 광고 이벤트 리스너
-        AdMob.addListener('onBannerAdLoaded', () => {
-            if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 로드 완료');
-        });
-        AdMob.addListener('onBannerAdFailedToLoad', (error) => {
-            _bannerAdLoaded = false;
-            _bannerAdVisible = false;
-            if (window.AppLogger) AppLogger.warn('[AdMob] 배너 광고 로드 실패: ' + JSON.stringify(error));
-        });
-
-        preloadRewardedInterstitial();
-    } catch (e) {
-        console.warn('[AdMob] 초기화 실패:', e);
-        if (window.AppLogger) AppLogger.warn('[AdMob] 초기화 실패: ' + (e.message || ''));
-    }
-}
-
-async function preloadRewardedAd() {
-    if (!_admobInitialized) return;
-    try {
-        const { AdMob } = window.Capacitor.Plugins;
-        if (!AdMob) return;
-        await AdMob.prepareRewardVideoAd({
-            adId: REWARDED_AD_UNIT_ID,
-            isTesting: false,
-            npa: !canShowPersonalizedAds(),
-        });
-        // _rewardedAdReady는 onRewardedVideoAdLoaded 리스너에서 설정
-    } catch (e) {
-        _rewardedAdReady = false;
-        console.warn('[AdMob] 보상형 광고 프리로드 실패:', e);
-        if (window.AppLogger) AppLogger.warn('[AdMob] 프리로드 실패: ' + (e.message || ''));
-        if (!preloadRewardedAd._retryCount) preloadRewardedAd._retryCount = 0;
-        if (preloadRewardedAd._retryCount < 3) {
-            preloadRewardedAd._retryCount++;
-            setTimeout(() => preloadRewardedAd(), 30000);
-        }
-    }
-}
-
-// --- 보상형 전면 광고 (Rewarded Interstitial) 함수 ---
-async function preloadRewardedInterstitial() {
-    if (!_admobInitialized) return;
-    try {
-        const { AdMob } = window.Capacitor.Plugins;
-        if (!AdMob) return;
-        await AdMob.prepareRewardInterstitialAd({
-            adId: REWARDED_INTERSTITIAL_AD_UNIT_ID,
-            isTesting: false,
-            npa: !canShowPersonalizedAds(),
-        });
-    } catch (e) {
-        _rewardedInterstitialReady = false;
-        console.warn('[AdMob] 보상형 전면 프리로드 실패:', e);
-        if (window.AppLogger) AppLogger.warn('[AdMob] 보상형 전면 프리로드 실패: ' + (e.message || ''));
-        if (!preloadRewardedInterstitial._retryCount) preloadRewardedInterstitial._retryCount = 0;
-        if (preloadRewardedInterstitial._retryCount < 3) {
-            preloadRewardedInterstitial._retryCount++;
-            setTimeout(() => preloadRewardedInterstitial(), 30000);
-        }
-    }
-}
-
-async function showRewardedInterstitial(context) {
-    if (!_rewardedInterstitialReady || !_admobInitialized) return false;
-    try {
-        const { AdMob } = window.Capacitor.Plugins;
-        if (!AdMob) return false;
-        _riContext = context;
-        _riRewardEarned = false;
-        await AdMob.showRewardInterstitialAd();
-        return true;
-    } catch (e) {
-        console.warn('[AdMob] 보상형 전면 표시 실패:', e);
-        _riContext = null;
-        _rewardedInterstitialReady = false;
-        preloadRewardedInterstitial._retryCount = 0;
-        preloadRewardedInterstitial();
-        return false;
-    }
-}
-
-// --- 배너 광고 함수 (던전 탭 전용) ---
-function _getBannerMargin() {
-    // 내 서재: 헤더 높이(약 53px) + safe-area-inset-top 을 합산하여 배너가 헤더 아래(검색바 위)에 위치하도록
-    const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)')) || 0;
-    return 53 + safeTop;
-}
-
-async function showBannerAd() {
-    if (!_admobInitialized || !isNativePlatform) return;
-    try {
-        const { AdMob } = window.Capacitor.Plugins;
-        if (!AdMob) return;
-
-        const bannerMargin = _getBannerMargin();
-        if (_bannerAdLoaded) {
-            await AdMob.resumeBanner();
-        } else {
-            await AdMob.showBanner({
-                adId: BANNER_AD_UNIT_ID,
-                adSize: 'ADAPTIVE_BANNER',
-                position: 'TOP_CENTER',
-                margin: bannerMargin,
-                isTesting: false,
-                npa: !canShowPersonalizedAds(),
-            });
-            _bannerAdLoaded = true;
-        }
-        _bannerAdVisible = true;
-        // 배너 스페이서 표시 (검색바 위에 공간 확보)
-        var spacer = document.getElementById('library-banner-spacer');
-        if (spacer) { spacer.classList.remove('d-none'); spacer.style.height = '60px'; }
-        // 던전 콘텐츠가 배너에 가리지 않도록 상단 여백 추가
-        const mainEl = document.querySelector('main');
-        if (mainEl) mainEl.style.paddingTop = `calc(${bannerMargin + 70}px + env(safe-area-inset-top))`;
-        if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 표시');
-    } catch (e) {
-        console.warn('[AdMob] 배너 광고 표시 실패:', e);
-        if (window.AppLogger) AppLogger.warn('[AdMob] 배너 표시 실패: ' + (e.message || ''));
-    }
-}
-
-async function hideBannerAd() {
-    if (!_bannerAdVisible || !_admobInitialized) return;
-    try {
-        const { AdMob } = window.Capacitor.Plugins;
-        if (!AdMob) return;
-        await AdMob.hideBanner();
-        _bannerAdVisible = false;
-        // 배너 스페이서 숨김
-        var spacer = document.getElementById('library-banner-spacer');
-        if (spacer) { spacer.classList.add('d-none'); spacer.style.height = ''; }
-        // 배너 숨김 시 상단 여백 원래대로 복원
-        const mainEl = document.querySelector('main');
-        if (mainEl) mainEl.style.paddingTop = '';
-        if (window.AppLogger) AppLogger.info('[AdMob] 배너 광고 숨김');
-    } catch (e) {
-        console.warn('[AdMob] 배너 광고 숨김 실패:', e);
-        if (window.AppLogger) AppLogger.warn('[AdMob] 배너 숨김 실패: ' + (e.message || ''));
-    }
-}
-
-function getRiDungeonCountToday() {
-    const today = getTodayKST();
-    return parseInt(localStorage.getItem('_ri_dungeon_' + today) || '0');
-}
-
-function incrementRiDungeonCount() {
-    const today = getTodayKST();
-    const key = '_ri_dungeon_' + today;
-    localStorage.setItem(key, String(getRiDungeonCountToday() + 1));
-}
 
 function applyRewardedInterstitialBonus(context) {
     const lang = AppState.currentLang;
@@ -7265,165 +6838,13 @@ function applyRewardedInterstitialBonus(context) {
     }
 }
 
-function _bonusExpKey() {
-    const uid = auth.currentUser ? auth.currentUser.uid : '_anon';
-    return `bonus_exp_date_${uid}`;
-}
-
-function canClaimBonusExp() {
-    const today = getTodayKST();
-    // 인메모리 잠금 (광고 진행 중)
-    if (_bonusExpInProgress) return 'used';
-    // localStorage 체크 (유저별 키)
-    if (localStorage.getItem(_bonusExpKey()) === today) return 'used';
-    return 'ready';
-}
-
-let _bonusExpTimerInterval = null;
-let _bonusExpInProgress = false; // 광고 진행 중 잠금
-
-function startBonusExpTimer() {
-    stopBonusExpTimer();
-    const timerEl = document.getElementById('bonus-exp-timer');
-    if (!timerEl) return;
-
-    function tick() {
-        const ms = getMsUntilNextKSTMidnight();
-        const lang = AppState.currentLang;
-        timerEl.textContent = `${i18n[lang].bonus_exp_next} ${formatCountdown(ms)}`;
-        timerEl.style.display = '';
-        if (ms <= 1000) {
-            stopBonusExpTimer();
-            setTimeout(() => renderBonusExp(), 1100);
-        }
-    }
-    tick();
-    _bonusExpTimerInterval = setInterval(tick, 1000);
-}
-
-function stopBonusExpTimer() {
-    if (_bonusExpTimerInterval) {
-        clearInterval(_bonusExpTimerInterval);
-        _bonusExpTimerInterval = null;
-    }
-}
-
-function renderBonusExp() {
-    const btn = document.getElementById('btn-bonus-exp');
-    const btnTitle = document.getElementById('bonus-exp-btn-title');
-    const statusText = document.getElementById('bonus-exp-status');
-    const timerEl = document.getElementById('bonus-exp-timer');
-    const iconEl = document.getElementById('bonus-exp-icon');
-    if (!btn || !statusText) return;
-
-    const lang = AppState.currentLang;
-    const status = canClaimBonusExp();
-
-    if (status === 'used') {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.background = 'linear-gradient(135deg, #888, #666)';
-        btn.style.borderColor = 'rgba(136,136,136,0.4)';
-        btn.style.boxShadow = 'none';
-        btn.style.cursor = 'default';
-        if (btnTitle) btnTitle.textContent = i18n[lang].bonus_exp_used;
-        statusText.textContent = i18n[lang].bonus_exp_next || '';
-        statusText.style.color = 'rgba(255,255,255,0.5)';
-        if (iconEl) iconEl.textContent = '✅';
-        startBonusExpTimer();
-    } else {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
-        btn.style.borderColor = 'rgba(255,215,0,0.6)';
-        btn.style.boxShadow = '0 2px 12px rgba(255,215,0,0.25)';
-        btn.style.cursor = 'pointer';
-        if (btnTitle) btnTitle.textContent = i18n[lang].bonus_exp_btn;
-        statusText.textContent = i18n[lang].bonus_exp_desc;
-        statusText.style.color = 'rgba(26,26,46,0.7)';
-        if (iconEl) iconEl.textContent = '🎬';
-        stopBonusExpTimer();
-        if (timerEl) timerEl.style.display = 'none';
-    }
-}
-
-window.claimBonusExp = async function() {
-    if (canClaimBonusExp() !== 'ready') return;
-
-    const lang = AppState.currentLang;
-    const btn = document.getElementById('btn-bonus-exp');
-
-    // ★ 즉시 잠금 — 중복 클릭/이벤트 방지
-    _bonusExpInProgress = true;
-    const btnTitle = document.getElementById('bonus-exp-btn-title');
-    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-    if (btnTitle) { btnTitle.textContent = i18n[lang].bonus_exp_loading; }
-
-    // 네이티브가 아닌 경우 (웹 테스트) — 광고 없이 바로 보상 지급
-    if (!isNativePlatform) {
-        applyBonusExpReward();
-        _bonusExpInProgress = false;
-        return;
-    }
-
-    if (!_admobInitialized) {
-        await initAdMob();
-    }
-
-    const { AdMob } = window.Capacitor.Plugins;
-    if (!AdMob) {
-        _bonusExpInProgress = false;
-        alert(i18n[lang].bonus_exp_not_ready);
-        renderBonusExp();
-        return;
-    }
-
-    if (!_rewardedAdReady) {
-        try {
-            await AdMob.prepareRewardVideoAd({
-                adId: REWARDED_AD_UNIT_ID,
-                isTesting: false,
-                npa: !canShowPersonalizedAds(),
-            });
-            _rewardedAdReady = true;
-        } catch (e) {
-            _bonusExpInProgress = false;
-            alert(i18n[lang].bonus_exp_not_ready);
-            renderBonusExp();
-            return;
-        }
-    }
-
-    // ★ 광고 표시 전 localStorage에 선점 마킹 (광고 시청 중 앱 강제 종료 대비)
-    const today = getTodayKST();
-    localStorage.setItem(_bonusExpKey(), today);
-
-    _rewardEarned = false;
-
-    try {
-        await AdMob.showRewardVideoAd();
-        // 이후 처리는 이벤트 리스너(Rewarded, Dismissed, FailedToShow)에서 수행
-    } catch (e) {
-        console.warn('[AdMob] 보상형 광고 표시 실패:', e);
-        if (window.AppLogger) AppLogger.warn('[AdMob] 광고 표시 실패: ' + (e.message || ''));
-        // 광고 표시 실패 시 선점 마킹 롤백
-        localStorage.removeItem(_bonusExpKey());
-        _rewardedAdReady = false;
-        _rewardEarned = false;
-        _bonusExpInProgress = false;
-        preloadRewardedAd._retryCount = 0;
-        preloadRewardedAd();
-        alert(i18n[lang].bonus_exp_fail);
-        renderBonusExp();
-    }
-};
-
 async function applyBonusExpReward() {
     const lang = AppState.currentLang;
     const today = getTodayKST();
 
-    // ★ localStorage에 확정 마킹 (claimBonusExp에서 선점 마킹 이미 완료)
-    localStorage.setItem(_bonusExpKey(), today);
+    // ★ localStorage에 확정 마킹
+    const uid = auth.currentUser ? auth.currentUser.uid : '_anon';
+    localStorage.setItem(`bonus_exp_date_${uid}`, today);
 
     // EXP(포인트) +50 지급
     AppState.user.points += BONUS_EXP_AMOUNT;
@@ -7441,12 +6862,9 @@ async function applyBonusExpReward() {
         }
     }
 
-    // ★ 잠금 해제
-    _bonusExpInProgress = false;
-
     saveUserData();
     updatePointUI();
-    renderBonusExp();
+    if (window.AdManager) window.AdManager.renderBonusExp();
 
     // Analytics 이벤트
     if (analytics) {
@@ -7455,239 +6873,6 @@ async function applyBonusExpReward() {
 
     alert(i18n[lang].bonus_exp_reward);
     if (window.AppLogger) AppLogger.info(`[BonusEXP] EXP +${BONUS_EXP_AMOUNT} 지급 완료`);
-}
-
-// --- ★ P6: 네이티브 광고 고급형 - 소셜탭 + Day1탭 (AdMob Native Advanced) ★ ---
-const NATIVE_AD_UNIT_ID = 'ca-app-pub-6654057059754695/8612252339';
-const NATIVE_AD_TEST_ID = 'ca-app-pub-3940256099942544/2247696110';
-const NATIVE_AD_POSITION = 5; // 소셜탭: 5번째 유저 카드 뒤에 삽입
-const REELS_NATIVE_AD_POSITION = 3; // Day1탭: 3번째 포스트 뒤에 삽입
-
-let _nativeAdLoaded = false;
-let _nativeAdVisible = false;
-let _nativeAdScrollRAF = null;
-let _nativeAdObserver = null;
-let _nativeAdActiveTab = null; // 'social' | 'reels' | null — 현재 네이티브 광고가 활성인 탭
-
-/**
- * 네이티브 광고 로드 및 표시 (탭 공용)
- * @param {string} tabId - 'social' | 'reels' | 'dungeon' | 'diary'
- */
-async function loadAndShowNativeAd(tabId) {
-    if (!isNativePlatform) return;
-
-    // ★ 해당 탭이 활성 상태인지 확인 — 다른 탭에서 로드 방지
-    const tabSection = document.getElementById(tabId);
-    if (!tabSection || !tabSection.classList.contains('active')) {
-        return;
-    }
-
-    if (!_admobInitialized) {
-        await initAdMob();
-    }
-
-    const placeholderId = 'native-ad-placeholder-' + tabId;
-    const placeholder = document.getElementById(placeholderId);
-    if (!placeholder) return;
-
-    // ★ 로드 시작 전 다시 한번 탭 활성 확인 (initAdMob 대기 중 탭 전환 가능)
-    if (!document.getElementById(tabId)?.classList.contains('active')) {
-        return;
-    }
-
-    try {
-        const { NativeAd } = window.Capacitor.Plugins;
-        if (!NativeAd) {
-            if (window.AppLogger) AppLogger.warn('[NativeAd] 플러그인 사용 불가');
-            placeholder.style.display = 'none';
-            return;
-        }
-
-        // 기존 광고 정리
-        await NativeAd.destroyAd().catch(() => {});
-
-        // 광고 로드
-        const result = await NativeAd.loadAd({
-            adId: NATIVE_AD_UNIT_ID,
-            isTesting: false,
-            npa: !canShowPersonalizedAds(),
-        });
-
-        if (result && result.loaded) {
-            // ★ 로드 완료 후 탭 활성 확인 (로드 중 탭 전환 시 즉시 파괴)
-            if (!document.getElementById(tabId)?.classList.contains('active')) {
-                NativeAd.destroyAd().catch(() => {});
-                _nativeAdLoaded = false;
-                _nativeAdActiveTab = null;
-                return;
-            }
-
-            _nativeAdLoaded = true;
-            _nativeAdActiveTab = tabId;
-            if (window.AppLogger) AppLogger.info(`[NativeAd] ${tabId}탭 네이티브 광고 로드 완료`);
-
-            // placeholder 좌표로 오버레이 표시
-            positionNativeAd(tabId);
-            setupNativeAdScrollSync(tabId);
-        }
-    } catch (e) {
-        console.warn('[NativeAd] 로드 실패:', e);
-        if (window.AppLogger) AppLogger.warn('[NativeAd] 로드 실패: ' + (e.message || ''));
-        _nativeAdLoaded = false;
-        _nativeAdActiveTab = null;
-        // 로드 실패 시 placeholder 숨김
-        placeholder.style.display = 'none';
-    }
-}
-
-/**
- * placeholder 좌표를 계산하여 네이티브 광고 오버레이 위치 지정 (탭 공용)
- * @param {string} tabId - 'social' | 'reels' | 'dungeon' | 'diary'
- */
-async function positionNativeAd(tabId) {
-    const placeholderId = 'native-ad-placeholder-' + tabId;
-    const placeholder = document.getElementById(placeholderId);
-    if (!placeholder || !_nativeAdLoaded) return;
-
-    // ★ 해당 탭이 아니면 표시하지 않음
-    if (!document.getElementById(tabId)?.classList.contains('active')) return;
-
-    try {
-        const { NativeAd } = window.Capacitor.Plugins;
-        if (!NativeAd) return;
-
-        const rect = placeholder.getBoundingClientRect();
-
-        // 소셜탭: sticky header 기준 클리핑, 그 외: 앱 header 기준 클리핑
-        let clipTop = 0;
-        if (tabId === 'social') {
-            const sh = document.querySelector('.social-sticky-header');
-            if (sh) clipTop = sh.getBoundingClientRect().bottom;
-        } else {
-            const appHeader = document.querySelector('header');
-            if (appHeader) clipTop = appHeader.getBoundingClientRect().bottom;
-        }
-        // 하단 클리핑: nav bar 위로만 보이도록
-        let clipBottom = 0;
-        const navEl = document.querySelector('nav');
-        if (navEl) clipBottom = navEl.getBoundingClientRect().top;
-        await NativeAd.showAd({
-            x: rect.left,
-            y: rect.top,
-            width: rect.width,
-            height: rect.height,
-            clipTop,
-            clipBottom,
-        });
-        _nativeAdVisible = true;
-    } catch (e) {
-        console.warn('[NativeAd] 표시 실패:', e);
-    }
-}
-
-/**
- * 스크롤 동기화 설정 (탭 공용)
- * main 요소의 스크롤에 맞춰 네이티브 오버레이 Y좌표를 업데이트
- * @param {string} tabId - 'social' | 'reels' | 'dungeon' | 'diary'
- */
-function setupNativeAdScrollSync(tabId) {
-    cleanupNativeAdScrollSync();
-
-    const mainEl = document.querySelector('main');
-    const placeholderId = 'native-ad-placeholder-' + tabId;
-    const placeholder = document.getElementById(placeholderId);
-    if (!mainEl || !placeholder) return;
-
-    // IntersectionObserver: placeholder가 화면 밖으로 나가면 hide
-    _nativeAdObserver = new IntersectionObserver((entries) => {
-        const entry = entries[0];
-        if (!_nativeAdLoaded) return;
-
-        const { NativeAd } = window.Capacitor.Plugins;
-        if (!NativeAd) return;
-
-        if (entry.isIntersecting) {
-            if (!_nativeAdVisible) {
-                NativeAd.resumeAd().catch(() => {});
-                _nativeAdVisible = true;
-            }
-        } else {
-            if (_nativeAdVisible) {
-                NativeAd.hideAd().catch(() => {});
-                _nativeAdVisible = false;
-            }
-        }
-    }, { threshold: 0.1 });
-    _nativeAdObserver.observe(placeholder);
-
-    // scroll 이벤트: requestAnimationFrame 스로틀링으로 Y좌표 동기화
-    // 소셜탭: sticky header 클리핑, Day1탭: 앱 header 클리핑
-    const clipRef = tabId === 'social'
-        ? document.querySelector('.social-sticky-header')
-        : document.querySelector('header');
-    const navRef = document.querySelector('nav');
-
-    function onScroll() {
-        if (_nativeAdScrollRAF) return;
-        _nativeAdScrollRAF = requestAnimationFrame(() => {
-            _nativeAdScrollRAF = null;
-            if (!_nativeAdLoaded || !_nativeAdVisible) return;
-
-            const rect = placeholder.getBoundingClientRect();
-            const clipTop = clipRef ? clipRef.getBoundingClientRect().bottom : 0;
-            const clipBottom = navRef ? navRef.getBoundingClientRect().top : 0;
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) {
-                NativeAd.updatePosition({ y: rect.top, clipTop, clipBottom }).catch(() => {});
-            }
-        });
-    }
-
-    mainEl.addEventListener('scroll', onScroll, { passive: true });
-    // 이벤트 참조 저장 (cleanup용)
-    mainEl._nativeAdScrollHandler = onScroll;
-}
-
-/**
- * 스크롤 리스너 정리
- */
-function cleanupNativeAdScrollSync() {
-    if (_nativeAdObserver) {
-        _nativeAdObserver.disconnect();
-        _nativeAdObserver = null;
-    }
-
-    if (_nativeAdScrollRAF) {
-        cancelAnimationFrame(_nativeAdScrollRAF);
-        _nativeAdScrollRAF = null;
-    }
-
-    const mainEl = document.querySelector('main');
-    if (mainEl && mainEl._nativeAdScrollHandler) {
-        mainEl.removeEventListener('scroll', mainEl._nativeAdScrollHandler);
-        delete mainEl._nativeAdScrollHandler;
-    }
-}
-
-/**
- * 네이티브 광고 완전 정리 (탭 전환 시 호출)
- */
-async function cleanupNativeAd() {
-    cleanupNativeAdScrollSync();
-    _nativeAdLoaded = false;
-    _nativeAdVisible = false;
-    _nativeAdActiveTab = null;
-
-    if (!isNativePlatform) return;
-
-    try {
-        const { NativeAd } = window.Capacitor.Plugins;
-        if (NativeAd) {
-            await NativeAd.destroyAd();
-        }
-    } catch (e) {
-        // 무시 — 이미 파괴되었을 수 있음
-    }
 }
 
 // --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
@@ -7870,53 +7055,25 @@ window.openMonthlyCalendar = async function() {
         return;
     }
 
-    // 보상형 광고 표시
-    if (!_admobInitialized) {
-        await initAdMob();
-    }
-
-    const { AdMob } = window.Capacitor.Plugins;
-    if (!AdMob) {
+    // 보상형 광고 표시 (AdManager 모듈 경유)
+    if (!window.AdManager) {
         alert(i18n[lang].monthly_cal_ad_fail);
         return;
     }
 
-    if (!_rewardedAdReady) {
-        try {
-            await AdMob.prepareRewardVideoAd({
-                adId: REWARDED_AD_UNIT_ID,
-                isTesting: false,
-                npa: !canShowPersonalizedAds(),
-            });
-            _rewardedAdReady = true;
-        } catch (e) {
+    const adShown = await window.AdManager.showRewarded({
+        context: 'monthlyCalendar',
+        onSuccess: function() {
+            _monthlyCalendarUnlocked = true;
+            localStorage.setItem('monthly_cal_ad_date', todayStr);
+            _showMonthlyCalendar();
+            if (window.AppLogger) AppLogger.info('[MonthlyCalendar] 보상형 광고 시청 완료 → 월간 캘린더 해제');
+        },
+        onFail: function() {
             alert(i18n[lang].monthly_cal_ad_fail);
-            return;
         }
-    }
-
-    // 콜백 설정
-    _rewardedAdContext = 'monthlyCalendar';
-    _rewardedAdOnSuccess = function() {
-        _monthlyCalendarUnlocked = true;
-        localStorage.setItem('monthly_cal_ad_date', todayStr);
-        _showMonthlyCalendar();
-        if (window.AppLogger) AppLogger.info('[MonthlyCalendar] 보상형 광고 시청 완료 → 월간 캘린더 해제');
-    };
-    _rewardedAdOnFail = function() {
-        alert(i18n[lang].monthly_cal_ad_fail);
-    };
-
-    try {
-        await AdMob.showRewardVideoAd();
-    } catch (e) {
-        console.warn('[MonthlyCalendar] 보상형 광고 표시 실패:', e);
-        _rewardedAdContext = 'bonusExp';
-        _rewardedAdOnSuccess = null;
-        _rewardedAdOnFail = null;
-        _rewardedAdReady = false;
-        preloadRewardedAd._retryCount = 0;
-        preloadRewardedAd();
+    });
+    if (!adShown) {
         alert(i18n[lang].monthly_cal_ad_fail);
     }
 };
@@ -8252,8 +7409,8 @@ window.filterReelsFeed = function(query) {
     if (_reelsSearchQuery === '') {
         // 검색어 없으면 전체 표시
         container.innerHTML = renderReelsCards(_reelsCachedPosts, lang);
-        if (_reelsCachedPosts.length >= REELS_NATIVE_AD_POSITION && isNativePlatform) {
-            setTimeout(() => loadAndShowNativeAd('reels'), 300);
+        if (window.AdManager && _reelsCachedPosts.length >= window.AdManager.REELS_NATIVE_AD_POSITION && isNativePlatform) {
+            setTimeout(() => { if (window.AdManager) window.AdManager.loadNativeAd('reels'); }, 300);
         }
     } else {
         const myUid = auth.currentUser?.uid;
@@ -9244,8 +8401,8 @@ async function renderReelsFeed() {
             container.innerHTML = renderReelsCards(localPosts, lang);
             window._reelsFeedLastKey = localKey;
             // Day1 네이티브 광고 로드 (로컬 캐시 렌더 후)
-            if (localPosts.length >= REELS_NATIVE_AD_POSITION && isNativePlatform) {
-                setTimeout(() => loadAndShowNativeAd('reels'), 300);
+            if (window.AdManager && localPosts.length >= window.AdManager.REELS_NATIVE_AD_POSITION && isNativePlatform) {
+                setTimeout(() => { if (window.AdManager) window.AdManager.loadNativeAd('reels'); }, 300);
             }
         }
     } else if (!window._reelsFeedLastKey) {
@@ -9274,12 +8431,12 @@ async function renderReelsFeed() {
         // Firestore 데이터가 로컬과 동일하면 DOM 교체 스킵 (깜빡임 방지)
         if (window._reelsFeedLastKey !== serverKey) {
             // DOM 교체 전 기존 광고 정리 (placeholder가 사라지므로)
-            if (_nativeAdActiveTab === 'reels') cleanupNativeAd();
+            if (window.AdManager && window.AdManager.nativeAdActiveTab === 'reels') window.AdManager.cleanupNativeAd();
             container.innerHTML = renderReelsCards(posts, lang);
             window._reelsFeedLastKey = serverKey;
             // Day1 네이티브 광고 로드 (서버 데이터 렌더 후)
-            if (posts.length >= REELS_NATIVE_AD_POSITION && isNativePlatform) {
-                setTimeout(() => loadAndShowNativeAd('reels'), 300);
+            if (window.AdManager && posts.length >= window.AdManager.REELS_NATIVE_AD_POSITION && isNativePlatform) {
+                setTimeout(() => { if (window.AdManager) window.AdManager.loadNativeAd('reels'); }, 300);
             }
         }
     } catch(e) {
@@ -9426,7 +8583,7 @@ function renderReelsCards(posts, lang) {
         </div>`;
 
         // Day1 네이티브 광고 placeholder 삽입 (N번째 포스트 뒤)
-        if (postIdx === REELS_NATIVE_AD_POSITION - 1 && posts.length >= REELS_NATIVE_AD_POSITION) {
+        if (window.AdManager && postIdx === window.AdManager.REELS_NATIVE_AD_POSITION - 1 && posts.length >= window.AdManager.REELS_NATIVE_AD_POSITION) {
             return cardHTML + `<div id="native-ad-placeholder-reels" class="native-ad-slot"><span class="ad-loading-text">광고</span></div>`;
         }
         return cardHTML;
@@ -9843,7 +9000,7 @@ function showReportReasonModal(reasons, title, submitText, cancelText, lang) {
 
         // ★ 네이티브 광고 숨김 (모달 위에 겹치지 않도록)
         let _adWasVisible = false;
-        if (isNativePlatform && _nativeAdVisible) {
+        if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
             _adWasVisible = true;
             try {
                 const { NativeAd } = window.Capacitor.Plugins;
@@ -13562,7 +12719,7 @@ window.renderLifeStatus = renderLifeStatus;
         // Trigger i18n re-apply for dynamically shown overlay
         if (typeof changeLanguage === 'function') changeLanguage(AppState.currentLang);
         // 보상형 광고 프리로드 (이미지 저장 시 사용)
-        preloadRewardedAd();
+        if (window.AdManager) window.AdManager.preloadRewarded();
     };
 
     window.closeLibraryView = function() {
@@ -14027,53 +13184,21 @@ window.renderLifeStatus = renderLifeStatus;
         var isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
         // 네이티브 앱에서만 보상형 광고 필수
-        if (isNative && _admobInitialized) {
-            if (!_rewardedAdReady) {
-                // 광고가 아직 로드되지 않았으면 로드 시도
-                alert(i18n[lang].lib_ad_loading || i18n[lang].bonus_exp_loading);
-                try {
-                    const { AdMob } = window.Capacitor.Plugins;
-                    if (AdMob) {
-                        await AdMob.prepareRewardVideoAd({
-                            adId: REWARDED_AD_UNIT_ID,
-                            isTesting: false,
-                            npa: !canShowPersonalizedAds(),
-                        });
-                        _rewardedAdReady = true;
-                    }
-                } catch (e) {
-                    alert(i18n[lang].lib_ad_not_ready || i18n[lang].bonus_exp_not_ready);
-                    return;
-                }
-            }
-
+        if (isNative && window.AdManager) {
             // 광고 시청 확인
             if (!confirm(i18n[lang].lib_ad_prompt)) return;
 
-            // 콜백 설정: 광고 시청 완료 시 이미지 저장 실행
-            _rewardedAdContext = 'libraryImage';
-            _rewardEarned = false;
-            _rewardedAdOnSuccess = function() {
-                _executeLibraryImageSave(lang, books);
-            };
-            _rewardedAdOnFail = function() {
-                const failLang = AppState.currentLang;
-                alert(i18n[failLang].lib_ad_fail || i18n[failLang].bonus_exp_fail);
-            };
-
-            try {
-                const { AdMob } = window.Capacitor.Plugins;
-                await AdMob.showRewardVideoAd();
-                // 이후 처리는 onRewardedVideoAdDismissed 리스너에서 콜백으로 수행
-            } catch (e) {
-                console.warn('[AdMob] 보상형 광고 표시 실패:', e);
-                _rewardedAdReady = false;
-                _rewardEarned = false;
-                _rewardedAdContext = 'bonusExp';
-                _rewardedAdOnSuccess = null;
-                _rewardedAdOnFail = null;
-                preloadRewardedAd._retryCount = 0;
-                preloadRewardedAd();
+            const adShown = await window.AdManager.showRewarded({
+                context: 'libraryImage',
+                onSuccess: function() {
+                    _executeLibraryImageSave(lang, books);
+                },
+                onFail: function() {
+                    const failLang = AppState.currentLang;
+                    alert(i18n[failLang].lib_ad_fail || i18n[failLang].bonus_exp_fail);
+                }
+            });
+            if (!adShown) {
                 alert(i18n[lang].lib_ad_not_ready || i18n[lang].bonus_exp_not_ready);
             }
             return;
@@ -15220,6 +14345,20 @@ window.drawRadarChart = drawRadarChart;
 window.getTodayKST = getTodayKST;
 window.isNativePlatform = isNativePlatform;
 window._auth = auth;
+
+// 광고 모듈용 추가 노출
+window._db = db;
+window._setDoc = setDoc;
+window._doc = doc;
+window._analytics = analytics;
+window._fbLogEvent = fbLogEvent;
+window.getMsUntilNextKSTMidnight = getMsUntilNextKSTMidnight;
+window.formatCountdown = formatCountdown;
+window.applyBonusExpReward = applyBonusExpReward;
+window.applyRewardedInterstitialBonus = applyRewardedInterstitialBonus;
+
+// --- Ad Manager 모듈 동적 로드 ---
+import('./modules/ad-manager.js').catch(e => console.error('[AdManager] 모듈 로드 실패:', e));
 
 // --- Exercise Calculator 모듈 (Running + 1RM) 동적 로드 ---
 import('./modules/exercise-calc.js').catch(e => console.error('[ExerciseCalc] 모듈 로드 실패:', e));
