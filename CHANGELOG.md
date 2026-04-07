@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.213] - 2026-04-07
+
+### 변경
+- feat: 대시보드 복귀 대상 스탯 카드 및 유저 테이블 Comeback 칼럼 추가
+
 ## [1.0.212] - 2026-04-07
 
 ### 변경
