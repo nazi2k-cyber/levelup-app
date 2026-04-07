@@ -14677,7 +14677,10 @@ window.renderLifeStatus = renderLifeStatus;
                 if (statusEl) statusEl.textContent = 'ISBN: ' + barcode;
                 try { await _html5QrCode.stop(); } catch(e) {}
                 var field = document.getElementById('isbn-manual-field');
-                if (field) field.value = barcode;
+                if (field) {
+                    field.value = barcode;
+                    field.blur(); // Dismiss keyboard
+                }
                 await onIsbnScanned(barcode);
                 _scanHandled = false;
             };
@@ -14891,6 +14894,7 @@ window.renderLifeStatus = renderLifeStatus;
     window.manualIsbnLookup = async function() {
         const input = document.getElementById('isbn-manual-field');
         var isbn = (input ? input.value : '').trim().replace(/[-\s]/g, '');
+        if (input) input.blur(); // Dismiss keyboard after retrieving value
         if (window.AppLogger) AppLogger.info('[ISBN] Manual lookup: ' + isbn);
         if (!isbn || isbn.length < 10) {
             alert(i18n[AppState.currentLang]?.isbn_invalid || 'ISBN을 정확히 입력해주세요 (10자리 또는 13자리)');
@@ -14908,6 +14912,11 @@ window.renderLifeStatus = renderLifeStatus;
     };
 
     async function onIsbnScanned(isbn) {
+        // Dismiss keyboard to prevent it from staying visible over results
+        var _isbnField = document.getElementById('isbn-manual-field');
+        if (_isbnField) _isbnField.blur();
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
+
         if (window.AppLogger) AppLogger.info('[ISBN] Processing ISBN: ' + isbn, { valid: isValidIsbn(isbn) });
         const statusEl = document.getElementById('isbn-scanner-status');
         if (statusEl) statusEl.textContent = '검색 중...';
