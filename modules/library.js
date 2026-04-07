@@ -1280,7 +1280,7 @@
         }
 
         try {
-            var _ping = httpsCallable(functions, 'ping');
+            var _ping = window._httpsCallable(window._functions, 'ping');
             var result = await _ping({ action: 'searchBooks', query: query, page: page });
             var data = result.data || {};
             var books = data.books || [];
@@ -1935,7 +1935,7 @@
 
     async function fetchBookDetails(isbn) {
         try {
-            const _ping = httpsCallable(functions, 'ping');
+            const _ping = window._httpsCallable(window._functions, 'ping');
             const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
             if (result.data && result.data.book) {
                 const apiBook = result.data.book;
@@ -2422,7 +2422,7 @@
         if (window.AppLogger) AppLogger.info('[ISBN] Looking up ISBN: ' + isbn);
         // 1) Server-side Korean book API proxy (알라딘 → 카카오 → 구글북스)
         try {
-            const _ping = httpsCallable(functions, 'ping');
+            const _ping = window._httpsCallable(window._functions, 'ping');
             const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
             if (result.data && result.data.book) {
                 if (window.AppLogger) AppLogger.info('[ISBN] Server lookup success', { title: result.data.book.title, source: result.data.source || 'server' });

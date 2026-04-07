@@ -10997,6 +10997,8 @@ window.renderReelsFeed = renderReelsFeed;
 // 뽀모도로/서재 모듈용 추가 노출
 window.showInAppNotification = showInAppNotification;
 window.changeLanguage = changeLanguage;
+window._httpsCallable = httpsCallable;
+window._functions = functions;
 
 // --- Ad Manager 모듈 동적 로드 ---
 import('./modules/ad-manager.js').catch(e => console.error('[AdManager] 모듈 로드 실패:', e));
