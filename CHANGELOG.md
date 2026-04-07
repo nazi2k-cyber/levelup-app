@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.216] - 2026-04-07
+
+### 변경
+- refactor: 소셜 탭 코드를 modules/social.js로 분리 (Phase 2)
+
 ## [1.0.215] - 2026-04-07
 
 ### 변경
