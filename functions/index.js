@@ -1442,6 +1442,21 @@ const MESSAGES = {
         ko: { title: "💔 스트릭이 끊어졌습니다", body: "스탯 감소가 시작됩니다. 지금 접속하여 다시 쌓아보세요!" },
         en: { title: "💔 Streak broken", body: "Stat decay has begun. Log in now to start rebuilding!" },
         ja: { title: "💔 ストリークが途切れました", body: "ステータス減少が始まりました。今すぐログインして立て直しましょう!" }
+    },
+    comeback_24h: {
+        ko: { title: "👋 오늘 하루도 성장할 수 있어요", body: "어제 완료하지 못한 퀘스트가 기다리고 있습니다. 잠깐이라도 들러보세요!" },
+        en: { title: "👋 There's still time to grow today", body: "Your unfinished quests are waiting. Even a quick check-in counts!" },
+        ja: { title: "👋 今日も成長できますよ", body: "未完了のクエストが待っています。少しだけでも覗いてみましょう！" }
+    },
+    comeback_72h: {
+        ko: { title: "💪 3일이 지났어요, 아직 늦지 않았습니다", body: "지금 돌아오면 스탯 감소를 최소화할 수 있어요. 다시 시작해볼까요?" },
+        en: { title: "💪 3 days gone — it's not too late", body: "Come back now to minimize stat decay. Ready to restart?" },
+        ja: { title: "💪 3日が過ぎました。まだ間に合います", body: "今戻ればステータス減少を最小限に抑えられます。再開しませんか？" }
+    },
+    comeback_7d: {
+        ko: { title: "🌟 일주일이나 비었어요, 돌아와주세요!", body: "당신의 캐릭터가 기다리고 있습니다. 복귀하면 특별 보상이 있을지도?" },
+        en: { title: "🌟 A whole week! We miss you", body: "Your character is waiting. Come back — there might be a surprise!" },
+        ja: { title: "🌟 1週間も経ちました。お帰りをお待ちしています！", body: "あなたのキャラクターが待っています。復帰すると特別報酬があるかも？" }
     }
 };
 
@@ -1612,6 +1627,10 @@ exports.sendStreakWarnings = onSchedule({
 
         if (diffDays < 2) continue; // 최근 접속 유저는 스킵
 
+        // 같은 날 복귀 푸시(10:00)를 이미 받은 유저는 스트릭 경고 중복 발송 방지
+        const comebackSent = data.comebackPushSent || {};
+        if (Object.values(comebackSent).some(d => d === todayStr)) continue;
+
         // 언어 감지 (Firestore에 저장된 언어 또는 기본 ko)
         const lang = data.lang || "ko";
         const isWarning = diffDays === 2;
@@ -1681,6 +1700,129 @@ exports.sendStreakWarnings = onSchedule({
     }
 
     console.log(`[스트릭 경고] 경고: ${warningCount}명, 끊어짐: ${brokenCount}명, 토큰 정리: ${invalidTokenCount}건`);
+});
+
+// ─── 3-1. 복귀 푸시 (매일 10:00 KST — 1d/3d/7d 미접속 유저에게 개별 발송) ───
+
+exports.sendComebackPush = onSchedule({
+    schedule: "0 10 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540
+}, async () => {
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+
+    const usersSnap = await db.collection("users")
+        .where("pushEnabled", "==", true)
+        .get();
+
+    let counts = { comeback_24h: 0, comeback_72h: 0, comeback_7d: 0, reset: 0, invalidToken: 0 };
+
+    // 티어 매핑: diffDays → 메시지 타입
+    const TIER_MAP = { 1: "comeback_24h", 3: "comeback_72h", 7: "comeback_7d" };
+
+    for (const doc of usersSnap.docs) {
+        const data = doc.data();
+        if (!data.fcmToken) continue;
+
+        let streak;
+        try {
+            streak = JSON.parse(data.streakStr || "{}");
+        } catch {
+            continue;
+        }
+
+        if (!streak.lastActiveDate) continue;
+
+        const lastActive = new Date(streak.lastActiveDate);
+        const diffDays = Math.floor((now - lastActive) / (1000 * 60 * 60 * 24));
+
+        // 복귀한 유저: comebackPushSent 필드 초기화
+        if (diffDays === 0 && data.comebackPushSent) {
+            await db.collection("users").doc(doc.id).update({
+                comebackPushSent: admin.firestore.FieldValue.delete()
+            });
+            counts.reset++;
+            continue;
+        }
+
+        // 티어 매칭
+        const msgType = TIER_MAP[diffDays];
+        if (!msgType) continue;
+
+        // 중복 방지: 같은 티어가 오늘 이미 발송되었으면 skip
+        const comebackSent = data.comebackPushSent || {};
+        if (comebackSent[msgType] === todayStr) continue;
+
+        const lang = data.lang || "ko";
+        const msg = getLocalizedMessage(msgType, lang);
+
+        const notification = {
+            token: data.fcmToken,
+            notification: {
+                title: msg.title,
+                body: msg.body
+            },
+            data: {
+                tab: "status",
+                target: "status",
+                type: msgType,
+                daysAway: String(diffDays),
+                link: "levelup://tab/status"
+            },
+            android: {
+                priority: "high",
+                notification: {
+                    channelId: "comeback_push",
+                    sound: "default"
+                }
+            }
+        };
+
+        try {
+            const response = await messaging.send(notification);
+            counts[msgType]++;
+
+            // comebackPushSent 갱신
+            await db.collection("users").doc(doc.id).update({
+                [`comebackPushSent.${msgType}`]: todayStr
+            });
+
+            await db.collection("push_logs").add({
+                timestamp: new Date(),
+                type: msgType,
+                target: String(data.fcmToken).substring(0, 20) + "...",
+                success: true,
+                messageId: String(response),
+                sender: "system/sendComebackPush",
+                uid: doc.id
+            });
+        } catch (e) {
+            if (e.code === "messaging/registration-token-not-registered" ||
+                e.code === "messaging/invalid-registration-token") {
+                counts.invalidToken++;
+                await db.collection("users").doc(doc.id).update({
+                    fcmToken: null,
+                    pushEnabled: false
+                });
+            }
+            console.warn(`[복귀 푸시] ${doc.id} 발송 실패:`, e.code || e.message);
+            try {
+                await db.collection("push_logs").add({
+                    timestamp: new Date(),
+                    type: msgType,
+                    target: String(data.fcmToken).substring(0, 20) + "...",
+                    success: false,
+                    error: String(e.code || e.message),
+                    sender: "system/sendComebackPush",
+                    uid: doc.id
+                });
+            } catch (_logErr) { /* ignore */ }
+        }
+    }
+
+    console.log(`[복귀 푸시] 24h: ${counts.comeback_24h}명, 72h: ${counts.comeback_72h}명, 7d: ${counts.comeback_7d}명, 복귀 리셋: ${counts.reset}건, 토큰 정리: ${counts.invalidToken}건`);
 });
 
 // ─── 4. 공지사항 수동 발송 (Callable Function — 관리자 전용) ───
