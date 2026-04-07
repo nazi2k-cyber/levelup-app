@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.217] - 2026-04-07
+
+### 변경
+- docs: 광고/소셜 모듈 분리 리팩토링 문서 최종 업데이트
+
 ## [1.0.216] - 2026-04-07
 
 ### 변경
