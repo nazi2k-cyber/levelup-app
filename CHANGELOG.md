@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.208] - 2026-04-07
+
+### 변경
+- docs: GitHub 백업 및 소스코드 압축 가이드 문서 작성
+
 ## [1.0.207] - 2026-04-06
 
 ### 변경
