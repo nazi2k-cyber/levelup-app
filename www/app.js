@@ -5177,9 +5177,17 @@ function _showPlannerRewardedAd(lang) {
 
 // --- ★ 팝업 모달창 로직 (다국어 지원 호칭 표 포함) ★ ---
 function closeInfoModal() {
-    const m = document.getElementById('infoModal'); 
-    m.classList.add('d-none'); 
-    m.classList.remove('d-flex'); 
+    const m = document.getElementById('infoModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+
+    // ★ 네이티브 광고 복원
+    if (isNativePlatform && _nativeAdLoaded && _nativeAdActiveTab) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.resumeAd();
+        } catch (e) { /* 무시 */ }
+    }
 }
 
 function closeTitleModal() { 
@@ -5646,6 +5654,14 @@ function openDungeonInfoModal() {
     const m = document.getElementById('infoModal');
     m.classList.remove('d-none');
     m.classList.add('d-flex');
+
+    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
+    if (isNativePlatform && _nativeAdVisible) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.hideAd();
+        } catch (e) { /* 무시 */ }
+    }
 }
 
 // --- ★ 플래너 가이드 모달 ★ ---
@@ -5704,6 +5720,14 @@ function openPlannerInfoModal() {
     const m = document.getElementById('infoModal');
     m.classList.remove('d-none');
     m.classList.add('d-flex');
+
+    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
+    if (isNativePlatform && _nativeAdVisible) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.hideAd();
+        } catch (e) { /* 무시 */ }
+    }
 }
 
 // --- ★ 내 서재 가이드 모달 ★ ---
@@ -5758,6 +5782,14 @@ window.openLibraryInfoModal = function() {
     const m = document.getElementById('infoModal');
     m.classList.remove('d-none');
     m.classList.add('d-flex');
+
+    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
+    if (isNativePlatform && _nativeAdVisible) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.hideAd();
+        } catch (e) { /* 무시 */ }
+    }
 };
 
 // --- ★ 설정 가이드 모달 (푸시/GPS/피트니스) ★ ---
