@@ -514,6 +514,65 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                         </td>
                     </tr>
 
+                    <tr><td colspan="5" class="cond-section-label">Scheduled — Comeback (복귀 푸시)</td></tr>
+
+                    <tr id="cond-comeback-24h">
+                        <td>
+                            <span class="cond-type-icon">👋</span>
+                            <span class="cond-type-label">Comeback 24h</span>
+                            <span class="cond-type-sub">sendComebackPush</span>
+                        </td>
+                        <td><span class="cond-schedule">10:00 KST</span></td>
+                        <td class="cond-condition">
+                            <code>lastActiveDate == 1d</code><br>
+                            <code>pushEnabled == true</code><br>
+                            <code>fcmToken</code> exists
+                        </td>
+                        <td><span class="cond-target-badge cond-target-individual">Individual Token</span></td>
+                        <td>
+                            <button class="btn-trigger" onclick="triggerCondition('comeback_24h', null, this)">Trigger</button>
+                            <div class="cond-trigger-result" id="cond-result-comeback-24h"></div>
+                        </td>
+                    </tr>
+
+                    <tr id="cond-comeback-72h">
+                        <td>
+                            <span class="cond-type-icon">💪</span>
+                            <span class="cond-type-label">Comeback 72h</span>
+                            <span class="cond-type-sub">sendComebackPush</span>
+                        </td>
+                        <td><span class="cond-schedule">10:00 KST</span></td>
+                        <td class="cond-condition">
+                            <code>lastActiveDate == 3d</code><br>
+                            <code>pushEnabled == true</code><br>
+                            <code>fcmToken</code> exists
+                        </td>
+                        <td><span class="cond-target-badge cond-target-individual">Individual Token</span></td>
+                        <td>
+                            <button class="btn-trigger" onclick="triggerCondition('comeback_72h', null, this)">Trigger</button>
+                            <div class="cond-trigger-result" id="cond-result-comeback-72h"></div>
+                        </td>
+                    </tr>
+
+                    <tr id="cond-comeback-7d">
+                        <td>
+                            <span class="cond-type-icon">🌟</span>
+                            <span class="cond-type-label">Comeback 7d</span>
+                            <span class="cond-type-sub">sendComebackPush</span>
+                        </td>
+                        <td><span class="cond-schedule">10:00 KST</span></td>
+                        <td class="cond-condition">
+                            <code>lastActiveDate == 7d</code><br>
+                            <code>pushEnabled == true</code><br>
+                            <code>fcmToken</code> exists
+                        </td>
+                        <td><span class="cond-target-badge cond-target-individual">Individual Token</span></td>
+                        <td>
+                            <button class="btn-trigger" onclick="triggerCondition('comeback_7d', null, this)">Trigger</button>
+                            <div class="cond-trigger-result" id="cond-result-comeback-7d"></div>
+                        </td>
+                    </tr>
+
                     <tr><td colspan="5" class="cond-section-label">Manual — Admin</td></tr>
 
                     <tr id="cond-announce">
@@ -564,6 +623,9 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                     <div class="stat-card"><div class="number" id="cond-stat-warn">-</div><div class="label">Streak Warning (2d)</div></div>
                     <div class="stat-card"><div class="number" id="cond-stat-broken">-</div><div class="label">Streak Broken (3d+)</div></div>
                     <div class="stat-card"><div class="number" id="cond-stat-cleanup">-</div><div class="label">Cleanup Target (30d+)</div></div>
+                    <div class="stat-card"><div class="number" id="cond-stat-comeback24h">-</div><div class="label">Comeback 24h (1d)</div></div>
+                    <div class="stat-card"><div class="number" id="cond-stat-comeback72h">-</div><div class="label">Comeback 72h (3d)</div></div>
+                    <div class="stat-card"><div class="number" id="cond-stat-comeback7d">-</div><div class="label">Comeback 7d (7d+)</div></div>
                 </div>
             </div>
 
@@ -586,6 +648,9 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                     <option value="daily_reminder">Daily Reminder</option>
                     <option value="streak_warning">Streak Warning</option>
                     <option value="streak_broken">Streak Broken</option>
+                    <option value="comeback_24h">Comeback 24h</option>
+                    <option value="comeback_72h">Comeback 72h</option>
+                    <option value="comeback_7d">Comeback 7d</option>
                     <option value="custom">Custom Message</option>
                 </select>
             </div>
@@ -682,6 +747,9 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                         <option value="quest_reminder">quest_reminder</option>
                         <option value="streak_warning">streak_warning</option>
                         <option value="streak_broken">streak_broken</option>
+                        <option value="comeback_24h">comeback_24h</option>
+                        <option value="comeback_72h">comeback_72h</option>
+                        <option value="comeback_7d">comeback_7d</option>
                         <option value="custom">custom</option>
                     </select>
                 </div>
@@ -967,6 +1035,21 @@ const MESSAGES = {
         ko: { title: "\uD83D\uDC94 \uC2A4\uD2B8\uB9AD\uC774 \uB04A\uC5B4\uC84C\uC2B5\uB2C8\uB2E4", body: "\uC2A4\uD0EF \uAC10\uC18C\uAC00 \uC2DC\uC791\uB429\uB2C8\uB2E4. \uC9C0\uAE08 \uC811\uC18D\uD558\uC5EC \uB2E4\uC2DC \uC30D\uC544\uBCF4\uC138\uC694!" },
         en: { title: "\uD83D\uDC94 Streak broken", body: "Stat decay has begun. Log in now to start rebuilding!" },
         ja: { title: "\uD83D\uDC94 \u30B9\u30C8\u30EA\u30FC\u30AF\u304C\u9014\u5207\u308C\u307E\u3057\u305F", body: "\u30B9\u30C6\u30FC\u30BF\u30B9\u6E1B\u5C11\u304C\u59CB\u307E\u308A\u307E\u3057\u305F\u3002\u4ECA\u3059\u3050\u30ED\u30B0\u30A4\u30F3\u3057\u3066\u7ACB\u3066\u76F4\u3057\u307E\u3057\u3087\u3046!" }
+    },
+    comeback_24h: {
+        ko: { title: "\uD83D\uDC4B \uC624\uB298 \uD558\uB8E8\uB3C4 \uC131\uC7A5\uD560 \uC218 \uC788\uC5B4\uC694", body: "\uC5B4\uC81C \uC644\uB8CC\uD558\uC9C0 \uBABB\uD55C \uD018\uC2A4\uD2B8\uAC00 \uAE30\uB2E4\uB9AC\uACE0 \uC788\uC2B5\uB2C8\uB2E4. \uC7A0\uAE50\uC774\uB77C\uB3C4 \uB4E4\uB7EC\uBCF4\uC138\uC694!" },
+        en: { title: "\uD83D\uDC4B There's still time to grow today", body: "Your unfinished quests are waiting. Even a quick check-in counts!" },
+        ja: { title: "\uD83D\uDC4B \u4ECA\u65E5\u3082\u6210\u9577\u3067\u304D\u307E\u3059\u3088", body: "\u672A\u5B8C\u4E86\u306E\u30AF\u30A8\u30B9\u30C8\u304C\u5F85\u3063\u3066\u3044\u307E\u3059\u3002\u5C11\u3057\u3060\u3051\u3067\u3082\u898B\u3066\u307F\u307E\u3057\u3087\u3046\uFF01" }
+    },
+    comeback_72h: {
+        ko: { title: "\uD83D\uDCAA 3\uC77C\uC774 \uC9C0\uB0AC\uC5B4\uC694, \uC544\uC9C1 \uB2A6\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4", body: "\uC9C0\uAE08 \uB3CC\uC544\uC624\uBA74 \uC2A4\uD0EF \uAC10\uC18C\uB97C \uCD5C\uC18C\uD654\uD560 \uC218 \uC788\uC5B4\uC694. \uB2E4\uC2DC \uC2DC\uC791\uD574\uBCFC\uAE4C\uC694?" },
+        en: { title: "\uD83D\uDCAA 3 days gone \u2014 it's not too late", body: "Come back now to minimize stat decay. Ready to restart?" },
+        ja: { title: "\uD83D\uDCAA 3\u65E5\u304C\u904E\u304E\u307E\u3057\u305F\u3002\u307E\u3060\u9593\u306B\u5408\u3044\u307E\u3059", body: "\u4ECA\u623B\u308C\u3070\u30B9\u30C6\u30FC\u30BF\u30B9\u6E1B\u5C11\u3092\u6700\u5C0F\u9650\u306B\u6291\u3048\u3089\u308C\u307E\u3059\u3002\u518D\u958B\u3057\u307E\u305B\u3093\u304B\uFF1F" }
+    },
+    comeback_7d: {
+        ko: { title: "\uD83C\uDF1F \uC77C\uC8FC\uC77C\uC774\uB098 \uBE44\uC5C8\uC5B4\uC694, \uB3CC\uC544\uC640\uC8FC\uC138\uC694!", body: "\uB2F9\uC2E0\uC758 \uCE90\uB9AD\uD130\uAC00 \uAE30\uB2E4\uB9AC\uACE0 \uC788\uC2B5\uB2C8\uB2E4. \uBCF5\uADC0\uD558\uBA74 \uD2B9\uBCC4 \uBCF4\uC0C1\uC774 \uC788\uC744\uC9C0\uB3C4?" },
+        en: { title: "\uD83C\uDF1F A whole week! We miss you", body: "Your character is waiting. Come back \u2014 there might be a surprise!" },
+        ja: { title: "\uD83C\uDF1F 1\u9031\u9593\u3082\u7D4C\u3061\u307E\u3057\u305F\u3002\u304A\u5E30\u308A\u3092\u304A\u5F85\u3061\u3057\u3066\u3044\u307E\u3059\uFF01", body: "\u3042\u306A\u305F\u306E\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u304C\u5F85\u3063\u3066\u3044\u307E\u3059\u3002\u5FA9\u5E30\u3059\u308B\u3068\u7279\u5225\u5831\u916C\u304C\u3042\u308B\u304B\u3082\uFF1F" }
     }
 };
 
@@ -1531,6 +1614,7 @@ window.refreshConditionsStatus = async function() {
         const usersSnap = await getDocs(collection(db, "users"));
         const now = new Date();
         let pushOnCount = 0, warnCount = 0, brokenCount = 0, cleanupCount = 0;
+        let comeback24hCount = 0, comeback72hCount = 0, comeback7dCount = 0;
 
         usersSnap.forEach(doc => {
             const d = doc.data();
@@ -1543,6 +1627,13 @@ window.refreshConditionsStatus = async function() {
                     if (diff >= 30 && d.fcmToken && d.pushEnabled) cleanupCount++;
                     else if (diff >= 3 && d.fcmToken && d.pushEnabled) brokenCount++;
                     else if (diff >= 2 && d.fcmToken && d.pushEnabled) warnCount++;
+
+                    // 복귀 푸시 카운트
+                    if (d.fcmToken && d.pushEnabled) {
+                        if (diff === 1) comeback24hCount++;
+                        if (diff === 3) comeback72hCount++;
+                        if (diff >= 7 && diff < 30) comeback7dCount++;
+                    }
                 }
             } catch {}
         });
@@ -1552,6 +1643,9 @@ window.refreshConditionsStatus = async function() {
         document.getElementById("cond-stat-warn").textContent = warnCount;
         document.getElementById("cond-stat-broken").textContent = brokenCount;
         document.getElementById("cond-stat-cleanup").textContent = cleanupCount;
+        document.getElementById("cond-stat-comeback24h").textContent = comeback24hCount;
+        document.getElementById("cond-stat-comeback72h").textContent = comeback72hCount;
+        document.getElementById("cond-stat-comeback7d").textContent = comeback7dCount;
         document.getElementById("cond-match-time").textContent =
             "Updated: " + now.toLocaleString("ko-KR", { hour12: false });
 
@@ -1607,13 +1701,22 @@ window.triggerCondition = async function(type, topic, btnEl) {
     } else {
         tlog("Conditions", `Triggering ${type} to matching users...`);
         try {
-            const minDays = type === "streak_warning" ? 2 : 3;
-            const matchUsers = usersCache.filter(u =>
-                u.fcmToken && u.diffDays !== null && u.diffDays >= minDays
-            );
+            let matchUsers;
+            if (type === "comeback_24h") {
+                matchUsers = usersCache.filter(u => u.fcmToken && u.diffDays === 1);
+            } else if (type === "comeback_72h") {
+                matchUsers = usersCache.filter(u => u.fcmToken && u.diffDays === 3);
+            } else if (type === "comeback_7d") {
+                matchUsers = usersCache.filter(u => u.fcmToken && u.diffDays !== null && u.diffDays >= 7);
+            } else {
+                const minDays = type === "streak_warning" ? 2 : 3;
+                matchUsers = usersCache.filter(u =>
+                    u.fcmToken && u.diffDays !== null && u.diffDays >= minDays
+                );
+            }
 
             if (!matchUsers.length) {
-                twarn("Conditions", `No users match ${type} condition (need ${minDays}d+ inactive)`);
+                twarn("Conditions", `No users match ${type} condition`);
                 resultEl.textContent = "No matching users";
                 resultEl.className = "cond-trigger-result fail";
             } else {
