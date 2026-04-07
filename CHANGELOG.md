@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.215] - 2026-04-07
+
+### 변경
+- fix: Module Bridge에 window.i18n 노출 추가 (ad-manager.js i18n 참조 오류 수정)
+
 ## [1.0.214] - 2026-04-07
 
 ### 변경
