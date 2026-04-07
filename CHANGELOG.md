@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.214] - 2026-04-07
+
+### 변경
+- refactor: 광고(AdMob) 코드를 modules/ad-manager.js IIFE 모듈로 분리
+
 ## [1.0.213] - 2026-04-07
 
 ### 변경
