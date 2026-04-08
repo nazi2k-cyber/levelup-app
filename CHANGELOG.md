@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.226] - 2026-04-08
+
+### 변경
+- fix: 루트 파일 동기화 누락 수정 (movie.js 모듈 로드 실패 해결)
+
 ## [1.0.225] - 2026-04-08
 
 ### 변경
