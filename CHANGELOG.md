@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.234] - 2026-04-08
+
+### 변경
+- 바벨의 영화관 i18n 적용 및 가이드 버튼/모달 추가
+- 영화 뷰토글/이미지저장 버튼 i18n 수정 (ja/en 미적용 해결)
+
 ## [1.0.233] - 2026-04-08
 
 ### 변경
