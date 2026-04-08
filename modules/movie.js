@@ -579,7 +579,7 @@
 
         // 바벨의 영화관 라벨 (column-reverse이므로 HTML 첫 번째 = 화면 최하단)
         var html = '<div class="book-tower-top">'
-            + '<div class="book-tower-top-label">' + t('mov_babel_cinema') + '<br>' + movies.length + '층</div>'
+            + '<div class="book-tower-top-label">' + t('mov_babel_cinema') + '<br>' + movies.length + t('mov_floor') + '</div>'
             + '</div>';
         html += '<div class="book-tower-base"></div>';
 
@@ -592,7 +592,7 @@
             var realIdx = (AppState.movies.items || []).indexOf(m);
 
             html += '<div class="book-tower-item" style="width:' + widthPct + '%; max-width:360px; padding-top:' + thickness + 'px; padding-bottom:' + thickness + 'px; cursor:pointer;" onclick="window.openMovieDetail(' + realIdx + ')">'
-                + '<span class="book-tower-floor">' + floor + '층</span>'
+                + '<span class="book-tower-floor">' + floor + t('mov_floor') + '</span>'
                 + '<span class="book-tower-title">' + escHtml(title) + '</span>'
                 + (yearLabel ? '<span class="book-tower-pages">' + yearLabel + '</span>' : '')
                 + '</div>';
@@ -883,7 +883,7 @@
 
             ctx.fillStyle = '#888';
             ctx.font = 'bold 8px Pretendard, sans-serif';
-            ctx.fillText(mm.floor + '층', itemX - 32, y + ih / 2 + 3);
+            ctx.fillText(mm.floor + t('mov_floor'), itemX - 32, y + ih / 2 + 3);
 
             var yearLabel = mm.movie.releaseDate ? mm.movie.releaseDate.substring(0, 4) : '';
             if (yearLabel) {
@@ -930,7 +930,7 @@
         ctx.fillStyle = '#00d9ff';
         ctx.font = 'bold 11px Pretendard, sans-serif';
         var hexLine1 = t('mov_babel_cinema') || '바벨의 영화관';
-        var hexLine2 = movies.length + '층';
+        var hexLine2 = movies.length + t('mov_floor');
         ctx.fillText(hexLine1, centerX - ctx.measureText(hexLine1).width / 2, y + hexH / 2 - 2);
         ctx.fillText(hexLine2, centerX - ctx.measureText(hexLine2).width / 2, y + hexH / 2 + 12);
         y += hexH;
