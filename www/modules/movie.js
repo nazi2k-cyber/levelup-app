@@ -535,7 +535,9 @@
 
         if (_movViewMode === 'tower') {
             if (listContainer) listContainer.style.display = 'none';
-            if (towerContainer) { towerContainer.style.display = ''; renderMovieTowerView(towerContainer, filtered); }
+            // 타워: 1층=가장 오래된 항목(바닥), 최신=맨 위
+            var towerOrder = filtered.slice().reverse();
+            if (towerContainer) { towerContainer.style.display = ''; renderMovieTowerView(towerContainer, towerOrder); }
         } else {
             if (towerContainer) towerContainer.style.display = 'none';
             if (listContainer) { listContainer.style.display = ''; renderMovieListView(listContainer, filtered); }
@@ -632,7 +634,7 @@
             var yr = m.releaseDate ? m.releaseDate.substring(0, 4) : '';
             var realIdx = items.indexOf(m);
 
-            html += '<div class="movie-item" style="display:flex; align-items:flex-start; gap:12px; padding:12px; border-bottom:1px solid var(--border-color);">';
+            html += '<div class="movie-item" onclick="window.openMovieDetail(' + realIdx + ')" style="display:flex; align-items:flex-start; gap:12px; padding:12px; border-bottom:1px solid var(--border-color); cursor:pointer;">';
 
             if (poster) {
                 html += '<img src="' + poster + '" style="width:55px; height:82px; object-fit:cover; border-radius:6px; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,0.2);" onerror="this.style.display=\'none\'">';
@@ -661,7 +663,7 @@
             if (m.genres) html += ' · ' + escHtml(m.genres.split(',')[0]);
             html += '</div>';
 
-            html += '<div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">';
+            html += '<div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;" onclick="event.stopPropagation()">';
             if (_movCurrentTab !== 'watched') {
                 html += '<button class="movie-action-btn" onclick="window.moveMovie(' + realIdx + ', \'watched\')" style="font-size:0.65rem; padding:3px 8px; border:1px solid var(--neon-blue); border-radius:4px; background:transparent; color:var(--neon-blue); cursor:pointer;">' + t('mov_move_watched') + '</button>';
             }
@@ -799,6 +801,9 @@
 
     async function _doMovieImageSave(lang, movies) {
         if (!movies || movies.length === 0) return;
+
+        // 이미지도 타워와 동일: 1층=오래된 항목(바닥), 최신=맨 위
+        movies = movies.slice().reverse();
 
         var canvas = document.createElement('canvas');
         var ctx = canvas.getContext('2d');
