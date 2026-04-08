@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.239] - 2026-04-08
+
+### 변경
+- refactor: 알림을 상태창 카드에서 모달 방식으로 변경
+
 ## [1.0.238] - 2026-04-08
 
 ### 변경
