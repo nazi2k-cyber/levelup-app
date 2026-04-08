@@ -1279,8 +1279,12 @@ async function handleSearchMovies(request) {
     const kobisKey = process.env.KOBIS_API_KEY;
     const kmdbKey = process.env.KMDB_API_KEY;
     if (!kobisKey && !kmdbKey) {
-        console.warn("[searchMovies] KOBIS_API_KEY / KMDB_API_KEY not configured");
-        throw new HttpsError("unavailable", "Movie search is not configured.");
+        console.warn("[searchMovies] KOBIS_API_KEY / KMDB_API_KEY not configured. query=" + query);
+        throw new HttpsError("unavailable", "Movie search is not configured.", {
+            reason: "MISSING_API_KEYS",
+            hint: "KOBIS_API_KEY 또는 KMDB_API_KEY 환경변수를 설정해주세요.",
+            query: query
+        });
     }
 
     // 1) KOBIS 영화목록 검색

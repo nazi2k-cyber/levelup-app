@@ -42,17 +42,27 @@
         } catch (_) { /* localStorage 용량 초과 등 무시 */ }
     }
 
-    function addEntry(level, message, stack) {
+    function addEntry(level, message, stack, context) {
         try {
             const logs = getLogs();
-            logs.push({
+            var entry = {
                 ts:    timestamp(),
                 level: level,
                 msg:   truncate(message, MSG_MAX_LEN),
                 stack: truncate(stack, STACK_MAX_LEN) || null,
                 env:   window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()
                            ? 'native' : 'web'
-            });
+            };
+            // 구조화된 컨텍스트 메타데이터 (디버깅용)
+            if (context && typeof context === 'object') {
+                entry.ctx = {};
+                for (var k in context) {
+                    if (Object.prototype.hasOwnProperty.call(context, k)) {
+                        entry.ctx[k] = truncate(String(context[k]), 300);
+                    }
+                }
+            }
+            logs.push(entry);
             // 오래된 항목 제거 (FIFO rotation)
             if (logs.length > MAX_ENTRIES) {
                 logs.splice(0, logs.length - MAX_ENTRIES);
@@ -135,6 +145,54 @@
         error: function (msg, detail) { addEntry('ERROR', msg, detail || ''); },
         debug: function (msg, detail) { addEntry('DEBUG', msg, detail || ''); },
 
+        /**
+         * 구조화된 에러 로깅 (API 오류 상세 분석용)
+         * @param {string} tag   - 모듈 태그 (예: '[Movie]')
+         * @param {string} msg   - 에러 메시지
+         * @param {Object} ctx   - 컨텍스트 정보 {code, action, params, duration, online, ...}
+         */
+        errorDetail: function (tag, msg, ctx) {
+            ctx = ctx || {};
+            ctx.online = navigator.onLine ? 'Y' : 'N';
+            addEntry('ERROR', tag + ' ' + msg, '', ctx);
+        },
+
+        /**
+         * API 호출 타이머 시작 — 호출 소요 시간 자동 측정
+         * @param {string} tag   - 모듈 태그 (예: '[Movie]')
+         * @param {string} label - 호출 레이블 (예: 'searchMovies')
+         * @returns {{ success(detail?), fail(error, extraCtx?) }}
+         */
+        apiCall: function (tag, label) {
+            var t0 = Date.now();
+            return {
+                /** API 성공 시 INFO 기록 */
+                success: function (detail) {
+                    var ms = Date.now() - t0;
+                    addEntry('INFO', tag + ' ' + label + ' 완료 (' + ms + 'ms)', '', { duration: ms + 'ms', detail: detail || '' });
+                },
+                /** API 실패 시 상세 ERROR 기록 */
+                fail: function (error, extraCtx) {
+                    var ms = Date.now() - t0;
+                    var code = (error && error.code) || '';
+                    var message = (error && error.message) || String(error || '');
+                    var details = (error && error.details) ? safeStringify(error.details) : '';
+                    var ctx = {
+                        code: code,
+                        duration: ms + 'ms',
+                        online: navigator.onLine ? 'Y' : 'N',
+                        details: details
+                    };
+                    if (extraCtx && typeof extraCtx === 'object') {
+                        for (var k in extraCtx) {
+                            if (Object.prototype.hasOwnProperty.call(extraCtx, k)) ctx[k] = extraCtx[k];
+                        }
+                    }
+                    addEntry('ERROR', tag + ' ' + label + ' 실패 (' + ms + 'ms): ' + message, error && error.stack || '', ctx);
+                }
+            };
+        },
+
         /** 최근 N개 로그를 최신순으로 반환 */
         getRecent: function (n) {
             const logs = getLogs();
@@ -151,6 +209,15 @@
 
             const lines = logs.map(function (l) {
                 let line = '[' + l.ts + '] [' + l.level + '] [' + l.env + '] ' + l.msg;
+                if (l.ctx) {
+                    var pairs = [];
+                    for (var k in l.ctx) {
+                        if (Object.prototype.hasOwnProperty.call(l.ctx, k) && l.ctx[k]) {
+                            pairs.push(k + '=' + l.ctx[k]);
+                        }
+                    }
+                    if (pairs.length) line += '\n    [ctx] ' + pairs.join(' | ');
+                }
                 if (l.stack) line += '\n    ' + l.stack.replace(/\n/g, '\n    ');
                 return line;
             });
@@ -244,10 +311,23 @@
                     const color    = colorMap[l.level] || 'var(--text-main)';
                     const time     = l.ts.replace('T', ' ').substring(0, 19);
                     const stack    = l.stack ? '<div style="font-size:0.6rem; color:var(--text-sub); margin-top:2px; word-break:break-all;">' + escapeHtml(l.stack.substring(0, 200)) + '</div>' : '';
+                    var ctxHtml = '';
+                    if (l.ctx) {
+                        var ctxPairs = [];
+                        for (var ck in l.ctx) {
+                            if (Object.prototype.hasOwnProperty.call(l.ctx, ck) && l.ctx[ck]) {
+                                ctxPairs.push('<span style="color:var(--neon-gold);">' + escapeHtml(ck) + '</span>=' + escapeHtml(String(l.ctx[ck])));
+                            }
+                        }
+                        if (ctxPairs.length) {
+                            ctxHtml = '<div style="font-size:0.58rem; color:var(--text-sub); margin-top:2px; padding:3px 6px; background:rgba(255,255,255,0.03); border-radius:3px; word-break:break-all;">' + ctxPairs.join(' · ') + '</div>';
+                        }
+                    }
                     return '<div class="log-entry">' +
                                '<span class="log-level" style="color:' + color + ';">[' + l.level + ']</span> ' +
                                '<span class="log-time">' + time + '</span>' +
                                '<div class="log-msg">' + escapeHtml(l.msg) + '</div>' +
+                               ctxHtml +
                                stack +
                            '</div>';
                 }).join('');

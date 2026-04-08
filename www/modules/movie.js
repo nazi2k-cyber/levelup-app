@@ -49,18 +49,24 @@
     async function searchMoviesAPI(query, page) {
         page = page || 1;
         log('검색 시작: query=' + query + ', page=' + page);
+        var tracker = window.AppLogger
+            ? AppLogger.apiCall('[Movie]', '검색(searchMovies)')
+            : null;
         try {
             var _ping = window._httpsCallable(window._functions, 'ping');
             var result = await _ping({ action: 'searchMovies', query: query, page: page });
             var data = result.data || {};
             var movies = data.movies || [];
             var hasMore = data.hasMore || false;
-            log('검색 결과: ' + movies.length + '건, hasMore=' + hasMore);
+            if (tracker) tracker.success(movies.length + '건, hasMore=' + hasMore + ', total=' + (data.totalCount || 0));
             _lastSearchError = false;
             return { results: movies, hasMore: hasMore, totalCount: data.totalCount || 0 };
         } catch(e) {
-            var errMsg = (e && e.message) || String(e);
-            logError('검색 실패: ' + errMsg);
+            if (tracker) {
+                tracker.fail(e, { action: 'searchMovies', query: query, page: page });
+            } else {
+                logError('검색 실패: ' + ((e && e.message) || String(e)));
+            }
             _lastSearchError = true;
             return { results: [], hasMore: false, totalCount: 0 };
         }
@@ -68,20 +74,26 @@
 
     async function fetchMovieDetails(movieCd, title, year, source) {
         log('상세 조회: movieCd=' + movieCd + ', title=' + title);
+        var tracker = window.AppLogger
+            ? AppLogger.apiCall('[Movie]', '상세조회(lookupMovie)')
+            : null;
         try {
             var _ping = window._httpsCallable(window._functions, 'ping');
             var result = await _ping({ action: 'lookupMovie', movieCd: String(movieCd), title: title, year: year, source: source });
             var data = result.data || {};
             var movie = data.movie || null;
             if (movie) {
-                log('상세 조회 성공: ' + movie.title);
+                if (tracker) tracker.success(movie.title);
             } else {
                 logWarn('상세 조회 결과 없음: movieCd=' + movieCd);
             }
             return movie;
         } catch(e) {
-            var errMsg = (e && e.message) || String(e);
-            logError('상세 조회 실패: ' + errMsg);
+            if (tracker) {
+                tracker.fail(e, { action: 'lookupMovie', movieCd: movieCd, title: title, year: year, source: source });
+            } else {
+                logError('상세 조회 실패: ' + ((e && e.message) || String(e)));
+            }
             return null;
         }
     }
