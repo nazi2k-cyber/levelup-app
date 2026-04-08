@@ -280,7 +280,7 @@ self.addEventListener('notificationclick', (event) => {
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (const client of clientList) {
                 if (client.url.includes('app.html') && 'focus' in client) {
-                    client.postMessage({ type: 'NOTIFICATION_CLICK', tab: targetTab, data: data });
+                    client.postMessage({ type: 'NOTIFICATION_CLICK', tab: targetTab, data: data, title: event.notification.title, body: event.notification.body });
                     return client.focus();
                 }
             }

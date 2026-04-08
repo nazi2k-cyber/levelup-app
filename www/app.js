@@ -9897,6 +9897,16 @@ function registerEarlyPushListeners() {
         const data = action.notification?.data;
         if (!data) return;
 
+        // 백그라운드 수신 알림 이력 저장
+        const noti = action.notification;
+        if (window.NotificationModule) {
+            window.NotificationModule.addNotification(
+                noti?.title || 'LEVEL UP',
+                noti?.body || '',
+                data?.type || 'unknown'
+            );
+        }
+
         if (_appNavigationReady) {
             // 앱이 이미 준비된 경우 바로 네비게이션
             handleNotificationAction(data);
@@ -10261,6 +10271,14 @@ function handleNotificationAction(data, _retryCount) {
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+            // 백그라운드 수신 알림 이력 저장
+            if (window.NotificationModule && event.data.title) {
+                window.NotificationModule.addNotification(
+                    event.data.title,
+                    event.data.body || '',
+                    event.data.data?.type || 'unknown'
+                );
+            }
             handleNotificationAction(event.data);
         }
     });

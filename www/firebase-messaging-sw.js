@@ -48,7 +48,7 @@ self.addEventListener('notificationclick', (event) => {
             // 이미 열린 창이 있으면 탭 이동 메시지 전송 후 포커스
             for (const client of clientList) {
                 if (client.url.includes('app.html') && 'focus' in client) {
-                    client.postMessage({ type: 'NOTIFICATION_CLICK', tab: targetTab, data: data });
+                    client.postMessage({ type: 'NOTIFICATION_CLICK', tab: targetTab, data: data, title: event.notification.title, body: event.notification.body });
                     return client.focus();
                 }
             }
