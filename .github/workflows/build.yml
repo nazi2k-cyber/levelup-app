@@ -101,6 +101,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # workflow_run(main 빌드)일 때는 auto-version PR이 이미 동기화를 처리하므로
+          # 브랜치 보호 규칙에 의해 직접 push 불가 → 커밋/push 스킵
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT_BRANCH" = "main" ]; then
+            echo "ℹ️ main 브랜치 — 동기화 커밋 스킵 (auto-version PR에서 처리)"
+            exit 0
+          fi
+
           # www/ → 루트로 갱신된 파일 커밋
           ROOT_FILES="app.html app.js data.js logger.js index.html style.css intro-style.css firebase-messaging-sw.js manifest.json push-test.html sw.js"
           CHANGED_ROOT=false

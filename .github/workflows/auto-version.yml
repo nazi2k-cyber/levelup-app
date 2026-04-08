@@ -168,6 +168,7 @@ jobs:
           # 변경된 파일 커밋
           git add VERSION CHANGELOG.md package.json functions/package.json 2>/dev/null || true
           git add sw.js www/sw.js 2>/dev/null || true
+          git add app.js www/app.js 2>/dev/null || true
 
           if ! git diff --cached --quiet; then
             git commit -m "chore: v${NEW_VERSION} 자동 버전 업데이트 [auto-version]"
@@ -264,3 +265,4 @@ jobs:
           echo "- \`package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`functions/package.json\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`sw.js\` / \`www/sw.js\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`app.js\` / \`www/app.js\`" >> $GITHUB_STEP_SUMMARY
