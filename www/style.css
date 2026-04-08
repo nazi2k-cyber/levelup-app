@@ -2373,6 +2373,44 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 [data-theme="light"] .book-action-btn { background: #f0f0f0; color: #1a1a1a; }
 [data-theme="light"] .book-list-item { background: #fff; }
 
+/* ========== My Movies ========== */
+.mov-tab {
+    flex: 1; padding: 10px 0; background: transparent; border: none;
+    color: var(--text-sub); font-size: 0.8rem; cursor: pointer;
+    border-bottom: 2px solid transparent; text-align: center;
+    transition: all 0.2s;
+}
+.mov-tab.active {
+    color: var(--neon-blue); border-bottom-color: var(--neon-blue);
+    font-weight: bold;
+}
+.mov-count-btn {
+    background: transparent; border: 1px solid var(--border-color);
+    border-radius: 20px; padding: 6px 14px;
+    color: var(--text-sub); font-size: 0.75rem; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    transition: all 0.2s;
+}
+.mov-count-btn.active {
+    background: var(--neon-blue); color: #fff;
+    border-color: var(--neon-blue); font-weight: bold;
+}
+.movie-list {
+    padding: 0;
+}
+.movie-item:active {
+    background: rgba(0,217,255,0.05);
+}
+.movie-action-btn:active {
+    opacity: 0.6;
+}
+.movie-search-item:active {
+    background: rgba(0,217,255,0.08);
+}
+[data-theme="light"] .movie-action-btn {
+    border-color: #ccc;
+}
+
 /* ========== Running Calculator ========== */
 .running-calc-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;

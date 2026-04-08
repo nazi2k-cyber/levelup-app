@@ -100,6 +100,7 @@ service cloud.firestore {
         && (!('lastBonusExpDate' in d) || d.lastBonusExpDate == null || d.lastBonusExpDate is string)
         && (!('lifeStatusStr' in d) || d.lifeStatusStr == null || d.lifeStatusStr is string)
         && (!('libraryStr' in d) || d.libraryStr == null || d.libraryStr is string)
+        && (!('moviesStr' in d) || d.moviesStr == null || d.moviesStr is string)
         && (!('runningCalcHistoryStr' in d) || d.runningCalcHistoryStr == null || d.runningCalcHistoryStr is string)
         && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || d.ormCalcHistoryStr is string);
     }
