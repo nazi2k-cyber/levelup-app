@@ -2077,6 +2077,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .library-view-toggle {
     display: flex; gap: 0; padding: 8px 16px; flex-shrink: 0;
+    position: relative;
 }
 .lib-view-btn {
     flex: 1; padding: 8px; border: 1px solid var(--border-color);
@@ -2130,8 +2131,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     white-space: nowrap;
 }
 .book-tower-source {
-    font-size: 0.5rem; opacity: 0.5; flex-shrink: 0;
-    white-space: nowrap; margin-left: 2px;
+    display: none;
 }
 .book-tower-floor {
     position: absolute; left: -38px; top: 50%; transform: translateY(-50%);
@@ -2154,7 +2154,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 
 /* ── Book List View ── */
-.library-list { display: flex; flex-direction: column; gap: 8px; min-height: 100%; justify-content: flex-end; }
+.library-list { display: flex; flex-direction: column; gap: 8px; min-height: auto; }
 .book-list-item {
     display: flex; gap: 12px; padding: 12px;
     background: var(--panel-bg); border: 1px solid var(--border-color);
@@ -2180,15 +2180,54 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     font-size: 1rem; cursor: pointer; padding: 4px 8px; flex-shrink: 0;
 }
 
-/* ── Book Tower Color Palette (warm pink/salmon — matches original app) ── */
-.book-tower-item:nth-child(8n+1) { background: linear-gradient(180deg, #f2b4a8, #eea090); }
-.book-tower-item:nth-child(8n+2) { background: linear-gradient(180deg, #f5c4b8, #f0b0a0); }
-.book-tower-item:nth-child(8n+3) { background: linear-gradient(180deg, #f8d0c4, #f4bcae); color: #5a3a3a; }
-.book-tower-item:nth-child(8n+4) { background: linear-gradient(180deg, #eea898, #e89888); }
-.book-tower-item:nth-child(8n+5) { background: linear-gradient(180deg, #f5bcae, #f0a898); }
-.book-tower-item:nth-child(8n+6) { background: linear-gradient(180deg, #f0c0b4, #ecaca0); }
-.book-tower-item:nth-child(8n+7) { background: linear-gradient(180deg, #f8d4c8, #f4c0b4); color: #5a3a3a; }
-.book-tower-item:nth-child(8n+8) { background: linear-gradient(180deg, #ecb0a0, #e8a090); }
+/* ── Book Tower Color Palettes ── */
+/* Dark theme (default) */
+.library-tower .book-tower-item,
+.tower-theme-dark .book-tower-item { color: #c0c0d0; }
+.tower-theme-dark .book-tower-item:nth-child(8n+1), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+1) { background: linear-gradient(180deg, #3a3a4a, #2e2e3e); }
+.tower-theme-dark .book-tower-item:nth-child(8n+2), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+2) { background: linear-gradient(180deg, #404052, #343446); }
+.tower-theme-dark .book-tower-item:nth-child(8n+3), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+3) { background: linear-gradient(180deg, #464658, #3a3a4c); }
+.tower-theme-dark .book-tower-item:nth-child(8n+4), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+4) { background: linear-gradient(180deg, #383848, #2c2c3c); }
+.tower-theme-dark .book-tower-item:nth-child(8n+5), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+5) { background: linear-gradient(180deg, #3e3e50, #32324a); }
+.tower-theme-dark .book-tower-item:nth-child(8n+6), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+6) { background: linear-gradient(180deg, #424254, #363648); }
+.tower-theme-dark .book-tower-item:nth-child(8n+7), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+7) { background: linear-gradient(180deg, #484860, #3c3c50); }
+.tower-theme-dark .book-tower-item:nth-child(8n+8), .library-tower:not([class*="tower-theme"]) .book-tower-item:nth-child(8n+8) { background: linear-gradient(180deg, #363646, #2a2a3a); }
+
+/* Warm theme (pink/salmon) */
+.tower-theme-warm .book-tower-item { color: #3a2a2a; }
+.tower-theme-warm .book-tower-item:nth-child(8n+1) { background: linear-gradient(180deg, #f2b4a8, #eea090); }
+.tower-theme-warm .book-tower-item:nth-child(8n+2) { background: linear-gradient(180deg, #f5c4b8, #f0b0a0); }
+.tower-theme-warm .book-tower-item:nth-child(8n+3) { background: linear-gradient(180deg, #f8d0c4, #f4bcae); color: #5a3a3a; }
+.tower-theme-warm .book-tower-item:nth-child(8n+4) { background: linear-gradient(180deg, #eea898, #e89888); }
+.tower-theme-warm .book-tower-item:nth-child(8n+5) { background: linear-gradient(180deg, #f5bcae, #f0a898); }
+.tower-theme-warm .book-tower-item:nth-child(8n+6) { background: linear-gradient(180deg, #f0c0b4, #ecaca0); }
+.tower-theme-warm .book-tower-item:nth-child(8n+7) { background: linear-gradient(180deg, #f8d4c8, #f4c0b4); color: #5a3a3a; }
+.tower-theme-warm .book-tower-item:nth-child(8n+8) { background: linear-gradient(180deg, #ecb0a0, #e8a090); }
+
+/* Ocean theme (deep blue/teal) */
+.tower-theme-ocean .book-tower-item { color: #a8c8e0; }
+.tower-theme-ocean .book-tower-item:nth-child(8n+1) { background: linear-gradient(180deg, #1e3a5f, #162e4f); }
+.tower-theme-ocean .book-tower-item:nth-child(8n+2) { background: linear-gradient(180deg, #234068, #1b3458); }
+.tower-theme-ocean .book-tower-item:nth-child(8n+3) { background: linear-gradient(180deg, #284870, #203c60); }
+.tower-theme-ocean .book-tower-item:nth-child(8n+4) { background: linear-gradient(180deg, #1c3555, #142a45); }
+.tower-theme-ocean .book-tower-item:nth-child(8n+5) { background: linear-gradient(180deg, #203d62, #183252); }
+.tower-theme-ocean .book-tower-item:nth-child(8n+6) { background: linear-gradient(180deg, #254468, #1d3858); }
+.tower-theme-ocean .book-tower-item:nth-child(8n+7) { background: linear-gradient(180deg, #2a4c72, #224062); }
+.tower-theme-ocean .book-tower-item:nth-child(8n+8) { background: linear-gradient(180deg, #1a3250, #122640); }
+
+/* ── Tower Theme Picker ── */
+.tower-theme-picker {
+    display: flex; gap: 6px; margin-left: auto; align-items: center; padding-left: 12px;
+}
+.tower-theme-dot {
+    width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent;
+    cursor: pointer; transition: border-color 0.2s, transform 0.15s;
+}
+.tower-theme-dot:active { transform: scale(0.9); }
+.tower-theme-dot.active { border-color: var(--neon-blue); }
+.tower-theme-dot[data-theme="dark"] { background: linear-gradient(135deg, #3a3a4a, #2e2e3e); }
+.tower-theme-dot[data-theme="warm"] { background: linear-gradient(135deg, #f2b4a8, #eea090); }
+.tower-theme-dot[data-theme="ocean"] { background: linear-gradient(135deg, #1e3a5f, #162e4f); }
 
 /* ── Library Share Button (top-right) ── */
 .library-share-btn {
