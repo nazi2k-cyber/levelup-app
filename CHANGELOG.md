@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.238] - 2026-04-08
+
+### 변경
+- feat: 알림/공지사항 카드 및 관리자 공지사항 탭 추가
+
 ## [1.0.237] - 2026-04-08
 
 ### 변경
