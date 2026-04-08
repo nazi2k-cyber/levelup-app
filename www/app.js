@@ -2021,7 +2021,7 @@ async function _doSaveUserData() {
                     'dungeonStr','diyQuestsStr','questHistoryStr','titleHistoryStr',
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
-                    'libraryStr','runningCalcHistoryStr','ormCalcHistoryStr'
+                    'libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr'
                 ]);
                 // 기존 문서의 허용되지 않은 필드
                 const _extraFields = _existingKeys.filter(k => !_allowedFields.has(k));
@@ -2070,7 +2070,7 @@ async function _doSaveUserData() {
                     if (bk in _merged && typeof _merged[bk] !== 'boolean') _issues.push(`${bk}(type=${typeof _merged[bk]})`);
                 });
                 // 문자열 크기 검증
-                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,libraryStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10};
+                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10};
                 for (const [sk, sl] of Object.entries(_strChecks)) {
                     if (sk in _merged && (typeof _merged[sk] !== 'string' || _merged[sk].length > sl)) _issues.push(`${sk}(type=${typeof _merged[sk]},len=${_merged[sk]?.length},limit=${sl})`);
                 }
