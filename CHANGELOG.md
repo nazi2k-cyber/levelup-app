@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.230] - 2026-04-08
+
+### 변경
+- 영화 모듈 대규모 UX 개선: 검색 UI, 모달, 바벨의 영화관, 이미지 저장
+
 ## [1.0.229] - 2026-04-08
 
 ### 변경
