@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.228] - 2026-04-08
+
+### 변경
+- ci: KOBIS/KMDb API 키를 배포 환경변수에 추가
+- feat: TMDB → KOBIS+KMDb 영화 API 전환 (비용 절감)
+
 ## [1.0.227] - 2026-04-08
 
 ### 변경
