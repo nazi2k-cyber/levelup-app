@@ -67,5 +67,19 @@ if [ -f "$WWW_SW_JS" ]; then
   echo "  ✅ www/sw.js CACHE_VERSION → levelup-v$VERSION"
 fi
 
+# 5. app.js APP_VERSION
+APP_JS="$PROJECT_ROOT/app.js"
+if [ -f "$APP_JS" ]; then
+  sed -i "s/const APP_VERSION = '[^']*'/const APP_VERSION = '$VERSION'/" "$APP_JS"
+  echo "  ✅ app.js APP_VERSION → $VERSION"
+fi
+
+# 6. www/app.js APP_VERSION (동기화 대상)
+WWW_APP_JS="$PROJECT_ROOT/www/app.js"
+if [ -f "$WWW_APP_JS" ]; then
+  sed -i "s/const APP_VERSION = '[^']*'/const APP_VERSION = '$VERSION'/" "$WWW_APP_JS"
+  echo "  ✅ www/app.js APP_VERSION → $VERSION"
+fi
+
 echo ""
 echo "🎉 모든 버전 참조가 v$VERSION 으로 동기화되었습니다."

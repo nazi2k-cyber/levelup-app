@@ -1002,6 +1002,10 @@
                         <button class="btn-primary" style="background:rgba(255,60,60,0.1); border:1px solid var(--neon-red); color:var(--neon-red); flex:1;" onclick="if(confirm(i18n[AppState.currentLang]?.log_clear_confirm || '로그를 모두 삭제하시겠습니까?')) AppLogger.clear()" data-i18n="log_clear">초기화</button>
                     </div>
                 </div>
+
+                <div id="build-version-info" style="text-align:center; padding:20px 0 10px; font-size:0.7rem; color:var(--text-sub, #888); opacity:0.6;">
+                    <span data-i18n="set_build_version">빌드 버전</span> <span id="build-version-number"></span>
+                </div>
             </section>
         </main>
 
