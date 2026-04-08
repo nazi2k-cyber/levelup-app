@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.241] - 2026-04-08
+
+### 변경
+- fix: 백그라운드 푸시 알림이 수신 알림 이력에 기록되지 않는 문제 수정
+
 ## [1.0.240] - 2026-04-08
 
 ### 변경
