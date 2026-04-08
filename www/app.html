@@ -1164,6 +1164,11 @@
         <div class="library-view-toggle">
             <button class="lib-view-btn active" data-view="tower" onclick="window.switchLibraryViewMode('tower')" data-i18n="lib_stack_view">쌓아보기</button>
             <button class="lib-view-btn" data-view="list" onclick="window.switchLibraryViewMode('list')" data-i18n="lib_list_view">리스트형 보기</button>
+            <div id="tower-theme-picker" class="tower-theme-picker">
+                <span class="tower-theme-dot active" data-theme="dark" onclick="window.switchTowerTheme('dark')"></span>
+                <span class="tower-theme-dot" data-theme="warm" onclick="window.switchTowerTheme('warm')"></span>
+                <span class="tower-theme-dot" data-theme="ocean" onclick="window.switchTowerTheme('ocean')"></span>
+            </div>
         </div>
         <div id="library-content" class="library-content" style="position:relative;">
             <div id="library-tower" class="library-tower"></div>

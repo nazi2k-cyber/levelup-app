@@ -960,6 +960,7 @@
     let _libCurrentTab = 'reading';
     let _libCurrentPeriod = 'total';
     let _libCurrentView = 'tower';
+    let _libTowerTheme = localStorage.getItem('libTowerTheme') || 'dark';
     let _libSearchQuery = '';
     let _libLocalSearch = false;  // false = API search, true = local filter
     let _libSelectedYear = new Date().getFullYear();
@@ -1201,7 +1202,22 @@
                 b.classList.toggle('disabled', _libCurrentTab !== 'read');
             }
         });
+        // Show/hide theme picker (only for tower view on read tab)
+        var picker = document.getElementById('tower-theme-picker');
+        if (picker) {
+            picker.style.display = (_libCurrentView === 'tower' && _libCurrentTab === 'read') ? 'flex' : 'none';
+            picker.querySelectorAll('.tower-theme-dot').forEach(d => {
+                d.classList.toggle('active', d.dataset.theme === _libTowerTheme);
+            });
+        }
     }
+
+    window.switchTowerTheme = function(theme) {
+        _libTowerTheme = theme;
+        localStorage.setItem('libTowerTheme', theme);
+        updateLibraryViewToggle();
+        renderLibrary();
+    };
 
     window.filterLibraryBooks = function(query) {
         var trimmed = (query || '').trim();
@@ -1471,11 +1487,16 @@
         }
         if (shareBtn) shareBtn.classList.remove('d-none');
 
-        // 렌더링 후 스크롤을 최하단으로 이동 (1층이 배너 바로 위에 보이도록)
+        // Tower view: 스크롤을 최하단으로 이동 (1층이 배너 바로 위에 보이도록)
+        // List view: 스크롤을 최상단으로 (최신순이 맨 위)
         var libContent = document.getElementById('library-content');
         if (libContent) {
             requestAnimationFrame(function() {
-                libContent.scrollTop = libContent.scrollHeight;
+                if (_libCurrentView === 'tower') {
+                    libContent.scrollTop = libContent.scrollHeight;
+                } else {
+                    libContent.scrollTop = 0;
+                }
             });
         }
     }
@@ -1529,14 +1550,16 @@
         const innerW = W - pad * 2;
         const centerX = W / 2;
 
-        // 스파인 색상 팔레트 (style.css nth-child 패턴과 동일)
-        const spineColors = [
-            ['#f2b4a8', '#eea090'], ['#f5c4b8', '#f0b0a0'],
-            ['#f8d0c4', '#f4bcae'], ['#eea898', '#e89888'],
-            ['#f5bcae', '#f0a898'], ['#f0c0b4', '#ecaca0'],
-            ['#f8d4c8', '#f4c0b4'], ['#ecb0a0', '#e8a090']
-        ];
-        const darkTextIndices = [2, 6]; // color: #5a3a3a
+        // 스파인 색상 팔레트 (테마별)
+        var themeColors = {
+            dark: { colors: [['#3a3a4a','#2e2e3e'],['#404052','#343446'],['#464658','#3a3a4c'],['#383848','#2c2c3c'],['#3e3e50','#32324a'],['#424254','#363648'],['#484860','#3c3c50'],['#363646','#2a2a3a']], text: '#c0c0d0', darkText: null },
+            warm: { colors: [['#f2b4a8','#eea090'],['#f5c4b8','#f0b0a0'],['#f8d0c4','#f4bcae'],['#eea898','#e89888'],['#f5bcae','#f0a898'],['#f0c0b4','#ecaca0'],['#f8d4c8','#f4c0b4'],['#ecb0a0','#e8a090']], text: '#3a2a2a', darkText: '#5a3a3a', darkTextIndices: [2,6] },
+            ocean: { colors: [['#1e3a5f','#162e4f'],['#234068','#1b3458'],['#284870','#203c60'],['#1c3555','#142a45'],['#203d62','#183252'],['#254468','#1d3858'],['#2a4c72','#224062'],['#1a3250','#122640']], text: '#a8c8e0', darkText: null }
+        };
+        var activeTheme = themeColors[_libTowerTheme] || themeColors.dark;
+        const spineColors = activeTheme.colors;
+        const defaultTextColor = activeTheme.text;
+        const darkTextIndices = activeTheme.darkTextIndices || [];
 
         // 각 책 스파인 메트릭 계산
         var totalBooksH = 0;
@@ -1594,7 +1617,7 @@
             ctx.fill();
 
             // 제목 텍스트
-            var textColor = darkTextIndices.indexOf(colorIdx) >= 0 ? '#5a3a3a' : '#3a2a2a';
+            var textColor = (activeTheme.darkText && darkTextIndices.indexOf(colorIdx) >= 0) ? activeTheme.darkText : defaultTextColor;
             ctx.fillStyle = textColor;
             ctx.font = 'bold 10px Pretendard, sans-serif';
             var title = m.book.title.length > 20 ? m.book.title.substring(0, 18) + '…' : m.book.title;
@@ -1801,7 +1824,7 @@
     }
 
     function renderTowerView(container, books) {
-        container.className = 'library-tower';
+        container.className = 'library-tower tower-theme-' + _libTowerTheme;
         // 바벨의 도서관 라벨을 최하단에 배치 (column-reverse이므로 HTML 첫 번째 = 화면 최하단)
         let html = '<div class="book-tower-top">'
             + '<div class="book-tower-top-label">' + t('lib_babel_tower') + '<br>' + books.length + '층</div>'
@@ -1815,12 +1838,10 @@
             const thickness = getBookThickness(book.pages);
             const widthPct = getBookWidth(book.pages, i);
             const pageLabel = book.pages ? book.pages + 'p' : '';
-            const srcLabel = getSourceLabel(book.source);
             html += '<div class="book-tower-item" style="width:' + widthPct + '%; max-width:360px; padding-top:' + thickness + 'px; padding-bottom:' + thickness + 'px;" onclick="window.openBookDetail(\'' + encodeURIComponent(book.isbn) + '\')">'
                 + '<span class="book-tower-floor">' + floor + '층</span>'
                 + '<span class="book-tower-title">' + escapeHtml(title) + '</span>'
                 + (pageLabel ? '<span class="book-tower-pages">' + escapeHtml(pageLabel) + '</span>' : '')
-                + (srcLabel ? '<span class="book-tower-source">' + escapeHtml(srcLabel) + '</span>' : '')
                 + '</div>';
         });
         container.innerHTML = html;
@@ -1828,8 +1849,12 @@
 
     function renderListView(container, books) {
         container.className = 'library-list';
+        // Sort by newest date first
+        var sorted = books.slice().sort(function(a, b) {
+            return (b.addedDate || '').localeCompare(a.addedDate || '');
+        });
         let html = '';
-        books.forEach(book => {
+        sorted.forEach(book => {
             const thumbSrc = book.thumbnail || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'45\' height=\'65\' fill=\'%23555\'%3E%3Crect width=\'45\' height=\'65\' fill=\'%23222\' rx=\'4\'/%3E%3Ctext x=\'22\' y=\'36\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'10\'%3E📖%3C/text%3E%3C/svg%3E';
             html += '<div class="book-list-item">'
                 + '<img class="book-list-thumb" src="' + escapeHtml(thumbSrc) + '" alt="" onerror="this.style.display=\'none\'">'
