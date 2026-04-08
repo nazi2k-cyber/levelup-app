@@ -1201,7 +1201,11 @@
             <div class="library-title-group">
                 <span data-i18n="mov_title">내 영화</span>
             </div>
-            <div style="width:24px;"></div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button id="movie-share-btn" class="library-share-btn d-none" onclick="window.shareMovieAsImage()">
+                    🎬 <span data-i18n="mov_save_image">이미지 저장</span>
+                </button>
+            </div>
         </div>
         <div class="library-search-bar">
             <div class="library-search-row">
@@ -1225,7 +1229,17 @@
             <button class="mov-tab active" data-cat="watched" onclick="window.switchMovieTab('watched')"><span data-i18n="mov_watched">본 영화</span></button>
             <button class="mov-tab" data-cat="wantToWatch" onclick="window.switchMovieTab('wantToWatch')"><span data-i18n="mov_want_to_watch">보고 싶은 영화</span></button>
         </div>
+        <div class="movie-view-toggle">
+            <button class="mov-view-btn active" data-view="tower" onclick="window.switchMovieViewMode('tower')" data-i18n="mov_stack_view">쌓아보기</button>
+            <button class="mov-view-btn" data-view="list" onclick="window.switchMovieViewMode('list')" data-i18n="mov_list_view">리스트형 보기</button>
+            <div id="movie-theme-picker" class="tower-theme-picker">
+                <span class="tower-theme-dot active" data-theme="dark" onclick="window.switchMovieTowerTheme('dark')"></span>
+                <span class="tower-theme-dot" data-theme="warm" onclick="window.switchMovieTowerTheme('warm')"></span>
+                <span class="tower-theme-dot" data-theme="ocean" onclick="window.switchMovieTowerTheme('ocean')"></span>
+            </div>
+        </div>
         <div id="movie-content" class="library-content" style="position:relative;">
+            <div id="movie-tower" class="library-tower"></div>
             <div id="movie-list" class="movie-list"></div>
         </div>
     </div>
