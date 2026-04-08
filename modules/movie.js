@@ -1012,30 +1012,62 @@
         }
     }
 
-    // ── i18n 기본값 보완 ──
-    (function() {
-        var defaults = {
-            mov_babel_cinema: '바벨의 영화관',
-            mov_stack_view: '쌓아보기',
-            mov_list_view: '리스트형 보기',
-            mov_save_image: '이미지 저장'
-        };
-        ['ko','en','ja'].forEach(function(lang) {
-            if (!i18n[lang]) return;
-            for (var k in defaults) {
-                if (!i18n[lang][k]) i18n[lang][k] = defaults[k];
+    // (mov_babel_cinema, btn_movie_info 등은 data.js에서 i18n 정의)
+
+    // ── 가이드 모달 ──
+    window.openMovieInfoModal = function() {
+        var lang = AppState.currentLang;
+        var guideData = {
+            ko: {
+                title: '내 영화 가이드',
+                sections: [
+                    { icon: '🔍', title: '영화 검색', desc: '검색창에서 영화를 검색하여 추가하세요. KOBIS/KMDb 데이터베이스에서 조회합니다.' },
+                    { icon: '📂', title: '카테고리', desc: '보는 중, 본 영화, 보고 싶은 영화 3가지 카테고리로 관리할 수 있습니다.' },
+                    { icon: '🏆', title: '감상 보상', desc: '영화를 본 영화로 등록하면 +10P & INT +0.5 보상을 받습니다! (영화 당 1회)' },
+                    { icon: '📊', title: '통계', desc: '전체, 연간, 월간 감상량을 확인할 수 있습니다.' },
+                    { icon: '🎬', title: '바벨의 영화관', desc: '본 영화를 쌓아서 나만의 영화관을 만들어보세요! 3종 테마 지원.' }
+                ]
+            },
+            en: {
+                title: 'Movie Guide',
+                sections: [
+                    { icon: '🔍', title: 'Search Movies', desc: 'Search and add movies. Data from KOBIS/KMDb databases.' },
+                    { icon: '📂', title: 'Categories', desc: 'Organize into Watching, Watched, and Want to Watch.' },
+                    { icon: '🏆', title: 'Watch Reward', desc: 'Mark a movie as Watched to earn +10P & INT +0.5! (Once per movie)' },
+                    { icon: '📊', title: 'Statistics', desc: 'View your movie stats by total, yearly, and monthly.' },
+                    { icon: '🎬', title: 'Tower of Cinema', desc: 'Stack your watched movies to build your own cinema tower! 3 themes.' }
+                ]
+            },
+            ja: {
+                title: 'マイ映画ガイド',
+                sections: [
+                    { icon: '🔍', title: '映画検索', desc: '検索で映画を追加できます。KOBIS/KMDbデータベースから取得します。' },
+                    { icon: '📂', title: 'カテゴリ', desc: '視聴中、視聴済み、観たいの3つのカテゴリで管理できます。' },
+                    { icon: '🏆', title: '視聴報酬', desc: '映画を視聴済みに登録すると+10P & INT +0.5の報酬！（映画ごとに1回）' },
+                    { icon: '📊', title: '統計', desc: '全体、年間、月間の視聴数を確認できます。' },
+                    { icon: '🎬', title: 'バベルの映画館', desc: '観た映画を積み上げて映画館を作りましょう！3種テーマ対応。' }
+                ]
             }
-        });
-        if (i18n.en) {
-            if (!i18n.en.mov_babel_cinema) i18n.en.mov_babel_cinema = 'Tower of Cinema';
-            if (!i18n.en.mov_stack_view) i18n.en.mov_stack_view = 'Stack View';
-            if (!i18n.en.mov_list_view) i18n.en.mov_list_view = 'List View';
-            if (!i18n.en.mov_save_image) i18n.en.mov_save_image = 'Save Image';
-        }
-        if (i18n.ja) {
-            if (!i18n.ja.mov_babel_cinema) i18n.ja.mov_babel_cinema = 'バベルの映画館';
-        }
-    })();
+        };
+
+        var g = guideData[lang] || guideData.ko;
+        var titleEl = document.getElementById('info-modal-title');
+        var bodyEl = document.getElementById('info-modal-body');
+        if (!titleEl || !bodyEl) return;
+
+        titleEl.innerText = g.title;
+        bodyEl.innerHTML = g.sections.map(function(s) {
+            return '<div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color);">'
+                + '<span style="font-size:1.3rem; flex-shrink:0;">' + s.icon + '</span>'
+                + '<div>'
+                + '<div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:3px;">' + escHtml(s.title) + '</div>'
+                + '<div style="font-size:0.75rem; color:var(--text-sub); line-height:1.5; word-break:keep-all;">' + escHtml(s.desc) + '</div>'
+                + '</div></div>';
+        }).join('');
+
+        var m = document.getElementById('infoModal');
+        if (m) { m.classList.remove('d-none'); m.classList.add('d-flex'); }
+    };
 
     // ── Util ──
     function escHtml(str) {

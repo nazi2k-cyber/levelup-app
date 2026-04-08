@@ -1202,8 +1202,9 @@
                 <span data-i18n="mov_title">내 영화</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
+                <button class="library-info-btn btn-info-sm" onclick="window.openMovieInfoModal()" data-i18n="btn_movie_info">가이드</button>
                 <button id="movie-share-btn" class="library-share-btn d-none" onclick="window.shareMovieAsImage()">
-                    🎬 <span data-i18n="mov_save_image">이미지 저장</span>
+                    🎬 <span data-i18n="lib_save_image">이미지 저장</span>
                 </button>
             </div>
         </div>
@@ -1230,8 +1231,8 @@
             <button class="mov-tab" data-cat="wantToWatch" onclick="window.switchMovieTab('wantToWatch')"><span data-i18n="mov_want_to_watch">보고 싶은 영화</span></button>
         </div>
         <div class="library-view-toggle">
-            <button class="lib-view-btn active" data-view="tower" onclick="window.switchMovieViewMode('tower')" data-i18n="mov_stack_view">쌓아보기</button>
-            <button class="lib-view-btn" data-view="list" onclick="window.switchMovieViewMode('list')" data-i18n="mov_list_view">리스트형 보기</button>
+            <button class="lib-view-btn active" data-view="tower" onclick="window.switchMovieViewMode('tower')" data-i18n="lib_stack_view">쌓아보기</button>
+            <button class="lib-view-btn" data-view="list" onclick="window.switchMovieViewMode('list')" data-i18n="lib_list_view">리스트형 보기</button>
             <div id="movie-theme-picker" class="tower-theme-picker">
                 <span class="tower-theme-dot active" data-theme="dark" onclick="window.switchMovieTowerTheme('dark')"></span>
                 <span class="tower-theme-dot" data-theme="warm" onclick="window.switchMovieTowerTheme('warm')"></span>
