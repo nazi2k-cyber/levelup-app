@@ -12,6 +12,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
+const APP_VERSION = '1.0.235';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -1394,6 +1395,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 안드로이드 뒤로가기(하드웨어) 버튼 핸들러 등록
     registerBackButtonHandler();
+
+    // 빌드 버전 표시
+    const versionEl = document.getElementById('build-version-number');
+    if (versionEl) versionEl.textContent = 'v' + APP_VERSION;
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
