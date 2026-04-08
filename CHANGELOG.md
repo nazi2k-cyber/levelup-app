@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.231] - 2026-04-08
+
+### 변경
+- 영화 뷰토글 스타일 통일 및 API 출처(source) 저장/표시 수정
+
 ## [1.0.230] - 2026-04-08
 
 ### 변경
