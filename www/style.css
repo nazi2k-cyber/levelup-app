@@ -1250,6 +1250,79 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     box-shadow: 0 4px 20px rgba(33, 150, 243, 0.15);
 }
 
+/* --- 알림/공지사항 카드 --- */
+.noti-section-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.72rem; font-weight: 700; color: var(--neon-blue);
+    margin-bottom: 6px; padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-color);
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+.noti-announcement-item {
+    padding: 10px 12px; margin-bottom: 6px;
+    background: rgba(0, 217, 255, 0.06);
+    border: 1px solid rgba(0, 217, 255, 0.15);
+    border-radius: 8px; cursor: default;
+}
+.noti-announcement-item .noti-ann-header {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+}
+.noti-announcement-item .noti-ann-title {
+    font-size: 0.82rem; font-weight: 700; color: var(--text-main);
+}
+.noti-announcement-item .noti-ann-body {
+    font-size: 0.75rem; color: var(--text-sub); line-height: 1.5;
+    word-break: keep-all;
+}
+.noti-badge-pinned {
+    display: inline-block; font-size: 0.6rem; font-weight: 700;
+    color: var(--neon-gold); background: rgba(255, 215, 0, 0.12);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+}
+.noti-history-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border-color);
+}
+.noti-history-item:last-child { border-bottom: none; }
+.noti-history-icon {
+    flex-shrink: 0; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem; border-radius: 50%;
+    background: rgba(0, 217, 255, 0.08);
+}
+.noti-history-body { flex: 1; min-width: 0; }
+.noti-history-title {
+    font-size: 0.78rem; font-weight: 600; color: var(--text-main);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.noti-history-text {
+    font-size: 0.72rem; color: var(--text-sub); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.noti-time {
+    font-size: 0.62rem; color: var(--text-sub); margin-top: 2px;
+}
+.noti-unread .noti-history-title { color: var(--neon-blue); }
+.noti-unread .noti-history-icon { background: rgba(0, 217, 255, 0.18); }
+.noti-empty {
+    text-align: center; padding: 16px 0;
+    font-size: 0.75rem; color: var(--text-sub);
+}
+.noti-badge-new {
+    display: inline-block; font-size: 0.55rem; font-weight: 800;
+    color: #fff; background: var(--neon-red, #ff5252);
+    padding: 1px 5px; border-radius: 3px; margin-left: 4px;
+    vertical-align: middle;
+}
+[data-theme="light"] .noti-announcement-item {
+    background: rgba(33, 150, 243, 0.06);
+    border-color: rgba(33, 150, 243, 0.15);
+}
+[data-theme="light"] .noti-history-icon {
+    background: rgba(33, 150, 243, 0.08);
+}
+
 /* --- 오프라인 상태 배너 --- */
 .offline-banner {
     position: fixed; top: 0; left: 0; right: 0; z-index: 10000;

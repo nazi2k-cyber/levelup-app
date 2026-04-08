@@ -555,6 +555,103 @@ async function handleSendAnnouncement(request) {
     return { success: true, messageId: response };
 }
 
+// ─── Admin: 공지사항 CRUD 핸들러 ───
+
+async function handleCreateAnnouncement(request) {
+    await assertAdmin(request);
+    const { title, body, pinned, active } = request.data || {};
+    if (!title || !body) {
+        throw new HttpsError("invalid-argument", "title과 body는 필수입니다.");
+    }
+    const now = require("firebase-admin/firestore").FieldValue.serverTimestamp();
+    const docRef = await db.collection("announcements").add({
+        title,
+        body,
+        pinned: pinned === true,
+        active: active !== false,
+        createdAt: now,
+        updatedAt: now,
+        author: request.auth?.token?.email || "unknown"
+    });
+    console.log("[공지사항] 생성:", docRef.id);
+    return { success: true, id: docRef.id };
+}
+
+async function handleUpdateAnnouncement(request) {
+    await assertAdmin(request);
+    const { docId, title, body, pinned, active } = request.data || {};
+    if (!docId) {
+        throw new HttpsError("invalid-argument", "docId는 필수입니다.");
+    }
+    const ref = db.collection("announcements").doc(docId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+        throw new HttpsError("not-found", "공지사항을 찾을 수 없습니다.");
+    }
+    const updates = { updatedAt: require("firebase-admin/firestore").FieldValue.serverTimestamp() };
+    if (title !== undefined) updates.title = title;
+    if (body !== undefined) updates.body = body;
+    if (pinned !== undefined) updates.pinned = pinned;
+    if (active !== undefined) updates.active = active;
+    await ref.update(updates);
+    console.log("[공지사항] 수정:", docId);
+    return { success: true };
+}
+
+async function handleDeleteAnnouncement(request) {
+    await assertAdmin(request);
+    const { docId } = request.data || {};
+    if (!docId) {
+        throw new HttpsError("invalid-argument", "docId는 필수입니다.");
+    }
+    await db.collection("announcements").doc(docId).delete();
+    console.log("[공지사항] 삭제:", docId);
+    return { success: true };
+}
+
+async function handleGetAnnouncements(request) {
+    await assertAdmin(request);
+    const snap = await db.collection("announcements").orderBy("createdAt", "desc").get();
+    const list = [];
+    snap.forEach(doc => {
+        const d = doc.data();
+        list.push({
+            id: doc.id,
+            title: d.title,
+            body: d.body,
+            pinned: d.pinned || false,
+            active: d.active !== false,
+            createdAt: d.createdAt ? d.createdAt.toMillis() : 0,
+            updatedAt: d.updatedAt ? d.updatedAt.toMillis() : 0,
+            author: d.author || ""
+        });
+    });
+    return { success: true, announcements: list };
+}
+
+async function handleGetActiveAnnouncements(request) {
+    // 일반 사용자도 호출 가능 (인증만 필요)
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+    const snap = await db.collection("announcements")
+        .where("active", "==", true)
+        .orderBy("createdAt", "desc")
+        .get();
+    const list = [];
+    snap.forEach(doc => {
+        const d = doc.data();
+        list.push({
+            id: doc.id,
+            title: d.title,
+            body: d.body,
+            pinned: d.pinned || false,
+            createdAt: d.createdAt ? d.createdAt.toMillis() : 0
+        });
+    });
+    return { success: true, announcements: list };
+}
+
 // ─── Admin: 유저 관리 핸들러 ───
 
 // 전체 유저 목록 조회 (관리자용)
@@ -1486,6 +1583,17 @@ exports.ping = onCall(pingCallableOpts, async (request) => {
                     return await handleSendTestNotification(request);
                 case "sendAnnouncement":
                     return await handleSendAnnouncement(request);
+                // ─── 공지사항 CRUD ───
+                case "createAnnouncement":
+                    return await handleCreateAnnouncement(request);
+                case "updateAnnouncement":
+                    return await handleUpdateAnnouncement(request);
+                case "deleteAnnouncement":
+                    return await handleDeleteAnnouncement(request);
+                case "getAnnouncements":
+                    return await handleGetAnnouncements(request);
+                case "getActiveAnnouncements":
+                    return await handleGetActiveAnnouncements(request);
                 case "getClientErrorLogs":
                     return await handleGetClientErrorLogs(request);
                 case "adminListUsers":

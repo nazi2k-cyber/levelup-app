@@ -1,7 +1,7 @@
 // --- Firebase SDK 초기화 ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, sendPasswordResetEmail, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, orderBy, limit, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 import { getRemoteConfig, fetchAndActivate, getValue, getString } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-remote-config.js";
@@ -790,7 +790,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote', 'notification'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -919,9 +919,10 @@ const STATUS_CARD_LABELS = {
     'my-library': { name_key: 'card_my_library', name: '내 서재', icon: '📚' },
     'my-movies': { name_key: 'card_my_movies', name: '내 영화', icon: '🎬' },
     'running-calc': { name_key: 'card_running_calc', name: '러닝 계산기', icon: '🏃' },
-    'orm-calc': { name_key: 'card_orm_calc', name: '1RM 계산기', icon: '🏋️' }
+    'orm-calc': { name_key: 'card_orm_calc', name: '1RM 계산기', icon: '🏋️' },
+    'notification': { name_key: 'card_notification', name: '알림', icon: '🔔' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote', 'notification'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -4074,7 +4075,7 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus(); if (window.AdManager) window.AdManager.renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount(); if (window.updateMovieCardCount) window.updateMovieCardCount();
+        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus(); if (window.AdManager) window.AdManager.renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount(); if (window.updateMovieCardCount) window.updateMovieCardCount(); if (window.NotificationModule) window.NotificationModule.render();
     } else {
         mainEl.style.overflowY = 'auto';
     }
@@ -10197,6 +10198,11 @@ function showInAppNotification(title, body, data) {
 
     document.body.appendChild(banner);
 
+    // 알림 이력 저장
+    if (window.NotificationModule) {
+        window.NotificationModule.addNotification(title, body, data?.type || 'unknown');
+    }
+
     // 5초 후 자동 제거
     setTimeout(() => {
         if (banner.parentNode) {
@@ -11017,6 +11023,13 @@ window.checkReadingRareTitles = checkReadingRareTitles;
 window.updateCameraToggleUI = updateCameraToggleUI;
 window.openAppSettings = openAppSettings;
 
+// 알림 모듈용 Firestore query 노출
+window._query = query;
+window._where = where;
+window._orderBy = orderBy;
+window._limit = limit;
+window._deleteDoc = deleteDoc;
+
 // --- Ad Manager 모듈 동적 로드 ---
 import('./modules/ad-manager.js').catch(e => console.error('[AdManager] 모듈 로드 실패:', e));
 
@@ -11034,3 +11047,6 @@ import('./modules/library.js').catch(e => console.error('[Library] 모듈 로드
 
 // --- Movie 모듈 동적 로드 ---
 import('./modules/movie.js').catch(e => console.error('[Movie] 모듈 로드 실패:', e));
+
+// --- Notification 모듈 동적 로드 ---
+import('./modules/notification.js').catch(e => console.error('[Notification] 모듈 로드 실패:', e));

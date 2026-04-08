@@ -380,6 +380,10 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
             <span class="tab-icon">🔐</span>
             <span class="tab-label">Permissions</span>
         </button>
+        <button class="tab-btn" data-tab="announcements" onclick="switchTab('announcements')">
+            <span class="tab-icon">📢</span>
+            <span class="tab-label">공지사항</span>
+        </button>
     </nav>
 
     <!-- ══════════════ Tab: Dashboard ══════════════ -->
@@ -882,6 +886,65 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
         </div>
     </div>
 
+    <!-- ══════════════ Tab: 공지사항 ══════════════ -->
+    <div class="tab-content" id="tab-announcements">
+        <div class="card" style="border-radius: 0 0 12px 12px; border-top: none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h2 style="margin:0;">공지사항 관리</h2>
+                <button class="btn btn-primary btn-sm" onclick="annShowForm()">+ 새 공지</button>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="annLoad()">목록 새로고침</button>
+            <div id="ann-list">로그인 후 확인 가능합니다.</div>
+        </div>
+
+        <!-- 공지사항 작성/수정 폼 -->
+        <div class="card" id="ann-form-card" style="display:none;">
+            <h2 id="ann-form-title">새 공지사항 작성</h2>
+            <input type="hidden" id="ann-edit-id" value="">
+
+            <div class="form-group">
+                <label>제목 (한국어) <span style="color:var(--error)">*</span></label>
+                <input type="text" id="ann-title-ko" placeholder="공지사항 제목 (한국어)">
+            </div>
+            <div class="form-group">
+                <label>제목 (English)</label>
+                <input type="text" id="ann-title-en" placeholder="Announcement title (English)">
+            </div>
+            <div class="form-group">
+                <label>제목 (日本語)</label>
+                <input type="text" id="ann-title-ja" placeholder="お知らせタイトル (日本語)">
+            </div>
+
+            <div class="form-group">
+                <label>본문 (한국어) <span style="color:var(--error)">*</span></label>
+                <textarea id="ann-body-ko" rows="3" placeholder="공지사항 본문 (한국어)" style="width:100%;resize:vertical;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>본문 (English)</label>
+                <textarea id="ann-body-en" rows="3" placeholder="Announcement body (English)" style="width:100%;resize:vertical;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>본문 (日本語)</label>
+                <textarea id="ann-body-ja" rows="3" placeholder="お知らせ本文 (日本語)" style="width:100%;resize:vertical;"></textarea>
+            </div>
+
+            <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px;">
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="checkbox" id="ann-pinned"> 📌 상단 고정
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="checkbox" id="ann-active" checked> ✅ 활성
+                </label>
+            </div>
+
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="annSave()">저장</button>
+                <button class="btn btn-ghost btn-sm" onclick="annHideForm()">취소</button>
+            </div>
+            <div id="ann-form-result" style="margin-top:8px;"></div>
+        </div>
+    </div>
+
 </div><!-- /admin-section -->
 
 </div><!-- /container -->
@@ -970,6 +1033,7 @@ window.switchTab = function(tabId) {
     document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("active"));
     document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add("active");
     document.getElementById("tab-" + tabId).classList.add("active");
+    if (tabId === 'announcements' && auth.currentUser) annLoad();
 };
 
 // ─── Firebase Init ───
@@ -1933,6 +1997,169 @@ window.permForceRefresh = async function() {
 
     refreshPermClaimView();
     initPermissionsTab();
+};
+
+// ══════════════ 공지사항 관리 ══════════════
+
+let annCache = [];
+
+window.annLoad = async function() {
+    const el = document.getElementById("ann-list");
+    el.innerHTML = '<span style="color:var(--text-sub)">로딩 중...</span>';
+    try {
+        const ping = httpsCallable(functions, "ping");
+        const result = await ping({ action: "getAnnouncements" });
+        annCache = result.data.announcements || [];
+        annRenderList();
+        tok("Announcements", `${annCache.length}건의 공지사항 조회`);
+    } catch (e) {
+        el.innerHTML = `<span style="color:var(--error)">오류: ${esc(e.message)}</span>`;
+        terror("Announcements", "getAnnouncements error: " + e.message);
+    }
+};
+
+function annRenderList() {
+    const el = document.getElementById("ann-list");
+    if (annCache.length === 0) {
+        el.innerHTML = '<span style="color:var(--text-sub)">등록된 공지사항이 없습니다.</span>';
+        return;
+    }
+    let html = '<table style="width:100%;font-size:0.82rem;border-collapse:collapse;">'
+        + '<thead><tr><th style="text-align:left;padding:6px;">제목(ko)</th><th>상태</th><th>고정</th><th>작성일</th><th>작업</th></tr></thead><tbody>';
+    annCache.forEach(ann => {
+        const titleKo = (ann.title && typeof ann.title === 'object') ? (ann.title.ko || '') : (ann.title || '');
+        const statusBadge = ann.active
+            ? '<span class="badge badge-success">활성</span>'
+            : '<span class="badge badge-error">비활성</span>';
+        const pinBadge = ann.pinned
+            ? '<span class="badge badge-warning">📌 고정</span>'
+            : '<span style="color:var(--text-sub)">—</span>';
+        const date = ann.createdAt ? new Date(ann.createdAt).toLocaleDateString('ko-KR') : '—';
+        html += `<tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 6px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(titleKo)}</td>
+            <td style="text-align:center;padding:8px 4px;">${statusBadge}</td>
+            <td style="text-align:center;padding:8px 4px;">${pinBadge}</td>
+            <td style="text-align:center;padding:8px 4px;font-size:0.75rem;color:var(--text-sub);">${date}</td>
+            <td style="text-align:center;padding:8px 4px;white-space:nowrap;">
+                <button class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:2px 8px;" onclick="annEdit('${esc(ann.id)}')">수정</button>
+                <button class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:2px 8px;color:var(--error);border-color:var(--error);" onclick="annDelete('${esc(ann.id)}')">삭제</button>
+                <button class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:2px 8px;color:var(--accent);border-color:var(--accent);" onclick="annPublish('${esc(ann.id)}')" title="푸시 발송">📤</button>
+            </td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+window.annShowForm = function(ann) {
+    document.getElementById("ann-form-card").style.display = "";
+    document.getElementById("ann-form-result").innerHTML = "";
+    if (ann) {
+        document.getElementById("ann-form-title").textContent = "공지사항 수정";
+        document.getElementById("ann-edit-id").value = ann.id;
+        const t = ann.title || {}; const b = ann.body || {};
+        document.getElementById("ann-title-ko").value = (typeof t === 'object' ? t.ko : t) || '';
+        document.getElementById("ann-title-en").value = (typeof t === 'object' ? t.en : '') || '';
+        document.getElementById("ann-title-ja").value = (typeof t === 'object' ? t.ja : '') || '';
+        document.getElementById("ann-body-ko").value = (typeof b === 'object' ? b.ko : b) || '';
+        document.getElementById("ann-body-en").value = (typeof b === 'object' ? b.en : '') || '';
+        document.getElementById("ann-body-ja").value = (typeof b === 'object' ? b.ja : '') || '';
+        document.getElementById("ann-pinned").checked = ann.pinned || false;
+        document.getElementById("ann-active").checked = ann.active !== false;
+    } else {
+        document.getElementById("ann-form-title").textContent = "새 공지사항 작성";
+        document.getElementById("ann-edit-id").value = "";
+        document.getElementById("ann-title-ko").value = "";
+        document.getElementById("ann-title-en").value = "";
+        document.getElementById("ann-title-ja").value = "";
+        document.getElementById("ann-body-ko").value = "";
+        document.getElementById("ann-body-en").value = "";
+        document.getElementById("ann-body-ja").value = "";
+        document.getElementById("ann-pinned").checked = false;
+        document.getElementById("ann-active").checked = true;
+    }
+    document.getElementById("ann-form-card").scrollIntoView({ behavior: 'smooth' });
+};
+
+window.annHideForm = function() {
+    document.getElementById("ann-form-card").style.display = "none";
+};
+
+window.annEdit = function(id) {
+    const ann = annCache.find(a => a.id === id);
+    if (ann) annShowForm(ann);
+};
+
+window.annSave = async function() {
+    const el = document.getElementById("ann-form-result");
+    const editId = document.getElementById("ann-edit-id").value;
+    const titleKo = document.getElementById("ann-title-ko").value.trim();
+    const bodyKo = document.getElementById("ann-body-ko").value.trim();
+    if (!titleKo || !bodyKo) {
+        el.innerHTML = '<span style="color:var(--error)">한국어 제목과 본문은 필수입니다.</span>';
+        return;
+    }
+    const payload = {
+        title: {
+            ko: titleKo,
+            en: document.getElementById("ann-title-en").value.trim() || titleKo,
+            ja: document.getElementById("ann-title-ja").value.trim() || titleKo
+        },
+        body: {
+            ko: bodyKo,
+            en: document.getElementById("ann-body-en").value.trim() || bodyKo,
+            ja: document.getElementById("ann-body-ja").value.trim() || bodyKo
+        },
+        pinned: document.getElementById("ann-pinned").checked,
+        active: document.getElementById("ann-active").checked
+    };
+    el.innerHTML = '<span style="color:var(--text-sub)">저장 중...</span>';
+    try {
+        const ping = httpsCallable(functions, "ping");
+        if (editId) {
+            await ping({ action: "updateAnnouncement", docId: editId, ...payload });
+            tok("Announcements", "공지사항 수정 완료: " + editId);
+        } else {
+            await ping({ action: "createAnnouncement", ...payload });
+            tok("Announcements", "공지사항 생성 완료");
+        }
+        el.innerHTML = '<span style="color:var(--success)">✓ 저장 완료</span>';
+        annHideForm();
+        annLoad();
+    } catch (e) {
+        el.innerHTML = `<span style="color:var(--error)">오류: ${esc(e.message)}</span>`;
+        terror("Announcements", "saveAnnouncement error: " + e.message);
+    }
+};
+
+window.annDelete = async function(id) {
+    if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
+    try {
+        const ping = httpsCallable(functions, "ping");
+        await ping({ action: "deleteAnnouncement", docId: id });
+        tok("Announcements", "공지사항 삭제 완료: " + id);
+        annLoad();
+    } catch (e) {
+        alert("삭제 실패: " + e.message);
+        terror("Announcements", "deleteAnnouncement error: " + e.message);
+    }
+};
+
+window.annPublish = async function(id) {
+    const ann = annCache.find(a => a.id === id);
+    if (!ann) return;
+    const titleKo = (ann.title && typeof ann.title === 'object') ? (ann.title.ko || '') : (ann.title || '');
+    const bodyKo = (ann.body && typeof ann.body === 'object') ? (ann.body.ko || '') : (ann.body || '');
+    if (!confirm(`이 공지사항을 푸시로 발송하시겠습니까?\n\n제목: ${titleKo}\n본문: ${bodyKo}`)) return;
+    try {
+        const ping = httpsCallable(functions, "ping");
+        await ping({ action: "sendAnnouncement", title: titleKo, body: bodyKo });
+        tok("Announcements", "공지사항 푸시 발송 완료: " + id);
+        alert("푸시 발송 완료");
+    } catch (e) {
+        alert("발송 실패: " + e.message);
+        terror("Announcements", "sendAnnouncement error: " + e.message);
+    }
 };
 </script>
 </body>

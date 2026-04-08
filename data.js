@@ -551,6 +551,13 @@ const i18n = {
         card_running_calc: "러닝 계산기",
         card_orm_calc: "1RM 계산기",
         card_step_count: "걸음수",
+        card_notification: "알림",
+        noti_announcements: "공지사항", noti_push_history: "수신 알림",
+        noti_no_announcements: "등록된 공지사항이 없습니다.",
+        noti_no_history: "수신된 알림이 없습니다.",
+        noti_pinned: "고정", noti_clear_history: "이력 지우기",
+        noti_clear_confirm: "알림 이력을 모두 삭제하시겠습니까?",
+        noti_new_badge: "NEW",
 
         // My Movies (내 영화)
         mov_title: "내 영화", mov_yearly: "연간", mov_detail: "상세", mov_unit: " 편",
@@ -1134,6 +1141,13 @@ const i18n = {
         card_running_calc: "Running Calculator",
         card_orm_calc: "1RM Calculator",
         card_step_count: "Steps",
+        card_notification: "Notifications",
+        noti_announcements: "Announcements", noti_push_history: "Push History",
+        noti_no_announcements: "No announcements.",
+        noti_no_history: "No notifications yet.",
+        noti_pinned: "Pinned", noti_clear_history: "Clear History",
+        noti_clear_confirm: "Clear all notification history?",
+        noti_new_badge: "NEW",
 
         // My Movies
         mov_title: "My Movies", mov_yearly: "Yearly", mov_detail: "Details", mov_unit: " movies",
@@ -1717,6 +1731,13 @@ const i18n = {
         card_running_calc: "ランニング計算機",
         card_orm_calc: "1RM計算機",
         card_step_count: "歩数",
+        card_notification: "お知らせ",
+        noti_announcements: "お知らせ", noti_push_history: "受信通知",
+        noti_no_announcements: "お知らせはありません。",
+        noti_no_history: "受信した通知はありません。",
+        noti_pinned: "固定", noti_clear_history: "履歴を削除",
+        noti_clear_confirm: "通知履歴をすべて削除しますか？",
+        noti_new_badge: "NEW",
 
         // マイ映画
         mov_title: "マイ映画", mov_yearly: "年間", mov_detail: "詳細", mov_unit: " 本",

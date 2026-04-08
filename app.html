@@ -518,6 +518,19 @@
                     </button>
                 </div>
 
+                <!-- Notification Card (알림/공지사항) -->
+                <div class="system-card status-reorderable" data-card-id="notification" style="margin-top: 10px; margin-bottom: 0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.2rem;">🔔</span>
+                            <h2 style="margin:0;" data-i18n="card_notification">알림</h2>
+                        </div>
+                        <button class="btn-info-sm" id="btn-noti-clear" style="font-size:0.7rem;" data-i18n="noti_clear_history">이력 지우기</button>
+                    </div>
+                    <div id="noti-announcements-area"></div>
+                    <div id="noti-history-area"></div>
+                </div>
+
                 <!-- btn-myinfo removed: replaced by hamburger menu -->
                 <button class="btn-myinfo" id="btn-myinfo" data-i18n="btn_myinfo" style="display:none;">&#9881; 내 정보</button>
 
