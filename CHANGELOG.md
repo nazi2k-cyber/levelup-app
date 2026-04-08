@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.233] - 2026-04-08
+
+### 변경
+- 타워/이미지 최신순 정렬 수정 및 리스트뷰 상세모달 연결
+
 ## [1.0.232] - 2026-04-08
 
 ### 변경
