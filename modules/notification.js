@@ -231,10 +231,17 @@
             backBtn.addEventListener('click', closeModal);
         }
 
-        // 홈 화면 편집에서 알림 버튼
-        const editorBtn = document.getElementById('btn-editor-notification');
-        if (editorBtn) {
-            editorBtn.addEventListener('click', openModal);
+        // 햄버거 메뉴에서 알림 버튼
+        const notiBtn = document.getElementById('btn-open-notification');
+        if (notiBtn) {
+            notiBtn.addEventListener('click', () => {
+                // 햄버거 메뉴 닫기
+                const popup = document.getElementById('hamburger-menu-popup');
+                const backdrop = document.getElementById('hamburger-menu-backdrop');
+                if (popup) popup.classList.add('d-none');
+                if (backdrop) backdrop.classList.add('d-none');
+                openModal();
+            });
         }
 
         updateUnreadBadge();

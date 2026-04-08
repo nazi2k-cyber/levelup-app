@@ -1341,21 +1341,8 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 [data-theme="light"] .notification-modal { background: #f5f5f5; }
 [data-theme="light"] .notification-modal-header { background: #f5f5f5; }
 
-/* 홈 화면 편집 하단 액션 영역 */
-.editor-bottom-actions {
-    padding: 12px 16px 30px; border-top: 1px solid var(--border-color);
-    margin-top: 8px;
-}
-.editor-action-btn {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 14px 16px;
-    background: var(--panel-bg); border: 1px solid var(--border-color);
-    border-radius: 12px; color: var(--text-main);
-    font-size: 0.9rem; font-weight: 600; cursor: pointer;
-    transition: background 0.15s;
-}
-.editor-action-btn:active { background: rgba(0, 217, 255, 0.08); }
-.noti-editor-badge {
+/* 햄버거 메뉴 알림 배지 */
+.noti-hamburger-badge {
     display: inline-block; background: var(--neon-red, #ff5252);
     color: #fff; font-size: 0.6rem; font-weight: 800;
     padding: 2px 6px; border-radius: 8px; margin-left: auto;
