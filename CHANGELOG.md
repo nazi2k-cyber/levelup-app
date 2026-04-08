@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.237] - 2026-04-08
+
+### 변경
+- fix: CI 빌드 실패 수정 — main 브랜치 직접 push 방지
+
 ## [1.0.236] - 2026-04-08
 
 ### 변경
