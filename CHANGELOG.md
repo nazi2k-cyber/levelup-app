@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.232] - 2026-04-08
+
+### 변경
+- 리스트뷰 최신 등록순 정렬 수정 및 API 출처 뱃지 추가
+
 ## [1.0.231] - 2026-04-08
 
 ### 변경
