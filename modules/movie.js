@@ -511,7 +511,13 @@
             });
         }
 
-        filtered.sort(function(a, b) { return (b.addedDate || '').localeCompare(a.addedDate || ''); });
+        filtered.sort(function(a, b) {
+            var cmp = (b.addedDate || '').localeCompare(a.addedDate || '');
+            if (cmp !== 0) return cmp;
+            // 같은 날짜면 나중에 추가된 항목이 위로 (배열 인덱스 역순)
+            var items = (AppState.movies && AppState.movies.items) || [];
+            return items.indexOf(b) - items.indexOf(a);
+        });
         return filtered;
     }
 
@@ -641,7 +647,12 @@
                 html += '<div style="font-size:0.68rem; color:var(--text-sub); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + escHtml(subTitle) + '</div>';
             }
             if (m.director) {
-                html += '<div style="font-size:0.7rem; color:var(--text-sub);">' + escHtml(m.director) + '</div>';
+                var srcBadge = '';
+                if (m.source) {
+                    var sl = m.source === 'kobis' ? 'KOBIS' : m.source === 'kmdb' ? 'KMDb' : m.source;
+                    srcBadge = ' <span class="source-badge source-' + escHtml(m.source) + '">' + escHtml(sl) + '</span>';
+                }
+                html += '<div style="font-size:0.7rem; color:var(--text-sub);">' + escHtml(m.director) + srcBadge + '</div>';
             }
             html += '<div style="font-size:0.7rem; color:var(--text-sub); margin-top:2px;">';
             if (yr) html += yr;
