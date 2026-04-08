@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.225] - 2026-04-08
+
+### 변경
+- feat: 내 영화 상태창 추가 (TMDB API, i18n, INT 보상, IIFE 모듈)
+
 ## [1.0.224] - 2026-04-08
 
 ### 변경
