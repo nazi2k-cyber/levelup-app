@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.236] - 2026-04-08
+
+### 변경
+- 설정 화면 최하단에 빌드 버전 표시 추가
+
 ## [1.0.235] - 2026-04-08
 
 ### 변경
