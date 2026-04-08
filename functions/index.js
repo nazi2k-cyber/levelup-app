@@ -1268,7 +1268,7 @@ async function handleSearchBooks(request) {
     return { books: [], hasMore: false, totalCount: 0 };
 }
 
-// ─── 영화 키워드 검색 (TMDB API) ───
+// ─── 영화 키워드 검색 (KOBIS → KMDb 폴백) ───
 async function handleSearchMovies(request) {
     const query = (request.data?.query || "").trim();
     const page = Math.max(1, parseInt(request.data?.page) || 1);
@@ -1276,94 +1276,196 @@ async function handleSearchMovies(request) {
         throw new HttpsError("invalid-argument", "검색어를 입력해주세요.");
     }
 
-    const tmdbKey = process.env.TMDB_API_KEY;
-    if (!tmdbKey) {
-        console.warn("[searchMovies] TMDB_API_KEY not configured");
+    const kobisKey = process.env.KOBIS_API_KEY;
+    const kmdbKey = process.env.KMDB_API_KEY;
+    if (!kobisKey && !kmdbKey) {
+        console.warn("[searchMovies] KOBIS_API_KEY / KMDB_API_KEY not configured");
         throw new HttpsError("unavailable", "Movie search is not configured.");
     }
 
-    try {
-        const url = `https://api.themoviedb.org/3/search/movie?api_key=${tmdbKey}&query=${encodeURIComponent(query)}&page=${page}&language=ko-KR&include_adult=false`;
-        const res = await fetch(url);
-        if (!res.ok) {
-            console.warn(`[searchMovies] TMDB HTTP ${res.status}: ${res.statusText}`);
-            throw new HttpsError("unavailable", `TMDB API error: ${res.status}`);
+    // 1) KOBIS 영화목록 검색
+    if (kobisKey) {
+        try {
+            const url = `https://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieList.json?key=${kobisKey}&movieNm=${encodeURIComponent(query)}&curPage=${page}&itemPerPage=20`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                const list = data?.movieListResult?.movieList || [];
+                if (list.length > 0) {
+                    const totalCnt = parseInt(data.movieListResult.totCnt) || 0;
+                    const movies = list.map(m => {
+                        const openDt = (m.openDt || "").replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3");
+                        const dirs = (m.directors || []).map(d => d.peopleNm).filter(Boolean).join(", ");
+                        return {
+                            movieCd: m.movieCd || "",
+                            title: m.movieNm || "",
+                            titleEn: m.movieNmEn || "",
+                            year: m.prdtYear || "",
+                            openDate: openDt,
+                            genres: m.genreAlt || "",
+                            directors: dirs,
+                            source: "kobis"
+                        };
+                    });
+                    return {
+                        movies,
+                        hasMore: page * 20 < totalCnt,
+                        totalCount: totalCnt
+                    };
+                }
+            } else {
+                console.warn(`[searchMovies] KOBIS HTTP ${res.status}`);
+            }
+        } catch (e) {
+            console.warn("[searchMovies] KOBIS error:", e.message);
         }
-        const data = await res.json();
-        if (data.results && data.results.length > 0) {
-            const movies = data.results.map(m => ({
-                tmdbId: m.id,
-                title: m.title || m.original_title || "",
-                originalTitle: m.original_title || "",
-                posterPath: m.poster_path || "",
-                releaseDate: m.release_date || "",
-                voteAverage: m.vote_average || 0,
-                overview: m.overview || "",
-                genreIds: m.genre_ids || []
-            }));
-            return {
-                movies: movies,
-                hasMore: page < (data.total_pages || 1),
-                totalCount: data.total_results || 0
-            };
+    }
+
+    // 2) KMDb 폴백
+    if (kmdbKey) {
+        try {
+            const startCount = (page - 1) * 20;
+            const url = `https://api.koreafilm.or.kr/openapi-data2/wisenut/search_api/search_json2.jsp?collection=kmdb_new2&detail=Y&ServiceKey=${kmdbKey}&query=${encodeURIComponent(query)}&startCount=${startCount}&listCount=20`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                const resultSet = (data?.Data || [])[0];
+                const list = resultSet?.Result || [];
+                const totalCnt = parseInt(resultSet?.TotalCount) || 0;
+                if (list.length > 0) {
+                    const movies = list.map(m => {
+                        const cleanTitle = (m.title || "").replace(/!HS|!HE/g, "").trim();
+                        const dirs = (m.directors?.director || []).map(d => d.directorNm).filter(Boolean).join(", ");
+                        return {
+                            movieCd: "kmdb_" + (m.DOCID || ""),
+                            title: cleanTitle,
+                            titleEn: m.titleEng || "",
+                            year: m.prodYear || "",
+                            openDate: (m.repRlsDate || "").replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3"),
+                            genres: m.genre || "",
+                            directors: dirs,
+                            source: "kmdb"
+                        };
+                    });
+                    return {
+                        movies,
+                        hasMore: startCount + 20 < totalCnt,
+                        totalCount: totalCnt
+                    };
+                }
+            } else {
+                console.warn(`[searchMovies] KMDb HTTP ${res.status}`);
+            }
+        } catch (e) {
+            console.warn("[searchMovies] KMDb error:", e.message);
         }
-    } catch (e) {
-        if (e instanceof HttpsError) throw e;
-        console.warn("[searchMovies] TMDB error:", e.message);
     }
 
     return { movies: [], hasMore: false, totalCount: 0 };
 }
 
-// ─── 영화 상세 조회 (TMDB API) ───
+// ─── 영화 상세 조회 (KOBIS + KMDb 보강) ───
 async function handleLookupMovie(request) {
-    const tmdbId = String(request.data?.tmdbId || "").trim();
-    if (!tmdbId) {
-        throw new HttpsError("invalid-argument", "Movie ID is required.");
+    const movieCd = String(request.data?.movieCd || "").trim();
+    const title = String(request.data?.title || "").trim();
+    const year = String(request.data?.year || "").trim();
+    const source = String(request.data?.source || "kobis").trim();
+    if (!movieCd && !title) {
+        throw new HttpsError("invalid-argument", "Movie ID or title is required.");
     }
 
-    const tmdbKey = process.env.TMDB_API_KEY;
-    if (!tmdbKey) {
-        throw new HttpsError("unavailable", "Movie search is not configured.");
-    }
+    const kobisKey = process.env.KOBIS_API_KEY;
+    const kmdbKey = process.env.KMDB_API_KEY;
 
-    try {
-        const url = `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${tmdbKey}&language=ko-KR&append_to_response=credits`;
-        const res = await fetch(url);
-        if (!res.ok) {
-            console.warn(`[lookupMovie] TMDB HTTP ${res.status}`);
-            return { movie: null };
-        }
-        const d = await res.json();
+    let kobisDetail = null;
+    let kmdbDetail = null;
 
-        const directors = (d.credits?.crew || [])
-            .filter(c => c.job === "Director")
-            .map(c => c.name)
-            .join(", ");
-        const castArr = (d.credits?.cast || [])
-            .slice(0, 5)
-            .map(c => c.name);
-        const genres = (d.genres || []).map(g => g.name).join(", ");
-
-        return {
-            movie: {
-                tmdbId: d.id,
-                title: d.title || d.original_title || "",
-                originalTitle: d.original_title || "",
-                director: directors,
-                cast: castArr.join(", "),
-                posterPath: d.poster_path || "",
-                releaseDate: d.release_date || "",
-                voteAverage: d.vote_average || 0,
-                overview: d.overview || "",
-                genres: genres,
-                runtime: d.runtime || 0
+    // 1) KOBIS 영화상세 (source가 kobis인 경우)
+    if (kobisKey && source !== "kmdb" && movieCd && !movieCd.startsWith("kmdb_")) {
+        try {
+            const url = `https://www.kobis.or.kr/kobisopenapi/webservice/rest/movie/searchMovieInfo.json?key=${kobisKey}&movieCd=${movieCd}`;
+            const res = await fetch(url);
+            if (res.ok) {
+                const data = await res.json();
+                const info = data?.movieInfoResult?.movieInfo;
+                if (info) {
+                    const dirs = (info.directors || []).map(d => d.peopleNm).filter(Boolean).join(", ");
+                    const actors = (info.actors || []).slice(0, 5).map(a => a.peopleNm).filter(Boolean).join(", ");
+                    const genres = (info.genres || []).map(g => g.genreNm).filter(Boolean).join(", ");
+                    const watchGrade = (info.audits || []).map(a => a.watchGradeNm).filter(Boolean)[0] || "";
+                    const openDt = (info.openDt || "").replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3");
+                    kobisDetail = {
+                        movieCd: info.movieCd || movieCd,
+                        title: info.movieNm || title,
+                        titleEn: info.movieNmEn || "",
+                        directors: dirs,
+                        cast: actors,
+                        genres,
+                        watchGrade,
+                        releaseDate: openDt,
+                        runtime: parseInt(info.showTm) || 0
+                    };
+                }
             }
-        };
-    } catch (e) {
-        console.warn("[lookupMovie] TMDB error:", e.message);
+        } catch (e) {
+            console.warn("[lookupMovie] KOBIS error:", e.message);
+        }
+    }
+
+    // 2) KMDb 검색 (포스터 + 줄거리 보강)
+    if (kmdbKey && title) {
+        try {
+            let kmdbUrl = `https://api.koreafilm.or.kr/openapi-data2/wisenut/search_api/search_json2.jsp?collection=kmdb_new2&detail=Y&ServiceKey=${kmdbKey}&title=${encodeURIComponent(title)}&listCount=1`;
+            if (year) {
+                kmdbUrl += `&releaseDts=${year}0101&releaseDte=${year}1231`;
+            }
+            const res = await fetch(kmdbUrl);
+            if (res.ok) {
+                const data = await res.json();
+                const resultSet = (data?.Data || [])[0];
+                const item = (resultSet?.Result || [])[0];
+                if (item) {
+                    const posters = (item.posters || "").split("|").filter(Boolean);
+                    const plots = item.plots?.plot || [];
+                    const koPlot = plots.find(p => p.plotLang === "한국어") || plots[0];
+                    const dirs = (item.directors?.director || []).map(d => d.directorNm).filter(Boolean).join(", ");
+                    const actors = (item.actors?.actor || []).slice(0, 5).map(a => a.actorNm).filter(Boolean).join(", ");
+                    kmdbDetail = {
+                        posterUrl: posters[0] || "",
+                        overview: koPlot?.plotText || "",
+                        directors: dirs,
+                        cast: actors,
+                        genres: item.genre || "",
+                        runtime: parseInt(item.runtime) || 0,
+                        rating: item.rating || ""
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn("[lookupMovie] KMDb error:", e.message);
+        }
+    }
+
+    if (!kobisDetail && !kmdbDetail) {
         return { movie: null };
     }
+
+    // 3) 두 소스 병합
+    return {
+        movie: {
+            movieCd: kobisDetail?.movieCd || movieCd,
+            title: kobisDetail?.title || title,
+            titleEn: kobisDetail?.titleEn || "",
+            director: kobisDetail?.directors || kmdbDetail?.directors || "",
+            cast: kobisDetail?.cast || kmdbDetail?.cast || "",
+            posterUrl: kmdbDetail?.posterUrl || "",
+            releaseDate: kobisDetail?.releaseDate || "",
+            watchGrade: kobisDetail?.watchGrade || kmdbDetail?.rating || "",
+            overview: kmdbDetail?.overview || "",
+            genres: kobisDetail?.genres || kmdbDetail?.genres || "",
+            runtime: kobisDetail?.runtime || kmdbDetail?.runtime || 0
+        }
+    };
 }
 
 exports.ping = onCall(pingCallableOpts, async (request) => {
