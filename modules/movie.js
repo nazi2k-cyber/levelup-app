@@ -131,10 +131,13 @@
         if (input) input.value = '';
         var cb = document.getElementById('movie-local-filter');
         if (cb) cb.checked = false;
-        // 뷰 토글 UI 초기화
-        document.querySelectorAll('.mov-view-btn').forEach(function(btn) {
-            btn.classList.toggle('active', btn.dataset.view === 'tower');
-        });
+        // 뷰 토글 UI 초기화 (영화 오버레이 내부만)
+        var movOverlay = document.getElementById('movie-overlay');
+        if (movOverlay) {
+            movOverlay.querySelectorAll('.lib-view-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.view === 'tower');
+            });
+        }
         updateMoviePeriodLabels();
         updateMoviePeriodCounts();
         updateMovieTabUI();
@@ -206,7 +209,7 @@
 
     // ── 메인 콘텐츠 표시/숨김 (검색 시 결과만 표시) ──
     function showMovieMainContent(show) {
-        var selectors = '#movie-overlay .library-count-bar, #movie-overlay .library-tabs, #movie-overlay .movie-view-toggle, #movie-content';
+        var selectors = '#movie-overlay .library-count-bar, #movie-overlay .library-tabs, #movie-overlay .library-view-toggle, #movie-content';
         var els = document.querySelectorAll(selectors);
         els.forEach(function(el) {
             el.style.display = show ? '' : 'none';
@@ -427,6 +430,7 @@
             watchGrade: detail.watchGrade || '',
             overview: detail.overview || '',
             genres: detail.genres || '',
+            source: detail.source || null,
             category: category,
             addedDate: todayStr(),
             finishedDate: category === 'watched' ? todayStr() : null,
@@ -535,9 +539,12 @@
     // ── 뷰 모드 전환 ──
     window.switchMovieViewMode = function(mode) {
         _movViewMode = mode;
-        document.querySelectorAll('.mov-view-btn').forEach(function(btn) {
-            btn.classList.toggle('active', btn.dataset.view === mode);
-        });
+        var movOverlay = document.getElementById('movie-overlay');
+        if (movOverlay) {
+            movOverlay.querySelectorAll('.lib-view-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.view === mode);
+            });
+        }
         renderMovieList();
     };
 
@@ -691,7 +698,7 @@
         // API 출처
         if (m.source) {
             var srcLabel = m.source === 'kobis' ? 'KOBIS' : m.source === 'kmdb' ? 'KMDb' : m.source;
-            html += '<div class="book-detail-source"><span class="source-badge">' + escHtml(srcLabel) + '</span></div>';
+            html += '<div class="book-detail-source"><span class="source-badge source-' + escHtml(m.source) + '">' + escHtml(srcLabel) + '</span></div>';
         }
         html += '</div></div>';
 
