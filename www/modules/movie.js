@@ -19,6 +19,8 @@
     let _apiSearchQuery = '';
     let _searchDebounce = null;
     let _lastSearchError = false;
+    let _movViewMode = 'tower';
+    let _movTowerTheme = 'dark';
 
     function t(key) {
         const lang = (AppState && AppState.currentLang) || 'ko';
@@ -124,13 +126,19 @@
         _apiSearchPage = 1;
         _apiSearchHasMore = false;
         _lastSearchError = false;
+        _movViewMode = 'tower';
         var input = document.getElementById('movie-search-input');
         if (input) input.value = '';
         var cb = document.getElementById('movie-local-filter');
         if (cb) cb.checked = false;
+        // 뷰 토글 UI 초기화
+        document.querySelectorAll('.mov-view-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.view === 'tower');
+        });
         updateMoviePeriodLabels();
         updateMoviePeriodCounts();
         updateMovieTabUI();
+        showMovieMainContent(true);
         renderMovieList();
         hideMovieSearchResults();
     };
@@ -196,6 +204,15 @@
         if (elM) elM.textContent = monthlyCount;
     }
 
+    // ── 메인 콘텐츠 표시/숨김 (검색 시 결과만 표시) ──
+    function showMovieMainContent(show) {
+        var selectors = '#movie-overlay .library-count-bar, #movie-overlay .library-tabs, #movie-overlay .movie-view-toggle, #movie-content';
+        var els = document.querySelectorAll(selectors);
+        els.forEach(function(el) {
+            el.style.display = show ? '' : 'none';
+        });
+    }
+
     // ── Search ──
     window.filterMovieList = function(query) {
         _movSearchQuery = (query || '').trim();
@@ -208,11 +225,13 @@
 
         if (_movSearchQuery.length < 2) {
             hideMovieSearchResults();
+            showMovieMainContent(true);
             renderMovieList();
             return;
         }
 
-        // 검색 중 표시
+        // 검색 중 표시 — 메인 콘텐츠 숨기고 검색 결과 영역만 표시
+        showMovieMainContent(false);
         var container = document.getElementById('movie-search-results');
         if (container) {
             container.classList.remove('d-none');
@@ -233,10 +252,13 @@
         _movLocalSearch = checked;
         if (checked) {
             hideMovieSearchResults();
+            showMovieMainContent(true);
             renderMovieList();
         } else {
             if (_movSearchQuery.length >= 2) {
                 window.filterMovieList(_movSearchQuery);
+            } else {
+                showMovieMainContent(true);
             }
         }
     };
@@ -322,8 +344,16 @@
         var poster = detail.posterUrl || '';
         var year = detail.releaseDate ? detail.releaseDate.substring(0, 4) : '';
 
+        // API 출처 라벨
+        var sourceLabel = '';
+        if (detail.source === 'kobis') sourceLabel = 'KOBIS';
+        else if (detail.source === 'kmdb') sourceLabel = 'KMDb';
+
         var modalHtml = '<div class="modal-overlay" id="movie-add-modal" onclick="window.closeMovieAddModal(event)" style="display:flex; align-items:center; justify-content:center; z-index:300;">';
-        modalHtml += '<div class="modal-content" onclick="event.stopPropagation()" style="max-width:340px; width:90%; max-height:80vh; overflow-y:auto; padding:16px;">';
+        modalHtml += '<div class="modal-content" onclick="event.stopPropagation()" style="max-width:340px; width:90%; max-height:80vh; overflow-y:auto; padding:16px; position:relative;">';
+
+        // X 닫기 버튼
+        modalHtml += '<button onclick="var m=document.getElementById(\'movie-add-modal\'); if(m) m.remove(); window._pendingMovieDetail=null;" style="position:absolute; top:8px; right:10px; background:none; border:none; color:var(--text-sub); font-size:1.2rem; cursor:pointer; padding:4px 8px; z-index:1;">✕</button>';
 
         if (poster) {
             modalHtml += '<div style="text-align:center; margin-bottom:12px;"><img src="' + poster + '" style="max-height:200px; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.3);" onerror="this.style.display=\'none\'"></div>';
@@ -346,6 +376,11 @@
             modalHtml += '<div style="font-size:0.72rem; color:var(--text-sub); line-height:1.5; margin-bottom:12px; max-height:80px; overflow-y:auto;">' + escHtml(detail.overview) + '</div>';
         }
 
+        // API 출처 뱃지
+        if (sourceLabel) {
+            modalHtml += '<div style="margin-bottom:10px; text-align:right;"><span style="font-size:0.6rem; padding:2px 8px; border-radius:3px; background:rgba(0,217,255,0.1); color:var(--neon-cyan); border:1px solid rgba(0,217,255,0.2);">' + sourceLabel + '</span></div>';
+        }
+
         modalHtml += '<div style="display:flex; flex-direction:column; gap:8px;">';
         modalHtml += '<button class="btn-primary" style="padding:10px; font-size:0.85rem;" onclick="window.addMovieFromPending(\'watched\')">' + t('mov_add_watched') + '</button>';
         modalHtml += '<button class="btn-primary" style="padding:10px; font-size:0.85rem; background:var(--neon-cyan);" onclick="window.addMovieFromPending(\'watching\')">' + t('mov_add_watching') + '</button>';
@@ -359,7 +394,7 @@
     };
 
     window.closeMovieAddModal = function(e) {
-        if (e && e.target && !e.target.id) return;
+        if (e && e.target && e.target.id !== 'movie-add-modal') return;
         var modal = document.getElementById('movie-add-modal');
         if (modal) modal.remove();
         window._pendingMovieDetail = null;
@@ -420,7 +455,7 @@
         updateMoviePeriodCounts();
         renderMovieList();
         window.updateMovieCardCount();
-        if (window.saveState) window.saveState();
+        if (window.saveUserData) window.saveUserData();
 
         alert(t('mov_added'));
     };
@@ -445,11 +480,8 @@
         alert(i18n[lang].mov_watch_reward || '🎬 영화 감상 완료! +10P & INT +0.5');
     }
 
-    // ── Render Movie List ──
-    function renderMovieList() {
-        var container = document.getElementById('movie-list');
-        if (!container) return;
-
+    // ── 필터링된 영화 목록 반환 ──
+    function getFilteredMovies() {
         var items = (AppState.movies && AppState.movies.items) || [];
         var filtered = items.filter(function(m) { return m.category === _movCurrentTab; });
 
@@ -476,6 +508,105 @@
         }
 
         filtered.sort(function(a, b) { return (b.addedDate || '').localeCompare(a.addedDate || ''); });
+        return filtered;
+    }
+
+    // ── Render Movie List (뷰모드 분기) ──
+    function renderMovieList() {
+        var towerContainer = document.getElementById('movie-tower');
+        var listContainer = document.getElementById('movie-list');
+        var filtered = getFilteredMovies();
+
+        // 이미지 저장 버튼 표시/숨김
+        var shareBtn = document.getElementById('movie-share-btn');
+        if (shareBtn) {
+            shareBtn.classList.toggle('d-none', filtered.length === 0);
+        }
+
+        if (_movViewMode === 'tower') {
+            if (listContainer) listContainer.style.display = 'none';
+            if (towerContainer) { towerContainer.style.display = ''; renderMovieTowerView(towerContainer, filtered); }
+        } else {
+            if (towerContainer) towerContainer.style.display = 'none';
+            if (listContainer) { listContainer.style.display = ''; renderMovieListView(listContainer, filtered); }
+        }
+    }
+
+    // ── 뷰 모드 전환 ──
+    window.switchMovieViewMode = function(mode) {
+        _movViewMode = mode;
+        document.querySelectorAll('.mov-view-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.view === mode);
+        });
+        renderMovieList();
+    };
+
+    // ── 타워 테마 전환 ──
+    window.switchMovieTowerTheme = function(theme) {
+        _movTowerTheme = theme;
+        var picker = document.getElementById('movie-theme-picker');
+        if (picker) {
+            picker.querySelectorAll('.tower-theme-dot').forEach(function(dot) {
+                dot.classList.toggle('active', dot.dataset.theme === theme);
+            });
+        }
+        renderMovieList();
+    };
+
+    // ── 타워 뷰 렌더링 (바벨의 영화관) ──
+    function renderMovieTowerView(container, movies) {
+        container.className = 'library-tower tower-theme-' + _movTowerTheme;
+
+        if (movies.length === 0) {
+            container.innerHTML = '<div style="padding:40px 20px; text-align:center; color:var(--text-sub); font-size:0.85rem;">' + t('mov_empty') + '</div>';
+            return;
+        }
+
+        // 바벨의 영화관 라벨 (column-reverse이므로 HTML 첫 번째 = 화면 최하단)
+        var html = '<div class="book-tower-top">'
+            + '<div class="book-tower-top-label">' + t('mov_babel_cinema') + '<br>' + movies.length + '층</div>'
+            + '</div>';
+        html += '<div class="book-tower-base"></div>';
+
+        movies.forEach(function(m, i) {
+            var floor = i + 1;
+            var title = m.title.length > 20 ? m.title.substring(0, 18) + '…' : m.title;
+            var thickness = getMovieThickness(m);
+            var widthPct = getMovieWidth(m, i);
+            var yearLabel = m.releaseDate ? m.releaseDate.substring(0, 4) : '';
+            var realIdx = (AppState.movies.items || []).indexOf(m);
+
+            html += '<div class="book-tower-item" style="width:' + widthPct + '%; max-width:360px; padding-top:' + thickness + 'px; padding-bottom:' + thickness + 'px; cursor:pointer;" onclick="window.openMovieDetail(' + realIdx + ')">'
+                + '<span class="book-tower-floor">' + floor + '층</span>'
+                + '<span class="book-tower-title">' + escHtml(title) + '</span>'
+                + (yearLabel ? '<span class="book-tower-pages">' + yearLabel + '</span>' : '')
+                + '</div>';
+        });
+        container.innerHTML = html;
+    }
+
+    function getMovieThickness(movie) {
+        // 기본 8px, 장르·감독 유무에 따라 변화
+        var base = 7;
+        if (movie.genres) base += 1;
+        if (movie.director) base += 1;
+        if (movie.cast) base += 1;
+        if (movie.overview) base += 2;
+        return Math.min(14, Math.max(5, base));
+    }
+
+    function getMovieWidth(movie, index) {
+        var base = 72;
+        if (movie.genres && movie.genres.length > 10) base += 5;
+        if (movie.director) base += 3;
+        if (movie.cast) base += 3;
+        var offset = ((index * 7 + 3) % 11) - 5;
+        return Math.min(92, Math.max(55, base + offset));
+    }
+
+    // ── 리스트 뷰 렌더링 ──
+    function renderMovieListView(container, filtered) {
+        var items = (AppState.movies && AppState.movies.items) || [];
 
         if (filtered.length === 0) {
             container.innerHTML = '<div style="padding:40px 20px; text-align:center; color:var(--text-sub); font-size:0.85rem;">' + t('mov_empty') + '</div>';
@@ -531,6 +662,64 @@
         container.innerHTML = html;
     }
 
+    // ── 영화 상세 보기 (타워 클릭 시) ──
+    window.openMovieDetail = function(realIdx) {
+        var items = (AppState.movies && AppState.movies.items) || [];
+        var m = items[realIdx];
+        if (!m) return;
+
+        var poster = m.posterUrl || (m.posterPath ? (TMDB_IMG_COMPAT + m.posterPath) : '');
+        var yr = m.releaseDate ? m.releaseDate.substring(0, 4) : '';
+        var catLabels = { watching: '보는 중', watched: '본 영화', wantToWatch: '보고 싶은 영화' };
+        var cats = ['watching', 'watched', 'wantToWatch'].filter(function(c) { return c !== m.category; });
+        var moveLabels = { watching: t('mov_move_watching'), watched: t('mov_move_watched'), wantToWatch: t('mov_move_want') };
+
+        var html = '<div class="book-detail-overlay" onclick="this.remove()">'
+            + '<div class="book-detail-sheet" onclick="event.stopPropagation()">'
+            + '<button class="book-detail-close" onclick="this.closest(\'.book-detail-overlay\').remove()">✕</button>'
+            + '<div class="book-detail-header">';
+        if (poster) {
+            html += '<img class="book-detail-thumb" src="' + escHtml(poster) + '" alt="" onerror="this.style.visibility=\'hidden\'">';
+        }
+        html += '<div class="book-detail-meta">'
+            + '<div class="book-detail-title">' + escHtml(m.title) + '</div>';
+        if (m.titleEn && m.titleEn !== m.title) {
+            html += '<div class="book-detail-author">' + escHtml(m.titleEn) + '</div>';
+        }
+        if (m.director) html += '<div class="book-detail-publisher">' + escHtml(m.director) + '</div>';
+        html += '<div class="book-detail-date">' + escHtml(m.addedDate || '') + ' 등록</div>';
+        // API 출처
+        if (m.source) {
+            var srcLabel = m.source === 'kobis' ? 'KOBIS' : m.source === 'kmdb' ? 'KMDb' : m.source;
+            html += '<div class="book-detail-source"><span class="source-badge">' + escHtml(srcLabel) + '</span></div>';
+        }
+        html += '</div></div>';
+
+        // 상세 정보 그리드
+        html += '<div class="book-detail-info-grid">';
+        html += '<div class="book-detail-info-item"><div class="book-detail-info-label">분류</div><div class="book-detail-info-value">' + (catLabels[m.category] || m.category) + '</div></div>';
+        if (yr) html += '<div class="book-detail-info-item"><div class="book-detail-info-label">개봉</div><div class="book-detail-info-value">' + yr + '</div></div>';
+        if (m.genres) html += '<div class="book-detail-info-item"><div class="book-detail-info-label">장르</div><div class="book-detail-info-value">' + escHtml(m.genres) + '</div></div>';
+        if (m.watchGrade) html += '<div class="book-detail-info-item"><div class="book-detail-info-label">등급</div><div class="book-detail-info-value">' + escHtml(m.watchGrade) + '</div></div>';
+        if (m.cast) html += '<div class="book-detail-info-item"><div class="book-detail-info-label">출연</div><div class="book-detail-info-value">' + escHtml(m.cast) + '</div></div>';
+        if (m.finishedDate) html += '<div class="book-detail-info-item"><div class="book-detail-info-label">감상일</div><div class="book-detail-info-value">' + escHtml(m.finishedDate) + '</div></div>';
+        html += '</div>';
+
+        if (m.overview) {
+            html += '<div class="book-detail-description">' + escHtml(m.overview) + '</div>';
+        }
+
+        // 액션 버튼
+        html += '<div class="book-detail-actions">';
+        cats.forEach(function(cat) {
+            html += '<button class="book-action-btn" onclick="window.moveMovie(' + realIdx + ',\'' + cat + '\'); this.closest(\'.book-detail-overlay\').remove(); renderMovieList();">' + moveLabels[cat] + '</button>';
+        });
+        html += '<button class="book-action-btn danger" onclick="window.deleteMovie(' + realIdx + '); this.closest(\'.book-detail-overlay\').remove();">' + t('mov_delete') + '</button>';
+        html += '</div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+    };
+
     // ── Move Movie Category ──
     window.moveMovie = function(idx) {
         var items = (AppState.movies && AppState.movies.items) || [];
@@ -551,7 +740,7 @@
         updateMoviePeriodCounts();
         renderMovieList();
         window.updateMovieCardCount();
-        if (window.saveState) window.saveState();
+        if (window.saveUserData) window.saveUserData();
     };
 
     // ── Delete Movie ──
@@ -565,8 +754,265 @@
         updateMoviePeriodCounts();
         renderMovieList();
         window.updateMovieCardCount();
-        if (window.saveState) window.saveState();
+        if (window.saveUserData) window.saveUserData();
     };
+
+    // ── 이미지 저장 (바벨의 영화관 Canvas) ──
+    window.shareMovieAsImage = async function() {
+        var lang = AppState.currentLang;
+        var movies = getFilteredMovies();
+        if (movies.length === 0) return;
+
+        var isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+        if (isNative && window.AdManager) {
+            if (!confirm(i18n[lang].mov_ad_prompt || i18n[lang].lib_ad_prompt || '광고 시청 후 이미지를 저장할 수 있습니다. 진행하시겠습니까?')) return;
+            var adShown = await window.AdManager.showRewarded({
+                context: 'movieImage',
+                onSuccess: function() { _doMovieImageSave(lang, movies); },
+                onFail: function() { alert(i18n[AppState.currentLang].lib_ad_fail || '광고 시청에 실패했습니다.'); }
+            });
+            if (!adShown) alert(i18n[lang].lib_ad_not_ready || '광고가 준비되지 않았습니다.');
+            return;
+        }
+
+        _doMovieImageSave(lang, movies);
+    };
+
+    async function _doMovieImageSave(lang, movies) {
+        if (!movies || movies.length === 0) return;
+
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var W = 540;
+        var pad = 20;
+        var innerW = W - pad * 2;
+        var centerX = W / 2;
+
+        // 스파인 색상 팔레트 (테마별)
+        var themeColors = {
+            dark:  { colors: [['#3a3a4a','#2e2e3e'],['#404052','#343446'],['#464658','#3a3a4c'],['#383848','#2c2c3c'],['#3e3e50','#32324a'],['#424254','#363648'],['#484860','#3c3c50'],['#363646','#2a2a3a']], text: '#c0c0d0' },
+            warm:  { colors: [['#f2b4a8','#eea090'],['#f5c4b8','#f0b0a0'],['#f8d0c4','#f4bcae'],['#eea898','#e89888'],['#f5bcae','#f0a898'],['#f0c0b4','#ecaca0'],['#f8d4c8','#f4c0b4'],['#ecb0a0','#e8a090']], text: '#3a2a2a', darkText: '#5a3a3a', darkTextIndices: [2,6] },
+            ocean: { colors: [['#1e3a5f','#162e4f'],['#234068','#1b3458'],['#284870','#203c60'],['#1c3555','#142a45'],['#203d62','#183252'],['#254468','#1d3858'],['#2a4c72','#224062'],['#1a3250','#122640']], text: '#a8c8e0' }
+        };
+        var activeTheme = themeColors[_movTowerTheme] || themeColors.dark;
+        var spineColors = activeTheme.colors;
+        var defaultTextColor = activeTheme.text;
+        var darkTextIndices = activeTheme.darkTextIndices || [];
+
+        // 메트릭 계산
+        var totalBooksH = 0;
+        var movieMetrics = movies.map(function(m, i) {
+            var thickness = getMovieThickness(m);
+            var paddingV = thickness * 2;
+            var textH = 14;
+            var itemH = paddingV + textH;
+            var widthPct = getMovieWidth(m, i);
+            var itemW = Math.min(360, (innerW * widthPct / 100));
+            totalBooksH += itemH;
+            return { movie: m, itemH: itemH, itemW: itemW, floor: i + 1 };
+        });
+
+        var hexH = 48;
+        var baseH = 14;
+        var baseGap = 4;
+        var footerH = 36;
+        var totalH = pad + totalBooksH + baseGap + baseH + hexH + footerH + pad;
+
+        canvas.width = W;
+        canvas.height = totalH;
+
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(0, 0, W, totalH);
+
+        var y = pad;
+
+        // 영화 스파인 (맨 위층부터 아래로)
+        for (var i = movieMetrics.length - 1; i >= 0; i--) {
+            var mm = movieMetrics[i];
+            var colorIdx = i % 8;
+            var c = spineColors[colorIdx];
+            var itemX = centerX - mm.itemW / 2;
+            var iw = mm.itemW, ih = mm.itemH;
+            var inset = iw * 0.04;
+
+            ctx.beginPath();
+            ctx.moveTo(itemX + inset, y);
+            ctx.lineTo(itemX + iw - inset, y);
+            ctx.lineTo(itemX + iw, y + ih / 2);
+            ctx.lineTo(itemX + iw - inset, y + ih);
+            ctx.lineTo(itemX + inset, y + ih);
+            ctx.lineTo(itemX, y + ih / 2);
+            ctx.closePath();
+
+            var spineGrad = ctx.createLinearGradient(0, y, 0, y + ih);
+            spineGrad.addColorStop(0, c[0]);
+            spineGrad.addColorStop(1, c[1]);
+            ctx.fillStyle = spineGrad;
+            ctx.fill();
+
+            var textColor = (activeTheme.darkText && darkTextIndices.indexOf(colorIdx) >= 0) ? activeTheme.darkText : defaultTextColor;
+            ctx.fillStyle = textColor;
+            ctx.font = 'bold 10px Pretendard, sans-serif';
+            var title = mm.movie.title.length > 20 ? mm.movie.title.substring(0, 18) + '…' : mm.movie.title;
+            var titleW = ctx.measureText(title).width;
+            ctx.fillText(title, centerX - titleW / 2, y + ih / 2 + 3);
+
+            ctx.fillStyle = '#888';
+            ctx.font = 'bold 8px Pretendard, sans-serif';
+            ctx.fillText(mm.floor + '층', itemX - 32, y + ih / 2 + 3);
+
+            var yearLabel = mm.movie.releaseDate ? mm.movie.releaseDate.substring(0, 4) : '';
+            if (yearLabel) {
+                ctx.fillStyle = textColor;
+                ctx.globalAlpha = 0.6;
+                ctx.font = '8px Pretendard, sans-serif';
+                ctx.fillText(yearLabel, centerX + titleW / 2 + 6, y + ih / 2 + 3);
+                ctx.globalAlpha = 1.0;
+            }
+
+            y += ih;
+        }
+
+        // 받침대
+        y += baseGap;
+        var baseW = Math.min(390, innerW * 0.92);
+        var baseX = centerX - baseW / 2;
+        var baseGrad = ctx.createLinearGradient(0, y, 0, y + baseH);
+        baseGrad.addColorStop(0, '#4a4a5a');
+        baseGrad.addColorStop(1, '#2a2a3a');
+        ctx.fillStyle = baseGrad;
+        ctx.beginPath();
+        ctx.roundRect(baseX, y, baseW, baseH, [0, 0, 6, 6]);
+        ctx.fill();
+        y += baseH;
+
+        // 바벨의 영화관 육각형
+        var hexW = innerW * 0.6;
+        var hexX = centerX - hexW / 2;
+        ctx.beginPath();
+        ctx.moveTo(hexX + hexW * 0.1, y);
+        ctx.lineTo(hexX + hexW * 0.9, y);
+        ctx.lineTo(hexX + hexW, y + hexH / 2);
+        ctx.lineTo(hexX + hexW * 0.9, y + hexH);
+        ctx.lineTo(hexX + hexW * 0.1, y + hexH);
+        ctx.lineTo(hexX, y + hexH / 2);
+        ctx.closePath();
+        var hexGrad = ctx.createLinearGradient(0, y, 0, y + hexH);
+        hexGrad.addColorStop(0, '#4a4a5a');
+        hexGrad.addColorStop(1, '#3a3a4a');
+        ctx.fillStyle = hexGrad;
+        ctx.fill();
+
+        ctx.fillStyle = '#00d9ff';
+        ctx.font = 'bold 11px Pretendard, sans-serif';
+        var hexLine1 = t('mov_babel_cinema') || '바벨의 영화관';
+        var hexLine2 = movies.length + '층';
+        ctx.fillText(hexLine1, centerX - ctx.measureText(hexLine1).width / 2, y + hexH / 2 - 2);
+        ctx.fillText(hexLine2, centerX - ctx.measureText(hexLine2).width / 2, y + hexH / 2 + 12);
+        y += hexH;
+
+        // 푸터
+        ctx.fillStyle = '#444';
+        ctx.font = '10px Pretendard, sans-serif';
+        var today = new Date().toISOString().slice(0, 10);
+        ctx.fillText('LEVEL UP: REBOOT | ' + today, pad + 6, y + 12);
+
+        // 저장 파이프라인
+        var userName = (AppState.user && AppState.user.name) ? AppState.user.name.replace(/[^a-zA-Z0-9가-힣]/g, '') : '';
+        var saveCountKey = 'movie_save_count_' + userName;
+        var saveCount = parseInt(localStorage.getItem(saveCountKey) || '0', 10) + 1;
+        localStorage.setItem(saveCountKey, String(saveCount));
+        var countSuffix = saveCount > 1 ? String(saveCount) : '';
+        var fileName = 'movie_tower_' + userName + countSuffix + '.png';
+        var msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+        var failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
+
+        try {
+            var isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+            var blob = await new Promise(function(resolve) { canvas.toBlob(resolve, 'image/png'); });
+            if (!blob) throw new Error('toBlob failed');
+
+            var saved = false;
+
+            if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+                var Filesystem = window.Capacitor.Plugins.Filesystem;
+                var dataUrl = canvas.toDataURL('image/png');
+                var base64Data = dataUrl.split(',')[1];
+                var dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
+                for (var d = 0; d < dirs.length; d++) {
+                    try {
+                        await Filesystem.writeFile({ path: fileName, data: base64Data, directory: dirs[d], recursive: true });
+                        saved = true;
+                        break;
+                    } catch(dirErr) {
+                        if (window.AppLogger) AppLogger.warn('[Movie] Filesystem write failed for dir ' + dirs[d] + ': ' + dirErr.message);
+                    }
+                }
+            }
+
+            if (!saved && navigator.share && navigator.canShare) {
+                try {
+                    var file = new File([blob], fileName, { type: 'image/png' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                        saved = true;
+                    }
+                } catch(shareErr) {
+                    if (shareErr.name === 'AbortError') saved = true;
+                    else if (window.AppLogger) AppLogger.warn('[Movie] Share API failed: ' + shareErr.message);
+                }
+            }
+
+            if (!saved && isNative) {
+                showImageOverlay(canvas.toDataURL('image/png'), lang);
+                saved = true;
+            }
+
+            if (!saved && !isNative) {
+                var url = URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                setTimeout(function() { document.body.removeChild(link); URL.revokeObjectURL(url); }, 1000);
+                saved = true;
+            }
+
+            if (saved) alert(msgs[lang] || msgs.ko);
+            else throw new Error('All save methods failed');
+        } catch(e) {
+            if (window.AppLogger) AppLogger.error('[Movie] Image save error: ' + e.message);
+            try { showImageOverlay(canvas.toDataURL('image/png'), lang); } catch(e2) { alert(failMsgs[lang] || failMsgs.ko); }
+        }
+    }
+
+    // ── i18n 기본값 보완 ──
+    (function() {
+        var defaults = {
+            mov_babel_cinema: '바벨의 영화관',
+            mov_stack_view: '쌓아보기',
+            mov_list_view: '리스트형 보기',
+            mov_save_image: '이미지 저장'
+        };
+        ['ko','en','ja'].forEach(function(lang) {
+            if (!i18n[lang]) return;
+            for (var k in defaults) {
+                if (!i18n[lang][k]) i18n[lang][k] = defaults[k];
+            }
+        });
+        if (i18n.en) {
+            if (!i18n.en.mov_babel_cinema) i18n.en.mov_babel_cinema = 'Tower of Cinema';
+            if (!i18n.en.mov_stack_view) i18n.en.mov_stack_view = 'Stack View';
+            if (!i18n.en.mov_list_view) i18n.en.mov_list_view = 'List View';
+            if (!i18n.en.mov_save_image) i18n.en.mov_save_image = 'Save Image';
+        }
+        if (i18n.ja) {
+            if (!i18n.ja.mov_babel_cinema) i18n.ja.mov_babel_cinema = 'バベルの映画館';
+        }
+    })();
 
     // ── Util ──
     function escHtml(str) {
