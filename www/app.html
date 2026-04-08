@@ -349,6 +349,23 @@
                     </div>
                 </div>
 
+                <!-- 내 영화 (My Movies) 카드 -->
+                <div class="system-card status-reorderable" data-card-id="my-movies" style="margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:1.2rem;">🎬</span>
+                            <h2 style="margin:0; font-size:0.95rem;" data-i18n="mov_title">내 영화</h2>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="text-align:right;">
+                                <div style="font-size:0.65rem; color:var(--text-sub);" data-i18n="mov_yearly">연간</div>
+                                <div style="font-size:1.3rem; font-weight:900; color:var(--neon-blue);"><span id="mov-yearly-card-count">0</span><span style="font-size:0.7rem; color:var(--text-sub);" data-i18n="mov_unit"> 편</span></div>
+                            </div>
+                            <button class="btn-info-sm" onclick="window.openMovieView()" data-i18n="mov_detail">상세</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- P5: 보상형 광고 일일 보너스 EXP -->
                 <div class="system-card status-reorderable" data-card-id="bonus-exp" style="padding:12px; text-align:center; margin-top:10px;">
                     <button id="btn-bonus-exp" onclick="window.claimBonusExp()" style="width:100%; padding:16px 20px; background:linear-gradient(135deg, #FFD700, #FFA500); border:2px solid rgba(255,215,0,0.6); border-radius:12px; cursor:pointer; display:flex; align-items:center; gap:14px; transition:all 0.2s ease; box-shadow:0 2px 12px rgba(255,215,0,0.25);">
@@ -1172,6 +1189,44 @@
         </div>
         <div id="library-content" class="library-content" style="position:relative;">
             <div id="library-tower" class="library-tower"></div>
+        </div>
+    </div>
+
+    <!-- My Movies Fullscreen Overlay -->
+    <div id="movie-overlay" class="library-overlay d-none">
+        <div class="library-header">
+            <button class="library-back-btn" onclick="window.closeMovieView()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+            </button>
+            <div class="library-title-group">
+                <span data-i18n="mov_title">내 영화</span>
+            </div>
+            <div style="width:24px;"></div>
+        </div>
+        <div class="library-search-bar">
+            <div class="library-search-row">
+                <input type="text" id="movie-search-input" data-i18n-placeholder="mov_search" placeholder="영화 검색하기" oninput="window.filterMovieList(this.value)">
+                <label class="library-filter-checkbox">
+                    <input type="checkbox" id="movie-local-filter" onchange="window.toggleMovieSearchMode(this.checked)">
+                    <span data-i18n="mov_my_filter">내 영화</span>
+                </label>
+            </div>
+        </div>
+        <div id="movie-search-results" class="library-search-results d-none"></div>
+        <div class="library-count-bar">
+            <div class="library-count-toggle">
+                <button class="mov-count-btn active" data-period="total" onclick="window.switchMoviePeriod('total')"><span id="mov-label-total" data-i18n="mov_total">전체</span>(<span id="mov-count-total" class="lib-count-num">0</span>)</button>
+                <button class="mov-count-btn" data-period="yearly" onclick="window.switchMoviePeriod('yearly')"><span id="mov-label-yearly">2026년</span>(<span id="mov-count-yearly" class="lib-count-num">0</span>)</button>
+                <button class="mov-count-btn" data-period="monthly" onclick="window.switchMoviePeriod('monthly')"><span id="mov-label-monthly">2026-04</span>(<span id="mov-count-monthly" class="lib-count-num">0</span>)</button>
+            </div>
+        </div>
+        <div class="library-tabs">
+            <button class="mov-tab" data-cat="watching" onclick="window.switchMovieTab('watching')"><span data-i18n="mov_watching">보는 중</span></button>
+            <button class="mov-tab active" data-cat="watched" onclick="window.switchMovieTab('watched')"><span data-i18n="mov_watched">본 영화</span></button>
+            <button class="mov-tab" data-cat="wantToWatch" onclick="window.switchMovieTab('wantToWatch')"><span data-i18n="mov_want_to_watch">보고 싶은 영화</span></button>
+        </div>
+        <div id="movie-content" class="library-content" style="position:relative;">
+            <div id="movie-list" class="movie-list"></div>
         </div>
     </div>
 

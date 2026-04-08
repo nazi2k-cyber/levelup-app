@@ -695,6 +695,7 @@ function getInitialAppState() {
         ddays: [],
         ddayCaption: '',
         library: { books: [] },
+        movies: { items: [], rewardedIds: [] },
     };
 }
 
@@ -788,7 +789,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -915,10 +916,11 @@ const STATUS_CARD_LABELS = {
     'dday-caption': { name_key: 'card_dday_caption', name: '목표/좌우명', icon: '💬' },
     'daily-quote': { name_key: 'card_daily_quote', name: '오늘의 명언', icon: '❝' },
     'my-library': { name_key: 'card_my_library', name: '내 서재', icon: '📚' },
+    'my-movies': { name_key: 'card_my_movies', name: '내 영화', icon: '🎬' },
     'running-calc': { name_key: 'card_running_calc', name: '러닝 계산기', icon: '🏃' },
     'orm-calc': { name_key: 'card_orm_calc', name: '1RM 계산기', icon: '🏋️' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -1957,6 +1959,7 @@ async function _doSaveUserData() {
             ddayCaption: AppState.ddayCaption || '',
             lifeStatusStr: localStorage.getItem('life_status_config') || '',
             libraryStr: JSON.stringify(AppState.library || { books: [] }),
+            moviesStr: JSON.stringify(AppState.movies || { items: [], rewardedIds: [] }),
             runningCalcHistoryStr: localStorage.getItem('running_calc_history') || '[]',
             ormCalcHistoryStr: localStorage.getItem('orm_calc_history') || '[]',
             rcLastRewardDate: localStorage.getItem('rc_last_reward_date') || '',
@@ -1969,7 +1972,7 @@ async function _doSaveUserData() {
             dungeonStr: 50000, diyQuestsStr: 50000, questHistoryStr: 200000,
             titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
             ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000,
-            libraryStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000
+            libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000
         };
         const _overflowed = [];
         for (const [key, limit] of Object.entries(_strLimits)) {
@@ -2246,6 +2249,12 @@ async function loadUserDataFromDB(user) {
                 try { AppState.library = JSON.parse(data.libraryStr); } catch(e) { AppState.library = { books: [] }; }
                 if (!AppState.library || !Array.isArray(AppState.library.books)) AppState.library = { books: [] };
                 if (!Array.isArray(AppState.library.rewardedISBNs)) AppState.library.rewardedISBNs = [];
+            }
+            // Movies (내 영화) 복원
+            if (data.moviesStr) {
+                try { AppState.movies = JSON.parse(data.moviesStr); } catch(e) { AppState.movies = { items: [], rewardedIds: [] }; }
+                if (!AppState.movies || !Array.isArray(AppState.movies.items)) AppState.movies = { items: [], rewardedIds: [] };
+                if (!Array.isArray(AppState.movies.rewardedIds)) AppState.movies.rewardedIds = [];
             }
             // Life Status 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.lifeStatusStr) {
@@ -4060,7 +4069,7 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus(); if (window.AdManager) window.AdManager.renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount();
+        drawRadarChart(); updatePointUI(); renderQuote(); renderDDayList(); renderDDayCaption(); renderLifeStatus(); if (window.AdManager) window.AdManager.renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount(); if (window.updateMovieCardCount) window.updateMovieCardCount();
     } else {
         mainEl.style.overflowY = 'auto';
     }
@@ -11017,3 +11026,6 @@ import('./modules/pomodoro.js').catch(e => console.error('[Pomodoro] 모듈 로�
 
 // --- Library 모듈 동적 로드 ---
 import('./modules/library.js').catch(e => console.error('[Library] 모듈 로드 실패:', e));
+
+// --- Movie 모듈 동적 로드 ---
+import('./modules/movie.js').catch(e => console.error('[Movie] 모듈 로드 실패:', e));
