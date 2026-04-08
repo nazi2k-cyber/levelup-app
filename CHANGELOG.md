@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.227] - 2026-04-08
+
+### 변경
+- fix: 영화 검색 API를 Cloud Function 경유로 변경 + AppLogger 보완
+
 ## [1.0.226] - 2026-04-08
 
 ### 변경
