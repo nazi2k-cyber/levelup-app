@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.249] - 2026-04-09
+
+### 변경
+- feat(terms): 언어 전환 UI 및 스크립트 추가 (Phase 1 Step 1-1~1-3)
+
 ## [1.0.248] - 2026-04-09
 
 ### 변경
