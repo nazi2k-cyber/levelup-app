@@ -4785,12 +4785,9 @@ function openProfileStatsModal(userId) {
 
     if (!u) return;
 
-    // ★ 네이티브 광고 숨김 (모달 위에 겹치지 않도록)
-    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
-        try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) NativeAd.hideAd();
-        } catch (e) { /* 무시 */ }
+    // ★ 모든 광고 숨김 (모달 위에 겹치지 않도록)
+    if (isNativePlatform && window.AdManager && window.AdManager.hideForModal) {
+        window.AdManager.hideForModal();
     }
 
     const lang = AppState.currentLang;
@@ -4839,12 +4836,9 @@ function closeProfileStatsModal() {
     m.classList.add('d-none');
     m.classList.remove('d-flex');
 
-    // ★ 네이티브 광고 복원
-    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
-        try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) NativeAd.resumeAd();
-        } catch (e) { /* 무시 */ }
+    // ★ 모든 광고 복원
+    if (isNativePlatform && window.AdManager && window.AdManager.resumeFromModal) {
+        window.AdManager.resumeFromModal();
     }
 }
 

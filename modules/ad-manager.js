@@ -48,6 +48,9 @@
     let _nativeAdObserver = null;
     let _nativeAdActiveTab = null;
 
+    // 모달 오버레이 시 광고 일시 숨김 플래그
+    let _adsHiddenForModal = false;
+
     // 보너스 EXP
     let _bonusExpTimerInterval = null;
     let _bonusExpInProgress = false;
@@ -760,7 +763,7 @@
             if (!NativeAd) return;
 
             if (entry.isIntersecting) {
-                if (!_nativeAdVisible) {
+                if (!_nativeAdVisible && !_adsHiddenForModal) {
                     NativeAd.resumeAd().catch(() => {});
                     _nativeAdVisible = true;
                 }
@@ -782,7 +785,7 @@
             if (_nativeAdScrollRAF) return;
             _nativeAdScrollRAF = requestAnimationFrame(() => {
                 _nativeAdScrollRAF = null;
-                if (!_nativeAdLoaded || !_nativeAdVisible) return;
+                if (!_nativeAdLoaded || !_nativeAdVisible || _adsHiddenForModal) return;
 
                 const rect = placeholder.getBoundingClientRect();
                 const clipTop = clipRef ? clipRef.getBoundingClientRect().bottom : 0;
@@ -834,6 +837,56 @@
         }
     }
 
+    // --- 모달 오버레이 시 모든 광고 숨김/복원 ---
+    async function hideForModal() {
+        _adsHiddenForModal = true;
+        if (!_isNative()) return;
+
+        // 네이티브 광고 숨김
+        if (_nativeAdActiveTab) {
+            try {
+                const { NativeAd } = window.Capacitor.Plugins;
+                if (NativeAd) await NativeAd.hideAd().catch(() => {});
+            } catch (e) { /* 무시 */ }
+        }
+
+        // 배너 광고 숨김
+        if (_bannerAdVisible) {
+            try {
+                const { AdMob } = window.Capacitor.Plugins;
+                if (AdMob) await AdMob.hideBanner().catch(() => {});
+            } catch (e) { /* 무시 */ }
+        }
+    }
+
+    async function resumeFromModal() {
+        _adsHiddenForModal = false;
+        if (!_isNative()) return;
+
+        // 네이티브 광고 복원
+        if (_nativeAdActiveTab && _nativeAdLoaded) {
+            try {
+                const { NativeAd } = window.Capacitor.Plugins;
+                if (NativeAd) {
+                    await NativeAd.resumeAd().catch(() => {});
+                    _nativeAdVisible = true;
+                    positionNativeAd(_nativeAdActiveTab);
+                }
+            } catch (e) { /* 무시 */ }
+        }
+
+        // 배너 광고 복원
+        if (_bannerAdLoaded) {
+            try {
+                const { AdMob } = window.Capacitor.Plugins;
+                if (AdMob) {
+                    await AdMob.resumeBanner().catch(() => {});
+                    _bannerAdVisible = true;
+                }
+            } catch (e) { /* 무시 */ }
+        }
+    }
+
     // --- 공개 API ---
     window.AdManager = {
         init,
@@ -850,6 +903,9 @@
         // 배너
         showBanner,
         hideBanner,
+        // 모달 오버레이 시 광고 일괄 숨김/복원
+        hideForModal,
+        resumeFromModal,
         // 네이티브
         loadNativeAd,
         cleanupNativeAd,
