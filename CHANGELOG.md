@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.253] - 2026-04-09
+
+### 변경
+- docs: OSS 독립 HTML 생성 phase 추가 및 Phase 3 세분화
+- feat(privacy): 개인정보 처리방침 다국어 준비 (Phase 3 Step 3-1~3-3)
+
 ## [1.0.252] - 2026-04-09
 
 ### 변경
