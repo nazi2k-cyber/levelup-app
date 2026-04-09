@@ -239,7 +239,7 @@ const i18n = {
         ob_day1_desc: "Day1 피드",
 
         // 뽀모도로 타이머
-        pomo_title: "POMODORO", pomo_focus: "집중", pomo_break: "휴식", pomo_long_break: "긴 휴식",
+        pomo_title: "뽀모도로", pomo_focus: "집중", pomo_break: "휴식", pomo_long_break: "긴 휴식",
         pomo_start: "시작", pomo_pause: "일시정지", pomo_reset: "초기화", pomo_resume: "재개",
         pomo_complete: "뽀모도로 완료!", pomo_break_over: "휴식 종료!",
         pomo_notif_focus_title: "🍅 집중 시간 종료!", pomo_notif_focus_body: "잘했어요! 휴식 시간입니다.",
@@ -1449,7 +1449,7 @@ const i18n = {
         ob_day1_desc: "Day1フィード",
 
         // ポモドーロタイマー
-        pomo_title: "POMODORO", pomo_focus: "集中", pomo_break: "休憩", pomo_long_break: "長い休憩",
+        pomo_title: "ポモドーロ", pomo_focus: "集中", pomo_break: "休憩", pomo_long_break: "長い休憩",
         pomo_start: "開始", pomo_pause: "一時停止", pomo_reset: "リセット", pomo_resume: "再開",
         pomo_complete: "ポモドーロ完了！", pomo_break_over: "休憩終了！",
         pomo_notif_focus_title: "🍅 集中時間終了！", pomo_notif_focus_body: "よく頑張りました！休憩しましょう。",
