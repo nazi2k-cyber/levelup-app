@@ -1528,6 +1528,7 @@ async function handleSearchMovies(request) {
                         const cleanTitle = (m.title || "").replace(/!HS|!HE/g, "").trim();
                         const dirs = (m.directors?.director || []).map(d => d.directorNm).filter(Boolean).join(", ");
                         const posters = (m.posters || "").split("|").filter(Boolean);
+                        const posterUrl = (posters[0] || "").replace(/^http:\/\//, "https://");
                         return {
                             movieCd: "kmdb_" + (m.DOCID || ""),
                             title: cleanTitle,
@@ -1536,7 +1537,7 @@ async function handleSearchMovies(request) {
                             openDate: (m.repRlsDate || "").replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3"),
                             genres: m.genre || "",
                             directors: dirs,
-                            posterUrl: posters[0] || "",
+                            posterUrl,
                             source: "kmdb"
                         };
                     });
@@ -1619,12 +1620,13 @@ async function handleLookupMovie(request) {
                 const item = (resultSet?.Result || [])[0];
                 if (item) {
                     const posters = (item.posters || "").split("|").filter(Boolean);
+                    const posterUrl = (posters[0] || "").replace(/^http:\/\//, "https://");
                     const plots = item.plots?.plot || [];
                     const koPlot = plots.find(p => p.plotLang === "한국어") || plots[0];
                     const dirs = (item.directors?.director || []).map(d => d.directorNm).filter(Boolean).join(", ");
                     const actors = (item.actors?.actor || []).slice(0, 5).map(a => a.actorNm).filter(Boolean).join(", ");
                     kmdbDetail = {
-                        posterUrl: posters[0] || "",
+                        posterUrl,
                         overview: koPlot?.plotText || "",
                         directors: dirs,
                         cast: actors,

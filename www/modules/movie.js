@@ -286,7 +286,7 @@
         _apiSearchResults.forEach(function(m, idx) {
             var exists = existingIds.indexOf(m.movieCd) !== -1;
             html += '<div class="movie-search-item" onclick="window.showMovieAddOptions(' + idx + ')" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid var(--border-color); cursor:pointer;">';
-            var searchPoster = m.posterUrl || '';
+            var searchPoster = (m.posterUrl || '').replace(/^http:\/\//, 'https://');
             if (searchPoster) {
                 html += '<img src="' + searchPoster + '" style="width:40px; height:60px; object-fit:cover; border-radius:4px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.2);" onerror="this.outerHTML=\'<div style=\\\'width:40px; height:60px; background:var(--border-color); border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.2rem;\\\'>🎬</div>\'">';
             } else {
@@ -349,7 +349,7 @@
             return;
         }
 
-        var poster = detail.posterUrl || '';
+        var poster = (detail.posterUrl || '').replace(/^http:\/\//, 'https://');
         var year = detail.releaseDate ? detail.releaseDate.substring(0, 4) : '';
 
         // API 출처 라벨
@@ -635,7 +635,7 @@
 
         var html = '';
         filtered.forEach(function(m) {
-            var poster = m.posterUrl || (m.posterPath ? (TMDB_IMG_COMPAT + m.posterPath) : '');
+            var poster = (m.posterUrl || (m.posterPath ? (TMDB_IMG_COMPAT + m.posterPath) : '')).replace(/^http:\/\//, 'https://');
             var yr = m.releaseDate ? m.releaseDate.substring(0, 4) : '';
             var realIdx = items.indexOf(m);
 
@@ -693,7 +693,7 @@
         var m = items[realIdx];
         if (!m) return;
 
-        var poster = m.posterUrl || (m.posterPath ? (TMDB_IMG_COMPAT + m.posterPath) : '');
+        var poster = (m.posterUrl || (m.posterPath ? (TMDB_IMG_COMPAT + m.posterPath) : '')).replace(/^http:\/\//, 'https://');
         var yr = m.releaseDate ? m.releaseDate.substring(0, 4) : '';
         var catLabels = { watching: '보는 중', watched: '본 영화', wantToWatch: '보고 싶은 영화' };
         var cats = ['watching', 'watched', 'wantToWatch'].filter(function(c) { return c !== m.category; });
