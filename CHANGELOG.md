@@ -5,6 +5,13 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.246] - 2026-04-09
+
+### 변경
+- 스크린샷 추가
+- 불필요한 이미지 정리
+- 스크린샷 삭제
+
 ## [1.0.245] - 2026-04-09
 
 ### 변경
