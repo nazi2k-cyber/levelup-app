@@ -316,8 +316,11 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 .follow-stat-item strong { color: var(--text-main); font-weight: 900; }
 
 /* Day1 팔로우 버튼 */
-.btn-reels-follow { padding: 2px 8px; font-size: 0.6rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 4px; margin-left: 6px; cursor: pointer; vertical-align: middle; line-height: 1.2; }
+.btn-reels-follow { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 4px; margin-left: 6px; cursor: pointer; vertical-align: middle; line-height: 1.2; }
 .btn-reels-follow.following { background: var(--neon-blue); color: #fff; }
+/* 프로필 플래너 버튼 */
+.btn-profile-planner { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-gold); color: var(--neon-gold); border-radius: 4px; cursor: pointer; vertical-align: middle; line-height: 1.2; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex-shrink: 0; }
+.btn-profile-planner:active { background: rgba(255, 204, 0, 0.15); }
 
 /* 네이티브 광고 placeholder (소셜탭 랭킹 내 인라인) */
 .native-ad-slot { min-height: 280px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }

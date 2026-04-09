@@ -4816,7 +4816,7 @@ function openProfileStatsModal(userId) {
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                     <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
                     ${followBtnHTML}
-                    <button onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" style="background:none; border:1px solid var(--neon-blue); border-radius:4px; padding:2px 8px; cursor:pointer; font-size:0.7rem; color:var(--neon-blue); display:inline-flex; align-items:center; gap:2px; white-space:nowrap; flex-shrink:0;" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
+                    <button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
                 <div class="profile-follow-stats" style="margin-top:4px;">
