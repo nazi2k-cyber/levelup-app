@@ -644,9 +644,333 @@
 
     </div><!-- /content-en -->
 
+    <!-- 日本語 -->
+    <div class="content-block" id="content-ja">
+
+    <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);border-radius:8px;padding:12px;margin-bottom:20px;">
+        <p style="color:#ffaa00;font-size:0.8rem;margin:0;">この文書は参考のために翻訳されたものです。本翻訳と韓国語原文との間に齟齬がある場合は、韓国語版が優先されます。</p>
+    </div>
+
+    <div class="section">
+        <p><span class="brand">BRAVECAT</span>（以下「会社」）は、<span class="brand">LEVEL UP: REBOOT</span>サービス（以下「サービス」）利用者の個人情報を重視し、「個人情報保護法」等の関連法令を遵守します。本プライバシーポリシーは、会社が収集する個人情報の項目、収集および利用目的、保有期間等について説明します。</p>
+    </div>
+
+    <div class="section">
+        <h2>1. 収集する個人情報項目</h2>
+        <table class="data-table">
+            <tr>
+                <th>区分</th>
+                <th>収集項目</th>
+                <th>収集方法</th>
+            </tr>
+            <tr>
+                <td>必須情報</td>
+                <td>メールアドレス、パスワード（暗号化保存）</td>
+                <td>会員登録時にユーザー入力</td>
+            </tr>
+            <tr>
+                <td>Googleログイン</td>
+                <td>Googleアカウントメール、プロフィール名、プロフィール写真URL</td>
+                <td>Google OAuth認証</td>
+            </tr>
+            <tr>
+                <td>プロフィール情報</td>
+                <td>ニックネーム、プロフィール写真、Instagram ID</td>
+                <td>ユーザー直接入力/アップロード</td>
+            </tr>
+            <tr>
+                <td>サービス利用情報</td>
+                <td>クエスト完了記録、ポイント、ステータス、レベル、称号履歴</td>
+                <td>サービス利用過程で自動生成</td>
+            </tr>
+            <tr>
+                <td>位置情報</td>
+                <td>GPS座標（緯度、経度）</td>
+                <td>ユーザー同意後にデバイスから収集</td>
+            </tr>
+            <tr>
+                <td>健康情報</td>
+                <td>1日の歩数（Google Fit / Health Connect連携時）</td>
+                <td>Google Fit APIまたはHealth Connect API同期</td>
+            </tr>
+            <tr>
+                <td>Day1フィード</td>
+                <td>写真、キャプション、いいね/コメント内容</td>
+                <td>ユーザー直接入力/アップロード</td>
+            </tr>
+            <tr>
+                <td>プランナー/ムード</td>
+                <td>日次計画、タイムテーブル、キャプション、写真、気分状態、DIYクエスト、タスクチェックリスト</td>
+                <td>ユーザー直接入力</td>
+            </tr>
+            <tr>
+                <td>Life Status</td>
+                <td>生年月日、期待寿命</td>
+                <td>ユーザー直接入力（別途同意後）</td>
+            </tr>
+            <tr>
+                <td>運動記録</td>
+                <td>ランニング距離（距離、時間、ペース）、1RM記録</td>
+                <td>ユーザー直接入力</td>
+            </tr>
+            <tr>
+                <td>D-Day</td>
+                <td>目標日、目標名</td>
+                <td>ユーザー直接入力</td>
+            </tr>
+            <tr>
+                <td>言語設定</td>
+                <td>アプリ言語選択（韓国語、英語、日本語）</td>
+                <td>ユーザー選択時に自動保存</td>
+            </tr>
+            <tr>
+                <td>プッシュ通知</td>
+                <td>FCMトークン、通知購読設定</td>
+                <td>ユーザー同意後に自動生成</td>
+            </tr>
+            <tr>
+                <td>広告関連</td>
+                <td>広告識別子、広告インタラクションデータ</td>
+                <td>Google AdMobによる自動収集</td>
+            </tr>
+            <tr>
+                <td>デバイス情報</td>
+                <td>デバイスタイプ、OSバージョン、アプリバージョン</td>
+                <td>サービス利用時に自動収集</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>2. 収集および利用目的</h2>
+        <ul>
+            <li><strong>サービス提供:</strong> アカウント作成・管理、クエストシステム運営、レベルおよびステータス管理</li>
+            <li><strong>ソーシャル機能:</strong> グローバルランキング、フレンドシステム、プロフィール表示</li>
+            <li><strong>ダンジョン/レイド:</strong> 位置情報ベースのレイドマッチング、参加人数集計</li>
+            <li><strong>健康連携:</strong> Google Fit / Health Connectデータのポイント換算</li>
+            <li><strong>Day1フィード:</strong> 24時間活動フィード運営、コミュニティ交流</li>
+            <li><strong>プランナー:</strong> 日次計画管理、気分追跡、成長記録、DIYクエスト連動</li>
+            <li><strong>Life Status:</strong> 期待寿命ベースの生命状態可視化、デバイス間同期</li>
+            <li><strong>運動記録:</strong> ランニング距離管理、1RM記録管理、STR報酬算定</li>
+            <li><strong>D-Day:</strong> 目標日管理および残日数表示</li>
+            <li><strong>プッシュ通知:</strong> クエスト通知、レイド通知、ストリーク通知、サービスお知らせ（言語別分離送信）</li>
+            <li><strong>広告:</strong> サービス運営費用充当のための広告表示（Google AdMob）</li>
+            <li><strong>サービス改善:</strong> 利用統計分析、エラー診断およびサービス品質向上</li>
+            <li><strong>カスタマーサポート:</strong> お問い合わせ対応、お知らせ配信</li>
+            <li><strong>安全:</strong> 不正利用防止、サービスセキュリティ維持</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>3. 保有および利用期間</h2>
+        <table class="data-table">
+            <tr>
+                <th>情報種類</th>
+                <th>保有期間</th>
+                <th>備考</th>
+            </tr>
+            <tr>
+                <td>アカウント情報</td>
+                <td>退会時まで</td>
+                <td>退会時即時削除</td>
+            </tr>
+            <tr>
+                <td>サービス利用記録</td>
+                <td>最終アクセスから1年</td>
+                <td>長期未利用時は別途分離保管</td>
+            </tr>
+            <tr>
+                <td>位置情報</td>
+                <td>収集後即時処理、非保管</td>
+                <td>レイドマッチング後削除</td>
+            </tr>
+            <tr>
+                <td>健康データ</td>
+                <td>ポイント換算完了時に原本削除（換算記録のみ保管）</td>
+                <td>換算記録（日付、歩数、報酬）保管</td>
+            </tr>
+            <tr>
+                <td>Day1フィードコンテンツ</td>
+                <td>写真: 投稿後24時間で自動削除 / 投稿データ: 退会時まで</td>
+                <td>写真のみ自動削除、テキスト・メタデータはサーバー保管</td>
+            </tr>
+            <tr>
+                <td>プランナーデータ</td>
+                <td>デバイスローカル保存（サーバー未送信）</td>
+                <td>ログアウト時削除</td>
+            </tr>
+            <tr>
+                <td>Life Statusデータ</td>
+                <td>退会時またはユーザーリセット時まで</td>
+                <td>暗号化保存、別途同意ベース</td>
+            </tr>
+            <tr>
+                <td>運動記録（ランニング/1RM）</td>
+                <td>デバイスローカル保存</td>
+                <td>ログアウト時削除</td>
+            </tr>
+            <tr>
+                <td>D-Dayデータ</td>
+                <td>退会時まで（Firestore同期）</td>
+                <td>ログアウト時ローカルデータ削除、サーバーデータは退会時削除</td>
+            </tr>
+            <tr>
+                <td>言語設定</td>
+                <td>退会時まで</td>
+                <td>Firestore同期</td>
+            </tr>
+            <tr>
+                <td>プッシュ通知トークン</td>
+                <td>サービス利用期間</td>
+                <td>ログアウト時削除</td>
+            </tr>
+            <tr>
+                <td>エラーログ</td>
+                <td>デバイスローカル保存（最大500件、ログアウト時削除）</td>
+                <td>サービス改善目的</td>
+            </tr>
+        </table>
+        <p>関連法令により保存が必要な場合は、当該法令で定めた期間保存します。</p>
+    </div>
+
+    <div class="section">
+        <h2>4. 第三者提供</h2>
+        <p>会社は原則としてユーザーの個人情報を第三者に提供しません。ただし、以下の場合は例外とします：</p>
+        <ul>
+            <li>ユーザーの事前同意がある場合</li>
+            <li>法律に特別な規定がある場合、または法的義務を履行するためにやむを得ない場合</li>
+            <li>捜査機関が法令に基づく手続きと方法に従って要請する場合</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>5. 処理委託</h2>
+        <table class="data-table">
+            <tr>
+                <th>受託業者</th>
+                <th>委託業務</th>
+                <th>保有期間</th>
+            </tr>
+            <tr>
+                <td>Google Firebase</td>
+                <td>ユーザー認証、データベースホスティング</td>
+                <td>サービス提供期間</td>
+            </tr>
+            <tr>
+                <td>Google Cloud Platform</td>
+                <td>クラウドインフラ、データ保存</td>
+                <td>サービス提供期間</td>
+            </tr>
+            <tr>
+                <td>Google AdMob</td>
+                <td>広告サービス提供</td>
+                <td>サービス提供期間</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>6. ユーザーの権利と行使方法</h2>
+        <p>ユーザー（または法定代理人）は以下の権利を行使できます：</p>
+        <ul>
+            <li><strong>閲覧請求:</strong> 本人の個人情報処理状況の閲覧</li>
+            <li><strong>訂正請求:</strong> 不正確な個人情報の訂正</li>
+            <li><strong>削除請求:</strong> 不要な個人情報の削除</li>
+            <li><strong>処理停止請求:</strong> 個人情報処理の停止</li>
+            <li><strong>同意撤回:</strong> 位置情報および健康情報収集同意の撤回（アプリ設定で可能）</li>
+        </ul>
+        <p>上記の権利行使はアプリ内設定メニューまたはメールを通じて可能です。</p>
+    </div>
+
+    <div class="section">
+        <h2>7. 安全性確保措置</h2>
+        <p>会社はユーザーの個人情報を安全に管理するため、以下の措置を講じています：</p>
+        <ul>
+            <li><strong>技術的措置:</strong> パスワード暗号化保存（Firebase Authentication）、SSL/TLS暗号化通信、データベースアクセス権限管理（Firestore Security Rules）</li>
+            <li><strong>管理的措置:</strong> 個人情報アクセス権限の最小化、定期的なセキュリティ点検</li>
+            <li><strong>物理的措置:</strong> Google Cloudのセキュリティインフラ活用、データセンターの物理的セキュリティ</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>8. クッキーおよび自動収集装置</h2>
+        <p>本サービスはネイティブモバイルアプリであり、Webクッキーは使用しません。ただし、サービス改善および広告提供のために以下の情報が自動的に収集される場合があります：</p>
+        <ul>
+            <li>アプリ使用頻度およびパターン</li>
+            <li>エラー発生ログ</li>
+            <li>デバイスおよびOS情報</li>
+            <li>広告識別子および広告インタラクションデータ（Google AdMob）</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>9. 児童の個人情報保護</h2>
+        <p>サービスは満18歳以上のユーザーを対象としています。会社は故意に満18歳未満の児童から個人情報を収集しません。満18歳未満の児童がサービスに登録した事実が確認された場合、当該アカウントおよび関連データを即時削除します。</p>
+    </div>
+
+    <div class="section">
+        <h2>10. 国外移転</h2>
+        <p>サービスはGoogle Firebase（米国所在）を通じてデータを保存するため、収集した個人情報は米国に所在するサーバーに移転・保管される場合があります。この場合、「個人情報保護法」に基づく適法な手続きを遵守します。</p>
+    </div>
+
+    <div class="section">
+        <h2>11. 個人情報保護責任者</h2>
+        <p>会社はユーザーの個人情報保護のため、以下のとおり個人情報保護責任者を指定しています：</p>
+        <p>
+            <strong>個人情報保護責任者</strong><br>
+            会社名: <span class="brand">BRAVECAT</span><br>
+            メール: privacy@bravecat.studio
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>12. 著作権保護</h2>
+        <p>サービス内のすべてのコンテンツ（デザイン、テキスト、画像、アイコン、UI/UX、ゲームシステム等）に対する著作権は<span class="brand">BRAVECAT</span>に帰属します。ユーザーがアップロードしたコンテンツ（Day1フィード写真、プロフィール写真等）の著作権は当該ユーザーに帰属しますが、サービス運営に必要な範囲内での利用が許諾されたものとみなします。</p>
+        <p>第三者の著作権を侵害するコンテンツのアップロードは禁止されており、著作権侵害が確認された場合、当該コンテンツを削除しアカウントを制裁する場合があります。著作権侵害の報告はcopyright@bravecat.studioで受け付けています。</p>
+    </div>
+
+    <div class="section">
+        <h2>13. プライバシーポリシーの変更</h2>
+        <p>本ポリシーが変更される場合、変更事項をサービス内のお知らせを通じて告知し、変更されたポリシーは告知した日から7日後に効力が発生します。</p>
+    </div>
+
+    <div class="section">
+        <h2>14. 権利侵害救済方法</h2>
+        <p>個人情報侵害に関する申告や相談が必要な場合、以下の機関にお問い合わせください：</p>
+        <ul>
+            <li>個人情報侵害申告センター（KISA）: 118</li>
+            <li>個人情報紛争調整委員会: 1833-6972</li>
+            <li>大検察庁サイバー捜査課: 1301</li>
+            <li>警察庁サイバー安全局: 182</li>
+        </ul>
+    </div>
+
+    </div><!-- /content-ja -->
+
     <div class="section" style="margin-top: 32px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
         <p style="font-size: 0.75rem; color: #666;">본 개인정보 처리방침의 한국어 원문이 법적 효력을 가지며, 영어 또는 일본어 번역본은 참고용으로만 제공됩니다. 번역본과 한국어 원문 사이에 차이가 있는 경우, 한국어 원문이 우선합니다.</p>
         <p style="font-size: 0.75rem; color: #666;">The Korean original of this Privacy Policy is legally binding. English or Japanese translations are provided for reference purposes only. In case of any discrepancy, the Korean version shall prevail.</p>
     </div>
+
+<script>
+const TITLES = {
+    ko: { title: '개인정보 처리방침', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 9일' },
+    en: { title: 'Privacy Policy', date: 'Effective: March 1, 2025 | Last updated: April 9, 2026' },
+    ja: { title: 'プライバシーポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月9日' }
+};
+function setLang(lang) {
+    const t = TITLES[lang] || TITLES.ko;
+    document.getElementById('page-title').textContent = t.title;
+    document.getElementById('page-date').textContent = t.date;
+    document.querySelectorAll('.content-block').forEach(el => el.classList.remove('active'));
+    document.getElementById('content-' + lang)?.classList.add('active');
+    document.querySelectorAll('.lang-switch button').forEach(b => b.classList.remove('active'));
+    document.getElementById('lang-' + lang)?.classList.add('active');
+    document.documentElement.lang = lang;
+    document.title = t.title + ' - BRAVECAT';
+}
+const browserLang = (navigator.language || 'ko').substring(0, 2);
+if (['ko', 'en', 'ja'].includes(browserLang)) setLang(browserLang);
+</script>
 </body>
 </html>
