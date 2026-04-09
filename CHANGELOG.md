@@ -5,6 +5,13 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.258] - 2026-04-09
+
+### 변경
+- fix: account-deletion 언어 전환(한/영/일) 실제 작동하도록 수정
+- Revert "feat: account-deletion 페이지 한국어만 활성화, 영어/일어 비활성화"
+- feat: account-deletion 페이지 한국어만 활성화, 영어/일어 비활성화
+
 ## [1.0.257] - 2026-04-09
 
 ### 변경
