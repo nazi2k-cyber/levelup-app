@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.243] - 2026-04-09
+
+### 변경
+- feat: 명상 타이머 상태창 추가 (IIFE 모듈, i18n, VIT 보상)
+
 ## [1.0.242] - 2026-04-08
 
 ### 변경
