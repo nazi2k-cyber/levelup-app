@@ -30,10 +30,18 @@ LEVEL UP: REBOOT is a self-improvement app that gamifies your daily life using R
 • Syncs with Google Fit & Health Connect for real step counting
 • Earn AGI (Agility) stat automatically when you hit your step goals
 
-🗓️ Growth Diary
-• Daily achievement logging with visual progress graphs
-• Track weekly and monthly improvement trends
-• Write your own growth story
+🗓️ Planner & Day1 Feed
+• Plan your day with priority tasks & timetable
+• Share your daily story with photos on the Day1 feed
+• Save planner as image & share via link
+
+🛠️ Smart Tools
+• 1RM Calculator — Track your big 3 lifts (squat, bench, deadlift)
+• Meditation Timer — Focus with singing bowl sounds
+• D-Day Counter — Track important goal dates
+• My Library — Manage your reading list (Babel's Library)
+• Running Calculator — Auto-calculate pace, distance & time
+• Life Progress — Visualize your remaining time
 
 🌍 Multilingual Support
 • Korean · English · Japanese
