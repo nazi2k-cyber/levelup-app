@@ -1,7 +1,7 @@
 # 플레이스토어 등록 체크리스트
 ## LEVEL UP: REBOOT (com.levelup.reboot)
 
-> **마지막 업데이트**: 2026-03-22
+> **마지막 업데이트**: 2026-04-09
 > **전체 준비도**: 약 85% — 개발 자산 준비 완료, Play Console 설정 작업 남음
 
 ---
@@ -122,19 +122,23 @@ keytool -list -v \
 |---|---|---|---|
 | 앱 아이콘 | 512×512 PNG | ✅ 완료 | `play_store_512.png` (16KB) |
 | 특성 이미지 (Feature Graphic) | 1024×500 PNG | ✅ 완료 | `feature-graphic.png` (307KB) |
-| 스크린샷 (휴대전화) | 최소 2장 | ✅ 완료 (19장) | `store-listing/Screenshot_*.jpg` |
+| 스크린샷 (휴대전화) | 최소 2장 | ✅ 완료 (13장) | `store-listing/screenshot/Screenshot_*.jpg` |
 
-### 스크린샷 현황 (19장 보유)
-- 2026-03-11 ~ 2026-03-21 촬영
+### 스크린샷 현황 (13장 보유)
+- 2026-04-07 ~ 2026-04-09 촬영 (최신 UI 반영)
 - 파일 크기: 219KB ~ 663KB
 - Play Store 업로드 시 2~8장 선택 권장
+- 상세 문서: `store-listing/screenshot/README.md`
 
-### 스크린샷 권장 선택 내용
-1. 로그인/메인 화면 (LEVEL UP 브랜딩)
-2. 스탯 현황 화면 (STR/INT/CHA/VIT/WLT/AGI)
-3. 주간 퀘스트 목록
-4. 던전 레이드 화면
-5. 소셜 랭킹 화면
+### 스크린샷 권장 선택 (8장)
+1. 상태창 — 헌터 스탯 레이더 차트 (STR/INT/CHA/VIT/WLT/AGI)
+2. 데일리 퀘스트 — 요일별 퀘스트 목록 & DIY 퀘스트
+3. 주간 도전과제 — 도전과제 + 일일 보너스 룰렛
+4. 로컬 레이드 (지도) — GPS 기반 던전 레이드
+5. 로컬 레이드 (배틀) — 실시간 보스 공략 & 참여 헌터
+6. Day1 피드 — 사진 포스팅 & 소셜 피드
+7. 글로벌 랭킹 — 리더보드 & 팔로우 시스템
+8. 스마트 도구 — 1RM 계산기, 명상 타이머, D-Day
 
 ### 할 일
 - [ ] 19장 중 대표 스크린샷 2~8장 선택
@@ -235,7 +239,7 @@ Play Console → 데이터 보안에서 아래 항목 신고:
 |---|---|---|
 | 앱 아이콘 (512×512) | `play_store_512.png` | ✅ |
 | 특성 이미지 (1024×500) | `feature-graphic.png` | ✅ |
-| 스크린샷 (19장) | `store-listing/Screenshot_*.jpg` | ✅ |
+| 스크린샷 (13장) | `store-listing/screenshot/Screenshot_*.jpg` | ✅ |
 | 한국어 등록정보 | `store-listing/ko-KR/` | ✅ |
 | 영어 등록정보 | `store-listing/en-US/` | ✅ |
 | 개인정보 처리방침 | `privacy.html` | ✅ |
@@ -266,7 +270,7 @@ Play Console → 데이터 보안에서 아래 항목 신고:
 ### 권장 (제출 전 확인)
 - ⬜ 외부 접근 가능한 개인정보 처리방침 URL 준비 (예: `https://bravecat.studio/privacy`)
 - ⬜ 고객지원 이메일 등록 (예: `support@bravecat.studio`)
-- ⬜ 스크린샷 19장 중 대표 2~8장 선택
+- ⬜ 스크린샷 13장 중 대표 8장 선택 (권장 목록은 `screenshot/README.md` 참조)
 
 ---
 
