@@ -573,28 +573,7 @@
 
     // --- Update summary card on status screen ---
     function updateSummaryCard() {
-        var list = loadRcHistory();
-        var el1 = document.getElementById('rc-summary-dist');
-        var el2 = document.getElementById('rc-summary-time');
-        var el3 = document.getElementById('rc-summary-pace');
-        var displayUnit = _rcDisplayUnit || 'km';
-
-        // Show most recent pace record in main summary
-        var latestPace = null;
-        for (var i = 0; i < list.length; i++) {
-            if (list[i].type !== 'vdot') { latestPace = list[i]; break; }
-        }
-        if (latestPace) {
-            var convDist = convertRecordDist(latestPace, displayUnit);
-            var convPace = convertRecordPace(latestPace, displayUnit);
-            if (el1) el1.textContent = (Math.round(convDist * 10) / 10) + ' ' + displayUnit;
-            if (el2) el2.textContent = latestPace.time;
-            if (el3) el3.textContent = convPace + ' /' + displayUnit;
-        } else {
-            if (el1) el1.textContent = '- ' + displayUnit;
-            if (el2) el2.textContent = '-';
-            if (el3) el3.textContent = '- /' + displayUnit;
-        }
+        renderSummaryMileage();
         renderRcSummaryHistory();
     }
     // Expose for external refresh (e.g. after Firebase data restore)
@@ -887,15 +866,20 @@
         var list = loadRcHistory();
         var displayUnit = _rcDisplayUnit || 'km';
         var totals = calcMileageTotals(list, displayUnit === 'mi');
-        if (parseFloat(totals.yearly) === 0 && parseFloat(totals.monthly) === 0) { el.innerHTML = ''; return; }
         var _t = i18n[window.AppState.currentLang] || {};
-        el.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">' +
-            '<div style="display:flex; align-items:center; gap:12px;">' +
-            '<div><div style="font-size:0.6rem; color:var(--text-sub);">' + (_t.rc_monthly_mileage || '월간') + '</div>' +
-            '<div style="font-size:0.8rem; font-weight:700; color:var(--neon-cyan, #00d9ff);">' + totals.monthly + ' ' + totals.unit + '</div></div>' +
-            '<div style="color:var(--text-sub);">|</div>' +
-            '<div><div style="font-size:0.6rem; color:var(--text-sub);">' + (_t.rc_yearly_mileage || '연간') + '</div>' +
-            '<div style="font-size:0.8rem; font-weight:700; color:var(--neon-cyan, #00d9ff);">' + totals.yearly + ' ' + totals.unit + '</div></div>' +
+        var titleLabel = _t.rc_mileage_title || '러닝 마일리지';
+        var monthlyLabel = _t.rc_monthly_mileage || '월간';
+        var yearlyLabel = _t.rc_yearly_mileage || '연간';
+        var newBadge = '<span style="display:inline-block; font-size:0.5rem; font-weight:800; color:#fff; background:var(--neon-red, #ff5252); padding:1px 5px; border-radius:3px; margin-left:5px; vertical-align:middle;">NEW</span>';
+
+        el.innerHTML = '<div style="padding:10px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">' +
+            '<div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:8px;">' + titleLabel + newBadge + '</div>' +
+            '<div style="display:flex; align-items:baseline; gap:16px;">' +
+            '<div><div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:2px;">' + monthlyLabel + '</div>' +
+            '<div style="font-size:1.15rem; font-weight:900; color:var(--neon-cyan, #00d9ff);">' + totals.monthly + ' <span style="font-size:0.7rem; font-weight:600;">' + totals.unit + '</span></div></div>' +
+            '<div style="color:var(--text-sub); font-size:0.8rem;">|</div>' +
+            '<div><div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:2px;">' + yearlyLabel + '</div>' +
+            '<div style="font-size:1.15rem; font-weight:900; color:var(--neon-cyan, #00d9ff);">' + totals.yearly + ' <span style="font-size:0.7rem; font-weight:600;">' + totals.unit + '</span></div></div>' +
             '</div></div>';
     }
 
