@@ -20,14 +20,28 @@
         .brand { font-weight: 700; color: #ffffff; }
         .warning { background: rgba(255,60,60,0.08); border: 1px solid rgba(255,60,60,0.2); border-radius: 8px; padding: 12px; margin: 12px 0; }
         .warning p { color: #ff6b6b; }
+        .lang-switch { text-align: center; margin-bottom: 20px; }
+        .lang-switch button { background: none; border: 1px solid rgba(255,255,255,0.15); color: #888; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; margin: 0 2px; }
+        .lang-switch button.active { border-color: #00d9ff; color: #00d9ff; }
+        .content-block { display: none; }
+        .content-block.active { display: block; }
     </style>
 </head>
 <body>
+    <div class="lang-switch">
+        <button onclick="setLang('ko')" id="lang-ko" class="active">한국어</button>
+        <button onclick="setLang('en')" id="lang-en">English</button>
+        <button onclick="setLang('ja')" id="lang-ja">日本語</button>
+    </div>
+
     <div class="legal-header">
         <button class="back-btn" onclick="history.back()">←</button>
-        <span class="legal-title">이용 정책</span>
+        <span class="legal-title" id="page-title">이용 정책</span>
     </div>
-    <div class="legal-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 5일</div>
+    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 9일</div>
+
+    <!-- 한국어 -->
+    <div class="content-block active" id="content-ko">
 
     <div class="section">
         <p>본 이용 정책(이하 "정책")은 <span class="brand">BRAVECAT</span>이 운영하는 <span class="brand">LEVEL UP: REBOOT</span> 서비스(이하 "서비스")의 올바른 이용 기준을 정합니다. 서비스를 이용함으로써 본 정책에 동의하는 것으로 간주됩니다.</p>
@@ -164,9 +178,320 @@
         <p>회사는 서비스 운영 환경 변화에 따라 본 정책을 수시로 변경할 수 있습니다. 변경 사항은 서비스 내 공지를 통해 고지하며, 변경된 정책에 동의하지 않는 경우 서비스 이용을 중단할 수 있습니다.</p>
     </div>
 
+    </div><!-- /content-ko -->
+
+    <!-- English -->
+    <div class="content-block" id="content-en">
+
+    <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+        <p style="color:#ffaa00;font-size:0.8rem;margin:0;">This is a translation provided for reference purposes only. In the event of any discrepancy between this translation and the Korean original, the Korean version shall prevail.</p>
+    </div>
+
+    <div class="section">
+        <p>This Usage Policy ("Policy") sets forth the proper usage standards for the <span class="brand">LEVEL UP: REBOOT</span> service ("Service") operated by <span class="brand">BRAVECAT</span>. By using the Service, you are deemed to have agreed to this Policy.</p>
+    </div>
+
+    <div class="section">
+        <h2>1. Basic Usage Principles</h2>
+        <p>LEVEL UP: REBOOT is a service designed to help users with self-improvement and forming healthy lifestyle habits. All users must adhere to the following principles:</p>
+        <ul>
+            <li>Use the Service honestly and sincerely</li>
+            <li>Respect the rights of other users</li>
+            <li>Contribute to the fair operation of the Service</li>
+            <li>Comply with applicable laws and regulations</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>2. Prohibited Actions</h2>
+
+        <h3>2.1 Data Manipulation and Fraud</h3>
+        <div class="warning">
+            <p>The following actions are strictly prohibited:</p>
+        </div>
+        <ul>
+            <li>Falsely recording quest completion data</li>
+            <li>Using automation tools (bots, macros, scripts, etc.) to complete quests or earn points</li>
+            <li>Manipulating Google Fit or Health Connect data to send false exercise records</li>
+            <li>Falsifying GPS location information (GPS spoofing)</li>
+            <li>Fraudulently manipulating raid/dungeon participation</li>
+            <li>Fraudulently transferring points or data between accounts</li>
+        </ul>
+
+        <h3>2.2 Community Standards</h3>
+        <ul>
+            <li>Harassment, defamation, or discriminatory behavior toward other users</li>
+            <li>Using offensive, harmful, or aggressive profile images or nicknames</li>
+            <li>Sending spam, advertising, or commercial messages</li>
+            <li>Unauthorized disclosure or collection of other users' personal information</li>
+            <li>Impersonating other users</li>
+            <li>Posting inappropriate (violent, sexual, hateful) photos or content on the Day1 feed</li>
+            <li>Harassment, spam, or advertising through comments</li>
+        </ul>
+
+        <h3>2.3 Technical Abuse</h3>
+        <ul>
+            <li>Circumventing or disabling the Service's security systems</li>
+            <li>Causing excessive load on Service servers</li>
+            <li>Unauthorized reverse engineering, decompiling, or disassembling of the Service's source code</li>
+            <li>Unauthorized access to the Service's APIs or databases</li>
+            <li>Creating multiple accounts to abuse the Service</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>3. Social Feature Standards</h2>
+        <h3>3.1 Global Rankings</h3>
+        <p>Rankings are operated for fair competition. Scores obtained through fraud may be deleted, and repeated violations may result in permanent exclusion from rankings.</p>
+        <h3>3.2 Friends Feature</h3>
+        <p>The friends feature must be used based on mutual respect. Repeatedly sending unnecessary friend requests or using the friends feature for harassment is prohibited.</p>
+        <h3>3.3 Instagram Integration</h3>
+        <p>Instagram profile integration is optional. Linking another person's Instagram account without authorization or linking a fake account is prohibited.</p>
+        <h3>3.4 Day1 Feed</h3>
+        <p>The Day1 feed is an activity-sharing feature with automatic deletion after 24 hours. The following standards must be observed:</p>
+        <ul>
+            <li>Limit of one post per day (resets daily at 00:00 KST)</li>
+            <li>Automatic deletion 24 hours after posting</li>
+            <li>Only appropriate content may be posted (violent, sexual, or hateful content is prohibited)</li>
+            <li>Comments must be based on mutual respect; harassment, spam, or advertising through comments is prohibited</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>4. Planner and Tool Standards</h2>
+        <h3>4.1 Planner</h3>
+        <p>The planner includes monthly calendar, weekly timetable, DIY quests, and task checklist features. Viewing the planner may require watching a rewarded ad.</p>
+        <ul>
+            <li>Recording inappropriate or harmful content in the planner is prohibited</li>
+            <li>Fraudulently earning points through DIY quests is prohibited</li>
+        </ul>
+        <h3>4.2 Running Calculator and 1RM Calculator</h3>
+        <p>The running calculator and 1RM calculator are reference tools to help users manage exercise records. Watching a rewarded ad may be required to use the calculators.</p>
+        <ul>
+            <li>Entering false exercise records to fraudulently obtain STR rewards is prohibited</li>
+            <li>Calculator results must not be used as medical advice</li>
+        </ul>
+        <h3>4.3 Life Status</h3>
+        <p>The Life Status feature visually displays the remaining lifespan based on the user's date of birth and life expectancy information. This feature is activated after separate consent for personal information collection and use.</p>
+        <ul>
+            <li>Using Life Status information in ways that cause discomfort to others is prohibited</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>5. Dungeon/Raid Standards</h2>
+        <p>Global dungeon raids are cooperative content operated during specific time slots (06:00-08:00, 11:30-13:30, 19:00-21:00 KST).</p>
+        <ul>
+            <li>Raid participation must be based on actual activity; false participation is prohibited</li>
+            <li>Manipulating raid data to fraudulently obtain rewards is prohibited</li>
+            <li>Intentionally interfering with other participants' raid experience is prohibited</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>6. Copyright Protection</h2>
+        <ul>
+            <li>Posting content that infringes third-party copyrights on the Day1 feed or profiles is prohibited</li>
+            <li>Unauthorized use of others' photos, images, music, etc. is prohibited</li>
+            <li>Unauthorized reproduction or distribution of Service content (UI, icons, game systems, etc.) is prohibited</li>
+            <li>If copyright infringement is confirmed, the relevant content may be deleted and the account sanctioned</li>
+            <li>Copyright infringement reports: copyright@bravecat.studio</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>7. Enforcement Actions</h2>
+        <p>The Company may take the following actions against users who violate this Policy:</p>
+        <ol>
+            <li><strong>Warning:</strong> A prior warning is issued for minor violations.</li>
+            <li><strong>Feature Restriction:</strong> Temporary restriction of specific features (social, raids, etc.).</li>
+            <li><strong>Data Reset:</strong> Reset of fraudulently obtained points, stats, and rankings.</li>
+            <li><strong>Account Suspension:</strong> Account suspension for a period for serious violations.</li>
+            <li><strong>Permanent Ban:</strong> Permanent account deletion for repeated or major violations.</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>8. Reports and Inquiries</h2>
+        <p>If you discover a policy violation, please report it to the contact below. The Company will review the report and take appropriate action.</p>
+        <p><span class="brand">BRAVECAT</span><br>Email: report@bravecat.studio</p>
+    </div>
+
+    <div class="section">
+        <h2>9. Policy Changes</h2>
+        <p>The Company may modify this Policy at any time as the service environment changes. Changes will be notified through in-app announcements. If you do not agree to the changes, you may discontinue use of the Service.</p>
+    </div>
+
+    </div><!-- /content-en -->
+
+    <!-- 日本語 -->
+    <div class="content-block" id="content-ja">
+
+    <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+        <p style="color:#ffaa00;font-size:0.8rem;margin:0;">この文書は参考のために翻訳されたものです。本翻訳と韓国語原文との間に齟齬がある場合は、韓国語版が優先されます。</p>
+    </div>
+
+    <div class="section">
+        <p>本利用ポリシー（以下「ポリシー」）は、<span class="brand">BRAVECAT</span>が運営する<span class="brand">LEVEL UP: REBOOT</span>サービス（以下「サービス」）の正しい利用基準を定めます。サービスを利用することにより、本ポリシーに同意したものとみなされます。</p>
+    </div>
+
+    <div class="section">
+        <h2>1. 基本利用原則</h2>
+        <p>LEVEL UP: REBOOTは、ユーザーの自己啓発と健康的な生活習慣の形成を支援するためのサービスです。すべてのユーザーは以下の原則を遵守する必要があります：</p>
+        <ul>
+            <li>誠実にサービスを利用すること</li>
+            <li>他のユーザーの権利を尊重すること</li>
+            <li>サービスの公正な運営に貢献すること</li>
+            <li>関連法令および規定を遵守すること</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>2. 禁止行為</h2>
+
+        <h3>2.1 データ操作および不正行為</h3>
+        <div class="warning">
+            <p>以下の行為は厳しく禁止されています：</p>
+        </div>
+        <ul>
+            <li>クエスト完了データを虚偽に記録する行為</li>
+            <li>自動化ツール（ボット、マクロ、スクリプト等）を使用してクエストを完了したりポイントを獲得する行為</li>
+            <li>Google FitまたはHealth Connectデータを操作して虚偽の運動記録を送信する行為</li>
+            <li>GPS位置情報を偽装（GPSスプーフィング）する行為</li>
+            <li>レイド/ダンジョン参加を不正に操作する行為</li>
+            <li>アカウント間でポイントまたはデータを不正に移転する行為</li>
+        </ul>
+
+        <h3>2.2 コミュニティ行動基準</h3>
+        <ul>
+            <li>他のユーザーへの嫌がらせ、誹謗中傷、差別的言動</li>
+            <li>不快、有害、または攻撃的なプロフィール画像やニックネームの使用</li>
+            <li>スパム、広告、または商業目的のメッセージ送信</li>
+            <li>他人の個人情報を無断で公開または収集する行為</li>
+            <li>他のユーザーを詐称する行為</li>
+            <li>Day1フィードに不適切な（暴力的、性的、嫌悪的）写真やコンテンツを投稿する行為</li>
+            <li>コメントによる嫌がらせ、スパム、広告行為</li>
+        </ul>
+
+        <h3>2.3 技術的濫用</h3>
+        <ul>
+            <li>サービスのセキュリティシステムを迂回または無力化する行為</li>
+            <li>サービスサーバーに過度な負荷を発生させる行為</li>
+            <li>サービスのソースコードを無断でリバースエンジニアリング、デコンパイル、逆アセンブルする行為</li>
+            <li>サービスのAPIやデータベースに無断でアクセスする行為</li>
+            <li>複数アカウントを作成してサービスを濫用する行為</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>3. ソーシャル機能利用基準</h2>
+        <h3>3.1 グローバルランキング</h3>
+        <p>ランキングは公正な競争のために運営されています。不正行為で獲得したスコアは削除される場合があり、繰り返し違反した場合はランキングから永久除外される場合があります。</p>
+        <h3>3.2 フレンド機能</h3>
+        <p>フレンド追加機能は相互尊重に基づいて利用する必要があります。不必要なフレンドリクエストを繰り返したり、フレンド機能を通じて嫌がらせを行う行為は禁止されています。</p>
+        <h3>3.3 Instagram連携</h3>
+        <p>Instagramプロフィール連携はユーザーの任意です。他人のInstagramアカウントを無断で連携したり、虚偽のアカウントを連携する行為は禁止されています。</p>
+        <h3>3.4 Day1フィード</h3>
+        <p>Day1フィードは24時間で自動削除される活動共有機能です。以下の基準を遵守する必要があります：</p>
+        <ul>
+            <li>1日1回投稿制限（毎日00:00 KSTにリセット）</li>
+            <li>投稿後24時間経過で自動削除</li>
+            <li>適切なコンテンツのみ投稿すること（暴力、性的、嫌悪コンテンツは禁止）</li>
+            <li>コメントは相互尊重に基づいて作成し、嫌がらせ・スパム・広告目的のコメントは禁止されています</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>4. プランナーおよびツール利用基準</h2>
+        <h3>4.1 プランナー</h3>
+        <p>プランナーには月間カレンダー、週間タイムテーブル、DIYクエスト、タスクチェックリスト機能が含まれます。プランナー閲覧時にリワード広告の視聴が必要な場合があります。</p>
+        <ul>
+            <li>プランナーに不適切または有害なコンテンツを記録する行為は禁止されています</li>
+            <li>DIYクエストを通じて不正にポイントを獲得する行為は禁止されています</li>
+        </ul>
+        <h3>4.2 ランニング計算機および1RM計算機</h3>
+        <p>ランニング計算機と1RM計算機は、ユーザーの運動記録管理を支援するための参考用ツールです。計算機の使用時にリワード広告の視聴が必要な場合があります。</p>
+        <ul>
+            <li>虚偽の運動記録を入力してSTR報酬を不正取得する行為は禁止されています</li>
+            <li>計算結果を医学的助言として使用してはなりません</li>
+        </ul>
+        <h3>4.3 Life Status</h3>
+        <p>Life Status機能は、ユーザーが入力した生年月日と期待寿命情報に基づいて残りの生涯を視覚的に表示します。この機能は、個別の個人情報収集および利用同意を経た後に有効化されます。</p>
+        <ul>
+            <li>Life Status情報を他人に不快感を与える方法で使用する行為は禁止されています</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>5. ダンジョン/レイド利用基準</h2>
+        <p>グローバルダンジョンレイドは、特定の時間帯（06:00～08:00、11:30～13:30、19:00～21:00 KST）に運営される協力コンテンツです。</p>
+        <ul>
+            <li>レイド参加は実際の活動に基づく必要があり、虚偽の参加は禁止されています</li>
+            <li>レイドデータを操作して報酬を不正取得する行為は禁止されています</li>
+            <li>他の参加者のレイド体験を故意に妨害する行為は禁止されています</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>6. 著作権保護</h2>
+        <ul>
+            <li>Day1フィードおよびプロフィールに第三者の著作権を侵害するコンテンツを投稿する行為は禁止されています</li>
+            <li>他人の写真、画像、音楽等を無断で使用する行為は禁止されています</li>
+            <li>サービスのコンテンツ（UI、アイコン、ゲームシステム等）を無断で複製・配布する行為は禁止されています</li>
+            <li>著作権侵害が確認された場合、該当コンテンツを削除しアカウントを制裁する場合があります</li>
+            <li>著作権侵害報告: copyright@bravecat.studio</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>7. 違反時の措置</h2>
+        <p>本ポリシーに違反したユーザーに対して、会社は以下の措置を取ることがあります：</p>
+        <ol>
+            <li><strong>警告：</strong> 軽微な違反の場合、事前警告を発送します。</li>
+            <li><strong>機能制限：</strong> 特定機能（ソーシャル、レイド等）の利用を一時的に制限します。</li>
+            <li><strong>データリセット：</strong> 不正に獲得したポイント、ステータス、ランキングをリセットします。</li>
+            <li><strong>アカウント停止：</strong> 重大な違反の場合、一定期間アカウントを停止します。</li>
+            <li><strong>永久バン：</strong> 反復的な違反または重大な違反の場合、アカウントを永久削除します。</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>8. 報告およびお問い合わせ</h2>
+        <p>ポリシー違反を発見した場合は、以下の連絡先までご報告ください。会社は受け付けた報告を検討した後、適切な措置を取ります。</p>
+        <p><span class="brand">BRAVECAT</span><br>メール: report@bravecat.studio</p>
+    </div>
+
+    <div class="section">
+        <h2>9. ポリシーの変更</h2>
+        <p>会社はサービス運営環境の変化に応じて、本ポリシーを随時変更することがあります。変更事項はサービス内のお知らせを通じて告知し、変更されたポリシーに同意しない場合はサービスの利用を中断することができます。</p>
+    </div>
+
+    </div><!-- /content-ja -->
+
     <div class="section" style="margin-top: 32px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
         <p style="font-size: 0.75rem; color: #666;">본 이용 정책의 한국어 원문이 법적 효력을 가지며, 영어 또는 일본어 번역본은 참고용으로만 제공됩니다. 번역본과 한국어 원문 사이에 차이가 있는 경우, 한국어 원문이 우선합니다.</p>
         <p style="font-size: 0.75rem; color: #666;">The Korean original of this Usage Policy is legally binding. English or Japanese translations are provided for reference purposes only. In case of any discrepancy, the Korean version shall prevail.</p>
     </div>
+
+    <script>
+    const TITLES = {
+        ko: { title: '이용 정책', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 9일' },
+        en: { title: 'Usage Policy', date: 'Effective: March 1, 2025 | Last updated: April 9, 2026' },
+        ja: { title: '利用ポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月9日' }
+    };
+    function setLang(lang) {
+        const t = TITLES[lang] || TITLES.ko;
+        document.getElementById('page-title').textContent = t.title;
+        document.getElementById('page-date').textContent = t.date;
+        document.querySelectorAll('.content-block').forEach(el => el.classList.remove('active'));
+        document.getElementById('content-' + lang)?.classList.add('active');
+        document.querySelectorAll('.lang-switch button').forEach(b => b.classList.remove('active'));
+        document.getElementById('lang-' + lang)?.classList.add('active');
+        document.documentElement.lang = lang;
+        document.title = t.title + ' - BRAVECAT';
+    }
+    const browserLang = (navigator.language || 'ko').substring(0, 2);
+    if (['ko', 'en', 'ja'].includes(browserLang)) setLang(browserLang);
+    </script>
 </body>
 </html>
