@@ -262,6 +262,7 @@ const i18n = {
         med_guide_title: "사용 방법",
         med_guide_body: "1. 원하는 시간을 선택하세요 (5~30분).<br>2. 시작 버튼을 눌러 명상을 시작하세요.<br>3. 타이머가 끝나면 자동으로 완료됩니다.<br>4. 매일 첫 명상 완료 시 +10P & VIT +0.3 보상!",
         med_sessions_today: "오늘",
+        med_sound: "종소리", med_sound_preview: "미리듣기",
 
         lib_title: "내 서재", lib_scan: "ISBN 스캔", lib_scan_hint: "바코드를 카메라에 비춰주세요",
         lib_reading: "읽고있는책", lib_read: "읽은책", lib_want_to_read: "읽고싶은책",
@@ -864,6 +865,7 @@ const i18n = {
         med_guide_title: "How to Use",
         med_guide_body: "1. Choose your duration (5-30 min).<br>2. Tap Start to begin meditating.<br>3. Timer completes automatically.<br>4. First daily meditation earns +10P & VIT +0.3!",
         med_sessions_today: "Today",
+        med_sound: "Bowl Sound", med_sound_preview: "Preview",
 
         lib_title: "My Library", lib_scan: "ISBN Scan", lib_scan_hint: "Point the camera at the barcode",
         lib_reading: "Reading", lib_read: "Read", lib_want_to_read: "Want to Read",
@@ -1466,6 +1468,7 @@ const i18n = {
         med_guide_title: "使い方",
         med_guide_body: "1. 希望の時間を選択してください（5〜30分）。<br>2. 開始ボタンを押して瞑想を始めましょう。<br>3. タイマーが終了すると自動的に完了します。<br>4. 毎日初回の瞑想完了で +10P & VIT +0.3 報酬！",
         med_sessions_today: "今日",
+        med_sound: "鐘の音", med_sound_preview: "試聴",
 
         lib_title: "私の書斎", lib_scan: "ISBNスキャン", lib_scan_hint: "バーコードをカメラに向けてください",
         lib_reading: "読書中", lib_read: "読了", lib_want_to_read: "読みたい",

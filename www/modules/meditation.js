@@ -7,6 +7,8 @@
     const MED_NOTIF_ID = 7800;
     const MED_PRESETS = [5, 10, 15, 20, 30];
 
+    let audioCtx = null;
+
     let medState = {
         phase: 'idle', // idle, meditating, completed
         secondsLeft: 0,
@@ -25,7 +27,7 @@
             const saved = localStorage.getItem(MED_STORAGE_KEY);
             if (saved) return JSON.parse(saved);
         } catch(e) {}
-        return { durationMin: 10 };
+        return { durationMin: 10, soundEnabled: true };
     }
 
     function saveMedSettings(s) {
@@ -79,6 +81,13 @@
             sessionCount.textContent = `${todayLabel} ${medState.dailySessions}`;
         }
 
+        // Sound toggle button
+        const soundBtn = document.getElementById('btn-med-sound');
+        if (soundBtn) {
+            const settings = getMedSettings();
+            soundBtn.textContent = settings.soundEnabled ? '🔔' : '🔕';
+        }
+
         // Preset chips active state
         const settings = getMedSettings();
         MED_PRESETS.forEach(m => {
@@ -111,6 +120,7 @@
         medState.totalSeconds = settings.durationMin * 60;
         medState.secondsLeft = medState.totalSeconds;
 
+        playBowlSound(); // 시작 종소리
         scheduleMedNotification(medState.totalSeconds);
 
         clearInterval(medState.intervalId);
@@ -139,11 +149,59 @@
         updateMedUI();
     }
 
-    function playMedSound() {
+    // --- 티베트 종소리 합성 (Web Audio API) ---
+    function getAudioContext() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return audioCtx;
+    }
+
+    function playBowlSound() {
+        const settings = getMedSettings();
+        if (!settings.soundEnabled) return;
         try {
-            if (navigator.vibrate) {
-                navigator.vibrate([300, 150, 300]);
-            }
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+
+            // 티베트 싱잉볼 배음 구조 (비정수배 하모닉스로 특유의 울림)
+            const fundamental = 230;
+            const partials = [
+                { ratio: 1.00, amp: 0.35, decay: 5.0 },
+                { ratio: 2.01, amp: 0.25, decay: 4.2 },
+                { ratio: 3.03, amp: 0.12, decay: 3.5 },
+                { ratio: 4.53, amp: 0.08, decay: 2.8 },
+                { ratio: 5.56, amp: 0.04, decay: 2.2 }
+            ];
+
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.6, now);
+            master.connect(ctx.destination);
+
+            partials.forEach(p => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(fundamental * p.ratio, now);
+                // 자연스러운 어택 + 긴 지수 감쇠
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(p.amp, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + p.decay);
+                osc.connect(gain);
+                gain.connect(master);
+                osc.start(now);
+                osc.stop(now + p.decay + 0.1);
+            });
+        } catch(e) {
+            console.warn('[Meditation] 종소리 재생 실패:', e);
+        }
+    }
+
+    function playMedSound() {
+        playBowlSound();
+        try {
+            if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
         } catch(e) {}
     }
 
@@ -316,6 +374,15 @@
         updateMedUI();
     };
 
+    window.toggleMedSound = function() {
+        const settings = getMedSettings();
+        settings.soundEnabled = !settings.soundEnabled;
+        saveMedSettings(settings);
+        updateMedUI();
+        // 켤 때 미리듣기
+        if (settings.soundEnabled) playBowlSound();
+    };
+
     // Settings modal
     window.openMedSettings = function() {
         const lang = i18n[AppState.currentLang] || i18n.ko;
@@ -327,6 +394,12 @@
             <div class="med-settings-modal">
                 <h3 style="margin:0 0 16px 0; font-size:1rem; color:#00e5a0;">${lang.med_settings_title || '명상 설정'}</h3>
                 <label><span>${lang.med_duration_min || '명상 시간 (분)'}</span><input type="number" id="med-set-duration" value="${settings.durationMin}" min="1" max="60"></label>
+                <label><span>${lang.med_sound || '종소리'}</span>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button id="med-set-sound-toggle" onclick="this.dataset.on = this.dataset.on==='true'?'false':'true'; this.textContent = this.dataset.on==='true'?'ON':'OFF'; this.style.color = this.dataset.on==='true'?'#00e5a0':'var(--text-sub)';" data-on="${settings.soundEnabled}" style="padding:4px 12px; border-radius:6px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:${settings.soundEnabled ? '#00e5a0' : 'var(--text-sub)'}; cursor:pointer; font-size:0.8rem; font-weight:700;">${settings.soundEnabled ? 'ON' : 'OFF'}</button>
+                        <button onclick="window.previewBowlSound()" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border-color); background:rgba(255,255,255,0.05); color:var(--text-sub); cursor:pointer; font-size:0.75rem;">▶ ${lang.med_sound_preview || '미리듣기'}</button>
+                    </div>
+                </label>
                 <div style="display:flex; gap:8px; margin-top:16px;">
                     <button onclick="window.saveMedSettingsFromModal()" class="btn-primary" style="flex:1; padding:10px; border-radius:8px; background:linear-gradient(135deg, #00e5a0, #00b87a);">${lang.med_save || '저장'}</button>
                     <button onclick="window.closeMedSettings()" style="flex:1; padding:10px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border-color); color:var(--text-sub); cursor:pointer;">✕</button>
@@ -350,9 +423,43 @@
         }
     };
 
+    window.previewBowlSound = function() {
+        // 설정 모달 내에서 미리듣기 시 임시로 soundEnabled 무시
+        try {
+            const ctx = getAudioContext();
+            const now = ctx.currentTime;
+            const fundamental = 230;
+            const partials = [
+                { ratio: 1.00, amp: 0.35, decay: 5.0 },
+                { ratio: 2.01, amp: 0.25, decay: 4.2 },
+                { ratio: 3.03, amp: 0.12, decay: 3.5 },
+                { ratio: 4.53, amp: 0.08, decay: 2.8 },
+                { ratio: 5.56, amp: 0.04, decay: 2.2 }
+            ];
+            const master = ctx.createGain();
+            master.gain.setValueAtTime(0.6, now);
+            master.connect(ctx.destination);
+            partials.forEach(p => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(fundamental * p.ratio, now);
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.linearRampToValueAtTime(p.amp, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + p.decay);
+                osc.connect(gain);
+                gain.connect(master);
+                osc.start(now);
+                osc.stop(now + p.decay + 0.1);
+            });
+        } catch(e) {}
+    };
+
     window.saveMedSettingsFromModal = function() {
         const durationMin = Math.max(1, Math.min(60, parseInt(document.getElementById('med-set-duration').value) || 10));
-        saveMedSettings({ durationMin });
+        const soundToggle = document.getElementById('med-set-sound-toggle');
+        const soundEnabled = soundToggle ? soundToggle.dataset.on === 'true' : true;
+        saveMedSettings({ durationMin, soundEnabled });
         window.closeMedSettings();
         if (medState.phase === 'idle' || medState.phase === 'completed') {
             medState.phase = 'idle';
