@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.263] - 2026-04-09
+
+### 변경
+- fix(movie): KMDb 포스터 URL http→https 변환으로 Mixed Content 차단 해결
+
 ## [1.0.262] - 2026-04-09
 
 ### 변경
