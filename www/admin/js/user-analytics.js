@@ -51,14 +51,38 @@ function render() {
                     <div id="ua-level-chart"></div>
                 </div>
             </div>
-            <h2 class="mt-16">많이 읽은 책 Top 10</h2>
-            <div id="ua-top-books" class="ua-top-books">
+            <div class="ua-top-tabs mt-16">
+                <button class="ua-top-tab active" data-tab="books">많이 읽은 책 Top 10</button>
+                <button class="ua-top-tab" data-tab="movies">많이 본 영화 Top 10</button>
+            </div>
+            <div id="ua-top-books" class="ua-top-panel active">
+                <p class="text-sub text-sm">데이터 로딩 중...</p>
+            </div>
+            <div id="ua-top-movies" class="ua-top-panel" style="display:none;">
                 <p class="text-sub text-sm">데이터 로딩 중...</p>
             </div>
             <button class="btn btn-outline btn-sm mt-16" id="ua-refresh-btn">새로고침</button>
         </div>
     `;
     document.getElementById("ua-refresh-btn").addEventListener("click", loadUserAnalytics);
+
+    // 탭 전환 이벤트
+    _container.querySelectorAll(".ua-top-tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+            _container.querySelectorAll(".ua-top-tab").forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            const target = tab.dataset.tab;
+            _container.querySelectorAll(".ua-top-panel").forEach(p => {
+                p.style.display = "none";
+                p.classList.remove("active");
+            });
+            const panel = document.getElementById(target === "books" ? "ua-top-books" : "ua-top-movies");
+            if (panel) {
+                panel.style.display = "";
+                panel.classList.add("active");
+            }
+        });
+    });
 }
 
 export async function loadUserAnalytics() {
@@ -100,6 +124,9 @@ export async function loadUserAnalytics() {
 
         // 많이 읽은 책 Top 10
         renderTopBooks("ua-top-books", d.topBooks || []);
+
+        // 많이 본 영화 Top 10
+        renderTopMovies("ua-top-movies", d.topMovies || []);
 
         tok("Analytics", `유저 분석 완료: 전체 ${d.totalUsers}명, 액티브(30일) ${d.active30d}명`);
     } catch (e) {
@@ -195,6 +222,47 @@ function renderTopBooks(containerId, books) {
                         <td class="ua-book-author">${escapeHtml(b.author || "-")}</td>
                         <td class="ua-book-publisher">${escapeHtml(b.publisher || "-")}</td>
                         <td class="ua-book-count">${b.count}명</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+function renderTopMovies(containerId, movies) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (!movies || movies.length === 0) {
+        el.innerHTML = '<p class="text-sub text-sm">데이터 없음</p>';
+        return;
+    }
+
+    el.innerHTML = `
+        <table class="ua-top-books-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th></th>
+                    <th>제목</th>
+                    <th>감독</th>
+                    <th>개봉일</th>
+                    <th>등록 수</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${movies.map((m, i) => `
+                    <tr>
+                        <td class="ua-rank">${i + 1}</td>
+                        <td class="ua-thumb-cell">
+                            ${m.posterUrl
+                                ? `<img class="ua-book-thumb" src="${escapeAttr(m.posterUrl)}" alt="" onerror="this.style.display='none'">`
+                                : '<div class="ua-book-thumb-placeholder"></div>'}
+                        </td>
+                        <td class="ua-book-title">${escapeHtml(m.title || "제목 없음")}</td>
+                        <td class="ua-book-author">${escapeHtml(m.director || "-")}</td>
+                        <td class="ua-book-publisher">${escapeHtml(m.releaseDate || "-")}</td>
+                        <td class="ua-book-count">${m.count}명</td>
                     </tr>
                 `).join("")}
             </tbody>

@@ -1118,6 +1118,9 @@ async function handleGetUserAnalytics(request) {
     // ISBN 기반 많이 읽은 책 집계
     const bookCountMap = {}; // isbn -> { count, title, author, publisher, thumbnail }
 
+    // 영화 코드 기반 많이 본 영화 집계
+    const movieCountMap = {}; // movieCd -> { count, title, director, posterUrl, releaseDate }
+
     for (const doc of usersSnap.docs) {
         totalUsers++;
         const data = doc.data();
@@ -1180,6 +1183,26 @@ async function handleGetUserAnalytics(request) {
             }
         } catch (_) { /* ignore */ }
 
+        // 영화 코드 기반 영화 집계 (moviesStr 파싱)
+        try {
+            const mov = JSON.parse(data.moviesStr || "{}");
+            const items = Array.isArray(mov.items) ? mov.items : [];
+            for (const movie of items) {
+                const movieCd = movie.movieCd;
+                if (!movieCd) continue;
+                if (!movieCountMap[movieCd]) {
+                    movieCountMap[movieCd] = {
+                        count: 0,
+                        title: movie.title || "",
+                        director: movie.director || "",
+                        posterUrl: movie.posterUrl || "",
+                        releaseDate: movie.releaseDate || ""
+                    };
+                }
+                movieCountMap[movieCd].count++;
+            }
+        } catch (_) { /* ignore */ }
+
         // 레벨 분포
         const lv = data.level || 1;
         if (lv <= 10) levelDistribution["1-10"]++;
@@ -1222,6 +1245,19 @@ async function handleGetUserAnalytics(request) {
             count: info.count
         }));
 
+    // Top 10 많이 본 영화 (movieCd 기준, 등록 유저 수 내림차순)
+    const topMovies = Object.entries(movieCountMap)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 10)
+        .map(([movieCd, info]) => ({
+            movieCd,
+            title: info.title,
+            director: info.director,
+            posterUrl: info.posterUrl,
+            releaseDate: info.releaseDate,
+            count: info.count
+        }));
+
     return {
         totalUsers,
         active7d,
@@ -1234,7 +1270,8 @@ async function handleGetUserAnalytics(request) {
         birthdaySetCount,
         expectAgeDistribution,
         ageGroupDistribution,
-        topBooks
+        topBooks,
+        topMovies
     };
 }
 

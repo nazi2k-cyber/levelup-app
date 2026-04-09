@@ -194,6 +194,33 @@ td { padding: 8px; border-bottom: 1px solid var(--border); }
     white-space: nowrap;
 }
 
+/* ─── Top Content Tabs ─── */
+.ua-top-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+}
+.ua-top-tab {
+    background: none;
+    border: none;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s, border-color 0.2s;
+}
+.ua-top-tab:hover {
+    color: var(--text);
+}
+.ua-top-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+.ua-top-panel { margin-top: 8px; }
+
 /* ─── Top Books Table ─── */
 .ua-top-books { margin-top: 8px; }
 .ua-top-books-table {
