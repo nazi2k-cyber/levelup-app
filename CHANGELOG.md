@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.261] - 2026-04-09
+
+### 변경
+- Day1 댓글 프로필 클릭 시 프로필 모달 팝업 + 프로필카드 팔로우/언팔로우 버튼 추가
+
 ## [1.0.260] - 2026-04-09
 
 ### 변경
