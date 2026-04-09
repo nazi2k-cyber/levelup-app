@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.264] - 2026-04-09
+
+### 변경
+- 프로필카드 플래너 버튼 UX 개선: 크기 일치 및 노란색 차별화
+
 ## [1.0.263] - 2026-04-09
 
 ### 변경
