@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.248] - 2026-04-09
+
+### 변경
+- docs: 약관/동의/고지 페이지 다국어 적용 구현 계획서 추가
+
 ## [1.0.247] - 2026-04-09
 
 ### 변경
