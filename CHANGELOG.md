@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.262] - 2026-04-09
+
+### 변경
+- feat(movie): API 검색 결과에 포스터 썸네일 표시
+
 ## [1.0.261] - 2026-04-09
 
 ### 변경
