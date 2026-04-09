@@ -4802,6 +4802,10 @@ function openProfileStatsModal(userId) {
         if (Array.isArray(su.friends) && su.friends.includes(userId)) followerCount++;
     });
 
+    const isMe = userId === auth.currentUser?.uid;
+    const isFollowing = (AppState.user.friends || []).includes(userId);
+    const followBtnHTML = !isMe ? `<button id="profile-modal-follow-btn" class="btn-reels-follow ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation();window.toggleProfileModalFollow('${sanitizeAttr(userId)}')" style="margin-left:6px;">${isFollowing ? (i18n[lang]?.btn_added || '팔로잉') : (i18n[lang]?.btn_add || '팔로우')}</button>` : '';
+
     const profileHTML = `
         <div style="display:flex; align-items:center; gap:12px;">
             ${u.photoURL
@@ -4811,6 +4815,7 @@ function openProfileStatsModal(userId) {
                 ${titleBadgeHTML}
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                     <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
+                    ${followBtnHTML}
                     <button onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" style="background:none; border:1px solid var(--neon-blue); border-radius:4px; padding:2px 8px; cursor:pointer; font-size:0.7rem; color:var(--neon-blue); display:inline-flex; align-items:center; gap:2px; white-space:nowrap; flex-shrink:0;" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
@@ -4845,6 +4850,15 @@ function closeProfileStatsModal() {
 
 window.openProfileStatsModal = openProfileStatsModal;
 window.closeProfileStatsModal = closeProfileStatsModal;
+
+// --- 프로필 모달 팔로우/언팔로우 토글 ---
+async function toggleProfileModalFollow(userId) {
+    if (!auth.currentUser || userId === auth.currentUser.uid) return;
+    await window.toggleFriend(userId);
+    // 모달 내용 갱신 (팔로우 상태 + 카운트 반영)
+    openProfileStatsModal(userId);
+}
+window.toggleProfileModalFollow = toggleProfileModalFollow;
 
 // --- 프로필 모달에서 당일 플래너 열람 ---
 async function viewUserTodayPlanner(userId) {
@@ -8611,10 +8625,10 @@ function renderCommentsSection(postId, comments) {
             const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(c.instaId)}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
             const timeAgo = getTimeAgo(c.timestamp, lang);
             return `<div class="reels-comment-item">
-                <img class="reels-comment-avatar" src="${cPhoto}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(cPhoto)}','${DEFAULT_PROFILE_SVG}')" alt="">
+                <img class="reels-comment-avatar" src="${cPhoto}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(cPhoto)}','${DEFAULT_PROFILE_SVG}')" alt="" onclick="window.openProfileStatsModal('${sanitizeAttr(c.uid)}')" style="cursor:pointer;">
                 <div class="reels-comment-body">
                     <div class="reels-comment-meta">
-                        <span class="reels-comment-name">${sanitizeText(c.name || '헌터')}</span>${instaBtn}
+                        <span class="reels-comment-name" onclick="window.openProfileStatsModal('${sanitizeAttr(c.uid)}')" style="cursor:pointer;">${sanitizeText(c.name || '헌터')}</span>${instaBtn}
                         <span class="reels-comment-time">${timeAgo}</span>
                     </div>
                     <div class="reels-comment-text">${sanitizeText(c.text).replace(/\n/g,'<br>')}</div>
