@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.257] - 2026-04-09
+
+### 변경
+- feat: 뽀모도로 하드코딩된 한국어 문구 i18n 적용
+
 ## [1.0.256] - 2026-04-09
 
 ### 변경
