@@ -286,7 +286,12 @@
         _apiSearchResults.forEach(function(m, idx) {
             var exists = existingIds.indexOf(m.movieCd) !== -1;
             html += '<div class="movie-search-item" onclick="window.showMovieAddOptions(' + idx + ')" style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid var(--border-color); cursor:pointer;">';
-            html += '<div style="width:40px; height:60px; background:var(--border-color); border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">🎬</div>';
+            var searchPoster = m.posterUrl || '';
+            if (searchPoster) {
+                html += '<img src="' + searchPoster + '" style="width:40px; height:60px; object-fit:cover; border-radius:4px; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.2);" onerror="this.outerHTML=\'<div style=\\\'width:40px; height:60px; background:var(--border-color); border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.2rem;\\\'>🎬</div>\'">';
+            } else {
+                html += '<div style="width:40px; height:60px; background:var(--border-color); border-radius:4px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">🎬</div>';
+            }
             html += '<div style="flex:1; min-width:0;">';
             html += '<div style="font-size:0.85rem; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + escHtml(m.title) + '</div>';
             if (m.titleEn && m.titleEn !== m.title) {

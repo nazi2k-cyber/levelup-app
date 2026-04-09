@@ -1527,6 +1527,7 @@ async function handleSearchMovies(request) {
                     const movies = list.map(m => {
                         const cleanTitle = (m.title || "").replace(/!HS|!HE/g, "").trim();
                         const dirs = (m.directors?.director || []).map(d => d.directorNm).filter(Boolean).join(", ");
+                        const posters = (m.posters || "").split("|").filter(Boolean);
                         return {
                             movieCd: "kmdb_" + (m.DOCID || ""),
                             title: cleanTitle,
@@ -1535,6 +1536,7 @@ async function handleSearchMovies(request) {
                             openDate: (m.repRlsDate || "").replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3"),
                             genres: m.genre || "",
                             directors: dirs,
+                            posterUrl: posters[0] || "",
                             source: "kmdb"
                         };
                     });
