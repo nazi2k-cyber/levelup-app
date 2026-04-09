@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.250] - 2026-04-09
+
+### 변경
+- feat(terms): 영어/일본어 콘텐츠 블록 추가 (Phase 1 Step 1-4~1-6)
+
 ## [1.0.249] - 2026-04-09
 
 ### 변경
