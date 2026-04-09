@@ -233,8 +233,8 @@
                     try {
                         await LocalNotifications.createChannel({
                             id: POMO_CHANNEL_ID,
-                            name: '뽀모도로 알림',
-                            description: '뽀모도로 타이머 알림',
+                            name: lang.pomo_notif_channel_name || '뽀모도로 알림',
+                            description: lang.pomo_notif_channel_desc || '뽀모도로 타이머 알림',
                             importance: 4,
                             sound: 'default',
                             visibility: 1
