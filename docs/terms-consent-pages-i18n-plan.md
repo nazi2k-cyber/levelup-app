@@ -1,4 +1,4 @@
-# 약관/동의/고지 페이지 다국어(i18n) 적용 구현 계획
+# 약관/동의/고지 페이지 다국어(i18n) 적용 + 인앱 일원화 구현 계획
 
 > 작성일: 2026-04-09  
 > 최종 수정: 2026-04-09  
@@ -22,6 +22,8 @@
 
 독립 실행 법적 페이지(terms.html, privacy.html, usage-policy.html)에 한/영/일 다국어 지원을 추가한다.  
 현재 앱 내 모달(`app.js legalContents`)과 계정 삭제 페이지(`account-deletion.html`)는 이미 3개 언어를 지원하지만, 독립 HTML 페이지는 한국어만 지원하는 상태이다.
+
+다국어 지원 완성 후, 인앱에서는 모달 대신 독립 HTML 페이지를 호출하는 방식으로 일원화하여 콘텐츠 이중 관리를 제거한다.
 
 ### 접근법
 - **언어별 전체 콘텐츠 블록** 방식 (Approach B)
@@ -167,45 +169,47 @@ if (['ko', 'en', 'ja'].includes(browserLang)) setLang(browserLang);
 
 ---
 
-## Phase 4: app.js 날짜 업데이트
+## Phase 4: 인앱 법적 페이지 일원화 (모달 → 독립 HTML 호출)
 
-### Step 4-1: www/app.js `legalContents` 날짜 변경
-대상 라인 (모두 `4월 5일` → `4월 9일`):
-- L6050: terms.ko 날짜
-- L6066: terms.en 날짜  
-- L6083: terms.ja 날짜
-- L6105: usage-policy.ko 날짜
-- L6116: usage-policy.en 날짜
-- L6128: usage-policy.ja 날짜
-- L6145: privacy.ko 날짜
-- L6158: privacy.en 날짜
-- L6172: privacy.ja 날짜
+### Step 4-1: www/app.js `legalContents` 수정
+- `legalContents` 객체에서 terms, usage-policy, privacy 항목 삭제 (oss는 유지)
+- `openLegalModal()` 함수 수정:
+  - terms, usage-policy, privacy → `window.open('terms.html')` 등으로 독립 HTML 호출
+  - oss → 기존 모달 방식 유지 (독립 HTML 없음)
 
-### Step 4-2: 루트 app.js 동일 변경
-- `/home/user/levelup-app/app.js` (www/app.js와 동일 복사본)
+### Step 4-2: www/data.js `login_terms_html` 수정
+- `login_terms_html` (ko/en/ja): `openLegalModal()` 호출 → 직접 링크(`href="terms.html"`)로 변경
+
+### Step 4-3: www/app.html 설정 버튼 수정
+- 설정 > 법적 고지 버튼 (L1002-1005): `openLegalModal('terms')` 등 → 직접 링크 또는 수정된 함수 호출
+- `#legalModal` 모달 HTML (L1920~): oss 전용으로 유지
+
+### Step 4-4: 루트 파일 동기화
+- `app.js`, `data.js` 루트 복사본도 동일하게 변경
+
+### 고려사항
+- oss (오픈소스 라이선스)는 독립 HTML 없음 → 모달 유지
+- Capacitor 앱 내 HTML 파일 경로 확인 필요 (www/ 기준 상대 경로)
 
 ---
 
 ## Phase 5: 커밋 & 푸시
 
-### Step 5-1: 변경 파일 확인
+### Step 5-1: 변경 파일
 ```
 terms.html
 usage-policy.html
 privacy.html
-www/app.js
-app.js
+www/app.js + app.js
+www/data.js + data.js
+www/app.html
 docs/terms-consent-pages-i18n-plan.md
 ```
 
-### Step 5-2: 커밋
+### Step 5-2: 커밋 & 푸시
 ```bash
-git add terms.html usage-policy.html privacy.html www/app.js app.js docs/terms-consent-pages-i18n-plan.md
-git commit -m "feat: 약관/동의/고지 페이지 다국어(ko/en/ja) 지원 추가"
-```
-
-### Step 5-3: 푸시
-```bash
+git add <files>
+git commit -m "feat: 약관/동의/고지 페이지 다국어 지원 + 인앱 일원화"
 git push -u origin claude/update-terms-consent-pages-7u2cI
 ```
 
@@ -217,12 +221,16 @@ git push -u origin claude/update-terms-consent-pages-7u2cI
 |------|------|
 | `account-deletion.html` | 언어 전환 패턴 참조 (L48-51 CSS, L55-58 버튼, L315-334 스크립트) |
 | `www/app.js` L6016-6188 | `legalContents` 번역 원본 (ko/en/ja HTML) |
-| `www/data.js` | i18n 키 참조 (legal_title, legal_terms 등) |
+| `www/app.js` L6190 | `openLegalModal()` 함수 |
+| `www/app.html` L1002-1005 | 설정 > 법적 고지 버튼 |
+| `www/app.html` L1920 | `#legalModal` 모달 HTML |
+| `www/data.js` L225/828/1431 | `login_terms_html` i18n 키 |
 
 ## 검증 방법
 
 1. 각 HTML 파일을 브라우저에서 열어 ko/en/ja 전환 확인
 2. 브라우저 언어 자동 감지 동작 확인
-3. 앱 내 모달과 독립 페이지 간 법적 내용 일관성 확인
-4. 모든 날짜가 `2026년 4월 9일`로 통일 확인
-5. `<title>` 태그가 언어에 따라 변경되는지 확인
+3. 인앱에서 약관/정책/개인정보 버튼 클릭 시 독립 HTML 페이지로 이동 확인
+4. oss 버튼 클릭 시 기존 모달 동작 유지 확인
+5. 모든 날짜가 `2026년 4월 9일`로 통일 확인
+6. `<title>` 태그가 언어에 따라 변경되는지 확인
