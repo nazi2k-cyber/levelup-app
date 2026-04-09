@@ -11,7 +11,7 @@
 | Phase | 대상 파일 | 상태 | PR |
 |-------|-----------|------|-----|
 | 1 | terms.html | ✅ 완료 | #717, #719, #721 |
-| 2 | usage-policy.html | ⬜ 미착수 | - |
+| 2 | usage-policy.html | ✅ 완료 | - |
 | 3 | privacy.html | ⬜ 미착수 | - |
 | 4 | app.js 날짜 업데이트 | ⬜ 미착수 | - |
 | 5 | 커밋 & 푸시 | ⬜ 미착수 | - |
@@ -104,32 +104,34 @@ if (['ko', 'en', 'ja'].includes(browserLang)) setLang(browserLang);
 
 ---
 
-## Phase 2: usage-policy.html 다국어 지원
+## Phase 2: usage-policy.html 다국어 지원 ✅ 완료
 
-### Step 2-1: CSS 추가
+> 완료일: 2026-04-09
+
+### Step 2-1: CSS 추가 ✅
 - Phase 1과 동일한 `.lang-switch`, `.content-block` 스타일 추가
 
-### Step 2-2: 언어 전환 버튼 삽입
+### Step 2-2: 언어 전환 버튼 삽입 ✅
 - Phase 1과 동일 구조
 
-### Step 2-3: 공통 헤더 data-i18n 적용
+### Step 2-3: 공통 헤더 data-i18n 적용 ✅
 - 제목: 이용 정책 / Usage Policy / 利用ポリシー
 - 날짜: 3개 언어
 
-### Step 2-4: 한국어 본문 content-ko 블록 래핑
+### Step 2-4: 한국어 본문 content-ko 블록 래핑 ✅
 
-### Step 2-5: 영어 콘텐츠 블록 추가
+### Step 2-5: 영어 콘텐츠 블록 추가 ✅
 - app.js `legalContents['usage-policy'].html.en` 기반
 - 9개 섹션 번역 (기본 원칙, 금지행위[3개 하위], 소셜, 플래너/도구, 던전/레이드, 저작권, 위반조치, 신고, 정책변경)
 - `.warning` 박스 스타일 영어 번역 포함
 
-### Step 2-6: 일본어 콘텐츠 블록 추가
+### Step 2-6: 일본어 콘텐츠 블록 추가 ✅
 - app.js `legalContents['usage-policy'].html.ja` 기반
 
-### Step 2-7: JavaScript 삽입
+### Step 2-7: JavaScript 삽입 ✅
 - TITLES 객체에 이용 정책 제목/날짜 3개 언어
 
-### Step 2-8: 날짜 업데이트
+### Step 2-8: 날짜 업데이트 ✅
 
 ---
 
