@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.244] - 2026-04-09
+
+### 변경
+- fix: 명상 타이틀 현지화 (MEDITATION → 명상/Meditation/瞑想)
+- fix: 명상 카드 기본 위치를 1RM 계산기 하단으로 변경
+
 ## [1.0.243] - 2026-04-09
 
 ### 변경
