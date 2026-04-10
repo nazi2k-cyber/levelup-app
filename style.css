@@ -684,6 +684,31 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .log-time { color: var(--text-sub); font-size: 0.65rem; }
 .log-msg { color: var(--text-main); font-size: 0.72rem; margin-top: 2px; word-break: break-all; }
 
+/* ===== 스트릭 이력 ===== */
+.streak-history {
+    display: flex; align-items: center; gap: 3px;
+}
+.streak-history-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; line-height: 1; transition: transform 0.2s;
+}
+.streak-history-dot.active {
+    background: linear-gradient(135deg, #ff6a00, #ff4500);
+    box-shadow: 0 0 4px rgba(255,69,0,0.4);
+    color: #fff; font-size: 0.55rem;
+}
+.streak-history-dot.inactive {
+    background: rgba(128,128,128,0.2);
+    border: 1px solid rgba(128,128,128,0.35);
+}
+.streak-history-dot.inactive::after {
+    content: '—'; color: rgba(128,128,128,0.5); font-size: 0.45rem; font-weight: 900;
+}
+.streak-history-dot.today {
+    outline: 1.5px solid var(--neon-blue); outline-offset: 1px;
+}
+
 /* ===== 스트릭 뱃지 ===== */
 .streak-badge {
     display: flex; align-items: center; gap: 3px;
