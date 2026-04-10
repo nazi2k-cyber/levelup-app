@@ -459,7 +459,16 @@
         _movSearchQuery = '';
         _apiSearchResults = [];
 
+        // 쌓아보기(최초 진입화면)로 전환
         _movCurrentTab = category;
+        _movViewMode = 'tower';
+        showMovieMainContent(true);
+        var movOverlay = document.getElementById('movie-overlay');
+        if (movOverlay) {
+            movOverlay.querySelectorAll('.lib-view-btn').forEach(function(btn) {
+                btn.classList.toggle('active', btn.dataset.view === 'tower');
+            });
+        }
         updateMovieTabUI();
         updateMoviePeriodCounts();
         renderMovieList();
