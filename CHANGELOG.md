@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.281] - 2026-04-10
+
+### 변경
+- feat: D-Day/D-Day+ 저장 시 애드몹 보상형 광고 표시 (1일 1회)
+
 ## [1.0.280] - 2026-04-10
 
 ### 변경
