@@ -4237,6 +4237,8 @@ function changeLanguage(langCode) {
         updateReelsResetTimer(); // i18n 업데이트 후 버튼 쿨다운 상태 재적용
         updateStepCountUI();
         refreshSettingsStatusMessages();
+        if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();
+        if (typeof window.refreshOrmCalcSummary === 'function') window.refreshOrmCalcSummary();
         window._reelsFeedLastKey = null; // 언어 변경 시 리렌더 강제
         renderReelsFeed();
         if (document.querySelector('.quest-tab-btn[data-quest-tab="stats"].active')) renderQuestStats();

@@ -872,14 +872,14 @@
         var yearlyLabel = _t.rc_yearly_mileage || '연간';
         var newBadge = '<span style="display:inline-block; font-size:0.5rem; font-weight:800; color:#fff; background:var(--neon-red, #ff5252); padding:1px 5px; border-radius:3px; margin-left:5px; vertical-align:middle;">NEW</span>';
 
-        el.innerHTML = '<div style="padding:10px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">' +
-            '<div style="font-size:0.65rem; color:var(--text-sub); margin-bottom:8px;">' + titleLabel + newBadge + '</div>' +
-            '<div style="display:flex; align-items:baseline; gap:16px;">' +
-            '<div><div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:2px;">' + monthlyLabel + '</div>' +
-            '<div style="font-size:1.15rem; font-weight:900; color:var(--neon-cyan, #00d9ff);">' + totals.monthly + ' <span style="font-size:0.7rem; font-weight:600;">' + totals.unit + '</span></div></div>' +
-            '<div style="color:var(--text-sub); font-size:0.8rem;">|</div>' +
-            '<div><div style="font-size:0.6rem; color:var(--text-sub); margin-bottom:2px;">' + yearlyLabel + '</div>' +
-            '<div style="font-size:1.15rem; font-weight:900; color:var(--neon-cyan, #00d9ff);">' + totals.yearly + ' <span style="font-size:0.7rem; font-weight:600;">' + totals.unit + '</span></div></div>' +
+        el.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">' +
+            '<div style="font-size:0.65rem; color:var(--text-sub);">' + titleLabel + newBadge + '</div>' +
+            '<div style="display:flex; align-items:baseline; gap:12px;">' +
+            '<div style="text-align:right;"><div style="font-size:0.55rem; color:var(--text-sub); margin-bottom:1px;">' + monthlyLabel + '</div>' +
+            '<div style="font-size:1.1rem; font-weight:900; color:var(--neon-cyan, #00d9ff);">' + totals.monthly + ' <span style="font-size:0.65rem; font-weight:600;">' + totals.unit + '</span></div></div>' +
+            '<div style="color:var(--text-sub); font-size:0.7rem;">|</div>' +
+            '<div style="text-align:right;"><div style="font-size:0.55rem; color:var(--text-sub); margin-bottom:1px;">' + yearlyLabel + '</div>' +
+            '<div style="font-size:1.1rem; font-weight:900; color:var(--neon-cyan, #00d9ff);">' + totals.yearly + ' <span style="font-size:0.65rem; font-weight:600;">' + totals.unit + '</span></div></div>' +
             '</div></div>';
     }
 
