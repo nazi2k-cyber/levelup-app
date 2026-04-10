@@ -678,7 +678,7 @@ function getInitialAppState() {
             fcmToken: null,
             stepData: { date: "", rewardedSteps: 0, totalSteps: 0 },
             instaId: "",
-            streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 },
+            streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0, activeDates: [] },
             nameLastChanged: null,
             rareTitle: { unlocked: [] },
             cameraEnabled: false,
@@ -2239,7 +2239,11 @@ async function loadUserDataFromDB(user) {
             if(data.instaId) AppState.user.instaId = data.instaId;
             if(data.nameLastChanged != null) AppState.user.nameLastChanged = data.nameLastChanged;
             if(data.streakStr) {
-                try { AppState.user.streak = JSON.parse(data.streakStr); } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0 }; }
+                try {
+                    const parsed = JSON.parse(data.streakStr);
+                    if (!Array.isArray(parsed.activeDates)) parsed.activeDates = [];
+                    AppState.user.streak = parsed;
+                } catch(e) { AppState.user.streak = { currentStreak: 0, lastActiveDate: null, multiplier: 1.0, activeDates: [] }; }
             }
             if(data.rareTitleStr) {
                 try { const parsed = JSON.parse(data.rareTitleStr); AppState.user.rareTitle = { unlocked: parsed.unlocked || [] }; } catch(e) { AppState.user.rareTitle = { unlocked: [] }; }
@@ -2455,6 +2459,12 @@ function getStreakMultiplier(streak) {
 function applyStreakAndDecay() {
     const today = getTodayStr();
     const lastActive = AppState.user.streak.lastActiveDate;
+    // activeDates 초기화 (기존 유저 마이그레이션)
+    if (!Array.isArray(AppState.user.streak.activeDates)) AppState.user.streak.activeDates = [];
+    // 기존 lastActiveDate가 있으면 activeDates에 시드
+    if (lastActive && !AppState.user.streak.activeDates.includes(lastActive)) {
+        AppState.user.streak.activeDates.push(lastActive);
+    }
     // lastActiveDate가 없으면(신규 유저/기존 유저 최초) 감소 없이 오늘로 설정
     if (!lastActive) {
         AppState.user.streak.lastActiveDate = today;
@@ -2504,6 +2514,7 @@ function updateStreak() {
 
     AppState.user.streak.lastActiveDate = today;
     AppState.user.streak.multiplier = getStreakMultiplier(AppState.user.streak.currentStreak);
+    recordStreakActiveDate(today);
     renderStreakBadge();
     // 스트릭 도전과제 업데이트 (현재 스트릭 값을 직접 설정)
     const chData = getWeeklyChallenges();
@@ -2531,6 +2542,46 @@ function renderStreakBadge() {
     } else {
         badge.classList.add('d-none');
     }
+    renderStreakHistory();
+}
+
+// --- 스트릭 이력 표시 (최근 7일) ---
+function renderStreakHistory() {
+    const container = document.getElementById('streak-history');
+    if (!container) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const activeDates = AppState.user.streak.activeDates || [];
+    const activeSet = new Set(activeDates);
+    const todayStr = getTodayStr();
+
+    let html = '';
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const isActive = activeSet.has(ds);
+        const isToday = ds === todayStr;
+        const cls = `streak-history-dot ${isActive ? 'active' : 'inactive'}${isToday ? ' today' : ''}`;
+        const dayNames = ['일','월','화','수','목','금','토'];
+        const label = dayNames[d.getDay()];
+        html += `<span class="${cls}" title="${ds} (${label})">${isActive ? '🔥' : ''}</span>`;
+    }
+    container.innerHTML = html;
+}
+
+// 스트릭 활동일 기록 (최근 30일만 유지)
+function recordStreakActiveDate(dateStr) {
+    if (!AppState.user.streak.activeDates) AppState.user.streak.activeDates = [];
+    if (!AppState.user.streak.activeDates.includes(dateStr)) {
+        AppState.user.streak.activeDates.push(dateStr);
+    }
+    // 최근 30일만 유지
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
+    AppState.user.streak.activeDates = AppState.user.streak.activeDates.filter(d => d >= cutoffStr);
 }
 
 // --- ★ 희귀 호칭 시스템 ★ ---
