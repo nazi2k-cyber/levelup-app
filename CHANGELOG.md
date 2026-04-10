@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.269] - 2026-04-10
+
+### 변경
+- feat: 스트릭 상태 설명문 추가 및 레벨 뱃지 한줄 표시 레이아웃 개선
+
 ## [1.0.268] - 2026-04-10
 
 ### 변경
