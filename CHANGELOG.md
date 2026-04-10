@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.276] - 2026-04-10
+
+### 변경
+- 랜딩 페이지 스크린샷 교체 및 중복 제거
+
 ## [1.0.275] - 2026-04-10
 
 ### 변경
