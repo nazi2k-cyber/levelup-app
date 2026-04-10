@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.268] - 2026-04-10
+
+### 변경
+- feat: 헤더에 스트릭 이력 표시 (최근 7일)
+
 ## [1.0.267] - 2026-04-10
 
 ### 변경
