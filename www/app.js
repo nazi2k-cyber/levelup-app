@@ -5157,10 +5157,10 @@ window.saveProfileCardAsImage = async function(userId) {
             }
         }
 
-        // html2canvas로 모달 DOM 캡처
+        // html2canvas로 모달 DOM 캡처 (scale=1, 배경색 지정으로 파일 크기 최적화)
         const canvas = await html2canvas(modalContent, {
-            backgroundColor: null,
-            scale: 2,
+            backgroundColor: '#0f1928',
+            scale: 1,
             useCORS: true,
             logging: false,
         });
@@ -5172,63 +5172,52 @@ window.saveProfileCardAsImage = async function(userId) {
         // 저장 버튼 복원
         if (saveBtn) saveBtn.style.display = '';
 
-        // --- 이미지 저장 (기존 멀티 방식) ---
+        // --- 이미지 저장 ---
         const userName = (AppState.user.name || '').replace(/[^a-zA-Z0-9가-힣]/g, '');
         const today = new Date().toISOString().split('T')[0];
-        const fileName = `profile_${userName}_${today}.png`;
+        const fileName = `profile_${userName}_${today}.jpg`;
 
         const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
         if (!blob) throw new Error('toBlob failed');
 
         let saved = false;
 
-        // 네이티브 앱: Web Share API 우선 (갤러리 저장 가능)
-        if (isNative && navigator.share && navigator.canShare) {
-            try {
-                const file = new File([blob], fileName, { type: 'image/png' });
-                if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file] });
-                    saved = true;
-                }
-            } catch (shareErr) {
-                if (shareErr.name === 'AbortError') {
-                    // 사용자 취소 — 성공으로 처리하지 않음
-                } else {
-                    console.warn('[ProfileCard] Share API 실패:', shareErr);
-                }
-            }
-        }
-
-        // 네이티브 앱: Filesystem API 폴백
-        if (!saved && isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+        // 네이티브 앱: Capacitor Filesystem API (JPEG로 파일 크기 축소)
+        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
             const Filesystem = window.Capacitor.Plugins.Filesystem;
             try {
-                const dataUrl = canvas.toDataURL('image/png');
-                const base64Data = dataUrl.split(',')[1];
-                const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
+                const base64Data = await new Promise(r => {
+                    const reader = new FileReader();
+                    reader.onload = () => r(reader.result.split(',')[1]);
+                    reader.readAsDataURL(blob);
+                });
+                const dirs = ['EXTERNAL', 'CACHE', 'DOCUMENTS'];
                 for (const dir of dirs) {
                     try {
                         await Filesystem.writeFile({ path: fileName, data: base64Data, directory: dir, recursive: true });
                         saved = true;
+                        if (window.AppLogger) AppLogger.info('[ProfileCard] 이미지 저장 성공: dir=' + dir);
                         break;
-                    } catch (dirErr) { /* 다음 디렉토리 시도 */ }
+                    } catch (dirErr) {
+                        if (window.AppLogger) AppLogger.warn('[ProfileCard] Filesystem ' + dir + ' 실패: ' + (dirErr.message || dirErr));
+                    }
                 }
             } catch (fsErr) {
-                console.warn('[ProfileCard] Filesystem 저장 실패:', fsErr);
+                if (window.AppLogger) AppLogger.warn('[ProfileCard] Filesystem 저장 실패: ' + (fsErr.message || fsErr));
             }
         }
 
-        // 네이티브 인앱 오버레이 최종 폴백 (성공 알림 없이 공유 UI 제공)
+        // 네이티브 인앱 오버레이 폴백 (공유 UI 제공)
         if (!saved && isNative) {
-            showImageOverlay(canvas.toDataURL('image/png'), lang);
-            return; // 오버레이에서 사용자가 직접 공유/저장
+            showImageOverlay(canvas.toDataURL('image/jpeg', 0.92), lang);
+            return;
         }
 
         // 웹 브라우저: Share API 시도
         if (!saved && !isNative && navigator.share && navigator.canShare) {
             try {
-                const file = new File([blob], fileName, { type: 'image/png' });
+                const file = new File([blob], fileName, { type: 'image/jpeg' });
                 if (navigator.canShare({ files: [file] })) {
                     await navigator.share({ files: [file] });
                     saved = true;
