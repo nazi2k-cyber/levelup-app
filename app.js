@@ -2528,19 +2528,20 @@ function updateStreak() {
 }
 
 function renderStreakBadge() {
+    // 레거시 뱃지 (존재 시 업데이트)
     const badge = document.getElementById('streak-badge');
     const countEl = document.getElementById('streak-count');
     const dayLabel = document.getElementById('streak-day-label');
-    if (!badge || !countEl) return;
-
-    const streak = AppState.user.streak.currentStreak;
-    if (streak > 0) {
-        badge.classList.remove('d-none');
-        badge.classList.toggle('fire', streak >= 7);
-        countEl.textContent = streak;
-        if (dayLabel) dayLabel.textContent = i18n[AppState.currentLang]?.streak_day || '일';
-    } else {
-        badge.classList.add('d-none');
+    if (badge && countEl) {
+        const streak = AppState.user.streak.currentStreak;
+        if (streak > 0) {
+            badge.classList.remove('d-none');
+            badge.classList.toggle('fire', streak >= 7);
+            countEl.textContent = streak;
+            if (dayLabel) dayLabel.textContent = i18n[AppState.currentLang]?.streak_day || '일';
+        } else {
+            badge.classList.add('d-none');
+        }
     }
     renderStreakHistory();
 }
@@ -2569,6 +2570,42 @@ function renderStreakHistory() {
         html += `<span class="${cls}" title="${ds} (${label})">${isActive ? '🔥' : ''}</span>`;
     }
     container.innerHTML = html;
+
+    // 스트릭 상태 설명문 업데이트
+    const statusEl = document.getElementById('streak-status-text');
+    if (statusEl) {
+        const { text, cls } = getStreakStatusText();
+        statusEl.textContent = text;
+        statusEl.className = 'streak-status-text' + (cls ? ' ' + cls : '');
+    }
+}
+
+// 현재 스트릭 상태 설명문 생성
+function getStreakStatusText() {
+    const streak = AppState.user.streak.currentStreak;
+    const mult = AppState.user.streak.multiplier || 1.0;
+    const lastActive = AppState.user.streak.lastActiveDate;
+    const todayStr = getTodayStr();
+    const gap = lastActive ? getDaysBetween(lastActive, todayStr) : 0;
+
+    // 스탯 감소 중 (3일 이상 미접속)
+    if (gap > 3) {
+        return { text: `⚠ 스탯 감소 중 (${gap - 3}일분)`, cls: 'danger' };
+    }
+    // 스트릭 끊김 위험 (2~3일 미접속)
+    if (gap >= 2) {
+        return { text: '⚠ 스트릭 위험! 활동 필요', cls: 'warn' };
+    }
+    // 배율 적용 중
+    if (mult > 1.0) {
+        return { text: `🔥 ${streak}일 연속 · x${mult} 배율`, cls: 'boost' };
+    }
+    // 스트릭 진행 중 (배율 미적용)
+    if (streak > 0) {
+        return { text: `🔥 ${streak}일 연속 · 3일부터 배율↑`, cls: '' };
+    }
+    // 스트릭 없음
+    return { text: '퀘스트 완료 시 스트릭 시작', cls: '' };
 }
 
 // 스트릭 활동일 기록 (최근 30일만 유지)
@@ -4153,7 +4190,7 @@ function switchTab(tabId, el) {
 
 function updatePointUI() {
     const req = Math.floor(100 * Math.pow(1.5, AppState.user.level - 1));
-    document.getElementById('sys-level').innerText = `Lv. ${Math.floor(AppState.user.level)}`;
+    document.getElementById('sys-level').innerText = `Lv.${Math.floor(AppState.user.level)}`;
     document.getElementById('display-pts').innerText = AppState.user.points;
     document.getElementById('display-req-pts').innerText = req;
     document.getElementById('btn-levelup').disabled = AppState.user.points < req;

@@ -152,8 +152,9 @@ input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-ca
 
 #app-container { flex-direction: column; width: 100%; height: 100%; }
 header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--panel-bg); z-index: 10; }
-#sys-title { font-weight: 900; letter-spacing: 1px; font-size: 1.1rem; }
-.level-badge { background: var(--neon-blue); color: #fff; font-weight: bold; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; }
+#sys-title { font-weight: 900; letter-spacing: 1px; font-size: 1.1rem; flex-shrink: 1; min-width: 0; }
+.header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.level-badge { background: var(--neon-blue); color: #fff; font-weight: bold; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; min-width: 38px; text-align: center; flex-shrink: 0; }
 main { flex-grow: 1; overflow-y: auto; padding: 15px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .view-section { display: none; animation: fadeIn 0.3s ease; }
 .view-section.active { display: block; }
@@ -685,29 +686,39 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .log-msg { color: var(--text-main); font-size: 0.72rem; margin-top: 2px; word-break: break-all; }
 
 /* ===== 스트릭 이력 ===== */
+.streak-history-wrapper {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
 .streak-history {
-    display: flex; align-items: center; gap: 3px;
+    display: flex; align-items: center; gap: 2px;
 }
 .streak-history-dot {
-    width: 14px; height: 14px; border-radius: 50%;
+    width: 12px; height: 12px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.6rem; line-height: 1; transition: transform 0.2s;
+    font-size: 0.5rem; line-height: 1;
 }
 .streak-history-dot.active {
     background: linear-gradient(135deg, #ff6a00, #ff4500);
-    box-shadow: 0 0 4px rgba(255,69,0,0.4);
-    color: #fff; font-size: 0.55rem;
+    box-shadow: 0 0 3px rgba(255,69,0,0.4);
+    color: #fff; font-size: 0.45rem;
 }
 .streak-history-dot.inactive {
-    background: rgba(128,128,128,0.2);
-    border: 1px solid rgba(128,128,128,0.35);
+    background: rgba(128,128,128,0.15);
+    border: 1px solid rgba(128,128,128,0.3);
 }
 .streak-history-dot.inactive::after {
-    content: '—'; color: rgba(128,128,128,0.5); font-size: 0.45rem; font-weight: 900;
+    content: '–'; color: rgba(128,128,128,0.4); font-size: 0.4rem; font-weight: 900;
 }
 .streak-history-dot.today {
     outline: 1.5px solid var(--neon-blue); outline-offset: 1px;
 }
+.streak-status-text {
+    font-size: 0.5rem; color: var(--text-sub); white-space: nowrap;
+    text-align: center; line-height: 1; letter-spacing: -0.3px;
+}
+.streak-status-text.warn { color: #ff6a00; }
+.streak-status-text.danger { color: #ff3c3c; }
+.streak-status-text.boost { color: #00e676; }
 
 /* ===== 스트릭 뱃지 ===== */
 .streak-badge {
