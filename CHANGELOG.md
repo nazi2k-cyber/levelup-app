@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.271] - 2026-04-10
+
+### 변경
+- feat: 약관/동의/고지 페이지에 내 서재/내 영화 기능 추가
+
 ## [1.0.270] - 2026-04-10
 
 ### 변경
