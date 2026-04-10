@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.270] - 2026-04-10
+
+### 변경
+- refactor: 상태창 가이드에서 스트릭 설명 제거 및 스트릭 가이드 모달로 통합
+- feat: 스트릭 가이드 버튼 및 모달 추가
+
 ## [1.0.269] - 2026-04-10
 
 ### 변경
