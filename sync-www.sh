@@ -37,77 +37,83 @@ ROOT_UPDATED=0
 WWW_UPDATED=0
 SKIPPED=0
 
-for f in "${FILES[@]}"; do
-  SRC="$SCRIPT_DIR/$f"
-  DST="$WWW_DIR/$f"
+# 파일 단위 양방향 동기화 함수
+# 인자: $1=SRC경로 $2=DST경로 $3=SRC git경로 $4=DST git경로 $5=표시명
+sync_file() {
+  local SRC="$1" DST="$2" SRC_GIT="$3" DST_GIT="$4" LABEL="$5"
 
   # Case 1: 루트만 존재
   if [ -f "$SRC" ] && [ ! -f "$DST" ]; then
     cp "$SRC" "$DST"
-    echo "  ROOT→WWW  $f (www에 없음)"
+    echo "  ROOT→WWW  $LABEL (www에 없음)"
     WWW_UPDATED=$((WWW_UPDATED + 1))
-    continue
+    return
   fi
 
   # Case 2: www만 존재
   if [ ! -f "$SRC" ] && [ -f "$DST" ]; then
     cp "$DST" "$SRC"
-    echo "  WWW→ROOT  $f (루트에 없음)"
+    echo "  WWW→ROOT  $LABEL (루트에 없음)"
     ROOT_UPDATED=$((ROOT_UPDATED + 1))
-    continue
+    return
   fi
 
   # Case 3: 양쪽 모두 없음
   if [ ! -f "$SRC" ] && [ ! -f "$DST" ]; then
-    echo "  SKIP  $f (양쪽 모두 없음)"
+    echo "  SKIP  $LABEL (양쪽 모두 없음)"
     SKIPPED=$((SKIPPED + 1))
-    continue
+    return
   fi
 
   # Case 4: 양쪽 동일
   if cmp -s "$SRC" "$DST"; then
     SKIPPED=$((SKIPPED + 1))
-    continue
+    return
   fi
 
   # Case 5: 양쪽 다름 — git 타임스탬프로 최신 판별
-  ROOT_TS=$(get_git_ts "$f")
-  WWW_TS=$(get_git_ts "www/$f")
+  local ROOT_TS WWW_TS
+  ROOT_TS=$(get_git_ts "$SRC_GIT")
+  WWW_TS=$(get_git_ts "$DST_GIT")
 
   if [ "$ROOT_TS" -gt "$WWW_TS" ]; then
     cp "$SRC" "$DST"
-    echo "  ROOT→WWW  $f (루트가 최신: root=$ROOT_TS > www=$WWW_TS)"
+    echo "  ROOT→WWW  $LABEL (루트가 최신: root=$ROOT_TS > www=$WWW_TS)"
     WWW_UPDATED=$((WWW_UPDATED + 1))
   elif [ "$WWW_TS" -gt "$ROOT_TS" ]; then
     cp "$DST" "$SRC"
-    echo "  WWW→ROOT  $f (www가 최신: www=$WWW_TS > root=$ROOT_TS)"
+    echo "  WWW→ROOT  $LABEL (www가 최신: www=$WWW_TS > root=$ROOT_TS)"
     ROOT_UPDATED=$((ROOT_UPDATED + 1))
   else
     # 타임스탬프 동일 — 파일 크기 비교, 동일하면 루트 우선
+    local ROOT_SIZE WWW_SIZE
     ROOT_SIZE=$(stat -c%s "$SRC" 2>/dev/null || stat -f%z "$SRC")
     WWW_SIZE=$(stat -c%s "$DST" 2>/dev/null || stat -f%z "$DST")
     if [ "$WWW_SIZE" -gt "$ROOT_SIZE" ]; then
       cp "$DST" "$SRC"
-      echo "  WWW→ROOT  $f (동일 타임스탬프, www가 더 큼: $WWW_SIZE > $ROOT_SIZE)"
+      echo "  WWW→ROOT  $LABEL (동일 타임스탬프, www가 더 큼: $WWW_SIZE > $ROOT_SIZE)"
       ROOT_UPDATED=$((ROOT_UPDATED + 1))
     else
       cp "$SRC" "$DST"
-      echo "  ROOT→WWW  $f (동일 타임스탬프, 루트 우선)"
+      echo "  ROOT→WWW  $LABEL (동일 타임스탬프, 루트 우선)"
       WWW_UPDATED=$((WWW_UPDATED + 1))
     fi
   fi
+}
+
+for f in "${FILES[@]}"; do
+  sync_file "$SCRIPT_DIR/$f" "$WWW_DIR/$f" "$f" "www/$f" "$f"
 done
 
-# modules/ 디렉토리 동기화
-if [ -d "$SCRIPT_DIR/modules" ]; then
-    mkdir -p "$WWW_DIR/modules"
-    rsync -a --delete "$SCRIPT_DIR/modules/" "$WWW_DIR/modules/"
-    echo "  SYNC modules/ 디렉토리 (root → www)"
-elif [ -d "$WWW_DIR/modules" ]; then
-    mkdir -p "$SCRIPT_DIR/modules"
-    rsync -a --delete "$WWW_DIR/modules/" "$SCRIPT_DIR/modules/"
-    echo "  SYNC modules/ (www → root)"
-fi
+# modules/ 디렉토리 양방향 동기화
+mkdir -p "$SCRIPT_DIR/modules" "$WWW_DIR/modules"
+MODULE_FILES=$( (ls "$SCRIPT_DIR/modules/" 2>/dev/null; ls "$WWW_DIR/modules/" 2>/dev/null) | sort -u )
+
+for mf in $MODULE_FILES; do
+  [ -f "$SCRIPT_DIR/modules/$mf" ] || [ -f "$WWW_DIR/modules/$mf" ] || continue
+  sync_file "$SCRIPT_DIR/modules/$mf" "$WWW_DIR/modules/$mf" \
+            "modules/$mf" "www/modules/$mf" "modules/$mf"
+done
 
 echo ""
 echo "완료: www/ ${WWW_UPDATED}개 갱신, 루트 ${ROOT_UPDATED}개 갱신, ${SKIPPED}개 이미 동일"
