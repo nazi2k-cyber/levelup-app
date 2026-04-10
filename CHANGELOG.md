@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.278] - 2026-04-10
+
+### 변경
+- fix: 프로필카드 좌우명 정렬 수정 및 이미지 저장을 모달 DOM 캡처로 변경
+
 ## [1.0.277] - 2026-04-10
 
 ### 변경
