@@ -550,6 +550,7 @@ const i18n = {
         dday_notif_title: "📅 D-Day 알림",
         dday_notif_body: "오늘은 [{title}] D-Day 입니다!",
         dday_notif_large: "오늘은 [{title}] D-Day 입니다! 목표를 향해 화이팅!",
+        dday_ad_fail: "광고 시청이 완료되지 않았습니다. 다시 시도해 주세요.",
 
         // D-Day Caption
         dday_caption_title: "목표 / 좌우명",
@@ -1156,6 +1157,7 @@ const i18n = {
         dday_notif_title: "📅 D-Day Alert",
         dday_notif_body: "Today is [{title}] D-Day!",
         dday_notif_large: "Today is [{title}] D-Day! Go for your goal!",
+        dday_ad_fail: "Ad viewing was not completed. Please try again.",
 
         // D-Day Caption
         dday_caption_title: "Goal / Motto",
@@ -1762,6 +1764,7 @@ const i18n = {
         dday_notif_title: "📅 D-Dayアラート",
         dday_notif_body: "今日は [{title}] D-Dayです！",
         dday_notif_large: "今日は [{title}] D-Dayです！目標に向かって頑張りましょう！",
+        dday_ad_fail: "広告の視聴が完了しませんでした。もう一度お試しください。",
 
         // D-Dayキャプション
         dday_caption_title: "目標 / 座右の銘",

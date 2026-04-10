@@ -652,6 +652,65 @@
         });
     }
 
+    // --- D-Day 저장 보상형 광고 (1일 1회) ---
+    function _ddayAdKey() {
+        const uid = _auth()?.currentUser ? _auth().currentUser.uid : '_anon';
+        return `dday_ad_date_${uid}`;
+    }
+
+    function hasDDayAdShownToday() {
+        const today = window.getTodayKST();
+        return localStorage.getItem(_ddayAdKey()) === today;
+    }
+
+    function markDDayAdShown() {
+        const today = window.getTodayKST();
+        localStorage.setItem(_ddayAdKey(), today);
+    }
+
+    /**
+     * D-Day 저장 시 보상형 광고 표시 (1일 1회)
+     * @param {Function} onSuccess - 광고 시청 완료 또는 이미 시청한 경우 콜백
+     * @param {Function} onFail - 광고 실패/이탈 시 콜백
+     */
+    async function showDDayRewardedAd(onSuccess, onFail) {
+        // 오늘 이미 시청했으면 바로 성공 콜백
+        if (hasDDayAdShownToday()) {
+            if (onSuccess) onSuccess();
+            return;
+        }
+
+        // 네이티브가 아니면 마킹만 하고 통과
+        if (!_isNative()) {
+            markDDayAdShown();
+            if (onSuccess) onSuccess();
+            return;
+        }
+
+        // 광고 표시 전에 마킹 (보너스 EXP 패턴과 동일)
+        markDDayAdShown();
+
+        const result = await showRewarded({
+            context: 'ddaySave',
+            onSuccess: function() {
+                if (window.AppLogger) AppLogger.info('[AdMob] D-Day 저장 보상형 광고 시청 완료');
+                if (onSuccess) onSuccess();
+            },
+            onFail: function() {
+                // 광고 이탈/실패 시 마킹 제거 → 다시 시청 가능
+                localStorage.removeItem(_ddayAdKey());
+                if (window.AppLogger) AppLogger.info('[AdMob] D-Day 저장 보상형 광고 이탈/실패');
+                if (onFail) onFail();
+            }
+        });
+
+        if (!result) {
+            // 광고 로드 자체가 안 된 경우 마킹 제거
+            localStorage.removeItem(_ddayAdKey());
+            if (onFail) onFail();
+        }
+    }
+
     // --- 네이티브 광고 ---
     async function loadNativeAd(tabId) {
         if (!_isNative()) return;
@@ -921,6 +980,9 @@
         RI_DUNGEON_DAILY_MAX,
         // 플래너 보상형
         showPlannerRewardedAd,
+        // D-Day 저장 보상형
+        showDDayRewardedAd,
+        hasDDayAdShownToday,
         // 내부 상태 접근 (app.js 호환)
         get nativeAdActiveTab() { return _nativeAdActiveTab; },
     };
