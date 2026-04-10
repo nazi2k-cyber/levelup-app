@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.284] - 2026-04-10
+
+### 변경
+- fix: 모듈 로드 실패 수정 — 루트 modules/ 동기화 누락 해결
+
 ## [1.0.283] - 2026-04-10
 
 ### 변경
