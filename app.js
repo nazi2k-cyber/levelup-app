@@ -11010,23 +11010,49 @@ function saveDDayFromModal(editIdx) {
 
     if (!AppState.ddays) AppState.ddays = [];
 
-    const entry = { title, date, type, pushEnabled, createdAt: Date.now() };
-
-    if (editIdx >= 0) {
-        entry.createdAt = AppState.ddays[editIdx]?.createdAt || Date.now();
-        AppState.ddays[editIdx] = entry;
-    } else {
-        if (AppState.ddays.length >= DDAY_MAX) {
-            alert((i18n[AppState.currentLang]?.dday_limit || 'D-Day는 최대 {max}개까지 설정할 수 있습니다.').replace('{max}', DDAY_MAX));
-            return;
-        }
-        AppState.ddays.push(entry);
+    if (editIdx < 0 && AppState.ddays.length >= DDAY_MAX) {
+        alert((i18n[AppState.currentLang]?.dday_limit || 'D-Day는 최대 {max}개까지 설정할 수 있습니다.').replace('{max}', DDAY_MAX));
+        return;
     }
 
-    closeDDayModal();
-    renderDDayList();
-    saveUserData();
-    scheduleDDayNotifications();
+    const entry = { title, date, type, pushEnabled, createdAt: Date.now() };
+    if (editIdx >= 0) {
+        entry.createdAt = AppState.ddays[editIdx]?.createdAt || Date.now();
+    }
+
+    // 저장 실행 함수
+    function _doSaveDDay() {
+        if (editIdx >= 0) {
+            AppState.ddays[editIdx] = entry;
+        } else {
+            AppState.ddays.push(entry);
+        }
+        closeDDayModal();
+        renderDDayList();
+        saveUserData();
+        scheduleDDayNotifications();
+    }
+
+    // 보상형 광고 표시 (1일 1회)
+    if (window.AdManager && window.AdManager.showDDayRewardedAd) {
+        // 저장 버튼 비활성화 (중복 클릭 방지)
+        const saveBtn = document.querySelector('#dday-modal-overlay button:last-child');
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; }
+
+        window.AdManager.showDDayRewardedAd(
+            function onSuccess() {
+                _doSaveDDay();
+            },
+            function onFail() {
+                // 광고 실패/이탈 시 알림 후 버튼 복원
+                const lang = AppState.currentLang;
+                alert(i18n[lang]?.dday_ad_fail || '광고 시청이 완료되지 않았습니다. 다시 시도해 주세요.');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
+            }
+        );
+    } else {
+        _doSaveDDay();
+    }
 }
 
 function deleteDDay(idx) {
