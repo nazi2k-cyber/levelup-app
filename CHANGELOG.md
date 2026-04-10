@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.281] - 2026-04-10
+
+### 변경
+- fix: 프로필카드 이미지 저장 FILE_NOTCREATED 수정 - 파일 크기 최적화
+
 ## [1.0.280] - 2026-04-10
 
 ### 변경
