@@ -12,7 +12,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.281';
+const APP_VERSION = '1.0.277';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -4981,9 +4981,9 @@ function openProfileStatsModal(userId) {
             ${u.photoURL
                 ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-blue); flex-shrink:0;">`
                 : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue); flex-shrink:0;"></div>`}
-            <div style="min-width:0; flex:1;">
+            <div>
                 ${titleBadgeHTML}
-                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                     <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
                     ${followBtnHTML}
                     <button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
@@ -4994,9 +4994,9 @@ function openProfileStatsModal(userId) {
                     <span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount||String)(followingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span>
                     <span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount||String)(followerCount)}</strong> <span>${i18n[lang]?.prof_followers || '팔로워'}</span></span>
                 </div>
+                ${captionHTML}
             </div>
-        </div>
-        ${captionHTML}`;
+        </div>`;
 
     document.getElementById('profile-stats-user-info').innerHTML = profileHTML;
     drawRadarChartForUser(u.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0});
@@ -5098,11 +5098,9 @@ async function viewUserTodayPlanner(userId) {
 }
 window.viewUserTodayPlanner = viewUserTodayPlanner;
 
-// --- 프로필카드 이미지 저장 (보상형 광고 연동, 모달 DOM 캡처) ---
+// --- 프로필카드 이미지 저장 (보상형 광고 연동) ---
 window.saveProfileCardAsImage = async function(userId) {
     const lang = AppState.currentLang;
-    const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
-    const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
 
     // ★ 보상형 광고: 최초 및 매 10회 저장 시 (플래너 광고 조건과 동일)
     let saveCount = parseInt(localStorage.getItem('profile_card_save_count') || '0', 10);
@@ -5113,121 +5111,312 @@ window.saveProfileCardAsImage = async function(userId) {
         try { await window.AdManager.showPlannerRewardedAd(lang); } catch (e) { console.warn('[ProfileCard] Ad failed:', e); }
     }
 
-    const modalContent = document.querySelector('#profileStatsModal .modal-content');
-    if (!modalContent) return;
+    // 유저 데이터 가져오기
+    let u = AppState.social.users.find(x => x.id === userId);
+    if (!u) return;
+    const isMe = userId === auth.currentUser?.uid;
+    const stats = u.stats || { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 };
+    const caption = isMe ? (AppState.ddayCaption || '') : (u.ddayCaption || '');
+    const followingCount = (u.friends || []).length;
+    let followerCount = 0;
+    AppState.social.users.forEach(su => {
+        if (Array.isArray(su.friends) && su.friends.includes(userId)) followerCount++;
+    });
 
-    // html2canvas 동적 로드 (최초 1회만)
-    if (!window.html2canvas) {
-        try {
-            await new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'html2canvas.min.js';
-                s.onload = resolve;
-                s.onerror = reject;
-                document.head.appendChild(s);
-            });
-        } catch (e) {
-            console.warn('[ProfileCard] html2canvas 로드 실패:', e);
-            alert(failMsgs[lang] || failMsgs.ko);
-            return;
-        }
+    // 호칭 텍스트
+    const baseTitle = u.title || '각성자';
+    let rareTitleText = '';
+    if (u.isMe) {
+        const best = typeof getBestRareTitle === 'function' ? getBestRareTitle() : null;
+        if (best) rareTitleText = best.title[lang] || best.title.ko;
+    } else if (u.rareTitle) {
+        rareTitleText = u.rareTitle.title[lang] || u.rareTitle.title.ko;
     }
 
-    try {
-        // 저장 버튼 임시 숨김 (캡처에서 제외)
-        const saveBtn = modalContent.querySelector('.btn-profile-save');
-        if (saveBtn) saveBtn.style.display = 'none';
-
-        // 모달 내 이미지를 data URL로 사전 변환 (CORS 문제 방지)
-        const imgs = modalContent.querySelectorAll('img');
-        const origSrcs = new Map();
-        for (const img of imgs) {
-            if (img.src && !img.src.startsWith('data:')) {
-                origSrcs.set(img, img.src);
-                try {
-                    const resp = await fetch(img.src);
-                    const blob = await resp.blob();
-                    const dataUrl = await new Promise(r => {
-                        const reader = new FileReader();
-                        reader.onload = () => r(reader.result);
-                        reader.readAsDataURL(blob);
-                    });
-                    img.src = dataUrl;
-                } catch (e) { /* 이미지 변환 실패 시 원본 유지 */ }
+    // cross-origin 이미지 안전 로드
+    async function loadImageSafe(src) {
+        if (!src) return null;
+        try {
+            if (src.startsWith('data:') || src.startsWith('blob:')) {
+                return await new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => resolve(null);
+                    img.src = src;
+                });
             }
+            const resp = await fetch(src);
+            const blob = await resp.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const img = await new Promise(resolve => {
+                const el = new Image();
+                el.onload = () => resolve(el);
+                el.onerror = () => resolve(null);
+                el.src = objectUrl;
+            });
+            URL.revokeObjectURL(objectUrl);
+            return img;
+        } catch (e) { return null; }
+    }
+
+    // 캔버스 설정
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 400;
+    const pad = 20;
+    const innerW = W - pad * 2;
+
+    // 높이 계산
+    const headerH = 80;
+    const followH = 24;
+    const captionH = caption ? 36 : 0;
+    const radarSize = 200;
+    const footerH = 30;
+    const totalH = pad + headerH + followH + captionH + 10 + radarSize + footerH + pad;
+
+    canvas.width = W;
+    canvas.height = totalH;
+
+    // 배경
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, W, totalH);
+
+    // 카드 영역
+    const cardX = pad - 4, cardY = pad - 4;
+    const cardW = innerW + 8, cardH = totalH - pad * 2 + 8;
+    ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    let y = pad;
+
+    // --- 프로필 헤더 ---
+    const avatarSize = 50;
+    const avatarX = pad + 8;
+    const avatarCenterY = y + headerH / 2;
+
+    // 아바타 테두리
+    ctx.beginPath();
+    ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2 + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#00d9ff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a2332';
+    ctx.fill();
+
+    // 프로필 이미지
+    if (u.photoURL) {
+        try {
+            const profImg = await loadImageSafe(u.photoURL);
+            if (profImg) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(profImg, avatarX, avatarCenterY - avatarSize / 2, avatarSize, avatarSize);
+                ctx.restore();
+            }
+        } catch (e) {}
+    }
+
+    const textX = avatarX + avatarSize + 14;
+
+    // 호칭
+    ctx.fillStyle = '#00d9ff';
+    ctx.font = 'bold 11px Pretendard, sans-serif';
+    let titleY = avatarCenterY - 18;
+    ctx.fillText(baseTitle, textX, titleY);
+    if (rareTitleText) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillText(' | ' + rareTitleText, textX + ctx.measureText(baseTitle).width, titleY);
+    }
+
+    // 이름
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px Pretendard, sans-serif';
+    ctx.fillText(u.name || '헌터', textX, avatarCenterY + 2);
+
+    // 레벨
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '12px Pretendard, sans-serif';
+    ctx.fillText('Lv. ' + (u.level || 1), textX, avatarCenterY + 18);
+
+    y += headerH;
+
+    // --- 팔로잉/팔로워 ---
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '12px Pretendard, sans-serif';
+    const followText = `${followingCount} ${i18n[lang]?.prof_following || '팔로잉'}    ${followerCount} ${i18n[lang]?.prof_followers || '팔로워'}`;
+    ctx.fillText(followText, pad + 10, y + 16);
+    y += followH;
+
+    // --- 좌우명 ---
+    if (caption) {
+        ctx.fillStyle = 'rgba(0, 217, 255, 0.15)';
+        ctx.beginPath();
+        ctx.roundRect(pad + 6, y + 2, innerW - 12, 28, 4);
+        ctx.fill();
+        // 좌측 바
+        ctx.fillStyle = '#00d9ff';
+        ctx.fillRect(pad + 6, y + 2, 3, 28);
+        // 텍스트
+        ctx.fillStyle = '#aaaaaa';
+        ctx.font = 'italic 11px Pretendard, sans-serif';
+        let displayCaption = caption;
+        const maxCaptionW = innerW - 30;
+        if (ctx.measureText(displayCaption).width > maxCaptionW) {
+            while (ctx.measureText(displayCaption + '...').width > maxCaptionW && displayCaption.length > 0) {
+                displayCaption = displayCaption.slice(0, -1);
+            }
+            displayCaption += '...';
         }
+        ctx.fillText(displayCaption, pad + 16, y + 20);
+        y += captionH;
+    }
 
-        // html2canvas로 모달 DOM 캡처 (scale=1, 배경색 지정으로 파일 크기 최적화)
-        const canvas = await html2canvas(modalContent, {
-            backgroundColor: '#0f1928',
-            scale: 1,
-            useCORS: true,
-            logging: false,
-        });
+    y += 10;
 
-        // 원본 이미지 src 복원
-        for (const [img, src] of origSrcs) {
-            img.src = src;
+    // --- 레이더 차트 ---
+    const radarCenterX = W / 2;
+    const radarCenterY = y + radarSize / 2;
+    const radarRadius = 70;
+    const angles = [];
+    for (let i = 0; i < 6; i++) angles.push(-Math.PI / 2 + (i * Math.PI / 3));
+
+    // 그리드
+    for (let level = 1; level <= 5; level++) {
+        const r = radarRadius * (level / 5);
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const px = radarCenterX + r * Math.cos(angles[i]);
+            const py = radarCenterY + r * Math.sin(angles[i]);
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
         }
-        // 저장 버튼 복원
-        if (saveBtn) saveBtn.style.display = '';
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
 
-        // --- 이미지 저장 ---
-        const userName = (AppState.user.name || '').replace(/[^a-zA-Z0-9가-힣]/g, '');
-        const today = new Date().toISOString().split('T')[0];
-        const fileName = `profile_${userName}_${today}.jpg`;
+    // 축
+    for (let i = 0; i < 6; i++) {
+        ctx.beginPath();
+        ctx.moveTo(radarCenterX, radarCenterY);
+        ctx.lineTo(radarCenterX + radarRadius * Math.cos(angles[i]), radarCenterY + radarRadius * Math.sin(angles[i]));
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
 
+    // 데이터 폴리곤
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const key = statKeys[i];
+        const val = Math.min(Math.round(Number(stats[key]) || 0), 100);
+        const r = radarRadius * (val / 100);
+        const px = radarCenterX + r * Math.cos(angles[i]);
+        const py = radarCenterY + r * Math.sin(angles[i]);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 217, 255, 0.25)';
+    ctx.fill();
+    ctx.strokeStyle = '#00d9ff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 데이터 포인트 + 라벨
+    for (let i = 0; i < 6; i++) {
+        const key = statKeys[i];
+        const val = Math.min(Math.round(Number(stats[key]) || 0), 100);
+        const r = radarRadius * (val / 100);
+        const px = radarCenterX + r * Math.cos(angles[i]);
+        const py = radarCenterY + r * Math.sin(angles[i]);
+
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#00d9ff';
+        ctx.fill();
+
+        // 라벨
+        const labelR = radarRadius + 18;
+        const lx = radarCenterX + labelR * Math.cos(angles[i]);
+        const ly = radarCenterY + labelR * Math.sin(angles[i]);
+        ctx.font = 'bold 10px Pretendard, sans-serif';
+        ctx.fillStyle = '#aaaaaa';
+        ctx.textAlign = 'center';
+        ctx.fillText((i18n[lang]?.[key] || key).toUpperCase(), lx, ly - 2);
+        ctx.fillStyle = '#00d9ff';
+        ctx.font = '10px Pretendard, sans-serif';
+        ctx.fillText(String(val), lx, ly + 10);
+    }
+    ctx.textAlign = 'left';
+
+    y += radarSize;
+
+    // --- 푸터 ---
+    ctx.fillStyle = '#444';
+    ctx.font = '10px Pretendard, sans-serif';
+    const today = new Date().toISOString().split('T')[0];
+    const footerText = 'LEVEL UP: REBOOT | ' + today;
+    ctx.fillText(footerText, pad + 6, totalH - pad + 4);
+
+    // --- 이미지 저장 ---
+    const userName = (u.name || '').replace(/[^a-zA-Z0-9가-힣]/g, '');
+    const fileName = `profile_${userName}_${today}.png`;
+    const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+    const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
+
+    try {
         const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('toBlob failed');
 
         let saved = false;
 
-        // 네이티브 앱: Capacitor Filesystem API (JPEG로 파일 크기 축소)
+        // 네이티브 앱: Capacitor Filesystem API
         if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
             const Filesystem = window.Capacitor.Plugins.Filesystem;
+            const dataUrl = canvas.toDataURL('image/png');
+            const base64Data = dataUrl.split(',')[1];
             try {
-                const base64Data = await new Promise(r => {
-                    const reader = new FileReader();
-                    reader.onload = () => r(reader.result.split(',')[1]);
-                    reader.readAsDataURL(blob);
-                });
-                const dirs = ['EXTERNAL', 'CACHE', 'DOCUMENTS'];
+                const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
                 for (const dir of dirs) {
                     try {
                         await Filesystem.writeFile({ path: fileName, data: base64Data, directory: dir, recursive: true });
                         saved = true;
-                        if (window.AppLogger) AppLogger.info('[ProfileCard] 이미지 저장 성공: dir=' + dir);
                         break;
-                    } catch (dirErr) {
-                        if (window.AppLogger) AppLogger.warn('[ProfileCard] Filesystem ' + dir + ' 실패: ' + (dirErr.message || dirErr));
-                    }
+                    } catch (dirErr) { /* 다음 디렉토리 시도 */ }
                 }
-            } catch (fsErr) {
-                if (window.AppLogger) AppLogger.warn('[ProfileCard] Filesystem 저장 실패: ' + (fsErr.message || fsErr));
-            }
+            } catch (fsErr) { /* Filesystem 실패 */ }
         }
 
-        // 네이티브 인앱 오버레이 폴백 (공유 UI 제공)
-        if (!saved && isNative) {
-            showImageOverlay(canvas.toDataURL('image/jpeg', 0.92), lang);
-            return;
-        }
-
-        // 웹 브라우저: Share API 시도
-        if (!saved && !isNative && navigator.share && navigator.canShare) {
+        // Web Share API
+        if (!saved && navigator.share && navigator.canShare) {
             try {
-                const file = new File([blob], fileName, { type: 'image/jpeg' });
+                const file = new File([blob], fileName, { type: 'image/png' });
                 if (navigator.canShare({ files: [file] })) {
                     await navigator.share({ files: [file] });
                     saved = true;
                 }
             } catch (shareErr) {
-                if (shareErr.name !== 'AbortError') console.warn('[ProfileCard] Share failed:', shareErr);
+                if (shareErr.name === 'AbortError') saved = true;
             }
         }
 
-        // 웹 브라우저: <a> 태그 다운로드 폴백
+        // 네이티브 인앱 오버레이 폴백
+        if (!saved && isNative) {
+            showImageOverlay(canvas.toDataURL('image/png'), lang);
+            saved = true;
+        }
+
+        // 웹 브라우저 <a> 다운로드 폴백
         if (!saved && !isNative) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -5242,13 +5431,15 @@ window.saveProfileCardAsImage = async function(userId) {
 
         if (saved) {
             alert(msgs[lang] || msgs.ko);
+        } else {
+            throw new Error('All save methods failed');
         }
     } catch (e) {
-        // 저장 버튼/이미지 복원 보장
-        const saveBtn = modalContent.querySelector('.btn-profile-save');
-        if (saveBtn) saveBtn.style.display = '';
-        console.error('[ProfileCard] 이미지 저장 실패:', e);
-        alert(failMsgs[lang] || failMsgs.ko);
+        try {
+            showImageOverlay(canvas.toDataURL('image/png'), lang);
+        } catch (e2) {
+            alert(failMsgs[lang] || failMsgs.ko);
+        }
     }
 };
 
