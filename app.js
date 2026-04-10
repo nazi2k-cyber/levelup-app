@@ -5183,12 +5183,29 @@ window.saveProfileCardAsImage = async function(userId) {
 
         let saved = false;
 
-        // 네이티브 앱: Capacitor Filesystem API
-        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
-            const Filesystem = window.Capacitor.Plugins.Filesystem;
-            const dataUrl = canvas.toDataURL('image/png');
-            const base64Data = dataUrl.split(',')[1];
+        // 네이티브 앱: Web Share API 우선 (갤러리 저장 가능)
+        if (isNative && navigator.share && navigator.canShare) {
             try {
+                const file = new File([blob], fileName, { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file] });
+                    saved = true;
+                }
+            } catch (shareErr) {
+                if (shareErr.name === 'AbortError') {
+                    // 사용자 취소 — 성공으로 처리하지 않음
+                } else {
+                    console.warn('[ProfileCard] Share API 실패:', shareErr);
+                }
+            }
+        }
+
+        // 네이티브 앱: Filesystem API 폴백
+        if (!saved && isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+            const Filesystem = window.Capacitor.Plugins.Filesystem;
+            try {
+                const dataUrl = canvas.toDataURL('image/png');
+                const base64Data = dataUrl.split(',')[1];
                 const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
                 for (const dir of dirs) {
                     try {
@@ -5197,11 +5214,19 @@ window.saveProfileCardAsImage = async function(userId) {
                         break;
                     } catch (dirErr) { /* 다음 디렉토리 시도 */ }
                 }
-            } catch (fsErr) { /* Filesystem 실패 */ }
+            } catch (fsErr) {
+                console.warn('[ProfileCard] Filesystem 저장 실패:', fsErr);
+            }
         }
 
-        // Web Share API
-        if (!saved && navigator.share && navigator.canShare) {
+        // 네이티브 인앱 오버레이 최종 폴백 (성공 알림 없이 공유 UI 제공)
+        if (!saved && isNative) {
+            showImageOverlay(canvas.toDataURL('image/png'), lang);
+            return; // 오버레이에서 사용자가 직접 공유/저장
+        }
+
+        // 웹 브라우저: Share API 시도
+        if (!saved && !isNative && navigator.share && navigator.canShare) {
             try {
                 const file = new File([blob], fileName, { type: 'image/png' });
                 if (navigator.canShare({ files: [file] })) {
@@ -5209,17 +5234,11 @@ window.saveProfileCardAsImage = async function(userId) {
                     saved = true;
                 }
             } catch (shareErr) {
-                if (shareErr.name === 'AbortError') saved = true;
+                if (shareErr.name !== 'AbortError') console.warn('[ProfileCard] Share failed:', shareErr);
             }
         }
 
-        // 네이티브 인앱 오버레이 폴백
-        if (!saved && isNative) {
-            showImageOverlay(canvas.toDataURL('image/png'), lang);
-            saved = true;
-        }
-
-        // 웹 브라우저 <a> 다운로드 폴백
+        // 웹 브라우저: <a> 태그 다운로드 폴백
         if (!saved && !isNative) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -5234,8 +5253,6 @@ window.saveProfileCardAsImage = async function(userId) {
 
         if (saved) {
             alert(msgs[lang] || msgs.ko);
-        } else {
-            throw new Error('All save methods failed');
         }
     } catch (e) {
         // 저장 버튼/이미지 복원 보장
