@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.280] - 2026-04-10
+
+### 변경
+- feat: 내 서재/내 영화 검색 저장 후 쌓아보기(최초 진입화면)로 자동 전환
+
 ## [1.0.279] - 2026-04-10
 
 ### 변경
