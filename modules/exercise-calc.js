@@ -870,10 +870,9 @@
         var titleLabel = _t.rc_mileage_title || '러닝 마일리지';
         var monthlyLabel = _t.rc_monthly_mileage || '월간';
         var yearlyLabel = _t.rc_yearly_mileage || '연간';
-        var newBadge = '<span style="display:inline-block; font-size:0.5rem; font-weight:800; color:#fff; background:var(--neon-red, #ff5252); padding:1px 5px; border-radius:3px; margin-left:5px; vertical-align:middle;">NEW</span>';
 
         el.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:rgba(0,217,255,0.05); border-radius:8px; border:1px solid rgba(0,217,255,0.15);">' +
-            '<div style="font-size:0.65rem; color:var(--text-sub);">' + titleLabel + newBadge + '</div>' +
+            '<div style="font-size:0.8rem; font-weight:700; color:var(--text-sub);">' + titleLabel + '</div>' +
             '<div style="display:flex; align-items:baseline; gap:12px;">' +
             '<div style="text-align:right;"><div style="font-size:0.55rem; color:var(--text-sub); margin-bottom:1px;">' + monthlyLabel + '</div>' +
             '<div style="font-size:1.1rem; font-weight:900; color:var(--neon-cyan, #00d9ff);">' + totals.monthly + ' <span style="font-size:0.65rem; font-weight:600;">' + totals.unit + '</span></div></div>' +
