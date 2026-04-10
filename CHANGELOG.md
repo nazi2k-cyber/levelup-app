@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.273] - 2026-04-10
+
+### 변경
+- 러닝 마일리지 NEW 배지 제거 및 글자 크기 확대
+
 ## [1.0.272] - 2026-04-10
 
 ### 변경
