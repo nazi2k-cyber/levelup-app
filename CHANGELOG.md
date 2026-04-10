@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.272] - 2026-04-10
+
+### 변경
+- fix: 이용 정책/개인정보 처리방침 한국어 글자 깨짐 수정
+
 ## [1.0.271] - 2026-04-10
 
 ### 변경
