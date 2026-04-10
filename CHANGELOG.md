@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.267] - 2026-04-10
+
+### 변경
+- 러닝 마일리지 i18n 수정 및 레이아웃 변경
+
 ## [1.0.266] - 2026-04-10
 
 ### 변경
