@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.277] - 2026-04-10
+
+### 변경
+- feat: 프로필카드 팝업 개선 - 소셜탭 카메라 제거, 좌우명 표시, 이미지 저장 기능
+
 ## [1.0.276] - 2026-04-10
 
 ### 변경
