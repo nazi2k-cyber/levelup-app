@@ -21,6 +21,7 @@ FILES=(
   manifest.json
   push-test.html
   sw.js
+  html2canvas.min.js
 )
 
 # git 커밋 타임스탬프 조회 (없으면 0 반환)
