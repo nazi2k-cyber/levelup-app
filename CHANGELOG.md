@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.291] - 2026-04-11
+
+### 변경
+- fix: 이메일 로그인 사용자 피트니스 안내 문구를 실제 제한사항에 맞게 수정
+- fix: Health Connect 안내 문구 사실관계 수정
+
 ## [1.0.290] - 2026-04-11
 
 ### 변경
