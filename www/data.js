@@ -159,7 +159,7 @@ const i18n = {
         settings_guide_gps_title: "위치 탐색 활성화 장점",
         settings_guide_gps_desc: "던전(로컬 레이드) 참여 시 해당 역 반경 2km 이내에서 근접 보너스 +50P를 추가로 획득할 수 있습니다.",
         settings_guide_fitness_title: "피트니스 동기화 활성화 장점",
-        settings_guide_fitness_desc: "걸음 수가 자동으로 동기화되어 1,000보당 +10P & STR +0.5 보상을 매일 받을 수 있습니다. 걸으면서 레벨업!<br><br>⚠️ <b>이메일 로그인 사용자 안내</b><br>Google Fit 연동 시 기기에 Google 계정이 로그인되어 있어야 합니다. Android 14 이상(Health Connect 지원)에서는 Google 계정 없이도 사용 가능합니다.",
+        settings_guide_fitness_desc: "걸음 수가 자동으로 동기화되어 1,000보당 +10P & STR +0.5 보상을 매일 받을 수 있습니다. 걸으면서 레벨업!<br><br>⚠️ <b>이메일 로그인 사용자 안내</b><br>Google Fit 연동 시 기기에 Google 계정이 로그인되어 있어야 합니다. Health Connect 앱이 설치되어 있으면 Google 계정 없이도 사용 가능합니다. (Android 14 이상은 기본 제공)",
         set_private_account: "비공개 계정",
         settings_guide_privacy_title: "비공개 계정 안내",
         settings_guide_privacy_desc: "비공개 계정을 활성화하면 던전 참여자 목록, Day1 검색, 소셜탭 랭킹에서 다른 사용자에게 노출되지 않습니다.<br><br>비공개 상태에서도 던전 참여 및 Day1 게시는 가능하지만, 다른 사용자의 검색 결과에는 표시되지 않습니다.",
