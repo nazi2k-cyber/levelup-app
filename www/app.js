@@ -6440,11 +6440,11 @@ window.sharePlannerLink = function() {
 // --- ★ 법적 페이지 (독립 HTML 호출) ★ ---
 window.openLegalPage = function(type) {
     const pages = {
-        'terms': 'terms.html',
-        'usage-policy': 'usage-policy.html',
-        'privacy': 'privacy.html',
-        'oss': 'oss.html',
-        'life-status-consent': 'life-status-consent.html'
+        'terms': 'terms/terms.html',
+        'usage-policy': 'terms/usage-policy.html',
+        'privacy': 'terms/privacy.html',
+        'oss': 'terms/oss.html',
+        'life-status-consent': 'terms/life-status-consent.html'
     };
     const url = pages[type];
     if (url) window.open(url, '_blank');
