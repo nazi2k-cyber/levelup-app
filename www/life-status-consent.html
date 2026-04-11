@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>개인정보 수집 및 이용 동의서 - BRAVECAT</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #1a1a1a; color: #e0e0e0; line-height: 1.7; padding: 20px; padding-top: env(safe-area-inset-top); }
+        .legal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .back-btn { background: none; border: none; color: #aaa; font-size: 1.5rem; cursor: pointer; padding: 0 8px; }
+        .legal-title { font-size: 1.3rem; font-weight: 800; color: #ffffff; }
+        .legal-date { font-size: 0.75rem; color: #888; margin-bottom: 24px; }
+        h2 { font-size: 1rem; font-weight: 700; color: #00d9ff; margin: 24px 0 12px 0; }
+        h3 { font-size: 0.9rem; font-weight: 600; color: #ffffff; margin: 16px 0 8px 0; }
+        p, li { font-size: 0.85rem; color: #ccc; margin-bottom: 8px; }
+        ul, ol { padding-left: 20px; margin-bottom: 12px; }
+        .section { margin-bottom: 20px; }
+        a { color: #00d9ff; text-decoration: underline; }
+        .brand { font-weight: 700; color: #ffffff; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.8rem; }
+        .data-table th, .data-table td { border: 1px solid rgba(255,255,255,0.1); padding: 10px; text-align: left; }
+        .data-table th { background: rgba(0,217,255,0.08); color: #00d9ff; font-weight: 600; }
+        .data-table td { color: #ccc; }
+        .lang-switch { text-align: center; margin-bottom: 20px; }
+        .lang-switch button { background: none; border: 1px solid rgba(255,255,255,0.15); color: #888; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; margin: 0 2px; }
+        .lang-switch button.active { border-color: #00d9ff; color: #00d9ff; }
+        .content-block { display: none; }
+        .content-block.active { display: block; }
+        .notice-box { background: rgba(0,217,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; margin: 16px 0; }
+        .notice-box h3 { margin-top: 0; }
+        .notice-box ul { list-style: none; padding-left: 0; }
+        .notice-box li { padding-left: 12px; position: relative; }
+        .notice-box li::before { content: "•"; position: absolute; left: 0; color: #00d9ff; }
+    </style>
+</head>
+<body>
+    <div class="lang-switch">
+        <button onclick="setLang('ko')" id="lang-ko" class="active">한국어</button>
+        <button onclick="setLang('en')" id="lang-en">English</button>
+        <button onclick="setLang('ja')" id="lang-ja">日本語</button>
+    </div>
+
+    <div class="legal-header">
+        <button class="back-btn" onclick="history.back()">←</button>
+        <span class="legal-title" id="page-title">개인정보 수집 및 이용 동의서</span>
+    </div>
+    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일</div>
+
+    <!-- 한국어 -->
+    <div class="content-block active" id="content-ko">
+        <div class="section">
+            <p><span class="brand">LevelUp</span>은 「개인정보 보호법」에 따라 아래와 같이 개인정보를 수집·이용하고자 합니다. 내용을 확인 후 동의 여부를 결정해 주세요.</p>
+        </div>
+
+        <div class="section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>내용</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>수집 항목</td>
+                        <td>생년월일, 기대 수명 설정값</td>
+                    </tr>
+                    <tr>
+                        <td>수집 목적</td>
+                        <td>Life Status(인생 현황) 기능 제공 및 기기 간 데이터 동기화</td>
+                    </tr>
+                    <tr>
+                        <td>보유 기간</td>
+                        <td>회원 탈퇴 시 또는 이용자가 직접 초기화 시 즉시 파기</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="notice-box">
+                <h3>안내 사항</h3>
+                <ul>
+                    <li>수집된 정보는 Firebase 서버에 암호화되어 저장됩니다.</li>
+                    <li>수집된 정보는 위 목적 외 다른 용도로 사용되지 않습니다.</li>
+                    <li>동의를 거부할 수 있으며, 거부 시 Life Status 기능 이용이 제한됩니다.</li>
+                    <li>설정 화면의 [초기화] 버튼으로 언제든지 정보를 삭제하고 동의를 철회할 수 있습니다.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- English -->
+    <div class="content-block" id="content-en">
+        <div class="section">
+            <p><span class="brand">LevelUp</span> collects and uses personal information as described below in accordance with privacy laws. Please review and decide whether to consent.</p>
+        </div>
+
+        <div class="section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Collected Items</td>
+                        <td>Date of birth, expected lifespan setting</td>
+                    </tr>
+                    <tr>
+                        <td>Purpose</td>
+                        <td>Life Status feature and cross-device data synchronization</td>
+                    </tr>
+                    <tr>
+                        <td>Retention Period</td>
+                        <td>Immediately deleted upon account deletion or user-initiated reset</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="notice-box">
+                <h3>Notice</h3>
+                <ul>
+                    <li>Collected information is encrypted and stored on Firebase servers.</li>
+                    <li>Collected information is not used for purposes other than stated above.</li>
+                    <li>You may refuse consent; Life Status features will be limited if refused.</li>
+                    <li>You can delete your information and withdraw consent at any time using the [Reset] button in settings.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日本語 -->
+    <div class="content-block" id="content-ja">
+        <div class="section">
+            <p><span class="brand">LevelUp</span>は個人情報保護法に基づき、以下のとおり個人情報を収集・利用いたします。内容をご確認の上、同意の可否をお決めください。</p>
+        </div>
+
+        <div class="section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>項目</th>
+                        <th>内容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>収集項目</td>
+                        <td>生年月日、期待寿命設定値</td>
+                    </tr>
+                    <tr>
+                        <td>収集目的</td>
+                        <td>Life Status（人生現況）機能の提供及びデバイス間データ同期</td>
+                    </tr>
+                    <tr>
+                        <td>保有期間</td>
+                        <td>退会時またはユーザーによるリセット時に即時削除</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="notice-box">
+                <h3>ご案内</h3>
+                <ul>
+                    <li>収集された情報はFirebaseサーバーに暗号化して保存されます。</li>
+                    <li>収集された情報は上記の目的以外には使用されません。</li>
+                    <li>同意を拒否することができます。拒否した場合、Life Status機能の利用が制限されます。</li>
+                    <li>設定画面の[リセット]ボタンでいつでも情報を削除し、同意を撤回できます。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="section" style="margin-top: 32px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <p style="font-size: 0.75rem; color: #666;">본 동의서의 한국어 원문이 법적 효력을 가지며, 영어 또는 일본어 번역본은 참고용으로만 제공됩니다.</p>
+        <p style="font-size: 0.75rem; color: #666;">The Korean original of this agreement is legally binding. English or Japanese translations are provided for reference purposes only.</p>
+    </div>
+
+<script>
+const TITLES = {
+    ko: { title: '개인정보 수집 및 이용 동의서', date: '시행일: 2025년 3월 1일' },
+    en: { title: 'Personal Information Collection & Use Agreement', date: 'Effective: March 1, 2025' },
+    ja: { title: '個人情報の収集及び利用同意書', date: '施行日: 2025年3月1日' }
+};
+function setLang(lang) {
+    const t = TITLES[lang] || TITLES.ko;
+    document.getElementById('page-title').textContent = t.title;
+    document.getElementById('page-date').textContent = t.date;
+    document.querySelectorAll('.content-block').forEach(el => el.classList.remove('active'));
+    document.getElementById('content-' + lang)?.classList.add('active');
+    document.querySelectorAll('.lang-switch button').forEach(b => b.classList.remove('active'));
+    document.getElementById('lang-' + lang)?.classList.add('active');
+    document.documentElement.lang = lang;
+    document.title = t.title + ' - BRAVECAT';
+}
+const browserLang = (navigator.language || 'ko').substring(0, 2);
+if (['ko', 'en', 'ja'].includes(browserLang)) setLang(browserLang);
+</script>
+</body>
+</html>
