@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.292] - 2026-04-11
+
+### 변경
+- feat: 초기화면 하단 로그 on/off 토글 추가 (관리자 전용)
+
 ## [1.0.291] - 2026-04-11
 
 ### 변경
