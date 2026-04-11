@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.295] - 2026-04-11
+
+### 변경
+- fix: 로그아웃 시 localStorage.clear()에서 loginLogVisible 보존
+
 ## [1.0.294] - 2026-04-11
 
 ### 변경
