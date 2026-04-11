@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.296] - 2026-04-11
+
+### 변경
+- refactor: 챌린지 + 룰렛 모듈 분리 (Step 1 #5, #6)
+
 ## [1.0.295] - 2026-04-11
 
 ### 변경
