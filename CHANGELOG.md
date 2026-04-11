@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.287] - 2026-04-11
+
+### 변경
+- refactor: 개인정보 동의서를 독립 HTML 페이지로 분리하고 체크박스 직접 토글 방식으로 변경
+
 ## [1.0.286] - 2026-04-11
 
 ### 변경
