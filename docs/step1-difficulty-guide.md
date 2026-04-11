@@ -69,33 +69,35 @@ app.js (11,631줄 → ~200줄 목표) 모듈 분리 5단계 계획 중 **Step 1*
 
 ---
 
-### 5. 챌린지 (Weekly Challenges) — ★★★☆☆
+### 5. 챌린지 (Weekly Challenges) — ★★★☆☆ [완료]
 | 항목 | 내용 |
 |------|------|
-| 위치 | app.js 6718-6815 |
+| 위치 | app.js 6503-6601 (이동 완료) |
 | 함수 | 4개 (`getWeeklyChallenges`, `updateChallengeProgress`, `renderWeeklyChallenges`, `claimChallenge`) |
 | 결합도 | 중간 |
-| 의존성 | `AppState.user.points`, `AppState.user.pendingStats`, `statKeys`, `getWeekStartDate()`, localStorage |
+| 상태 | **완료** — `modules/challenge-roulette.js`로 룰렛과 함께 분리 |
 
-**분리 포인트:**
-- 퀘스트/던전 완료 데이터에 의존 → 인터페이스 설계 필요
-- 룰렛과 합쳐서 `modules/challenge-roulette.js`로 이동 권장
+**작업 내용:**
+- `weeklyChallengeTemplates` 상수 + 4개 함수 → `modules/challenge-roulette.js`로 이동
+- app.js 호출부 13곳 `window.*` 가드 패턴으로 변경
+- Module Bridge에 `window.getWeekStartDate`, `window.statKeys` 추가
+- app.js에서 ~100줄 제거
 
 ---
 
-### 6. 룰렛 (Daily Bonus Roulette) — ★★★★☆
+### 6. 룰렛 (Daily Bonus Roulette) — ★★★★☆ [완료]
 | 항목 | 내용 |
 |------|------|
-| 위치 | app.js 6818-7040 |
+| 위치 | app.js 6603-6825 (이동 완료) |
 | 함수 | 8개 |
 | 결합도 | 높음 |
-| 의존성 | `AppState.quest.completedState`, `AppState.user.points/pendingStats`, `getTodayKST()`, Canvas 2D API, localStorage |
+| 상태 | **완료** — `modules/challenge-roulette.js`로 챌린지와 함께 분리 |
 
-**분리 포인트:**
-- Canvas 2D 룰렛 휠 + 스핀 애니메이션
-- 24시간 쿨다운 타이머
-- 퀘스트 1개 이상 완료 시 활성화 조건
-- 챌린지와 합쳐서 `modules/challenge-roulette.js`로 이동 권장
+**작업 내용:**
+- `rouletteSlots` 상수 + 8개 함수 → `modules/challenge-roulette.js`로 이동
+- `applyRewardedInterstitialBonus` spin 컨텍스트 → `window.applySpinBonus()` 위임 방식으로 리팩터링
+- `getMsUntilNextKSTMidnight`, `formatCountdown`은 app.js에 유지 (ad-manager 모듈 공유 유틸)
+- app.js에서 ~215줄 제거
 
 ---
 
@@ -124,9 +126,9 @@ app.js (11,631줄 → ~200줄 목표) 모듈 분리 5단계 계획 중 **Step 1*
 | 2 | 명언 | ~90줄 | ~265줄 |
 | 3 | D-Day + Caption | ~380줄 | ~645줄 |
 | 4 | Life Status | ~325줄 | ~970줄 |
-| 5 | 챌린지 | ~100줄 | ~1,070줄 |
-| 6 | 룰렛 | ~225줄 | ~1,295줄 |
-| 7 | Reels | ~1,720줄 | ~3,015줄 |
+| 5 | 챌린지 (완료) | ~100줄 | ~1,070줄 |
+| 6 | 룰렛 (완료) | ~215줄 | ~1,285줄 |
+| 7 | Reels | ~1,720줄 | ~3,005줄 |
 
 ## 기존 모듈 패턴 (준수 필수)
 
