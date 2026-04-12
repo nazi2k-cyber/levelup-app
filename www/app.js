@@ -2,6 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, sendPasswordResetEmail, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, orderBy, limit, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
 import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 import { getRemoteConfig, fetchAndActivate, getValue, getString } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-remote-config.js";
 import { getAnalytics, logEvent as fbLogEvent } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
@@ -11,7 +12,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.306';
+const APP_VERSION = '1.0.303';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -144,7 +145,15 @@ window.addEventListener('offline', () => {
     disableNetwork(db).catch(e => console.warn('[Firestore] disableNetwork 실패:', e.message));
 });
 
-
+// Firebase Cloud Messaging 초기화 (웹 환경에서만)
+let messaging = null;
+try {
+    if (!isNativePlatform) {
+        messaging = getMessaging(app);
+    }
+} catch (e) {
+    console.warn('[FCM] Messaging 초기화 스킵:', e.message);
+}
 
 // --- 프로필 이미지 기본값 & 안전한 로드 ---
 const DEFAULT_PROFILE_SVG = "data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27%23555%27%3E%3Cpath d=%27M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%27/%3E%3C/svg%3E";
@@ -781,7 +790,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -899,6 +908,7 @@ function initStatusCardReorder() {
 
 // --- 햄버거 메뉴 & 상태창 편집 ---
 const STATUS_CARD_LABELS = {
+    'step-count': { name_key: 'card_step_count', name: '걸음수', icon: '🚶' },
     'stat-radar': { name: 'STAT RADAR', icon: '📊' },
     'bonus-exp': { name_key: 'card_bonus_exp', name: '보너스 EXP', icon: '🎬' },
     'pomodoro': { name_key: 'card_pomodoro', name: 'POMODORO', icon: '🍅' },
@@ -912,7 +922,7 @@ const STATUS_CARD_LABELS = {
     'orm-calc': { name_key: 'card_orm_calc', name: '1RM 계산기', icon: '🏋️' },
     'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' }
 };
-const ALL_CARD_IDS = ['stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -964,7 +974,7 @@ function applyCardVisibility() {
         if (hidden.includes(cardId)) {
             card.style.display = 'none';
         } else {
-            // 숨김 해제 시 표시 복원
+            // 숨김 해제 시 표시 복원 (step-count 포함)
             card.style.display = '';
         }
     });
@@ -1381,8 +1391,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initRemoteConfig(); // Phase 2: A/B 테스트 Remote Config
     ConversionTracker.screenView(); // Phase 2: 로그인 화면 조회 계측
 
-    // 앱 시작 즉시 딥링크 리스너 등록 (콜드 스타트 대응)
-    registerDeepLinkListeners();
+    // 앱 시작 즉시 네이티브 푸시 알림 클릭 리스너 등록 (콜드 스타트 대응)
+    registerEarlyPushListeners();
 
     // 안드로이드 뒤로가기(하드웨어) 버튼 핸들러 등록
     registerBackButtonHandler();
@@ -1507,17 +1517,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.AdManager) window.AdManager.renderBonusExp();
             if (window.updateReelsResetTimer) window.updateReelsResetTimer();
 
+            updateStepCountUI();
+            if (AppState.user.syncEnabled) { syncHealthData(false); }
+
             // OS 권한 상태와 앱 토글 동기화 (OS에서 차단/해제된 경우 토글 off)
+            // ⚠️ 반드시 initPushNotifications보다 먼저 실행해야 올바른 pushEnabled 상태로 리스너 설정
             await syncToggleWithOSPermissions();
 
-            // 콜드 스타트 시 대기 중인 딥링크 데이터 처리
-            _appNavigationReady = true;
-            if (_pendingDeepLinkData) {
-                setTimeout(() => {
-                    handleNotificationAction(_pendingDeepLinkData);
-                    _pendingDeepLinkData = null;
-                }, 500);
-            }
+            initPushNotifications();
+
+            // 콜드 스타트 시 대기 중인 알림 데이터 처리 (푸시 클릭으로 앱 진입 시)
+            processPendingNotification();
 
             // 로그인 후 권한 요청 프롬프트 표시 (온보딩 완료 후 실행)
             if (!localStorage.getItem(ONBOARDING_STORAGE_KEY)) {
@@ -1722,8 +1732,11 @@ function bindEvents() {
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
     document.getElementById('btn-diy-quest-info').addEventListener('click', openDiyQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
+    document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
     document.getElementById('btn-day1-info').addEventListener('click', openDay1InfoModal);
+    document.getElementById('btn-settings-push-guide').addEventListener('click', () => openSettingsGuideModal('push'));
     document.getElementById('btn-settings-gps-guide').addEventListener('click', () => openSettingsGuideModal('gps'));
+    document.getElementById('btn-settings-fitness-guide').addEventListener('click', () => openSettingsGuideModal('fitness'));
     document.getElementById('btn-settings-delete-guide').addEventListener('click', () => openSettingsGuideModal('delete'));
     document.getElementById('btn-settings-privacy-guide').addEventListener('click', () => openSettingsGuideModal('privacy'));
     document.getElementById('btn-info-close').addEventListener('click', closeInfoModal);
@@ -1754,7 +1767,9 @@ function bindEvents() {
     });
     updateLoginLangButtons(AppState.currentLang);
     document.getElementById('theme-toggle').addEventListener('change', changeTheme);
+    document.getElementById('push-toggle').addEventListener('change', togglePushNotifications);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
+    document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
     document.getElementById('camera-toggle').addEventListener('change', toggleCamera);
     document.getElementById('privacy-toggle').addEventListener('change', togglePrivateAccount);
     document.getElementById('btn-settings-camera-guide').addEventListener('click', function() {
@@ -1807,6 +1822,64 @@ function bindEvents() {
 
     document.getElementById('btn-raid-action').addEventListener('click', window.simulateRaidAction);
 
+    // Planner tab
+    document.getElementById('btn-planner-save').addEventListener('click', savePlannerEntry);
+    document.getElementById('btn-add-task').addEventListener('click', window.addPlannerTask);
+    document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+    // 플래너 탭 전환 (우선순위 / 시간표)
+    document.querySelectorAll('.planner-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.planner-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.planner-tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.getAttribute('data-planner-tab');
+            const target = document.getElementById('planner-tab-' + tab);
+            if (target) target.classList.add('active');
+            // 탭에 따라 저장 영역 표시/숨김
+            const prioritySave = document.getElementById('priority-save-area');
+            if (prioritySave) prioritySave.style.display = tab === 'priority' ? 'block' : 'none';
+        });
+    });
+    // 퀘스트 서브탭 전환 (퀘스트 / 통계)
+    document.querySelectorAll('.quest-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.quest-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.quest-tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.getAttribute('data-quest-tab');
+            const target = document.getElementById('quest-tab-' + tab);
+            if (target) target.classList.add('active');
+            if (tab === 'stats') renderQuestStats();
+        });
+    });
+    // 퀘스트 통계 월/연 네비게이션
+    document.getElementById('btn-qstats-prev-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() - 1); renderQuestStats(); });
+    document.getElementById('btn-qstats-next-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() + 1); renderQuestStats(); });
+    document.getElementById('btn-qstats-prev-year').addEventListener('click', () => { _qstatsYear--; renderQuestStats(); });
+    document.getElementById('btn-qstats-next-year').addEventListener('click', () => { _qstatsYear++; renderQuestStats(); });
+    // DIY 전용 통계 필터
+    document.getElementById('qstats-diy-filter')?.addEventListener('change', (e) => { _qstatsDiyOnly = e.target.checked; renderQuestStats(); });
+
+    document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
+
+    // Reels tab
+    document.getElementById('btn-reels-post').addEventListener('click', () => { if (window.postToReels) window.postToReels(); });
+    // 우선순위 탭 저장 버튼도 같은 저장 함수 연결
+    const prioritySaveBtn = document.getElementById('btn-planner-save-priority');
+    if (prioritySaveBtn) prioritySaveBtn.addEventListener('click', savePlannerEntry);
+    // Planner photo upload
+    document.getElementById('planner-photo-label').addEventListener('click', function(e) {
+        e.preventDefault();
+        showPhotoSourceSheet('plannerPhotoUpload');
+    });
+    document.getElementById('plannerPhotoUpload').addEventListener('change', loadPlannerPhoto);
+    // Planner share button
+    document.getElementById('btn-planner-share').addEventListener('click', openShareModal);
 }
 
 // --- 데이터 저장/로드 ---
@@ -2320,6 +2393,16 @@ async function loadUserDataFromDB(user) {
                     }
                 } catch(e) {}
             }
+            const syncToggleEl = document.getElementById('sync-toggle');
+            syncToggleEl.checked = AppState.user.syncEnabled;
+            if (AppState.isEmailUser) {
+                syncToggleEl.disabled = true;
+                syncToggleEl.checked = false;
+                syncToggleEl.closest('.setting-row').style.opacity = '0.5';
+            } else {
+                syncToggleEl.disabled = false;
+                syncToggleEl.closest('.setting-row').style.opacity = '';
+            }
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
             document.getElementById('privacy-toggle').checked = AppState.user.privateAccount;
             const privacyWarningEl = document.getElementById('private-account-warning');
@@ -2694,6 +2777,29 @@ function checkStreakRareTitles() {
             });
             newUnlock = true;
             AppLogger.info(`[RareTitle] 스트릭 희귀 호칭 해금: ${rt.title.ko} (${rt.days}일)`);
+        }
+    });
+    if (newUnlock) {
+        saveUserData();
+        updatePointUI();
+        const newest = AppState.user.rareTitle.unlocked[AppState.user.rareTitle.unlocked.length - 1];
+        showRareTitleNotification(newest);
+    }
+}
+
+// 걸음수 마일스톤 달성 시 희귀 호칭 해금 체크
+function checkStepRareTitles() {
+    const steps = Number(AppState.user.stepData?.totalSteps) || 0;
+    let newUnlock = false;
+    rareStepTitles.forEach(rt => {
+        const titleId = `steps_${rt.steps}`;
+        if (steps >= rt.steps && !AppState.user.rareTitle.unlocked.find(u => u.id === titleId)) {
+            AppState.user.rareTitle.unlocked.push({
+                id: titleId, type: 'steps', rarity: rt.rarity, icon: rt.icon,
+                title: rt.title, unlockedAt: new Date().toISOString()
+            });
+            newUnlock = true;
+            AppLogger.info(`[RareTitle] 걸음수 희귀 호칭 해금: ${rt.title.ko} (${rt.steps}보)`);
         }
     });
     if (newUnlock) {
@@ -3246,6 +3352,11 @@ function renderDiyQuestList() {
     }).join('');
 }
 
+// 플래너 내 DIY 퀘스트를 우선순위 태스크 형태로 렌더링
+function renderPlannerDiyQuests() {
+    // DIY 퀘스트는 loadPlannerForDate에서 plannerTasks에 통합되므로 별도 렌더링 불필요
+}
+
 window.toggleDiyQuest = (questId) => {
     const q = AppState.diyQuests.definitions.find(d => d.id === questId);
     if (!q) return;
@@ -3279,6 +3390,7 @@ window.toggleDiyQuest = (questId) => {
     updateQuestHistory();
     saveUserData();
     renderDiyQuestList();
+    renderPlannerTasks();
     renderCalendar();
     updatePointUI();
     if (window.renderRoulette) window.renderRoulette();
@@ -4194,7 +4306,7 @@ function switchTab(tabId, el) {
 
     if(tabId === 'social' && window.SocialModule) window.SocialModule.fetchData();
     if(tabId === 'quests') { renderQuestList(); renderCalendar(); if (window.renderWeeklyChallenges) window.renderWeeklyChallenges(); if (window.renderRoulette) window.renderRoulette(); }
-    if(tabId === 'diary') { if (window.updateReelsResetTimer) window.updateReelsResetTimer(); }
+    if(tabId === 'diary') { renderPlannerCalendar(); loadPlannerForDate(diarySelectedDate); if (window.updateReelsResetTimer) window.updateReelsResetTimer(); }
     if(tabId === 'reels') { if (window.renderReelsFeed) window.renderReelsFeed(); if (window.updateReelsResetTimer) window.updateReelsResetTimer(); }
     if(tabId === 'dungeon') {
         updateDungeonStatus();
@@ -4254,6 +4366,16 @@ function refreshSettingsStatusMessages() {
     const lang = i18n[AppState.currentLang];
     if (!lang) return;
 
+    // 푸시 알림 상태
+    const pushStatus = document.getElementById('push-status');
+    if (pushStatus && pushStatus.style.display !== 'none') {
+        if (AppState.user.pushEnabled) {
+            pushStatus.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+        } else {
+            pushStatus.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
+        }
+    }
+
     // GPS 위치 상태
     const gpsStatus = document.getElementById('gps-status');
     if (gpsStatus && gpsStatus.style.display !== 'none') {
@@ -4266,12 +4388,32 @@ function refreshSettingsStatusMessages() {
 
     // 카메라 상태
     updateCameraToggleUI();
+
+    // Google Fit 동기화 상태
+    const syncStatus = document.getElementById('sync-status');
+    if (syncStatus && syncStatus.style.display !== 'none') {
+        if (AppState.user.syncEnabled) {
+            const totalSteps = AppState.user.stepData?.totalSteps || 0;
+            if (totalSteps === 0) {
+                syncStatus.innerHTML = `<span style="color:var(--neon-gold);">${lang.sync_no_steps || '걸음 수 기록이 없습니다. (0보)'}</span>`;
+            } else {
+                syncStatus.innerHTML = `<span style="color:var(--neon-blue);">${lang.sync_done || '동기화 완료'}</span>`;
+            }
+        } else {
+            syncStatus.innerHTML = `<span style="color:var(--text-sub);">${lang.sync_off || '동기화 해제됨'}</span>`;
+        }
+    }
 }
 
 function changeLanguage(langCode) {
     const oldLang = AppState.currentLang;
     AppState.currentLang = langCode;
     try { localStorage.setItem('lang', langCode); } catch(e) {}
+
+    // 언어 변경 시 푸시 토픽 재구독
+    if (oldLang !== langCode && AppState.user && AppState.user.pushEnabled) {
+        updateTopicSubscriptionForLanguage(oldLang, langCode);
+    }
 
     // 언어 변경 시 Firestore에 저장 (서버 측 언어별 발송에 필요)
     if (oldLang !== langCode && auth.currentUser) {
@@ -4298,6 +4440,7 @@ function changeLanguage(langCode) {
         if (window.SocialModule) window.SocialModule.renderUsers(AppState.social.sortCriteria);
         renderQuestList();
         renderCalendar();
+        renderPlannerCalendar();
         window.renderQuote?.();
         window.renderDDayList?.();
         window.renderDDayCaption?.();
@@ -4306,6 +4449,7 @@ function changeLanguage(langCode) {
         updateDungeonStatus();
         loadPlayerName();
         if (window.updateReelsResetTimer) window.updateReelsResetTimer(); // i18n 업데이트 후 버튼 쿨다운 상태 재적용
+        updateStepCountUI();
         refreshSettingsStatusMessages();
         if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();
         if (typeof window.refreshOrmCalcSummary === 'function') window.refreshOrmCalcSummary();
@@ -4806,6 +4950,7 @@ function openProfileStatsModal(userId) {
                 <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
                     <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
                     ${followBtnHTML}
+                    <button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
                     ${saveBtnHTML}
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
@@ -4847,6 +4992,75 @@ async function toggleProfileModalFollow(userId) {
     openProfileStatsModal(userId);
 }
 window.toggleProfileModalFollow = toggleProfileModalFollow;
+
+// --- 프로필 모달에서 당일 플래너 열람 ---
+async function viewUserTodayPlanner(userId) {
+    const lang = AppState.currentLang;
+    const isMe = userId === auth.currentUser?.uid;
+    let blocks = null;
+    let tasks = null;
+
+    if (isMe) {
+        // 현재 유저: localStorage에서 오늘 플래너 가져오기
+        const todayStr = getTodayStr();
+        const entry = getDiaryEntry(todayStr);
+        if (entry && entry.blocks && Object.keys(entry.blocks).length > 0) {
+            blocks = entry.blocks;
+            tasks = entry.tasks || [];
+        }
+    } else {
+        // 다른 유저: 오늘 날짜의 릴스 포스트에서 가져오기
+        const todayKST = getTodayKST();
+        if (Array.isArray(window._reelsCachedPosts)) {
+            const post = window._reelsCachedPosts.find(p => p.uid === userId && p.dateKST === todayKST);
+            if (post && post.blocks && Object.keys(post.blocks).length > 0) {
+                blocks = post.blocks;
+                tasks = post.tasks || [];
+            }
+        }
+    }
+
+    if (!blocks) {
+        // 당일 플랜 없음 안내 팝업
+        const noPlanner = i18n[lang]?.profile_no_today_plan || '당일 플랜이 없습니다.';
+        const m = document.getElementById('infoModal');
+        document.getElementById('info-modal-title').textContent = i18n[lang]?.profile_view_planner || '당일 플래너';
+        document.getElementById('info-modal-body').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sub); font-size:0.9rem;">${noPlanner}</div>`;
+        m.classList.remove('d-none');
+        m.classList.add('d-flex');
+        return;
+    }
+
+    // ★ 보상형 광고: 최초 및 매 10회 열람 시
+    let viewCount = parseInt(localStorage.getItem('planner_view_count') || '0', 10);
+    viewCount++;
+    localStorage.setItem('planner_view_count', String(viewCount));
+    const shouldShowAd = (viewCount === 1) || (viewCount % 10 === 0);
+    if (shouldShowAd && typeof isNativePlatform !== 'undefined' && isNativePlatform && window.AdManager) {
+        try { await window.AdManager.showPlannerRewardedAd(lang); } catch (e) { console.warn('[PlannerAd] Ad failed:', e); }
+    }
+
+    // 시간표 렌더링
+    const mergedBlocks = window.mergeConsecutiveBlocks ? window.mergeConsecutiveBlocks(blocks) : [];
+    const scheduleLabel = i18n[lang]?.planner_tab_schedule || '시간표';
+    let scheduleHTML = mergedBlocks.map(({time, task}) =>
+        `<div style="display:flex; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span style="color:var(--neon-blue); font-size:0.8rem; white-space:nowrap; min-width:100px;">${time}</span>
+            <span style="color:var(--text-main); font-size:0.8rem;">${sanitizeText(task)}</span>
+        </div>`
+    ).join('');
+
+    const m = document.getElementById('infoModal');
+    document.getElementById('info-modal-title').textContent = i18n[lang]?.profile_view_planner || '당일 플래너';
+    document.getElementById('info-modal-body').innerHTML = `
+        <div style="padding:8px 0;">
+            <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:8px;">📋 ${scheduleLabel}</div>
+            ${scheduleHTML}
+        </div>`;
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+window.viewUserTodayPlanner = viewUserTodayPlanner;
 
 // --- 프로필카드 이미지 저장 (보상형 광고 연동) ---
 window.saveProfileCardAsImage = async function(userId) {
@@ -5668,6 +5882,72 @@ function openDungeonInfoModal() {
     }
 }
 
+// --- ★ 플래너 가이드 모달 ★ ---
+function openPlannerInfoModal() {
+    const lang = AppState.currentLang;
+    const guideData = {
+        ko: {
+            title: '플래너 사용 가이드',
+            sections: [
+                { icon: '⭐', title: '우선순위 태스크', desc: '하루의 핵심 할 일을 최대 6개 입력하세요. 왼쪽 버튼을 눌러 우선순위를 매기면 자동으로 번호가 부여됩니다.' },
+                { icon: '🕐', title: '시간표 (타임박스)', desc: '05:00~23:30까지 30분 단위로 할 일을 배치하세요. 우선순위 태스크에서 입력한 항목이 드롭다운에 표시됩니다.' },
+                { icon: '📷', title: '사진 & 한마디', desc: '시간표 탭에서 사진을 첨부하고 오늘의 한마디를 작성하세요. Day1 포스팅 시 필수입니다.' },
+                { icon: '💾', title: '저장 보상', desc: '하루 1회 저장 시 +20P & AGI +0.5 보상을 받습니다.' },
+                { icon: '📤', title: 'Day1 포스팅', desc: '시간표와 사진, 텍스트를 모두 완성하면 Day1에 포스팅할 수 있습니다. 포스팅 시 +20P & CHA +0.5 보상! 24시간 후 자동 삭제됩니다.' },
+                { icon: '🔗', title: '공유 기능', desc: '포스팅 버튼 옆 공유 아이콘을 눌러 플래너를 이미지로 저장하거나 요약 텍스트를 클립보드에 복사할 수 있습니다.' }
+            ]
+        },
+        en: {
+            title: 'Planner Guide',
+            sections: [
+                { icon: '⭐', title: 'Priority Tasks', desc: 'Enter up to 6 key tasks for the day. Tap the left button to assign priority - numbers are assigned automatically.' },
+                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Assign tasks in 30-min blocks from 05:00-23:30. Tasks from Priority list appear in the dropdown.' },
+                { icon: '📷', title: 'Photo & Caption', desc: 'Attach a photo and write a caption in the Schedule tab. Required for Day1 posting.' },
+                { icon: '💾', title: 'Save Reward', desc: 'Save once a day to earn +20P & AGI +0.5.' },
+                { icon: '📤', title: 'Day1 Posting', desc: 'Complete the schedule, photo, and caption to post to Day1. Earn +20P & CHA +0.5! Auto-deleted after 24 hours.' },
+                { icon: '🔗', title: 'Sharing', desc: 'Tap the share icon next to the Post button to save your planner as an image or copy a summary to clipboard.' }
+            ]
+        },
+        ja: {
+            title: 'プランナーガイド',
+            sections: [
+                { icon: '⭐', title: '優先タスク', desc: '1日の重要なタスクを最大6つ入力してください。左のボタンを押すと優先順位が自動付与されます。' },
+                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '05:00〜23:30まで30分単位でタスクを配置できます。優先タスクの項目がドロップダウンに表示されます。' },
+                { icon: '📷', title: '写真 & キャプション', desc: 'スケジュールタブで写真を添付し、今日の一言を書きましょう。Day1投稿に必須です。' },
+                { icon: '💾', title: '保存報酬', desc: '1日1回保存で+20P & AGI +0.5の報酬を獲得できます。' },
+                { icon: '📤', title: 'Day1投稿', desc: 'スケジュール・写真・テキストを完成させるとDay1に投稿できます。投稿で+20P & CHA +0.5！24時間後に自動削除されます。' },
+                { icon: '🔗', title: '共有機能', desc: '投稿ボタン横の共有アイコンをタップして、プランナーを画像保存またはテキストをコピーできます。' }
+            ]
+        }
+    };
+
+    const g = guideData[lang] || guideData.ko;
+    document.getElementById('info-modal-title').innerText = g.title;
+    const body = document.getElementById('info-modal-body');
+
+    body.innerHTML = g.sections.map(s => `
+        <div style="display:flex; gap:10px; align-items:flex-start; padding:10px 0; border-bottom:1px dashed var(--border-color);">
+            <span style="font-size:1.3rem; flex-shrink:0;">${s.icon}</span>
+            <div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:3px;">${s.title}</div>
+                <div style="font-size:0.75rem; color:var(--text-sub); line-height:1.5; word-break:keep-all;">${s.desc}</div>
+            </div>
+        </div>
+    `).join('');
+
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+
+    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
+    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
+        try {
+            const { NativeAd } = window.Capacitor.Plugins;
+            if (NativeAd) NativeAd.hideAd();
+        } catch (e) { /* 무시 */ }
+    }
+}
+
 // --- ★ 설정 가이드 모달 (푸시/GPS/피트니스) ★ ---
 function openSettingsGuideModal(type) {
     const lang = AppState.currentLang;
@@ -5677,8 +5957,8 @@ function openSettingsGuideModal(type) {
     const title = l[titleKey] || titleKey;
     const desc = l[descKey] || descKey;
 
-    const colors = { gps: 'var(--neon-blue)', delete: 'var(--neon-red)', privacy: 'var(--neon-purple, #b388ff)' };
-    const icons = { gps: '📍', delete: '⚠️', privacy: '🔒' };
+    const colors = { push: 'var(--neon-gold)', gps: 'var(--neon-blue)', fitness: 'var(--neon-purple, #b388ff)', delete: 'var(--neon-red)', privacy: 'var(--neon-purple, #b388ff)' };
+    const icons = { push: '🔔', gps: '📍', fitness: '🏃', delete: '⚠️', privacy: '🔒' };
     const color = colors[type] || 'var(--neon-blue)';
     const icon = icons[type] || 'ℹ️';
 
@@ -5720,6 +6000,16 @@ function openDay1InfoModal() {
     `;
 
     const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// --- ★ 플래너 공유 모달 ★ ---
+function openShareModal() {
+    const lang = AppState.currentLang;
+    const titles = { ko: '플래너 공유', en: 'Share Planner', ja: 'プランナー共有' };
+    document.getElementById('share-modal-title').innerText = titles[lang] || titles.ko;
+    const m = document.getElementById('shareModal');
     m.classList.remove('d-none');
     m.classList.add('d-flex');
 }
@@ -5778,6 +6068,427 @@ function showImageOverlay(dataUrl, lang) {
     overlay.appendChild(btnRow);
     document.body.appendChild(overlay);
 }
+
+// 플래너를 이미지로 저장 (html2canvas 없이 캔버스 직접 생성)
+window.sharePlannerAsImage = async function() {
+    const lang = AppState.currentLang;
+    const dateStr = diarySelectedDate;
+    const entry = getDiaryEntry(dateStr);
+
+    const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
+    const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+    const photoSrc = _plannerPhotoBase64 || plannerPhotoData || (entry && entry.photo) || null;
+    const mood = (entry && entry.mood) ? entry.mood : '';
+    const moodMap = { great: '😄', good: '🙂', neutral: '😐', bad: '😞', terrible: '😫' };
+    const moodEmoji = moodMap[mood] || '';
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const W = 540;
+    const pad = 20;
+    const innerW = W - pad * 2;
+
+    // cross-origin 이미지를 fetch→blob→objectURL로 로드 (canvas taint 방지)
+    async function loadImageSafe(src) {
+        if (!src) return null;
+        try {
+            // data: URL이나 blob: URL은 직접 로드 (taint 없음)
+            if (src.startsWith('data:') || src.startsWith('blob:')) {
+                return await new Promise(resolve => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => resolve(null);
+                    img.src = src;
+                });
+            }
+            // HTTP URL: fetch로 blob 변환 후 objectURL 사용
+            const resp = await fetch(src);
+            const blob = await resp.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            const img = await new Promise(resolve => {
+                const el = new Image();
+                el.onload = () => resolve(el);
+                el.onerror = () => resolve(null);
+                el.src = objectUrl;
+            });
+            URL.revokeObjectURL(objectUrl);
+            return img;
+        } catch(e) {
+            return null;
+        }
+    }
+
+    // 사진 로드 (있을 경우)
+    let photoImg = null;
+    let photoH = 0;
+    if (photoSrc) {
+        photoImg = await loadImageSafe(photoSrc);
+        if (photoImg) {
+            photoH = Math.round(innerW * (photoImg.height / photoImg.width));
+            if (photoH > 400) photoH = 400;
+        }
+    }
+
+    // 시간표 블록 (연속 동일 업무 합치기, 최대 8개 표시)
+    const mergedImageBlocks = window.mergeConsecutiveBlocks ? window.mergeConsecutiveBlocks(Object.fromEntries(blocks)) : [];
+    const maxBlocks = 8;
+    const displayBlocks = mergedImageBlocks.slice(0, maxBlocks);
+    const moreCount = mergedImageBlocks.length > maxBlocks ? mergedImageBlocks.length - maxBlocks : 0;
+
+    // 높이 계산
+    const lineH = 24;
+    const headerH = 56;
+    let totalH = pad;                   // top padding
+    totalH += headerH;                  // 프로필 헤더
+    if (photoImg) totalH += photoH + 12; // 사진
+    if (caption) totalH += 40;           // 캡션
+    if (displayBlocks.length > 0) {
+        totalH += 32;                    // 시간표 제목
+        totalH += displayBlocks.length * lineH; // 블록 행
+        if (moreCount > 0) totalH += 20; // +more
+        totalH += 16;                    // 하단 여백
+    }
+    totalH += 36;                        // 푸터
+    totalH += pad;                       // bottom padding
+
+    canvas.width = W;
+    canvas.height = totalH;
+
+    // 배경
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, W, totalH);
+
+    // 카드 영역 (system-card 스타일)
+    const cardX = pad - 4, cardY = pad - 4;
+    const cardW = innerW + 8, cardH = totalH - pad * 2 + 8;
+    ctx.fillStyle = 'rgba(15, 25, 40, 0.95)';
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    const r = 10;
+    ctx.beginPath();
+    ctx.moveTo(cardX + r, cardY);
+    ctx.lineTo(cardX + cardW - r, cardY);
+    ctx.quadraticCurveTo(cardX + cardW, cardY, cardX + cardW, cardY + r);
+    ctx.lineTo(cardX + cardW, cardY + cardH - r);
+    ctx.quadraticCurveTo(cardX + cardW, cardY + cardH, cardX + cardW - r, cardY + cardH);
+    ctx.lineTo(cardX + r, cardY + cardH);
+    ctx.quadraticCurveTo(cardX, cardY + cardH, cardX, cardY + cardH - r);
+    ctx.lineTo(cardX, cardY + r);
+    ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    let y = pad;
+
+    // --- 프로필 헤더 (reels-header 스타일) ---
+    // 아바타 원형
+    const avatarSize = 38;
+    const avatarX = pad + 6;
+    const avatarCenterY = y + headerH / 2;
+    ctx.beginPath();
+    ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2 + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = '#00d9ff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a2332';
+    ctx.fill();
+
+    // 프로필 이미지 로드 시도
+    if (AppState.user.photoURL) {
+        try {
+            const profImg = await loadImageSafe(AppState.user.photoURL);
+            if (profImg) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(avatarX + avatarSize / 2, avatarCenterY, avatarSize / 2, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.drawImage(profImg, avatarX, avatarCenterY - avatarSize / 2, avatarSize, avatarSize);
+                ctx.restore();
+            }
+        } catch(e) {}
+    }
+
+    // 유저명
+    const textX = avatarX + avatarSize + 12;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px Pretendard, sans-serif';
+    ctx.fillText(AppState.user.name || '헌터', textX, avatarCenterY - 4);
+
+    // Lv + 무드
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '12px Pretendard, sans-serif';
+    ctx.fillText('Lv.' + Math.floor(AppState.user.level) + (moodEmoji ? ' ' + moodEmoji : ''), textX, avatarCenterY + 14);
+
+    // 날짜 (우측)
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = '11px Pretendard, sans-serif';
+    const dateDisplay = window.formatReelsTime ? window.formatReelsTime(Date.now()) : '';
+    ctx.fillText(dateDisplay, W - pad - ctx.measureText(dateDisplay).width - 6, avatarCenterY + 2);
+
+    y += headerH;
+
+    // --- 사진 ---
+    if (photoImg) {
+        const imgX = pad;
+        const imgW = innerW;
+        ctx.drawImage(photoImg, imgX, y, imgW, photoH);
+        y += photoH + 12;
+    }
+
+    // --- 캡션 ---
+    if (caption) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '13px Pretendard, sans-serif';
+        // 텍스트가 긴 경우 줄임
+        let displayCaption = caption;
+        if (ctx.measureText(displayCaption).width > innerW - 20) {
+            while (ctx.measureText(displayCaption + '...').width > innerW - 20 && displayCaption.length > 0) {
+                displayCaption = displayCaption.slice(0, -1);
+            }
+            displayCaption += '...';
+        }
+        ctx.fillText(displayCaption, pad + 10, y + 18);
+        y += 40;
+    }
+
+    // --- 시간표 블록 (reels-timetable 스타일) ---
+    if (displayBlocks.length > 0) {
+        // 시간표 배경 박스
+        const ttX = pad + 4, ttY = y;
+        const ttW = innerW - 8;
+        const ttH = 28 + displayBlocks.length * lineH + (moreCount > 0 ? 20 : 0) + 8;
+        ctx.fillStyle = 'rgba(0, 217, 255, 0.04)';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(ttX, ttY, ttW, ttH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // 시간표 제목
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 12px Pretendard, sans-serif';
+        const schedLabel = { ko: '시간표', en: 'Schedule', ja: 'スケジュール' };
+        ctx.fillText('📋 ' + (schedLabel[lang] || schedLabel.ko), ttX + 10, y + 20);
+        y += 32;
+
+        // 블록 행
+        displayBlocks.forEach(({time, task}) => {
+            ctx.fillStyle = '#00d9ff';
+            ctx.font = 'bold 12px Pretendard, monospace';
+            ctx.fillText(time, ttX + 10, y + 16);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Pretendard, sans-serif';
+            // 긴 텍스트 줄임
+            let displayTask = task;
+            const maxTaskW = ttW - 130;
+            if (ctx.measureText(displayTask).width > maxTaskW) {
+                while (ctx.measureText(displayTask + '...').width > maxTaskW && displayTask.length > 0) {
+                    displayTask = displayTask.slice(0, -1);
+                }
+                displayTask += '...';
+            }
+            ctx.fillText(displayTask, ttX + 110, y + 16);
+
+            // 구분선
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(ttX + 10, y + lineH);
+            ctx.lineTo(ttX + ttW - 10, y + lineH);
+            ctx.stroke();
+
+            y += lineH;
+        });
+
+        if (moreCount > 0) {
+            ctx.fillStyle = '#aaa';
+            ctx.font = '10px Pretendard, sans-serif';
+            const moreText = `+${moreCount} more`;
+            ctx.fillText(moreText, ttX + ttW - ctx.measureText(moreText).width - 10, y + 14);
+            y += 20;
+        }
+        y += 16;
+    }
+
+    // --- 푸터 ---
+    ctx.fillStyle = '#444';
+    ctx.font = '10px Pretendard, sans-serif';
+    const footerText = 'LEVEL UP: REBOOT | ' + dateStr;
+    ctx.fillText(footerText, pad + 6, totalH - pad + 4);
+
+    // 다운로드 (네이티브 앱 + 웹 모두 지원)
+    const userName = (AppState.user && AppState.user.name) ? AppState.user.name.replace(/[^a-zA-Z0-9가-힣]/g, '') : '';
+    const saveCountKey = `planner_save_count_${dateStr}_${userName}`;
+    let saveCount = parseInt(localStorage.getItem(saveCountKey) || '0', 10) + 1;
+    localStorage.setItem(saveCountKey, String(saveCount));
+    const countSuffix = saveCount > 1 ? String(saveCount) : '';
+    const fileName = `planner_${dateStr}_${userName}${countSuffix}.png`;
+    const msgs = { ko: '이미지가 저장되었습니다.', en: 'Image saved.', ja: '画像を保存しました。' };
+    const failMsgs = { ko: '이미지 저장에 실패했습니다.', en: 'Failed to save image.', ja: '画像の保存に失敗しました。' };
+
+    try {
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('toBlob failed');
+
+        let saved = false;
+
+        // 네이티브 앱: Capacitor Filesystem API로 직접 로컬 저장
+        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
+            const Filesystem = window.Capacitor.Plugins.Filesystem;
+            const dataUrl = canvas.toDataURL('image/png');
+            const base64Data = dataUrl.split(',')[1];
+
+            try {
+                // Documents → External → Cache 순서로 저장 시도
+                let savedPath = null;
+                const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
+                for (const dir of dirs) {
+                    try {
+                        const result = await Filesystem.writeFile({
+                            path: fileName,
+                            data: base64Data,
+                            directory: dir,
+                            recursive: true
+                        });
+                        savedPath = result.uri;
+                        break;
+                    } catch(dirErr) {
+                        AppLogger.warn('[Planner] Filesystem write failed for dir ' + dir + ': ' + dirErr.message);
+                    }
+                }
+
+                if (savedPath) {
+                    AppLogger.info('[Planner] Image saved: ' + savedPath);
+                    saved = true;
+                }
+            } catch(fsErr) {
+                AppLogger.warn('[Planner] Filesystem save failed: ' + fsErr.message);
+            }
+        }
+
+        // Web Share API 시도 (네이티브 Filesystem 실패 시 또는 웹 브라우저)
+        if (!saved && navigator.share && navigator.canShare) {
+            try {
+                const file = new File([blob], fileName, { type: 'image/png' });
+                const shareData = { files: [file] };
+                if (navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    saved = true;
+                }
+            } catch(shareErr) {
+                if (shareErr.name === 'AbortError') {
+                    saved = true; // 사용자 취소는 정상 동작
+                } else {
+                    AppLogger.warn('[Planner] Share API failed: ' + shareErr.message);
+                }
+            }
+        }
+
+        // 네이티브 앱에서 모든 방법 실패 시 인앱 오버레이로 표시
+        if (!saved && isNative) {
+            const overlayDataUrl = canvas.toDataURL('image/png');
+            showImageOverlay(overlayDataUrl, lang);
+            saved = true;
+        }
+
+        // <a> 태그 다운로드 (데스크톱 웹 브라우저 폴백)
+        if (!saved && !isNative) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 1000);
+            saved = true;
+        }
+
+        if (saved) {
+            alert(msgs[lang] || msgs.ko);
+        } else {
+            throw new Error('All save methods failed');
+        }
+    } catch(e) {
+        AppLogger.error('[Planner] Image save error: ' + e.message);
+        // 최종 폴백 - 인앱 오버레이로 이미지 표시 (외부 브라우저 열지 않음)
+        try {
+            const dataUrl = canvas.toDataURL('image/png');
+            showImageOverlay(dataUrl, lang);
+        } catch(e2) {
+            alert(failMsgs[lang] || failMsgs.ko);
+        }
+    }
+
+    // 모달 닫기
+    const m = document.getElementById('shareModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
+
+// 플래너 요약 텍스트를 클립보드에 복사
+window.sharePlannerLink = function() {
+    const lang = AppState.currentLang;
+    const dateStr = diarySelectedDate;
+    const entry = getDiaryEntry(dateStr);
+
+    const tasks = (entry && entry.tasks) ? entry.tasks.filter(t => t.text) : plannerTasks.filter(t => t.text);
+    const blocks = (entry && entry.blocks) ? Object.entries(entry.blocks).sort(([a],[b]) => a.localeCompare(b)) : [];
+    const caption = (entry && entry.caption) ? entry.caption : (document.getElementById('planner-caption')?.value || '');
+
+    let text = `📋 LEVEL UP: REBOOT - ${dateStr}\n`;
+    text += `👤 ${AppState.user.name} | Lv.${AppState.user.level}\n\n`;
+
+    if (tasks.length > 0) {
+        const taskLabel = { ko: '⭐ 우선순위 태스크', en: '⭐ Priority Tasks', ja: '⭐ 優先タスク' };
+        text += (taskLabel[lang] || taskLabel.ko) + '\n';
+        tasks.forEach((t, i) => {
+            text += (t.ranked ? `${i + 1}. ` : '· ') + t.text + '\n';
+        });
+        text += '\n';
+    }
+
+    if (blocks.length > 0) {
+        const schedLabel = { ko: '🕐 시간표', en: '🕐 Schedule', ja: '🕐 スケジュール' };
+        text += (schedLabel[lang] || schedLabel.ko) + '\n';
+        blocks.forEach(([time, task]) => {
+            text += `${time} ${task}\n`;
+        });
+        text += '\n';
+    }
+
+    if (caption) {
+        text += `💬 ${caption}\n`;
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
+        alert(msgs[lang] || msgs.ko);
+    }).catch(() => {
+        // 폴백: textarea 이용
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const msgs = { ko: '클립보드에 복사되었습니다.', en: 'Copied to clipboard.', ja: 'クリップボードにコピーしました。' };
+        alert(msgs[lang] || msgs.ko);
+    });
+
+    // 모달 닫기
+    const m = document.getElementById('shareModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+};
 
 // --- ★ 법적 페이지 (독립 HTML 호출) ★ ---
 window.openLegalPage = function(type) {
@@ -5871,19 +6582,961 @@ async function applyBonusExpReward() {
     if (window.AppLogger) AppLogger.info(`[BonusEXP] EXP +${BONUS_EXP_AMOUNT} 지급 완료`);
 }
 
+// --- ★ 플래너 기능 (일론 머스크 타임박스 스타일) ★ ---
 let diarySelectedDate = getTodayStr();
+let plannerWeekOffset = 0; // 주간 캘린더 주 오프셋 (0 = 현재 주, -1 = 전주, 1 = 다음주)
+let monthlyCalendarYear = new Date().getFullYear();
+let monthlyCalendarMonth = new Date().getMonth();
+let _monthlyCalendarUnlocked = false; // 오늘 보상형 광고 시청 완료 여부
+// plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯)
+let plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+
+function dateToStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function getDiaryEntry(dateStr) {
     try {
         const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
         return diaries[dateStr] || null;
     } catch { return null; }
 }
+
 function getAllDiaryEntries() {
     try {
         return JSON.parse(localStorage.getItem('diary_entries') || '{}');
     } catch { return {}; }
 }
+
+// 주간 플래너 캘린더 렌더링 (이전/다음 주 네비게이션 지원)
+function renderPlannerCalendar() {
+    const container = document.getElementById('planner-calendar-grid');
+    if (!container) return;
+
+    const today = new Date();
+    const todayStr = dateToStr(today);
+    const currentDay = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDay + (plannerWeekOffset * 7));
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthEl = document.getElementById('planner-cal-month');
+    if (monthEl) monthEl.innerText = `${startOfWeek.getFullYear()} ${monthNames[startOfWeek.getMonth()]}`;
+
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+
+    const allEntries = getAllDiaryEntries();
+
+    container.innerHTML = Array.from({length: 7}, (_, i) => {
+        const iterDate = new Date(startOfWeek);
+        iterDate.setDate(startOfWeek.getDate() + i);
+        const dateStr = dateToStr(iterDate);
+        const isToday = dateStr === todayStr;
+        const isSelected = dateStr === diarySelectedDate;
+        const entry = allEntries[dateStr];
+        const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
+
+        return `
+            <div class="cal-day ${isToday ? 'today' : ''} ${isSelected ? 'planner-selected' : ''}"
+                 onclick="window.selectPlannerDate('${dateStr}')" style="cursor:pointer;">
+                <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
+                <div class="cal-date">${iterDate.getDate()}</div>
+                <div class="cal-score">${hasEntry ? '✓' : '·'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 주간 캘린더 이전/다음 주 이동
+window.changePlannerWeek = function(delta) {
+    plannerWeekOffset += delta;
+    renderPlannerCalendar();
+};
+
+// --- ★ 월간 캘린더 기능 ★ ---
+
+// 월간 캘린더 렌더링
+function renderMonthlyCalendar(year, month) {
+    const container = document.getElementById('monthly-calendar-grid');
+    if (!container) return;
+
+    const lang = AppState.currentLang;
+    const today = new Date();
+    const todayStr = dateToStr(today);
+
+    const monthNames = {
+        ko: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+        en: ["January","February","March","April","May","June","July","August","September","October","November","December"],
+        ja: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
+    };
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["S","M","T","W","T","F","S"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+
+    const titleEl = document.getElementById('monthly-cal-title');
+    if (titleEl) titleEl.innerText = `${year} ${(monthNames[lang] || monthNames.en)[month]}`;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const allEntries = getAllDiaryEntries();
+
+    // 요일 헤더
+    let headerHTML = '<div class="monthly-cal-header">';
+    (dayNames[lang] || dayNames.en).forEach(d => { headerHTML += `<span>${d}</span>`; });
+    headerHTML += '</div>';
+
+    // 날짜 그리드
+    let gridHTML = '<div class="monthly-cal-grid">';
+    for (let i = 0; i < firstDay; i++) gridHTML += '<div class="monthly-cal-day empty"></div>';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        const isSelected = dateStr === diarySelectedDate;
+        const entry = allEntries[dateStr];
+        const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
+        const classes = ['monthly-cal-day'];
+        if (isToday) classes.push('today');
+        if (isSelected) classes.push('selected');
+        if (hasEntry) classes.push('has-entry');
+
+        gridHTML += `<div class="${classes.join(' ')}" onclick="window.selectMonthlyDate('${dateStr}')">${d}</div>`;
+    }
+    gridHTML += '</div>';
+
+    container.innerHTML = headerHTML + gridHTML;
+}
+
+// 월간 캘린더에서 날짜 선택 → 월간 유지, 해당 날짜 데이터 로드
+window.selectMonthlyDate = function(dateStr) {
+    // 선택 날짜가 속한 주로 weekOffset 계산 (주간 복귀 시 사용)
+    const selected = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    const todayStart = new Date(today);
+    todayStart.setDate(today.getDate() - today.getDay());
+    todayStart.setHours(0,0,0,0);
+    const selectedStart = new Date(selected);
+    selectedStart.setDate(selected.getDate() - selected.getDay());
+    selectedStart.setHours(0,0,0,0);
+    const diffDays = Math.round((selectedStart - todayStart) / (1000 * 60 * 60 * 24));
+    plannerWeekOffset = Math.round(diffDays / 7);
+
+    // 날짜 선택 및 데이터 로드 (월간 캘린더 유지)
+    window.selectPlannerDate(dateStr);
+
+    // 월간 캘린더 선택 상태 갱신
+    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
+};
+
+// 이전/다음 월 이동
+window.changeMonthlyCalendar = function(delta) {
+    monthlyCalendarMonth += delta;
+    if (monthlyCalendarMonth > 11) { monthlyCalendarMonth = 0; monthlyCalendarYear++; }
+    if (monthlyCalendarMonth < 0) { monthlyCalendarMonth = 11; monthlyCalendarYear--; }
+    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
+};
+
+// 월간 캘린더 열기 (보상형 광고 게이트)
+window.openMonthlyCalendar = async function() {
+    const lang = AppState.currentLang;
+    const todayStr = getTodayStr();
+
+    // 오늘 이미 광고 시청했는지 확인
+    const adDate = localStorage.getItem('monthly_cal_ad_date');
+    if (adDate === todayStr || _monthlyCalendarUnlocked) {
+        _showMonthlyCalendar();
+        return;
+    }
+
+    // 웹(비네이티브) 환경에서는 광고 없이 바로 진입
+    if (!isNativePlatform) {
+        _monthlyCalendarUnlocked = true;
+        localStorage.setItem('monthly_cal_ad_date', todayStr);
+        _showMonthlyCalendar();
+        return;
+    }
+
+    // 보상형 광고 표시 (AdManager 모듈 경유)
+    if (!window.AdManager) {
+        alert(i18n[lang].monthly_cal_ad_fail);
+        return;
+    }
+
+    const adShown = await window.AdManager.showRewarded({
+        context: 'monthlyCalendar',
+        onSuccess: function() {
+            _monthlyCalendarUnlocked = true;
+            localStorage.setItem('monthly_cal_ad_date', todayStr);
+            _showMonthlyCalendar();
+            if (window.AppLogger) AppLogger.info('[MonthlyCalendar] 보상형 광고 시청 완료 → 월간 캘린더 해제');
+        },
+        onFail: function() {
+            alert(i18n[lang].monthly_cal_ad_fail);
+        }
+    });
+    if (!adShown) {
+        alert(i18n[lang].monthly_cal_ad_fail);
+    }
+};
+
+// 월간 캘린더 실제 표시
+function _showMonthlyCalendar() {
+    const now = new Date();
+    monthlyCalendarYear = now.getFullYear();
+    monthlyCalendarMonth = now.getMonth();
+    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
+
+    const weeklyCard = document.getElementById('weekly-calendar-card');
+    const monthlyCard = document.getElementById('monthly-calendar-card');
+    if (weeklyCard) weeklyCard.classList.add('d-none');
+    if (monthlyCard) monthlyCard.classList.remove('d-none');
+}
+
+// 월간 캘린더 닫기 → 주간 복귀
+function closeMonthlyCalendar() {
+    const weeklyCard = document.getElementById('weekly-calendar-card');
+    const monthlyCard = document.getElementById('monthly-calendar-card');
+    if (weeklyCard) weeklyCard.classList.remove('d-none');
+    if (monthlyCard) monthlyCard.classList.add('d-none');
+    renderPlannerCalendar();
+}
+window.closeMonthlyCalendar = closeMonthlyCalendar;
+
+// 선택 날짜가 미래인지 확인
+function isSelectedDateFuture() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const selected = new Date(diarySelectedDate + 'T00:00:00');
+    return selected > today;
+}
+
+// 현재 plannerTasks에서 드롭다운 옵션 목록 생성
+function getTaskOptions() {
+    const ranked = plannerTasks
+        .map((t, i) => ({ ...t, idx: i }))
+        .filter(t => t.ranked && t.text.trim())
+        .sort((a, b) => a.rankOrder - b.rankOrder);
+    const unranked = plannerTasks.filter(t => !t.ranked && t.text.trim());
+    let rankNum = 1;
+    return [
+        ...ranked.map(t => ({ text: t.text.trim(), label: `${rankNum++}. ${t.text.trim()}` })),
+        ...unranked.map(t => ({ text: t.text.trim(), label: `· ${t.text.trim()}` }))
+    ];
+}
+
+// 이미 렌더링된 타임박스 드롭다운의 옵션 목록만 갱신
+function updateTimeboxDropdownOptions() {
+    const options = getTaskOptions();
+    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
+    const optHTML = [`<option value="">${emptyLabel}</option>`,
+        ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}">${o.label}</option>`)
+    ].join('');
+    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = optHTML;
+        if (cur) sel.value = cur;
+    });
+}
+
+// 우선순위 태스크 목록 렌더링
+function renderPlannerTasks() {
+    const container = document.getElementById('planner-tasks-list');
+    if (!container) return;
+    const isFuture = isSelectedDateFuture();
+
+    // 순위 번호 계산 (rankOrder 순서대로 1,2,3...)
+    const rankedSorted = plannerTasks
+        .map((t, i) => ({ ...t, idx: i }))
+        .filter(t => t.ranked)
+        .sort((a, b) => a.rankOrder - b.rankOrder);
+    const rankMap = {};
+    rankedSorted.forEach((t, i) => { rankMap[t.idx] = i + 1; });
+
+    container.innerHTML = plannerTasks.map((task, idx) => {
+        const rankNum = rankMap[idx];
+        const rankLabel = rankNum ? rankNum : '·';
+        const isRanked = !!rankNum;
+        const canRemove = idx >= 6;
+        const isDiy = !!task.diyQuestId;
+        const diyQuest = isDiy ? AppState.diyQuests.definitions.find(d => d.id === task.diyQuestId) : null;
+        const isDiyDone = isDiy && (AppState.diyQuests.completedToday[task.diyQuestId] || false);
+        const isDone = isDiy ? isDiyDone : !!task.done;
+
+        // 스탯 태그 (DIY만)
+        const statTag = (isDiy && diyQuest) ? `<span class="diy-task-stat-inline">${sanitizeText(diyQuest.stat)}</span>` : '';
+
+        // 체크 버튼 (모든 태스크 공통)
+        let checkBtn = '';
+        if (isDiy) {
+            checkBtn = `<button class="task-check-btn${isDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleDiyQuest('${task.diyQuestId}')" ${isFuture ? 'disabled' : ''}>${isDone ? '✅' : '⬜'}</button>`;
+        } else {
+            checkBtn = `<button class="task-check-btn${isDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleTaskDone(${idx})" ${isFuture ? 'disabled' : ''}>${isDone ? '✅' : '⬜'}</button>`;
+        }
+
+        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isDone ? ' task-done' : ''}">
+            <button class="task-rank-btn${isRanked ? ' ranked' : ''}"
+                    onclick="window.toggleTaskRank(${idx})"
+                    ${isFuture ? 'disabled' : ''}>${rankLabel}</button>
+            ${statTag}<input class="planner-task-input${isDone ? ' task-done-input' : ''}" type="text"
+                   value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
+                   placeholder="${i18n[AppState.currentLang]?.planner_task_placeholder || '할 일 입력...'}"
+                   maxlength="50"
+                   oninput="window.updateTaskText(${idx}, this.value)"
+                   ${isFuture ? 'disabled' : ''}>
+            ${checkBtn}
+            ${canRemove && !isDiy ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
+        </div>`;
+    }).join('');
+
+    updateTimeboxDropdownOptions();
+}
+
+window.toggleTaskRank = function(idx) {
+    if (plannerTasks[idx].ranked) {
+        plannerTasks[idx].ranked = false;
+        plannerTasks[idx].rankOrder = 0;
+    } else {
+        const maxOrder = plannerTasks.filter(t => t.ranked).reduce((m, t) => Math.max(m, t.rankOrder), 0);
+        plannerTasks[idx].ranked = true;
+        plannerTasks[idx].rankOrder = maxOrder + 1;
+    }
+    renderPlannerTasks();
+};
+
+window.toggleTaskDone = function(idx) {
+    if (idx < 0 || idx >= plannerTasks.length) return;
+    plannerTasks[idx].done = !plannerTasks[idx].done;
+    renderPlannerTasks();
+};
+
+window.updateTaskText = function(idx, val) {
+    plannerTasks[idx].text = val;
+    updateTimeboxDropdownOptions();
+};
+
+window.addPlannerTask = function() {
+    plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    renderPlannerTasks();
+};
+
+window.removeTask = function(idx) {
+    if (idx < 6) return;
+    plannerTasks.splice(idx, 1);
+    renderPlannerTasks();
+};
+
+// 전일 날짜 문자열 계산
+function getPrevDateStr(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 전일 플랜 복사 - 우선순위 태스크
+window.copyPrevDayTasks = function(checked) {
+    if (!checked) {
+        // 체크 해제 시 현재 날짜 데이터로 복원
+        loadPlannerForDate(diarySelectedDate);
+        return;
+    }
+    const prevDate = getPrevDateStr(diarySelectedDate);
+    const prevEntry = getDiaryEntry(prevDate);
+    if (!prevEntry || !prevEntry.tasks || !Array.isArray(prevEntry.tasks)) {
+        alert(i18n[AppState.currentLang]?.copy_prev_plan_empty || '전일 플랜 데이터가 없습니다.');
+        document.getElementById('chk-copy-prev-tasks').checked = false;
+        return;
+    }
+    plannerTasks = prevEntry.tasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+    while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    renderPlannerTasks();
+};
+
+// 전일 플랜 복사 - 시간표
+window.copyPrevDaySchedule = function(checked) {
+    if (!checked) {
+        // 체크 해제 시 현재 날짜 데이터로 복원
+        renderTimeboxGrid(diarySelectedDate);
+        return;
+    }
+    const prevDate = getPrevDateStr(diarySelectedDate);
+    const prevEntry = getDiaryEntry(prevDate);
+    if (!prevEntry || !prevEntry.blocks || Object.keys(prevEntry.blocks).length === 0) {
+        alert(i18n[AppState.currentLang]?.copy_prev_schedule_empty || '전일 시간표 데이터가 없습니다.');
+        document.getElementById('chk-copy-prev-schedule').checked = false;
+        return;
+    }
+    // 전일 블록 데이터로 타임박스 그리드 렌더링
+    const grid = document.getElementById('planner-timebox-grid');
+    if (!grid) return;
+    const blocks = prevEntry.blocks;
+    const options = getTaskOptions();
+    const isFuture = isSelectedDateFuture();
+    // 전일 블록에서 사용된 값 중 현재 옵션에 없는 값 추가
+    const optTexts = new Set(options.map(o => o.text));
+    const extraVals = [...new Set(Object.values(blocks))].filter(v => v && !optTexts.has(v));
+
+    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
+    const makeOpts = (currentVal) => {
+        const opts = [`<option value="">${emptyLabel}</option>`,
+            ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`),
+            ...extraVals.map(v => `<option value="${v.replace(/"/g,'&quot;')}"${v === currentVal ? ' selected' : ''}>${v}</option>`)
+        ].join('');
+        return opts;
+    };
+
+    const rows = [];
+    for (let h = 5; h < 24; h++) rows.push(h);
+
+    grid.innerHTML = rows.map(h => {
+        const t00 = `${String(h).padStart(2,'0')}:00`;
+        const t30 = `${String(h).padStart(2,'0')}:30`;
+        const val00 = blocks[t00] || '';
+        const val30 = blocks[t30] || '';
+        return `<div class="timebox-row">
+            <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
+            <select class="timebox-select${val00 ? ' has-content' : ''}"
+                    data-time="${t00}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val00)}
+            </select>
+            <select class="timebox-select${val30 ? ' has-content' : ''}"
+                    data-time="${t30}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val30)}
+            </select>
+        </div>`;
+    }).join('');
+};
+
+// --- ★ 선택한 날짜 플랜 → 오늘 적용 기능 ★ ---
+window.openApplyTodayModal = function() {
+    const lang = AppState.currentLang;
+    const today = getTodayStr();
+
+    // 당일 선택 시 무시 (버튼 비활성화 상태이지만 방어)
+    if (diarySelectedDate === today) return;
+
+    const selectedEntry = getDiaryEntry(diarySelectedDate);
+    const hasBlocks = selectedEntry && selectedEntry.blocks && Object.keys(selectedEntry.blocks).length > 0;
+    const hasTasks = selectedEntry && selectedEntry.tasks && Array.isArray(selectedEntry.tasks) && selectedEntry.tasks.some(t => t.text);
+
+    if (!hasBlocks && !hasTasks) {
+        alert(i18n[lang]?.apply_today_no_data || '복사할 플랜 데이터가 없습니다.');
+        return;
+    }
+
+    // 모달 타이틀 & 본문 렌더링
+    const titleEl = document.getElementById('apply-today-modal-title');
+    const bodyEl = document.getElementById('apply-today-modal-body');
+    const confirmBtn = document.getElementById('btn-apply-today-confirm');
+    const cancelBtn = document.getElementById('btn-apply-today-cancel');
+
+    if (titleEl) titleEl.textContent = i18n[lang]?.apply_today_confirm_title || '⚠️ 플래너 덮어쓰기 경고';
+    if (confirmBtn) confirmBtn.textContent = i18n[lang]?.apply_today_confirm_btn || '적용하기';
+    if (cancelBtn) cancelBtn.textContent = i18n[lang]?.apply_today_cancel_btn || '취소';
+
+    const msgTemplate = i18n[lang]?.apply_today_confirm_msg || '<b>{date}</b>의 우선순위 태스크와 시간표가 오늘(<b>{today}</b>) 플래너에 덮어쓰기됩니다.';
+    if (bodyEl) bodyEl.innerHTML = msgTemplate.replace('{date}', diarySelectedDate).replace('{today}', today);
+
+    const modal = document.getElementById('applyTodayModal');
+    if (modal) { modal.classList.remove('d-none'); modal.classList.add('d-flex'); }
+};
+
+window.closeApplyTodayModal = function() {
+    const modal = document.getElementById('applyTodayModal');
+    if (modal) { modal.classList.add('d-none'); modal.classList.remove('d-flex'); }
+};
+
+window.confirmApplyToday = function() {
+    const lang = AppState.currentLang;
+    const today = getTodayStr();
+    const selectedEntry = getDiaryEntry(diarySelectedDate);
+    if (!selectedEntry) return;
+
+    // 오늘 기존 엔트리 로드
+    let diaries;
+    try { diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}'); } catch(e) { diaries = {}; }
+    const todayEntry = diaries[today] || {};
+
+    // 우선순위 태스크 복사
+    if (selectedEntry.tasks && Array.isArray(selectedEntry.tasks)) {
+        todayEntry.tasks = selectedEntry.tasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
+        todayEntry.priorities = todayEntry.tasks.filter(t => t.ranked && t.text).sort((a, b) => a.rankOrder - b.rankOrder).map(t => t.text);
+    }
+
+    // 시간표 블록 복사
+    if (selectedEntry.blocks && Object.keys(selectedEntry.blocks).length > 0) {
+        todayEntry.blocks = { ...selectedEntry.blocks };
+        todayEntry.text = Object.entries(selectedEntry.blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500);
+    }
+
+    todayEntry.timestamp = Date.now();
+    diaries[today] = todayEntry;
+    localStorage.setItem('diary_entries', JSON.stringify(diaries));
+
+    // 모달 닫기
+    window.closeApplyTodayModal();
+
+    // 오늘 날짜로 이동 & 렌더링
+    diarySelectedDate = today;
+    renderPlannerCalendar();
+    loadPlannerForDate(today);
+
+    alert(i18n[lang]?.apply_today_success || '오늘 플래너에 적용되었습니다.');
+};
+
+// 오늘 적용 버튼 활성화/비활성화 업데이트
+function updateApplyTodayButton() {
+    const btn = document.getElementById('btn-apply-today');
+    if (!btn) return;
+    const today = getTodayStr();
+    btn.disabled = (diarySelectedDate === today);
+}
+
+// --- Day1 복사/필터/정렬/렌더: modules/reels.js로 분리됨 ---
+
+// 타임박스 그리드 렌더링 - 드롭다운 방식 (05:00~23:30)
+function renderTimeboxGrid(dateStr) {
+    const grid = document.getElementById('planner-timebox-grid');
+    if (!grid) return;
+
+    const entry = getDiaryEntry(dateStr);
+    const blocks = (entry && entry.blocks) ? entry.blocks : {};
+    const isFuture = isSelectedDateFuture();
+    const options = getTaskOptions();
+
+    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
+    const makeOpts = (currentVal) => {
+        const opts = [`<option value="">${emptyLabel}</option>`,
+            ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`)
+        ].join('');
+        return opts;
+    };
+
+    const rows = [];
+    for (let h = 5; h < 24; h++) rows.push(h);
+
+    grid.innerHTML = rows.map(h => {
+        const t00 = `${String(h).padStart(2,'0')}:00`;
+        const t30 = `${String(h).padStart(2,'0')}:30`;
+        const val00 = blocks[t00] || '';
+        const val30 = blocks[t30] || '';
+        return `<div class="timebox-row">
+            <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
+            <select class="timebox-select${val00 ? ' has-content' : ''}"
+                    data-time="${t00}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val00)}
+            </select>
+            <select class="timebox-select${val30 ? ' has-content' : ''}"
+                    data-time="${t30}"
+                    ${isFuture ? 'disabled' : ''}
+                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
+                ${makeOpts(val30)}
+            </select>
+        </div>`;
+    }).join('');
+}
+
+window.selectPlannerDate = function(dateStr) {
+    diarySelectedDate = dateStr;
+    renderPlannerCalendar();
+    loadPlannerForDate(dateStr);
+    updateApplyTodayButton();
+};
+
+function loadPlannerForDate(dateStr) {
+    const dateDisplay = document.getElementById('planner-selected-date');
+    if (dateDisplay) dateDisplay.innerText = dateStr;
+
+    // 전일 복사 체크박스 리셋
+    const chkTasks = document.getElementById('chk-copy-prev-tasks');
+    if (chkTasks) chkTasks.checked = false;
+    const chkSchedule = document.getElementById('chk-copy-prev-schedule');
+    if (chkSchedule) chkSchedule.checked = false;
+
+    // 무드 버튼 리셋
+    document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => btn.classList.remove('selected'));
+    const saved = getDiaryEntry(dateStr);
+    if (saved && saved.mood) {
+        const moodBtn = document.querySelector(`#planner-mood-selector .diary-mood-btn[data-mood="${saved.mood}"]`);
+        if (moodBtn) moodBtn.classList.add('selected');
+    }
+
+    // 태스크 로드 (새 형식 우선, 구 형식 마이그레이션)
+    if (saved && saved.tasks && Array.isArray(saved.tasks)) {
+        plannerTasks = saved.tasks.map(t => {
+            const d = { text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0, done: !!t.done };
+            if (t.diyQuestId) d.diyQuestId = t.diyQuestId;
+            return d;
+        });
+        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    } else if (saved && (saved.priorities || saved.brainDump)) {
+        // 구 형식 마이그레이션: priorities(3개) + brainDump 텍스트
+        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+        const oldPriorities = saved.priorities || [];
+        oldPriorities.forEach((p, i) => {
+            if (p && i < 6) { plannerTasks[i].text = p; plannerTasks[i].ranked = true; plannerTasks[i].rankOrder = i + 1; }
+        });
+        // brainDump 줄 단위로 빈 슬롯에 채우기
+        if (saved.brainDump) {
+            saved.brainDump.split('\n').forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                const slot = plannerTasks.findIndex(t => !t.text);
+                if (slot >= 0) plannerTasks[slot].text = trimmed;
+                else plannerTasks.push({ text: trimmed, ranked: false, rankOrder: 0 });
+            });
+        }
+    } else {
+        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+    }
+
+    // DIY 퀘스트를 빈 태스크 슬롯에 기본값으로 채우기 (오늘 날짜만)
+    if (dateStr === getTodayStr()) {
+        checkDiyDailyReset();
+        const diyDefs = AppState.diyQuests.definitions || [];
+        diyDefs.forEach(q => {
+            // 이미 diyQuestId로 연결된 항목이 있으면 스킵
+            const alreadyById = plannerTasks.some(t => t.diyQuestId === q.id);
+            if (alreadyById) return;
+            // 동일한 텍스트가 있으면 diyQuestId 연결만 추가
+            const sameText = plannerTasks.find(t => t.text === q.title && !t.diyQuestId);
+            if (sameText) { sameText.diyQuestId = q.id; return; }
+            // 빈 슬롯 찾아서 채우기
+            const emptySlot = plannerTasks.findIndex(t => !t.text.trim());
+            if (emptySlot >= 0) {
+                plannerTasks[emptySlot].text = q.title;
+                plannerTasks[emptySlot].diyQuestId = q.id;
+            } else {
+                plannerTasks.push({ text: q.title, ranked: false, rankOrder: 0, diyQuestId: q.id });
+            }
+        });
+    }
+
+    // 캡션 복원
+    const captionEl = document.getElementById('planner-caption');
+    if (captionEl) {
+        captionEl.value = (saved && saved.caption) ? saved.caption : '';
+        window.updateCaptionCounter();
+    }
+
+    // 사진 복원
+    if (saved && saved.photo) {
+        plannerPhotoData = saved.photo;
+        // base64 원본 보존 (URL이면 null → loadImageSafe 폴백)
+        _plannerPhotoBase64 = isBase64Image(saved.photo) ? saved.photo : null;
+        const preview = document.getElementById('planner-photo-preview');
+        const placeholder = document.getElementById('planner-photo-placeholder');
+        const removeBtn = document.getElementById('planner-photo-remove');
+        if (preview) {
+            if (saved.photo && saved.photo.startsWith('http')) {
+                preview.onerror = function() {
+                    this.onerror = null;
+                    window._retryFirebaseImg(this, saved.photo);
+                };
+            }
+            preview.src = saved.photo;
+            preview.classList.remove('d-none');
+        }
+        if (placeholder) placeholder.classList.add('d-none');
+        if (removeBtn) removeBtn.classList.remove('d-none');
+
+        // URL 사진 → base64 캐시 (canvas export용, 백그라운드)
+        if (!isBase64Image(saved.photo) && saved.photo.startsWith('http')) {
+            fetch(saved.photo).then(r => r.blob()).then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => { _plannerPhotoBase64 = reader.result; };
+                reader.readAsDataURL(blob);
+            }).catch(() => { /* 캐시 실패 무시 — sharePlannerAsImage에서 loadImageSafe 폴백 */ });
+        }
+
+        // 기존 base64 사진 → Storage 자동 마이그레이션 (백그라운드)
+        if (isBase64Image(saved.photo) && auth.currentUser) {
+            const migDateStr = diarySelectedDate;
+            uploadImageToStorage(
+                `planner_photos/${auth.currentUser.uid}/${migDateStr}.jpg`, saved.photo
+            ).then(url => {
+                try {
+                    const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+                    if (diaries[migDateStr]) {
+                        diaries[migDateStr].photo = url;
+                        localStorage.setItem('diary_entries', JSON.stringify(diaries));
+                        plannerPhotoData = url;
+                        AppLogger.info('[Planner] base64→Storage 마이그레이션 완료: ' + migDateStr);
+                    }
+                } catch (e) { /* 마이그레이션 실패 무시 — 다음 저장 시 재시도 */ }
+            }).catch(() => { /* 백그라운드 마이그레이션 실패 무시 */ });
+        }
+    } else {
+        plannerPhotoData = null;
+        _plannerPhotoBase64 = null;
+        const preview = document.getElementById('planner-photo-preview');
+        const placeholder = document.getElementById('planner-photo-placeholder');
+        const removeBtn = document.getElementById('planner-photo-remove');
+        if (preview) { preview.classList.add('d-none'); preview.removeAttribute('src'); }
+        if (placeholder) placeholder.classList.remove('d-none');
+        if (removeBtn) removeBtn.classList.add('d-none');
+        const fileInput = document.getElementById('plannerPhotoUpload');
+        if (fileInput) fileInput.value = '';
+    }
+
+    // 태스크 목록 렌더링 (이 안에서 updateTimeboxDropdownOptions도 호출됨)
+    renderPlannerTasks();
+
+    // 타임박스 그리드 렌더링 (태스크 옵션 준비된 후)
+    renderTimeboxGrid(dateStr);
+
+    // 미래 날짜 비활성화
+    const isFuture = isSelectedDateFuture();
+    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => { sel.disabled = isFuture; });
+    const saveBtn = document.getElementById('btn-planner-save');
+    if (saveBtn) saveBtn.disabled = isFuture;
+    const addBtn = document.getElementById('btn-add-task');
+    if (addBtn) addBtn.disabled = isFuture;
+
+    // 오늘 적용 버튼 상태 업데이트
+    updateApplyTodayButton();
+
+    // DIY 퀘스트 플래너 연동 렌더링
+    renderPlannerDiyQuests();
+}
+
+let _plannerSaving = false; // 플래너 저장 진행 중 플래그
+
+async function savePlannerEntry() {
+    if (_plannerSaving) return; // 중복 저장 방지
+    _plannerSaving = true;
+
+    // 저장 중 버튼 비활성화 (저장 + Day1 포스팅)
+    const saveBtn = document.getElementById('btn-planner-save');
+    const savePriorityBtn = document.getElementById('btn-planner-save-priority');
+    const postBtn = document.getElementById('btn-reels-post');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; }
+    if (savePriorityBtn) { savePriorityBtn.disabled = true; savePriorityBtn.style.opacity = '0.6'; }
+    if (postBtn) { postBtn.disabled = true; postBtn.style.opacity = '0.6'; }
+
+    const dateStr = diarySelectedDate;
+
+    // 타임박스 드롭다운 블록 수집
+    const selects = document.querySelectorAll('#planner-timebox-grid .timebox-select');
+    const blocks = {};
+    selects.forEach(sel => {
+        const val = sel.value.trim();
+        if (val) blocks[sel.dataset.time] = val;
+    });
+
+    // 태스크 데이터 수집 (diyQuestId, done 포함)
+    const tasksData = plannerTasks.map(t => {
+        const d = { text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0, done: !!t.done };
+        if (t.diyQuestId) d.diyQuestId = t.diyQuestId;
+        return d;
+    });
+    // 하위 호환 priorities 배열 (순위 지정된 항목만 순서대로)
+    const rankedByOrder = tasksData
+        .filter(t => t.ranked && t.text)
+        .sort((a, b) => a.rankOrder - b.rankOrder)
+        .map(t => t.text);
+    const brainDump = '';
+
+    const selectedMood = document.querySelector('#planner-mood-selector .diary-mood-btn.selected');
+    const mood = selectedMood ? selectedMood.dataset.mood : '';
+
+    const hasContent = Object.keys(blocks).length > 0 || tasksData.some(t => t.text);
+
+    try {
+        let diaries;
+        try {
+            diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
+        } catch(parseErr) {
+            AppLogger.warn('[Planner] diary_entries 파싱 오류, 초기화: ' + parseErr.message);
+            diaries = {};
+        }
+
+        // 보상: 하루 1회만 - diary_entries와 분리된 별도 키로 관리 (Firebase 덮어쓰기 영향 없음)
+        let plannerRewards = {};
+        try { plannerRewards = JSON.parse(localStorage.getItem('planner_rewards') || '{}'); } catch(e) {}
+        const alreadyRewarded = plannerRewards[dateStr] === true;
+        const giveReward = !alreadyRewarded && hasContent;
+
+        const text = Object.entries(blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500);
+
+        // 플래너 사진: base64 → Cloud Storage 업로드, URL만 저장 (Firestore 문서 비대화 방지)
+        let photoValue = plannerPhotoData || (diaries[dateStr]?.photo || null);
+        if (isBase64Image(photoValue) && auth.currentUser) {
+            try {
+                const uid = auth.currentUser.uid;
+                const plannerLang = AppState.currentLang || 'ko';
+                const plannerProgressCb = createUploadProgressCallback(plannerLang === 'ko' ? '플래너 사진 업로드 중...' : 'Uploading planner photo...');
+                const photoURL = await uploadImageToStorage(
+                    `planner_photos/${uid}/${dateStr}${getImageExtension()}`, photoValue, plannerProgressCb
+                );
+                hideUploadProgress();
+                photoValue = photoURL;
+                plannerPhotoData = photoURL; // 메모리 캐시도 URL로 교체
+                AppLogger.info('[Planner] 사진 Storage 업로드 완료');
+            } catch (e) {
+                hideUploadProgress();
+                AppLogger.error('[Planner] 사진 Storage 업로드 실패: ' + (e.message || e));
+                // 업로드 실패 시 사진 없이 저장 (base64 Firestore 저장 방지)
+                photoValue = null;
+                alert(i18n[AppState.currentLang]?.photo_upload_fail || '사진 업로드에 실패했습니다. 네트워크 확인 후 다시 시도해주세요.');
+            }
+        }
+
+        diaries[dateStr] = {
+            text, mood, timestamp: Date.now(), blocks,
+            tasks: tasksData,
+            priorities: rankedByOrder,
+            brainDump,
+            photo: photoValue,
+            caption: (document.getElementById('planner-caption')?.value || '').trim()
+        };
+
+        try {
+            localStorage.setItem('diary_entries', JSON.stringify(diaries));
+        } catch(storageErr) {
+            AppLogger.error('[Planner] localStorage 저장 실패: ' + storageErr.message);
+            alert(i18n[AppState.currentLang]?.storage_full || '저장 공간이 부족합니다. 오래된 데이터를 정리해 주세요.');
+            return;
+        }
+
+        if (giveReward) {
+            plannerRewards[dateStr] = true;
+            localStorage.setItem('planner_rewards', JSON.stringify(plannerRewards));
+            AppState.user.points += 20;
+            AppState.user.pendingStats.agi += 0.5;
+            updatePointUI();
+            drawRadarChart();
+            if (window.updateChallengeProgress) window.updateChallengeProgress('planner_use');
+            AppLogger.info('[Planner] 보상 지급: +20P, AGI +0.5');
+        }
+
+        await saveUserData();
+        AppLogger.info('[Planner] 플래너 저장 완료: ' + dateStr);
+    } catch(e) {
+        AppLogger.error('[Planner] Save error: ' + (e.stack || e.message));
+        alert((i18n[AppState.currentLang]?.save_error || '저장 중 오류가 발생했습니다: ') + e.message);
+        return;
+    } finally {
+        // 저장 완료 후 버튼 재활성화
+        _plannerSaving = false;
+        const _saveBtn = document.getElementById('btn-planner-save');
+        const _savePriorityBtn = document.getElementById('btn-planner-save-priority');
+        if (_saveBtn) { _saveBtn.disabled = false; _saveBtn.style.opacity = ''; }
+        if (_savePriorityBtn) { _savePriorityBtn.disabled = false; _savePriorityBtn.style.opacity = ''; }
+        // Day1 포스팅 버튼은 타이머 상태에 따라 복원
+        if (window.updateReelsResetTimer) window.updateReelsResetTimer();
+    }
+
+    renderPlannerCalendar();
+    alert(i18n[AppState.currentLang].diary_saved || '플래너가 저장되었습니다.');
+}
+
+// --- ★ 플래너 사진 기능 (타임테이블 사진 필수) ★ ---
 let plannerPhotoData = null; // base64 or URL
+let _plannerPhotoBase64 = null; // canvas export용 base64 원본 보존 (URL 교체 후에도 유지)
+
+let _plannerPhotoCompressing = false;
+function loadPlannerPhoto(e) {
+    const file = e.target.files[0];
+    if (!file || _plannerPhotoCompressing) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = async function() {
+            _plannerPhotoCompressing = true;
+            try {
+                const canvas = document.createElement('canvas');
+                const maxSize = 480;
+                let w = img.width, h = img.height;
+                if (w > maxSize || h > maxSize) {
+                    if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+                    else { w = Math.round(w * maxSize / h); h = maxSize; }
+                }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                // 적응형 압축: 1.2MB 이하 보장 (2MB 규칙에 안전 마진 + 모바일 업로드 속도 고려)
+                const { dataURL } = await compressToTargetSize(canvas, 1200 * 1024, 0.7, 0.2);
+                plannerPhotoData = dataURL;
+                _plannerPhotoBase64 = dataURL; // canvas export용 base64 보존
+                const preview = document.getElementById('planner-photo-preview');
+                const placeholder = document.getElementById('planner-photo-placeholder');
+                const removeBtn = document.getElementById('planner-photo-remove');
+                preview.src = plannerPhotoData;
+                preview.classList.remove('d-none');
+                placeholder.classList.add('d-none');
+                removeBtn.classList.remove('d-none');
+            } finally {
+                _plannerPhotoCompressing = false;
+            }
+        };
+        img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+window.removePlannerPhoto = function() {
+    plannerPhotoData = null;
+    _plannerPhotoBase64 = null;
+    const preview = document.getElementById('planner-photo-preview');
+    const placeholder = document.getElementById('planner-photo-placeholder');
+    const removeBtn = document.getElementById('planner-photo-remove');
+    preview.classList.add('d-none');
+    preview.removeAttribute('src');
+    placeholder.classList.remove('d-none');
+    removeBtn.classList.add('d-none');
+    document.getElementById('plannerPhotoUpload').value = '';
+};
+
+// 캡션 글자 수 카운터 (한글 140자 / 영문 280자 제한)
+// 한글(2바이트 문자)은 2로, 영문/숫자(1바이트)는 1로 계산하여 최대 280 기준
+function getCaptionByteLength(str) {
+    let len = 0;
+    for (let i = 0; i < str.length; i++) {
+        len += str.charCodeAt(i) > 127 ? 2 : 1;
+    }
+    return len;
+}
+
+window.updateCaptionCounter = function() {
+    const textarea = document.getElementById('planner-caption');
+    const counter = document.getElementById('planner-caption-counter');
+    if (!textarea || !counter) return;
+
+    let text = textarea.value;
+    const byteLen = getCaptionByteLength(text);
+    const maxBytes = 280;
+
+    // 초과 시 잘라내기
+    if (byteLen > maxBytes) {
+        let trimmed = '';
+        let currentLen = 0;
+        for (let i = 0; i < text.length; i++) {
+            const charLen = text.charCodeAt(i) > 127 ? 2 : 1;
+            if (currentLen + charLen > maxBytes) break;
+            trimmed += text[i];
+            currentLen += charLen;
+        }
+        textarea.value = trimmed;
+        text = trimmed;
+    }
+
+    const used = getCaptionByteLength(text);
+    const koEquiv = Math.ceil(used / 2);
+    counter.innerText = `${koEquiv} / 140`;
+    counter.style.color = used >= maxBytes * 0.9 ? 'var(--neon-red)' : 'var(--text-sub)';
+};
+
 // --- ★ 릴스 기능 ★ ---
 
 // KST 기준 오늘 날짜 문자열
@@ -5940,6 +7593,29 @@ async function showPermissionPrompts() {
     const cap = window.Capacitor;
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 상태 확인 시작');
 
+    // 1) 푸시 알림 — 앱 토글 off + OS 미승인일 때만 요청
+    if (!AppState.user.pushEnabled && cap.Plugins && cap.Plugins.PushNotifications) {
+        try {
+            const { PushNotifications } = cap.Plugins;
+            const status = await PushNotifications.checkPermissions();
+            if (status.receive !== 'granted') {
+                const token = await requestNativePushPermission();
+                if (token) {
+                    AppState.user.pushEnabled = true;
+                    AppState.user.fcmToken = token;
+                    document.getElementById('push-toggle').checked = true;
+                    const statusDiv = document.getElementById('push-status');
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].push_on || '푸시 알림 활성화됨'}</span>`;
+                    await setupNativePushListeners();
+                    saveUserData();
+                }
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Push check/request error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
     // 2) GPS 위치 — 앱 토글 off + OS 미승인일 때만 요청
     if (!AppState.user.gpsEnabled && cap.Plugins && cap.Plugins.Geolocation) {
         try {
@@ -5958,6 +7634,42 @@ async function showPermissionPrompts() {
             }
         } catch (e) {
             if (window.AppLogger) AppLogger.warn('[PermPrompt] GPS check/request error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    // 3) 건강 데이터 — 앱 토글 off일 때만 요청 (이메일 로그인 사용자는 스킵)
+    if (!AppState.user.syncEnabled && !AppState.isEmailUser) {
+        try {
+            let fitnessGranted = false;
+            const { HealthConnect, GoogleFit } = cap.Plugins || {};
+
+            if (HealthConnect) {
+                const availability = await HealthConnect.isAvailable();
+                if (availability.available) {
+                    fitnessGranted = await requestFitnessScope(true);
+                }
+            }
+            if (!fitnessGranted && GoogleFit) {
+                const availability = await GoogleFit.isAvailable();
+                if (availability.available && !availability.hasPermissions) {
+                    fitnessGranted = await requestFitnessScope(true);
+                }
+            }
+
+            if (fitnessGranted) {
+                AppState.user.syncEnabled = true;
+                document.getElementById('sync-toggle').checked = true;
+                updateStepCountUI(); // 권한 승인 즉시 상태창 UI 반영
+                saveUserData();
+                syncHealthData(true).then(() => {
+                    // 권한 직후 SDK 초기화 지연으로 데이터 조회 실패 시 재시도
+                    if (!AppState.user.stepData || AppState.user.stepData.totalSteps === 0) {
+                        setTimeout(() => syncHealthData(true), 2000);
+                    }
+                });
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
         }
     }
 
@@ -6064,6 +7776,62 @@ async function toggleGPS() {
     }
 }
 
+async function toggleHealthSync() {
+    const toggle = document.getElementById('sync-toggle');
+    const statusDiv = document.getElementById('sync-status');
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    if (toggle.checked) {
+        // 네이티브 앱 환경 확인
+        if (!isNative) {
+            toggle.checked = false;
+            statusDiv.style.display = 'flex';
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 동기화는 앱에서만 사용 가능합니다.</span>`;
+            return;
+        }
+
+        // 이메일 로그인 사용자는 구글 피트니스 동기화 사용 불가
+        if (AppState.isEmailUser) {
+            toggle.checked = false;
+            const lang = i18n[AppState.currentLang];
+            statusDiv.style.display = 'flex';
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.fitness_email_disabled || '이메일 로그인 사용자는 구글 피트니스 동기화를 사용할 수 없습니다.'}</span>`;
+            return;
+        }
+
+        // 네이티브 건강 데이터 권한 요청 (Health Connect / Google Fit SDK)
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">건강 데이터 권한 요청 중...</span>`;
+
+        const granted = await requestFitnessScope();
+        if (!granted) {
+            toggle.checked = false;
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 권한이 필요합니다.</span>`;
+            return;
+        }
+
+        AppState.user.syncEnabled = true;
+        saveUserData();
+        syncHealthData(true);
+    } else {
+        AppState.user.syncEnabled = false;
+        saveUserData();
+        updateStepCountUI();
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off || '동기화 해제됨'}</span>`;
+
+        // 네이티브 앱: OS 권한 해제 안내
+        const isNativeOff = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (isNativeOff) {
+            const lang = i18n[AppState.currentLang];
+            const msg = lang.sync_revoke_confirm || '건강 데이터 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
+        }
+    }
+}
+
 // --- 비공개 계정 토글 ---
 function togglePrivateAccount() {
     const toggle = document.getElementById('privacy-toggle');
@@ -6140,9 +7908,275 @@ function updateCameraToggleUI() {
     }
 }
 
+// 네이티브 건강 데이터 권한 요청 (Health Connect → Google Fit SDK 순서)
+// skipGoogleSignIn: true일 경우 Google 계정 로그인이 필요한 상황에서 팝업 없이 건너뜀 (자동 프롬프트용)
+async function requestFitnessScope(skipGoogleSignIn = false) {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return false;
 
+    try {
+        // 1단계: Health Connect 권한 시도
+        const { HealthConnect } = window.Capacitor.Plugins;
+        if (HealthConnect) {
+            const availability = await HealthConnect.isAvailable();
+            if (availability.available) {
+                await HealthConnect.requestPermissions();
+                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료');
+                return true;
+            }
+        }
 
+        // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (GoogleFit) {
+            // 네이티브 Google 계정이 없고 자동 프롬프트인 경우 Google Sign-In 팝업 방지
+            if (skipGoogleSignIn) {
+                const gfStatus = await GoogleFit.isAvailable();
+                if (gfStatus.needsSignIn) {
+                    if (window.AppLogger) AppLogger.info('[GoogleFit] Google Sign-In 필요 → 자동 프롬프트에서 건너뜀');
+                    return false;
+                }
+            }
+            await GoogleFit.requestPermissions();
+            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
+            return true;
+        }
 
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 건강 데이터 플러그인을 찾을 수 없음');
+        return false;
+    } catch (e) {
+        const errCode = String(e.code || (e.error && e.error.code) || '');
+        if (errCode === '12501') return false; // 사용자 취소
+        AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
+        return false;
+    }
+}
+
+/**
+ * Health Connect (네이티브)를 통한 걸음 수 조회 시도
+ * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
+ */
+async function tryHealthConnectSteps() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return null;
+
+    try {
+        const { HealthConnect } = window.Capacitor.Plugins;
+        if (!HealthConnect) return null;
+
+        // Health Connect SDK 사용 가능 여부 확인
+        const availability = await HealthConnect.isAvailable();
+        if (!availability.available) {
+            if (window.AppLogger) AppLogger.info('[HealthConnect] SDK not available, falling back to Google Fit SDK');
+            return null;
+        }
+
+        // 걸음 수 조회
+        const result = await HealthConnect.getTodaySteps();
+        if (result.fallbackToRest) {
+            if (window.AppLogger) AppLogger.info('[HealthConnect] Fallback: ' + (result.error || 'unknown'));
+            return null;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[HealthConnect] Native steps: ${result.steps} (source: ${result.source})`);
+        return result.steps;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[HealthConnect] Error: ' + (e.message || JSON.stringify(e)));
+        return null;
+    }
+}
+
+/**
+ * Google Fit 네이티브 SDK를 통한 걸음 수 조회 시도
+ * Health Connect가 사용 불가한 기기에서 Google Fit SDK (History API) 사용
+ * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
+ */
+async function tryGoogleFitNativeSteps() {
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    if (!isNative) return null;
+
+    try {
+        const { GoogleFit } = window.Capacitor.Plugins;
+        if (!GoogleFit) return null;
+
+        // Google Fit SDK 사용 가능 여부 확인
+        const availability = await GoogleFit.isAvailable();
+        if (!availability.available || !availability.hasPermissions) {
+            if (window.AppLogger) AppLogger.info('[GoogleFit] SDK not available or no permissions, skipping');
+            return null;
+        }
+
+        // 걸음 수 조회
+        const result = await GoogleFit.getTodaySteps();
+        if (result.fallbackToRest) {
+            if (window.AppLogger) AppLogger.info('[GoogleFit] Fallback: ' + (result.error || 'unknown'));
+            return null;
+        }
+
+        if (window.AppLogger) AppLogger.info(`[GoogleFit] Native steps: ${result.steps} (source: ${result.source})`);
+        return result.steps;
+    } catch (e) {
+        if (window.AppLogger) AppLogger.warn('[GoogleFit] Native error: ' + (e.message || JSON.stringify(e)));
+        return null;
+    }
+}
+
+async function syncHealthData(showMsg = false) {
+    if (!AppState.user.syncEnabled) return;
+
+    const statusDiv = document.getElementById('sync-status');
+    if(showMsg) {
+        statusDiv.style.display = 'flex';
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`;
+    }
+
+    const now = new Date();
+    const todayStr = now.toDateString();
+
+    if (!AppState.user.stepData || AppState.user.stepData.date !== todayStr) {
+        AppState.user.stepData = { date: todayStr, rewardedSteps: 0, totalSteps: 0 };
+    }
+
+    let totalStepsToday = 0;
+    let dataSource = 'none';
+
+    // 1단계: Health Connect (네이티브 Android 14+) 시도
+    const nativeSteps = await tryHealthConnectSteps();
+    if (nativeSteps !== null) {
+        totalStepsToday = nativeSteps;
+        dataSource = 'health_connect';
+    }
+
+    // 2단계: Google Fit 네이티브 SDK 시도 (Health Connect 실패 시)
+    if (dataSource === 'none') {
+        const fitNativeSteps = await tryGoogleFitNativeSteps();
+        if (fitNativeSteps !== null) {
+            totalStepsToday = fitNativeSteps;
+            dataSource = 'google_fit_native';
+        }
+    }
+
+    // 네이티브 SDK에서 데이터를 가져오지 못한 경우
+    if (dataSource === 'none') {
+        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
+        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
+        updateStepCountUI(); // syncEnabled 상태를 UI에 즉시 반영
+        return;
+    }
+
+    // 실제 총 걸음수 저장
+    AppState.user.stepData.totalSteps = totalStepsToday;
+
+    // 걸음수 기반 희귀 호칭 체크
+    checkStepRareTitles();
+
+    // 보상 계산
+    const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
+
+    if (unrewardedSteps >= 1000) {
+        const rewardChunks = Math.floor(unrewardedSteps / 1000);
+        const earnedPoints = rewardChunks * 10;
+        const earnedStr = rewardChunks * 0.5;
+
+        AppState.user.points += earnedPoints;
+        AppState.user.pendingStats.str += earnedStr;
+        AppState.user.stepData.rewardedSteps += (rewardChunks * 1000);
+
+        if (showMsg) {
+            const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+            const _l = i18n[AppState.currentLang] || {};
+            const _syncMsg = (_l.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
+            const _rewMsg = (_l.sync_reward_msg || '추가 보상: +{points}P, STR +{str}').replace('{points}', earnedPoints).replace('{str}', earnedStr);
+            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${_syncMsg}<br>${_rewMsg}</span>`;
+        }
+        updatePointUI();
+        drawRadarChart();
+    } else {
+        if (showMsg) {
+            if(totalStepsToday === 0) {
+                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${i18n[AppState.currentLang]?.sync_no_steps || '걸음 수 기록이 없습니다. (0보)'}</span>`;
+            } else {
+                const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+                const _l2 = i18n[AppState.currentLang] || {};
+                const _syncMsg2 = (_l2.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
+                const _nextMsg = (_l2.sync_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', 1000 - unrewardedSteps);
+                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${_syncMsg2}<br>(${_nextMsg})</span>`;
+            }
+        }
+    }
+    saveUserData();
+    updateStepCountUI();
+}
+
+// --- 걸음수 상태창 UI 업데이트 ---
+function updateStepCountUI() {
+    const card = document.getElementById('step-count-card');
+    if (!card) return;
+    const lang = i18n[AppState.currentLang];
+    const valueEl = document.getElementById('step-count-value');
+    const infoEl = document.getElementById('step-count-info');
+    const reqPanel = document.getElementById('step-req-panel');
+
+    // 이메일 로그인 사용자는 걸음수 카드 숨김
+    if (AppState.isEmailUser) {
+        card.style.display = 'none';
+        return;
+    }
+
+    // 항상 표시
+    card.style.display = '';
+
+    if (!AppState.user.syncEnabled) {
+        // 권한 없음 → 설명문 + 제약사항 패널 표시
+        valueEl.textContent = '-';
+        infoEl.textContent = lang.step_no_perm || '설정에서 피트니스 동기화를 활성화하세요';
+        infoEl.style.color = 'var(--neon-red)';
+
+        if (reqPanel) {
+            reqPanel.style.display = '';
+            const titleEl = document.getElementById('step-req-title');
+            const listEl = document.getElementById('step-req-list');
+            if (titleEl) titleEl.textContent = lang.step_req_title || '걸음수 연동 필수 조건';
+            if (listEl) {
+                const googleFitUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.fitness';
+                const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
+                const req1Text = lang.step_req_1 || 'Google Fit 또는 Health Connect 앱 설치 필요';
+                const req1Html = req1Text
+                    .replace('Google Fit', `<a href="${googleFitUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Google Fit</a>`)
+                    .replace('Health Connect', `<a href="${healthConnectUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
+                const items = [
+                    { icon: '📲', html: req1Html },
+                    { icon: '⚙️', html: (() => {
+                        const req2Text = lang.step_req_2 || '내 정보 → 구글 피트니스 앱 동기화 활성화';
+                        const myInfoLabels = ['내 정보', 'My Info', 'マイ情報'];
+                        let result = req2Text;
+                        for (const label of myInfoLabels) {
+                            if (req2Text.includes(label)) {
+                                result = req2Text.replace(label, `<a href="javascript:void(0)" onclick="document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active'));document.getElementById('settings').classList.add('active');document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));" style="color:inherit;text-decoration:underline;">${label}</a>`);
+                                break;
+                            }
+                        }
+                        return result;
+                    })() },
+                    { icon: '🔑', html: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용' },
+                    { icon: '🎁', html: lang.step_req_reward || '1,000보마다 +10P & STR +0.5 보상' }
+                ];
+                listEl.innerHTML = items.map(r =>
+                    `<li style="margin-bottom:2px;">${r.icon} ${r.html}</li>`
+                ).join('');
+            }
+        }
+        return;
+    }
+
+    // 동기화 활성 → 걸음수 표시 (실제 총 걸음수) + 제약사항 패널 숨김
+    if (reqPanel) reqPanel.style.display = 'none';
+    const totalSteps = AppState.user.stepData?.totalSteps || 0;
+    valueEl.textContent = totalSteps.toLocaleString();
+    const remaining = 1000 - (totalSteps % 1000);
+    infoEl.textContent = (lang.step_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', remaining);
+    infoEl.style.color = 'var(--neon-gold)';
+}
 
 // --- 푸시 알림 (FCM) ---
 
@@ -6154,6 +8188,49 @@ async function syncToggleWithOSPermissions() {
     const cap = window.Capacitor;
     const lang = i18n[AppState.currentLang];
     let changed = false;
+
+    // 1) 푸시 알림: OS 상태와 앱 토글 양방향 동기화
+    if (cap.Plugins && cap.Plugins.PushNotifications) {
+        try {
+            const { PushNotifications } = cap.Plugins;
+            const status = await PushNotifications.checkPermissions();
+            const osGranted = status.receive === 'granted';
+
+            if (AppState.user.pushEnabled && !osGranted) {
+                // OS 차단 → 앱 토글 off
+                AppState.user.pushEnabled = false;
+                AppState.user.fcmToken = null;
+                const pushToggle = document.getElementById('push-toggle');
+                if (pushToggle) pushToggle.checked = false;
+                const statusDiv = document.getElementById('push-status');
+                if (statusDiv) {
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off_by_os || 'OS 설정에서 알림이 차단되어 비활성화됨'}</span>`;
+                }
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] Push disabled: OS permission not granted');
+            } else if (!AppState.user.pushEnabled && osGranted) {
+                // OS 허용 → 앱 토글 on + 리스너 설정
+                const token = await requestNativePushPermission();
+                if (token) {
+                    AppState.user.pushEnabled = true;
+                    AppState.user.fcmToken = token;
+                    const pushToggle = document.getElementById('push-toggle');
+                    if (pushToggle) pushToggle.checked = true;
+                    const statusDiv = document.getElementById('push-status');
+                    if (statusDiv) {
+                        statusDiv.style.display = 'flex';
+                        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+                    }
+                    await setupNativePushListeners();
+                    changed = true;
+                    if (window.AppLogger) AppLogger.info('[SyncPerm] Push enabled: OS permission granted');
+                }
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[SyncPerm] Push check error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
 
     // 2) GPS 위치: OS 상태와 앱 토글 양방향 동기화
     if (cap.Plugins && cap.Plugins.Geolocation) {
@@ -6192,55 +8269,371 @@ async function syncToggleWithOSPermissions() {
         }
     }
 
+    // 3) 건강 데이터: OS 상태와 앱 토글 양방향 동기화
+    if (cap.Plugins) {
+        try {
+            let hasPermission = false;
+            const { HealthConnect, GoogleFit } = cap.Plugins;
+
+            if (HealthConnect) {
+                const availability = await HealthConnect.isAvailable();
+                if (availability.available && availability.hasPermissions) {
+                    hasPermission = true;
+                }
+            }
+            if (!hasPermission && GoogleFit) {
+                const availability = await GoogleFit.isAvailable();
+                if (availability.available && availability.hasPermissions) {
+                    hasPermission = true;
+                }
+            }
+
+            if (AppState.user.syncEnabled && !hasPermission) {
+                // OS 해제 → 앱 토글 off
+                AppState.user.syncEnabled = false;
+                const syncToggle = document.getElementById('sync-toggle');
+                if (syncToggle) syncToggle.checked = false;
+                const statusDiv = document.getElementById('sync-status');
+                if (statusDiv) {
+                    statusDiv.style.display = 'flex';
+                    statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.sync_off_by_os || 'OS 설정에서 건강 데이터 권한이 해제되어 비활성화됨'}</span>`;
+                }
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] Fitness disabled: OS permission not granted');
+            } else if (!AppState.user.syncEnabled && hasPermission) {
+                // OS 허용 → 앱 토글 on + 데이터 동기화
+                AppState.user.syncEnabled = true;
+                const syncToggle = document.getElementById('sync-toggle');
+                if (syncToggle) syncToggle.checked = true;
+                updateStepCountUI(); // 상태창 UI 즉시 반영
+                syncHealthData(true);
+                changed = true;
+                if (window.AppLogger) AppLogger.info('[SyncPerm] Fitness enabled: OS permission granted');
+            }
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[SyncPerm] Fitness check error: ' + (e.message || JSON.stringify(e)));
+        }
+    }
+
     if (changed) {
         saveUserData();
     }
 }
 
-/**
- * 앱 시작 시 딥링크 리스너 등록 (콜드 스타트 대응)
- * - 앱이 아직 준비되지 않은 경우 _pendingDeepLinkData에 저장 후
- *   앱 초기화 완료 시 처리
- */
-let _pendingDeepLinkData = null;
-let _appNavigationReady = false;
+/** 푸시 알림 초기화 — 로그인 후 호출 */
+async function initPushNotifications() {
+    const pushToggle = document.getElementById('push-toggle');
+    if (!pushToggle) return;
 
-function registerDeepLinkListeners() {
-    const cap = window.Capacitor;
-    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
-    if (!cap.Plugins || !cap.Plugins.App) return;
+    // 저장된 상태 복원
+    pushToggle.checked = AppState.user.pushEnabled;
 
-    // @capacitor/app 플러그인으로 딥링크 (appUrlOpen) 처리
-    cap.Plugins.App.addListener('appUrlOpen', (event) => {
-        console.log('[DeepLink] URL 열림:', event.url);
-        if (window.AppLogger) AppLogger.info('[DeepLink] appUrlOpen: ' + event.url);
+    const statusDiv = document.getElementById('push-status');
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
+    // 이미 활성화된 상태라면 토큰 갱신 및 메시지 리스너 설정
+    if (AppState.user.pushEnabled) {
         try {
-            const url = new URL(event.url);
-            // levelup://tab/quests 또는 levelup://quests 형식 처리
-            const pathParts = url.pathname.replace(/^\/+/, '').split('/');
-            const tab = url.hostname === 'tab' ? pathParts[0] : url.hostname;
+            let freshToken = null;
+            if (isNative) {
+                freshToken = await requestNativePushPermission();
+            } else {
+                freshToken = await requestWebPushPermission();
+            }
 
-            if (tab) {
-                if (_appNavigationReady) {
-                    handleNotificationAction({ tab: tab });
-                } else {
-                    _pendingDeepLinkData = { tab: tab };
+            if (freshToken) {
+                if (freshToken !== AppState.user.fcmToken) {
+                    AppState.user.fcmToken = freshToken;
+                    saveUserData();
+                    if (window.AppLogger) AppLogger.info('[FCM] 시작 시 토큰 갱신됨');
                 }
+                if (isNative) {
+                    await setupNativePushListeners();
+                } else {
+                    await setupWebPushListeners();
+                }
+            } else {
+                // 토큰 획득 실패 — 푸시 비활성화
+                AppState.user.pushEnabled = false;
+                AppState.user.fcmToken = null;
+                pushToggle.checked = false;
+                saveUserData();
+                if (window.AppLogger) AppLogger.warn('[FCM] 시작 시 토큰 획득 실패, 푸시 비활성화');
             }
         } catch (e) {
-            console.warn('[DeepLink] URL 파싱 실패:', e.message);
+            if (window.AppLogger) AppLogger.warn('[FCM] 시작 시 토큰 갱신 실패: ' + (e.message || ''));
+        }
+
+        // 레거시 토픽 → 언어별 토픽 마이그레이션 (1회 실행)
+        const migrated = localStorage.getItem('push_topic_v2');
+        if (!migrated && isNative) {
+            const cap = window.Capacitor;
+            if (cap && cap.Plugins && cap.Plugins.FCMPlugin) {
+                try { await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic: 'raid_alerts' }); } catch(e) {}
+                try { await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic: 'daily_reminder' }); } catch(e) {}
+                await subscribeNativeTopics();
+                if (window.AppLogger) AppLogger.info('[FCM] 레거시 토픽 → 언어별 토픽 마이그레이션 완료');
+            }
+            try { localStorage.setItem('push_topic_v2', '1'); } catch(e) {}
+        }
+
+        if (statusDiv) {
+            statusDiv.style.display = 'flex';
+            const lang = i18n[AppState.currentLang];
+            if (AppState.user.pushEnabled) {
+                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+            } else {
+                statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
+            }
+        }
+    }
+}
+
+/** 푸시 알림 토글 핸들러 */
+async function togglePushNotifications() {
+    const pushToggle = document.getElementById('push-toggle');
+    const isChecked = pushToggle.checked;
+    const statusDiv = document.getElementById('push-status');
+    const lang = i18n[AppState.currentLang];
+    statusDiv.style.display = 'flex';
+
+    if (!isChecked) {
+        // 푸시 알림 비활성화
+        AppState.user.pushEnabled = false;
+        AppState.user.fcmToken = null;
+        saveUserData();
+        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
+        if (window.AppLogger) AppLogger.info('[FCM] 푸시 알림 비활성화');
+
+        // 네이티브: 토픽 구독 해제 및 OS 권한 해제 안내
+        const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+        if (isNative) {
+            await unsubscribeNativeTopics();
+            const msg = lang.push_revoke_confirm || '알림 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
+            if (confirm(msg)) {
+                openAppSettings();
+            }
+        }
+        return;
+    }
+
+    // 푸시 알림 활성화 시도
+    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.push_requesting || '알림 권한 요청 중...'}</span>`;
+
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    try {
+        let token = null;
+
+        if (isNative) {
+            token = await requestNativePushPermission();
+        } else {
+            token = await requestWebPushPermission();
+        }
+
+        if (!token) {
+            pushToggle.checked = false;
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_denied || '알림 권한이 거부되었습니다.'}</span>`;
+            return;
+        }
+
+        AppState.user.pushEnabled = true;
+        AppState.user.fcmToken = token;
+        saveUserData();
+
+        if (window.AppLogger) AppLogger.info('[FCM] 토큰 등록 완료: ' + token.substring(0, 20) + '...');
+        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
+
+        // 메시지 리스너 설정
+        if (isNative) {
+            await setupNativePushListeners();
+        } else {
+            await setupWebPushListeners();
+        }
+    } catch (e) {
+        if (window.AppLogger) AppLogger.error('[FCM] 푸시 알림 설정 실패: ' + (e.message || JSON.stringify(e)));
+        pushToggle.checked = false;
+        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_err || '푸시 알림 설정 실패'}</span>`;
+    }
+}
+
+/** 네이티브 앱: Capacitor PushNotifications 또는 커스텀 FCMPlugin으로 권한 요청 및 토큰 획득 */
+async function requestNativePushPermission() {
+    const cap = window.Capacitor;
+
+    // 방법 1: @capacitor/push-notifications 플러그인
+    if (cap.Plugins && cap.Plugins.PushNotifications) {
+        const { PushNotifications } = cap.Plugins;
+
+        const permResult = await PushNotifications.requestPermissions();
+        if (permResult.receive !== 'granted') {
+            if (window.AppLogger) AppLogger.warn('[FCM] 네이티브 알림 권한 거부: ' + JSON.stringify(permResult));
+            return null;
+        }
+
+        // 기존 registration 리스너 제거 후 토큰 수신 대기 (중복 방지)
+        await PushNotifications.removeAllListeners();
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const timeout = setTimeout(() => {
+                if (!settled) { settled = true; reject(new Error('FCM 토큰 수신 타임아웃')); }
+            }, 15000);
+
+            PushNotifications.addListener('registration', (tokenData) => {
+                if (settled) return; // 중복 이벤트 무시
+                settled = true;
+                clearTimeout(timeout);
+                if (window.AppLogger) AppLogger.info('[FCM] 네이티브 토큰 수신: ' + tokenData.value.substring(0, 20) + '...');
+                resolve(tokenData.value);
+            });
+
+            PushNotifications.addListener('registrationError', (error) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeout);
+                if (window.AppLogger) AppLogger.error('[FCM] 네이티브 등록 실패: ' + JSON.stringify(error));
+                reject(new Error(error.error || '등록 실패'));
+            });
+
+            PushNotifications.register();
+        });
+    }
+
+    // 방법 2: 커스텀 FCMPlugin (네이티브 브릿지)
+    if (cap.Plugins && cap.Plugins.FCMPlugin) {
+        const result = await cap.Plugins.FCMPlugin.getToken();
+        return result.token || null;
+    }
+
+    // 방법 3: Capacitor 네이티브 브릿지 직접 호출
+    if (cap.toNative) {
+        return new Promise((resolve, reject) => {
+            const callbackId = 'fcm_getToken_' + Date.now();
+            cap.toNative('FCMPlugin', 'getToken', { callbackId });
+            // 폴백: 5초 후 타임아웃
+            setTimeout(() => resolve(null), 5000);
+        });
+    }
+
+    return null;
+}
+
+/** 웹 브라우저: Firebase Messaging으로 권한 요청 및 토큰 획득 */
+async function requestWebPushPermission() {
+    if (!messaging) {
+        if (window.AppLogger) AppLogger.warn('[FCM] Firebase Messaging이 초기화되지 않았습니다.');
+        return null;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        if (window.AppLogger) AppLogger.warn('[FCM] 웹 알림 권한 거부: ' + permission);
+        return null;
+    }
+
+    // Service Worker 등록 (sw.js 에 FCM 통합)
+    let swRegistration = null;
+    if ('serviceWorker' in navigator) {
+        swRegistration = await navigator.serviceWorker.ready;
+        if (window.AppLogger) AppLogger.info('[FCM] Service Worker 준비 완료');
+    }
+
+    const token = await getToken(messaging, {
+        vapidKey: 'BGAe3k0DShCc20txNmeXM-61AnHWcm7tDBzOvnQQYKJfhok7xROtvcAQjod4Dyd0V9xBEQyQDjpJr1hnwki7YRs',
+        serviceWorkerRegistration: swRegistration
+    });
+
+    return token || null;
+}
+
+/** 네이티브 앱: 포그라운드 메시지 리스너 설정 (중복 호출 방지) */
+let _nativePushListenersReady = false;
+async function setupNativePushListeners() {
+    if (_nativePushListenersReady) {
+        if (window.AppLogger) AppLogger.info('[FCM] 리스너 이미 설정됨, 건너뜀');
+        return;
+    }
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins) return;
+
+    // @capacitor/push-notifications 플러그인 사용
+    if (cap.Plugins.PushNotifications) {
+        const { PushNotifications } = cap.Plugins;
+
+        // 포그라운드 알림 수신
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            if (window.AppLogger) AppLogger.info('[FCM] 포그라운드 알림 수신: ' + JSON.stringify(notification));
+            showInAppNotification(notification.title, notification.body, notification.data);
+        });
+
+        // 알림 탭(클릭) 처리 — 앱이 백그라운드 상태일 때
+        // 주의: 콜드 스타트용 얼리 리스너(registerEarlyPushListeners)가 이미 등록되어 있으므로
+        // 중복 등록하지 않음 (이중 네비게이션 방지)
+
+        // 기본 토픽 구독
+        await subscribeNativeTopics();
+        _nativePushListenersReady = true;
+    }
+}
+
+/**
+ * 앱 시작 시 즉시 푸시 알림 클릭 리스너 등록 (콜드 스타트 대응)
+ * - 앱이 종료된 상태에서 푸시 알림 클릭으로 앱이 실행된 경우,
+ *   auth 완료 전에 리스너가 등록되어야 알림 데이터를 놓치지 않음
+ * - 앱이 아직 준비되지 않은 경우 _pendingNotificationData에 저장 후
+ *   앱 초기화 완료 시 처리
+ */
+let _pendingNotificationData = null;
+let _appNavigationReady = false;
+
+function registerEarlyPushListeners() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return;
+
+    // 콜드 스타트 시 플러그인이 아직 로드되지 않았을 수 있으므로 지연 재시도
+    if (!cap.Plugins || !cap.Plugins.PushNotifications) {
+        console.log('[FCM] 플러그인 미로드, 300ms 후 재시도');
+        setTimeout(() => registerEarlyPushListeners(), 300);
+        return;
+    }
+
+    const { PushNotifications } = cap.Plugins;
+
+    // 콜드 스타트: 알림 클릭으로 앱이 열린 경우 처리
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+        console.log('[FCM] 얼리 리스너 — 알림 클릭 감지:', JSON.stringify(action));
+        const data = action.notification?.data;
+        if (!data) return;
+
+        // 백그라운드 수신 알림 이력 저장
+        const noti = action.notification;
+        if (window.NotificationModule) {
+            window.NotificationModule.addNotification(
+                noti?.title || 'LEVEL UP',
+                noti?.body || '',
+                data?.type || 'unknown'
+            );
+        }
+
+        if (_appNavigationReady) {
+            // 앱이 이미 준비된 경우 바로 네비게이션
+            handleNotificationAction(data);
+        } else {
+            // 앱 초기화 중 — 대기열에 저장 (이력 저장용 title/body 포함)
+            _pendingNotificationData = { ...data, _notifTitle: noti?.title, _notifBody: noti?.body };
+            if (window.AppLogger) AppLogger.info('[FCM] 콜드 스타트 알림 데이터 대기: ' + JSON.stringify(data));
         }
     });
 
-    // 앱이 콜드 스타트로 열렸을 때 launch URL 확인
-    cap.Plugins.App.getLaunchUrl().then((result) => {
-        if (result && result.url) {
-            console.log('[DeepLink] 런치 URL:', result.url);
-            if (window.AppLogger) AppLogger.info('[DeepLink] getLaunchUrl: ' + result.url);
+    // @capacitor/app 플러그인으로 딥링크 (appUrlOpen) 처리
+    if (cap.Plugins.App) {
+        cap.Plugins.App.addListener('appUrlOpen', (event) => {
+            console.log('[DeepLink] URL 열림:', event.url);
+            if (window.AppLogger) AppLogger.info('[DeepLink] appUrlOpen: ' + event.url);
 
             try {
-                const url = new URL(result.url);
+                const url = new URL(event.url);
+                // levelup://tab/quests 또는 levelup://quests 형식 처리
                 const pathParts = url.pathname.replace(/^\/+/, '').split('/');
                 const tab = url.hostname === 'tab' ? pathParts[0] : url.hostname;
 
@@ -6248,16 +8641,41 @@ function registerDeepLinkListeners() {
                     if (_appNavigationReady) {
                         handleNotificationAction({ tab: tab });
                     } else {
-                        _pendingDeepLinkData = { tab: tab };
+                        _pendingNotificationData = { tab: tab };
                     }
                 }
             } catch (e) {
-                console.warn('[DeepLink] 런치 URL 파싱 실패:', e.message);
+                console.warn('[DeepLink] URL 파싱 실패:', e.message);
             }
-        }
-    }).catch(() => {});
+        });
 
-    console.log('[DeepLink] 딥링크 리스너 등록 완료');
+        // 앱이 콜드 스타트로 열렸을 때 launch URL 확인
+        cap.Plugins.App.getLaunchUrl().then((result) => {
+            if (result && result.url) {
+                console.log('[DeepLink] 런치 URL:', result.url);
+                if (window.AppLogger) AppLogger.info('[DeepLink] getLaunchUrl: ' + result.url);
+
+                try {
+                    const url = new URL(result.url);
+                    const pathParts = url.pathname.replace(/^\/+/, '').split('/');
+                    const tab = url.hostname === 'tab' ? pathParts[0] : url.hostname;
+
+                    if (tab) {
+                        if (_appNavigationReady) {
+                            // 이미 앱 준비 완료 — 바로 네비게이션
+                            handleNotificationAction({ tab: tab });
+                        } else {
+                            _pendingNotificationData = { tab: tab };
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[DeepLink] 런치 URL 파싱 실패:', e.message);
+                }
+            }
+        }).catch(() => {});
+    }
+
+    console.log('[FCM] 얼리 푸시 리스너 등록 완료');
 }
 
 // --- 앱 종료 확인 토스트 ---
@@ -6342,6 +8760,14 @@ function registerBackButtonHandler() {
             }
         }
 
+        // 2-a) 알림 모달이 열려있으면 닫기
+        const notiModal = document.getElementById('notification-modal');
+        if (notiModal && !notiModal.classList.contains('d-none')) {
+            if (window.NotificationModule) window.NotificationModule.closeModal();
+            else notiModal.classList.add('d-none');
+            return;
+        }
+
         // 2) 카드 에디터가 열려있으면 닫기
         const cardEditor = document.getElementById('card-editor-fullscreen');
         if (cardEditor && !cardEditor.classList.contains('d-none')) {
@@ -6384,6 +8810,100 @@ function registerBackButtonHandler() {
     console.log('[BackButton] 안드로이드 뒤로가기 버튼 핸들러 등록 완료');
 }
 
+/** 앱 초기화 완료 후 대기 중인 알림 데이터 처리 */
+function processPendingNotification() {
+    _appNavigationReady = true;
+    if (_pendingNotificationData) {
+        if (window.AppLogger) AppLogger.info('[FCM] 대기 중인 알림 처리: ' + JSON.stringify(_pendingNotificationData));
+
+        // 콜드 스타트 시 저장하지 못한 알림 이력 저장
+        if (window.NotificationModule && _pendingNotificationData._notifTitle) {
+            window.NotificationModule.addNotification(
+                _pendingNotificationData._notifTitle,
+                _pendingNotificationData._notifBody || '',
+                _pendingNotificationData.type || 'unknown'
+            );
+        }
+
+        // 약간의 지연으로 DOM 렌더링 완료 후 탭 전환
+        setTimeout(() => {
+            handleNotificationAction(_pendingNotificationData);
+            _pendingNotificationData = null;
+        }, 500);
+    }
+}
+
+/** 웹 브라우저: 포그라운드 메시지 리스너 설정 */
+async function setupWebPushListeners() {
+    if (!messaging) return;
+
+    onMessage(messaging, (payload) => {
+        if (window.AppLogger) AppLogger.info('[FCM] 웹 메시지 수신: ' + JSON.stringify(payload));
+        showInAppNotification(
+            payload.notification?.title || 'LEVEL UP',
+            payload.notification?.body || '',
+            payload.data
+        );
+    });
+}
+
+/** 네이티브 기본 토픽 구독 (언어별 레이드 알림, 일일 리마인더 등) */
+async function subscribeNativeTopics() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const lang = AppState.currentLang || localStorage.getItem('lang') || 'ko';
+    const topics = [`raid_alerts_${lang}`, `daily_reminder_${lang}`, 'announcements'];
+    for (const topic of topics) {
+        try {
+            await cap.Plugins.FCMPlugin.subscribeTopic({ topic });
+            if (window.AppLogger) AppLogger.info('[FCM] 토픽 구독: ' + topic);
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[FCM] 토픽 구독 실패: ' + topic + ' - ' + e.message);
+        }
+    }
+}
+
+/** 네이티브 토픽 구독 해제 (모든 언어 토픽 + 레거시 토픽 해제) */
+async function unsubscribeNativeTopics() {
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const langs = ['ko', 'en', 'ja'];
+    const baseTopics = ['raid_alerts', 'daily_reminder'];
+    const topics = [];
+    for (const base of baseTopics) {
+        for (const lang of langs) {
+            topics.push(`${base}_${lang}`);
+        }
+    }
+    topics.push('announcements');
+    // 레거시 토픽도 해제
+    topics.push('raid_alerts', 'daily_reminder');
+
+    for (const topic of topics) {
+        try {
+            await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic });
+        } catch (e) {
+            if (window.AppLogger) AppLogger.warn('[FCM] 토픽 해제 실패: ' + topic);
+        }
+    }
+}
+
+/** 언어 변경 시 푸시 토픽 재구독 (이전 언어 해제 → 새 언어 구독) */
+async function updateTopicSubscriptionForLanguage(oldLang, newLang) {
+    if (oldLang === newLang) return;
+    const cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.FCMPlugin) return;
+
+    const baseTopics = ['raid_alerts', 'daily_reminder'];
+    for (const base of baseTopics) {
+        try { await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic: `${base}_${oldLang}` }); } catch (e) {}
+        try { await cap.Plugins.FCMPlugin.subscribeTopic({ topic: `${base}_${newLang}` }); } catch (e) {}
+    }
+    if (window.AppLogger) AppLogger.info(`[FCM] 토픽 언어 변경: ${oldLang} → ${newLang}`);
+}
+
 /** 인앱 알림 표시 (포그라운드 수신 시) */
 function showInAppNotification(title, body, data) {
     // 기존 알림 배너가 있으면 제거
@@ -6412,6 +8932,11 @@ function showInAppNotification(title, body, data) {
     });
 
     document.body.appendChild(banner);
+
+    // 알림 이력 저장
+    if (window.NotificationModule) {
+        window.NotificationModule.addNotification(title, body, data?.type || 'unknown');
+    }
 
     // 5초 후 자동 제거
     setTimeout(() => {
@@ -6458,6 +8983,23 @@ function handleNotificationAction(data, _retryCount) {
             }
         }
     }
+}
+
+// 서비스 워커에서 알림 클릭 시 postMessage로 탭 이동 처리
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+            // 백그라운드 수신 알림 이력 저장
+            if (window.NotificationModule && event.data.title) {
+                window.NotificationModule.addNotification(
+                    event.data.title,
+                    event.data.body || '',
+                    event.data.data?.type || 'unknown'
+                );
+            }
+            handleNotificationAction(event.data);
+        }
+    });
 }
 
 // URL 해시 기반 탭 이동 (서비스 워커가 새 창을 열 때 #tab 사용)
@@ -6597,6 +9139,9 @@ import('./modules/library.js').catch(e => console.error('[Library] 모듈 로드
 
 // --- Movie 모듈 동적 로드 ---
 import('./modules/movie.js').catch(e => console.error('[Movie] 모듈 로드 실패:', e));
+
+// --- Notification 모듈 동적 로드 ---
+import('./modules/notification.js').catch(e => console.error('[Notification] 모듈 로드 실패:', e));
 
 // --- Quotes 모듈 동적 로드 ---
 import('./modules/quotes.js').catch(e => console.error('[Quotes] 모듈 로드 실패:', e));

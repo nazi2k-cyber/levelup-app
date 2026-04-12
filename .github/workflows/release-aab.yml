@@ -241,11 +241,17 @@ jobs:
               echo 'package com.levelup.reboot;'
               echo 'import com.getcapacitor.BridgeActivity;'
               echo 'import com.levelup.reboot.plugins.AppSettingsPlugin;'
+              echo 'import com.levelup.reboot.plugins.GoogleFitPlugin;'
+              echo 'import com.levelup.reboot.plugins.HealthConnectPlugin;'
+              echo 'import com.levelup.reboot.plugins.FCMPlugin;'
               echo 'import com.levelup.reboot.plugins.NativeAdPlugin;'
               echo 'public class MainActivity extends BridgeActivity {'
               echo '    @Override'
               echo '    public void onCreate(android.os.Bundle savedInstanceState) {'
               echo '        registerPlugin(AppSettingsPlugin.class);'
+              echo '        registerPlugin(GoogleFitPlugin.class);'
+              echo '        registerPlugin(HealthConnectPlugin.class);'
+              echo '        registerPlugin(FCMPlugin.class);'
               echo '        registerPlugin(NativeAdPlugin.class);'
               echo '        super.onCreate(savedInstanceState);'
               echo '    }'
@@ -258,6 +264,15 @@ jobs:
       - name: Gradle 의존성 및 SDK 버전 주입
         run: |
           BUILD_GRADLE="android/app/build.gradle"
+          ! grep -q "health.connect" "$BUILD_GRADLE" && \
+            sed -i '/^dependencies {/a\    implementation "androidx.health.connect:connect-client:1.1.0-alpha07"' "$BUILD_GRADLE"
+          if ! grep -q "play-services-fitness" "$BUILD_GRADLE"; then
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-fitness:21.2.0"' "$BUILD_GRADLE"
+            sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-auth:21.3.0"' "$BUILD_GRADLE"
+          fi
+          ! grep -q "firebase-messaging" "$BUILD_GRADLE" && \
+            sed -i '/^dependencies {/a\    implementation "com.google.firebase:firebase-messaging:24.0.0"' "$BUILD_GRADLE"
+
           # AdMob 의존성 (NativeAdPlugin 네이티브 광고)
           if ! grep -q "play-services-ads" "$BUILD_GRADLE"; then
             sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-ads:23.6.0"' "$BUILD_GRADLE"

@@ -5,23 +5,6 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
-## [1.0.306] - 2026-04-12
-
-### 변경
-- Step 2 청크 G 보완: step-count 카드 에디터 잔여 참조 제거 + notification 모듈 임포트 제거
-- Step 2 청크 G: HTML 정리 — 플래너/푸시/건강동기화 UI 마크업 제거
-
-## [1.0.305] - 2026-04-12
-
-### 변경
-- Step 2 청크 B-F: 핵심 파일 정리 — 푸시/건강동기화/플래너 코드 및 i18n 키 제거
-
-## [1.0.304] - 2026-04-12
-
-### 변경
-- ci: remove deleted plugin references from workflow files (GoogleFit, HealthConnect, FCM)
-- Step 2 청크 A: 독립 파일 정리 — FCM/건강동기화 네이티브 플러그인 삭제 + 모듈 비우기
-
 ## [1.0.303] - 2026-04-12
 
 ### 변경
