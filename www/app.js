@@ -3154,7 +3154,7 @@ function drawRadarChart() {
     
     for (let i = 0; i < 6; i++) {
         const key = statKeys[i]; 
-        const val = Math.round(Number(AppState.user.stats[key]) || 0);
+        const val = Math.min(100, Math.max(0, Math.round(Number(AppState.user.stats[key]) || 0)));
         totalSum += val;
         
         const r = radius * (val / 100); 
@@ -3208,7 +3208,7 @@ function drawRadarChartForUser(stats) {
 
     for (let i = 0; i < 6; i++) {
         const key = statKeys[i];
-        const val = Math.round(Number(stats[key]) || 0);
+        const val = Math.min(100, Math.max(0, Math.round(Number(stats[key]) || 0)));
         const r = radius * (val / 100);
         const x = centerX + r * Math.cos(angles[i]);
         const y = centerY + r * Math.sin(angles[i]);
