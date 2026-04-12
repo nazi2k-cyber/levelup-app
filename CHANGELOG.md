@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.305] - 2026-04-12
+
+### 변경
+- Step 2 청크 B-F: 핵심 파일 정리 — 푸시/건강동기화/플래너 코드 및 i18n 키 제거
+
 ## [1.0.304] - 2026-04-12
 
 ### 변경
