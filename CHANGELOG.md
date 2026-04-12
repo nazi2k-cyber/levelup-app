@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.303] - 2026-04-12
+
+### 변경
+- docs: STEP2-PLAN에 청크 구조 및 누락 검증 단계 추가
+
 ## [1.0.302] - 2026-04-12
 
 ### 변경
