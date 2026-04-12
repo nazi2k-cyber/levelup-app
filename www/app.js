@@ -3513,6 +3513,7 @@ window.selectDiyStat = (btn) => {
 };
 
 function renderCalendar() {
+    renderQstatsCalendar(); // 통계 탭 주간 진척도도 함께 갱신
     const container = document.getElementById('calendar-grid');
     if(!container) return;
     
@@ -3561,12 +3562,139 @@ function renderCalendar() {
 let _qstatsMonth = new Date();
 let _qstatsYear = new Date().getFullYear();
 let _qstatsDiyOnly = false;
+let _qstatsWeekOffset = 0;          // 주간 진척도 캘린더 주 오프셋 (0=이번주, -1=지난주 ...)
+let _qstatsMonthlyUnlocked = false; // 오늘 보상형 광고 시청 완료 여부 (주간↔월간 전환)
+
+// 통계 탭 주간 진척도 캘린더 렌더링
+function renderQstatsCalendar() {
+    const container = document.getElementById('qstats-calendar-grid');
+    if (!container) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentDay = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - currentDay + (_qstatsWeekOffset * 7));
+
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const monthEl = document.getElementById('qstats-cal-month');
+    if (monthEl) monthEl.innerText = `${startOfWeek.getFullYear()} ${monthNames[startOfWeek.getMonth()]}`;
+
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+
+    const todayStr = getTodayStr();
+
+    container.innerHTML = Array.from({length: 7}, (_, i) => {
+        const iterDate = new Date(startOfWeek);
+        iterDate.setDate(startOfWeek.getDate() + i);
+        iterDate.setHours(0, 0, 0, 0);
+        const dateStr = `${iterDate.getFullYear()}-${String(iterDate.getMonth()+1).padStart(2,'0')}-${String(iterDate.getDate()).padStart(2,'0')}`;
+        const isToday = dateStr === todayStr;
+        const isFuture = iterDate > today;
+
+        const diyCount = AppState.diyQuests.definitions.length;
+        let count = 0, total = 12;
+
+        if (isToday) {
+            const s = AppState.quest.completedState[AppState.quest.currentDayOfWeek];
+            count = s.filter(v => v).length + Object.values(AppState.diyQuests.completedToday).filter(v => v).length;
+            total = 12 + diyCount;
+        } else if (isFuture) {
+            total = 12 + diyCount;
+        } else {
+            const hist = AppState.questHistory && AppState.questHistory[dateStr];
+            if (hist) {
+                count = (hist.r || 0) + (hist.d || 0);
+                total = hist.t || 12;
+            }
+        }
+
+        return `
+            <div class="cal-day ${isToday ? 'today' : ''}">
+                <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
+                <div class="cal-date">${iterDate.getDate()}</div>
+                <div class="cal-score">${isFuture ? '-' : count + '/' + total}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// 주간 진척도 캘린더 주 이동
+window.changeQstatsWeek = function(delta) {
+    _qstatsWeekOffset += delta;
+    renderQstatsCalendar();
+};
+
+// 주간→월간 전환 (보상형 광고 게이트, 1일 1회)
+window.openQstatsMonthly = async function() {
+    const lang = AppState.currentLang;
+    const todayStr = getTodayStr();
+
+    // 오늘 이미 광고 시청했거나 세션 내 해제된 경우 바로 진입
+    const adDate = localStorage.getItem('qstats_monthly_ad_date');
+    if (adDate === todayStr || _qstatsMonthlyUnlocked) {
+        _showQstatsMonthly();
+        return;
+    }
+
+    // 웹(비네이티브) 환경은 광고 없이 바로 진입
+    if (!isNativePlatform) {
+        _qstatsMonthlyUnlocked = true;
+        localStorage.setItem('qstats_monthly_ad_date', todayStr);
+        _showQstatsMonthly();
+        return;
+    }
+
+    if (!window.AdManager) {
+        alert(i18n[lang].monthly_cal_ad_fail);
+        return;
+    }
+
+    const adShown = await window.AdManager.showRewarded({
+        context: 'qstatsMonthly',
+        onSuccess: function() {
+            _qstatsMonthlyUnlocked = true;
+            localStorage.setItem('qstats_monthly_ad_date', todayStr);
+            _showQstatsMonthly();
+            if (window.AppLogger) AppLogger.info('[QstatsMonthly] 보상형 광고 시청 완료 → 월간 통계 해제');
+        },
+        onFail: function() {
+            alert(i18n[lang].monthly_cal_ad_fail);
+        }
+    });
+    if (!adShown) {
+        alert(i18n[lang].monthly_cal_ad_fail);
+    }
+};
+
+function _showQstatsMonthly() {
+    const weeklyCard = document.getElementById('qstats-weekly-card');
+    const monthlyCard = document.getElementById('qstats-monthly-card');
+    if (weeklyCard) weeklyCard.classList.add('d-none');
+    if (monthlyCard) monthlyCard.classList.remove('d-none');
+    renderQuestStats();
+}
+
+// 월간→주간 복귀
+window.closeQstatsMonthly = function() {
+    const weeklyCard = document.getElementById('qstats-weekly-card');
+    const monthlyCard = document.getElementById('qstats-monthly-card');
+    if (weeklyCard) weeklyCard.classList.remove('d-none');
+    if (monthlyCard) monthlyCard.classList.add('d-none');
+    renderQstatsCalendar();
+};
 
 function renderQuestStats() {
     const history = AppState.questHistory || {};
     const hasData = Object.keys(history).length > 0;
     const emptyEl = document.getElementById('qstats-empty-state');
     if (emptyEl) emptyEl.classList.toggle('d-none', hasData);
+
+    renderQstatsCalendar(); // 주간 진척도 캘린더 갱신
 
     const y = _qstatsMonth.getFullYear();
     const m = _qstatsMonth.getMonth();

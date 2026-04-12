@@ -586,14 +586,6 @@
                             <div id="diy-quest-list"></div>
                         </div>
                     </div>
-                    <div class="system-card calendar-wrapper">
-                        <div class="cal-header">
-                            <span data-i18n="cal_title">주간 진척도</span>
-                            <span style="font-size:0.75rem; color:var(--text-sub);" id="cal-month"></span>
-                        </div>
-                        <div class="cal-grid" id="calendar-grid"></div>
-                    </div>
-
                     <!-- P3: 주간 도전과제 -->
                     <div class="system-card" style="padding:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -625,14 +617,36 @@
                             <span data-i18n="qstats_diy_only">DIY 퀘스트만</span>
                         </label>
                     </div>
-                    <!-- Monthly stats card -->
-                    <div class="system-card" style="padding:15px;">
+
+                    <!-- 주간 진척도 카드 (기본 표시, 주간/월간 토글) -->
+                    <div class="system-card calendar-wrapper" id="qstats-weekly-card" style="padding:10px; margin-bottom:8px;">
+                        <div class="cal-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <button class="planner-week-nav-btn" onclick="window.changeQstatsWeek(-1)">◀</button>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span data-i18n="cal_title">주간 진척도</span>
+                                <span style="font-size:0.75rem; color:var(--text-sub);" id="qstats-cal-month"></span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <button class="planner-week-nav-btn" onclick="window.changeQstatsWeek(1)">▶</button>
+                                <button class="planner-monthly-btn" id="btn-qstats-open-monthly" onclick="window.openQstatsMonthly()">
+                                    📅 <span data-i18n="planner_monthly">월간</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="cal-grid" id="qstats-calendar-grid"></div>
+                    </div>
+
+                    <!-- Monthly stats card (기본 숨김, 주간 카드의 월간 버튼으로 진입) -->
+                    <div class="system-card d-none" id="qstats-monthly-card" style="padding:15px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                             <h3 style="margin:0; font-size:0.95rem; color:var(--neon-blue);" data-i18n="qstats_monthly_title">월간 퀘스트 통계</h3>
                             <div style="display:flex; align-items:center; gap:6px;">
                                 <button class="btn-info-sm" id="btn-qstats-prev-month">◀</button>
                                 <span id="qstats-month-label" style="font-size:0.8rem; color:var(--neon-gold); min-width:80px; text-align:center;"></span>
                                 <button class="btn-info-sm" id="btn-qstats-next-month">▶</button>
+                                <button class="planner-monthly-btn" onclick="window.closeQstatsMonthly()">
+                                    📋 <span data-i18n="planner_weekly_short">주간</span>
+                                </button>
                             </div>
                         </div>
                         <div id="qstats-monthly-summary" style="display:flex; gap:8px; margin-bottom:12px;"></div>
