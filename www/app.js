@@ -1858,8 +1858,8 @@ function bindEvents() {
         });
     });
     // 퀘스트 통계 월/연 네비게이션
-    document.getElementById('btn-qstats-prev-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() - 1); renderQuestStats(); });
-    document.getElementById('btn-qstats-next-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() + 1); renderQuestStats(); });
+    document.getElementById('btn-qstats-prev-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() - 1); _qstatsSelectedDate = null; renderQuestStats(); });
+    document.getElementById('btn-qstats-next-month').addEventListener('click', () => { _qstatsMonth.setMonth(_qstatsMonth.getMonth() + 1); _qstatsSelectedDate = null; renderQuestStats(); });
     document.getElementById('btn-qstats-prev-year').addEventListener('click', () => { _qstatsYear--; renderQuestStats(); });
     document.getElementById('btn-qstats-next-year').addEventListener('click', () => { _qstatsYear++; renderQuestStats(); });
     // DIY 전용 통계 필터
@@ -3564,6 +3564,7 @@ let _qstatsYear = new Date().getFullYear();
 let _qstatsDiyOnly = false;
 let _qstatsWeekOffset = 0;          // 주간 진척도 캘린더 주 오프셋 (0=이번주, -1=지난주 ...)
 let _qstatsMonthlyUnlocked = false; // 오늘 보상형 광고 시청 완료 여부 (주간↔월간 전환)
+let _qstatsSelectedDate = null;     // 월간 캘린더에서 선택된 날짜 (퀘스트별 진척도 표시용)
 
 // 통계 탭 주간 진척도 캘린더 렌더링
 function renderQstatsCalendar() {
@@ -3688,6 +3689,16 @@ window.closeQstatsMonthly = function() {
     renderQstatsCalendar();
 };
 
+// 월간 캘린더 날짜 선택 → 퀘스트별 진척도 표시
+window.selectQstatsDate = function(dateStr) {
+    _qstatsSelectedDate = (_qstatsSelectedDate === dateStr) ? null : dateStr;
+    const y = _qstatsMonth.getFullYear();
+    const m = _qstatsMonth.getMonth();
+    const history = AppState.questHistory || {};
+    renderMonthlyHeatmap(y, m, history);
+    renderMonthlyDailyProgress(y, m, history);
+};
+
 function renderQuestStats() {
     const history = AppState.questHistory || {};
     const hasData = Object.keys(history).length > 0;
@@ -3762,6 +3773,7 @@ function renderMonthlyHeatmap(year, month, history) {
 
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = getTodayStr();
 
     let headerHTML = '<div class="qstats-heatmap-header">';
     (dayNames[lang] || dayNames.en).forEach(d => { headerHTML += `<span>${d}</span>`; });
@@ -3773,9 +3785,26 @@ function renderMonthlyHeatmap(year, month, history) {
     for (let d = 1; d <= daysInMonth; d++) {
         const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const rec = history[key];
-        let level = 0;
-        if (rec) {
-            let done, total;
+        const isToday = (key === todayStr);
+        const isFuture = (key > todayStr);
+        const isSelected = (_qstatsSelectedDate === key);
+
+        let level = 0, done = 0, total = 0;
+        if (isToday) {
+            const diyCount = AppState.diyQuests.definitions.length;
+            const regularDone = (AppState.quest.completedState[AppState.quest.currentDayOfWeek] || []).filter(v => v).length;
+            const diyDone = Object.values(AppState.diyQuests.completedToday || {}).filter(v => v).length;
+            if (_qstatsDiyOnly) {
+                done = diyDone; total = diyCount;
+            } else {
+                done = regularDone + diyDone; total = 12 + diyCount;
+            }
+            const rate = total > 0 ? done / total * 100 : 0;
+            if (rate >= 76) level = 4;
+            else if (rate >= 51) level = 3;
+            else if (rate >= 26) level = 2;
+            else if (rate >= 1) level = 1;
+        } else if (rec && !isFuture) {
             if (_qstatsDiyOnly) {
                 done = rec.d || 0;
                 total = rec.dt != null ? rec.dt : (rec.t - 12);
@@ -3789,7 +3818,12 @@ function renderMonthlyHeatmap(year, month, history) {
             else if (rate >= 26) level = 2;
             else if (rate >= 1) level = 1;
         }
-        gridHTML += `<div class="qstats-heatmap-cell level-${level}">${d}</div>`;
+
+        const hasData = isToday ? total > 0 : (!!rec && !isFuture && total > 0);
+        const ratioHTML = hasData ? `<span class="cell-ratio">${done}/${total}</span>` : '';
+        const selectedClass = isSelected ? ' selected' : '';
+
+        gridHTML += `<div class="qstats-heatmap-cell level-${level}${selectedClass}" onclick="window.selectQstatsDate('${key}')"><span class="cell-day">${d}</span>${ratioHTML}</div>`;
     }
     gridHTML += '</div>';
 
@@ -3810,79 +3844,111 @@ function renderMonthlyDailyProgress(year, month, history) {
     const container = document.getElementById('qstats-daily-progress');
     if (!container) return;
     const lang = AppState.currentLang;
+
+    const labels = {
+        ko: '퀘스트별 진척도',
+        en: 'Quest Progress',
+        ja: 'クエスト別進捗'
+    };
+    const prompts = {
+        ko: '캘린더에서 날짜를 선택하세요',
+        en: 'Select a date from the calendar',
+        ja: 'カレンダーから日付を選択してください'
+    };
     const dayNames = {
         ko: ["일","월","화","수","목","금","토"],
-        en: ["S","M","T","W","T","F","S"],
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
         ja: ["日","月","火","水","木","金","土"]
     };
-    const labels = {
-        ko: '일자별 진척도',
-        en: 'Daily Progress',
-        ja: '日別進捗'
-    };
+    const regularLabel = { ko: '레귤러 퀘스트', en: 'Regular', ja: 'レギュラー' };
+    const diyLabel    = { ko: 'DIY 퀘스트',    en: 'DIY',     ja: 'DIY' };
+    const totalLabel  = { ko: '전체',           en: 'Total',   ja: '合計' };
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const todayStr = (() => {
-        const t = new Date();
-        return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-    })();
+    const todayStr = getTodayStr();
 
-    let rowsHTML = '';
-    for (let d = 1; d <= daysInMonth; d++) {
-        const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    let contentHTML;
+    if (!_qstatsSelectedDate) {
+        contentHTML = `<div class="qstats-quest-detail-prompt">${prompts[lang] || prompts.en}</div>`;
+    } else {
+        const key = _qstatsSelectedDate;
         const rec = history[key];
-        const dow = new Date(year, month, d).getDay();
+        const selDate = new Date(key + 'T00:00:00');
         const isToday = (key === todayStr);
         const isFuture = (key > todayStr);
+        const dow = selDate.getDay();
 
-        let done = 0, total = 0, pct = 0;
+        const mn = i18n[lang]?.month_names_short || i18n.ko.month_names_short;
+        const dn = dayNames[lang] || dayNames.en;
+        const dayPart = lang === 'ja' ? `${selDate.getDate()}日` : lang === 'ko' ? `${selDate.getDate()}일` : selDate.getDate();
+        const dateLabel = `${mn[selDate.getMonth()]} ${dayPart} (${dn[dow]})`;
+
+        let done = 0, total = 0, doneR = 0, doneD = 0, totalR = 12, totalD = 0;
+
         if (isToday) {
-            // 오늘은 주간 진척도와 동일하게 라이브 데이터 사용
             const diyCount = AppState.diyQuests.definitions.length;
-            const regularDone = (AppState.quest.completedState[AppState.quest.currentDayOfWeek] || []).filter(v => v).length;
-            const diyDone = Object.values(AppState.diyQuests.completedToday || {}).filter(v => v).length;
+            doneR = (AppState.quest.completedState[AppState.quest.currentDayOfWeek] || []).filter(v => v).length;
+            doneD = Object.values(AppState.diyQuests.completedToday || {}).filter(v => v).length;
+            totalR = 12; totalD = diyCount;
             if (_qstatsDiyOnly) {
-                done = diyDone;
-                total = diyCount;
+                done = doneD; total = diyCount;
             } else {
-                done = regularDone + diyDone;
-                total = 12 + diyCount;
+                done = doneR + doneD; total = 12 + diyCount;
             }
-            pct = total > 0 ? Math.round(done / total * 100) : 0;
         } else if (!isFuture && rec) {
+            doneR = rec.r || 0; doneD = rec.d || 0;
+            totalR = 12; totalD = rec.dt != null ? rec.dt : Math.max(0, (rec.t || 12) - 12);
             if (_qstatsDiyOnly) {
-                done = rec.d || 0;
-                total = rec.dt != null ? rec.dt : (rec.t - 12);
+                done = doneD; total = rec.dt != null ? rec.dt : Math.max(0, (rec.t || 12) - 12);
             } else {
-                done = (rec.r || 0) + (rec.d || 0);
-                total = rec.t || 0;
+                done = doneR + doneD; total = rec.t || 0;
             }
-            pct = total > 0 ? Math.round(done / total * 100) : 0;
         }
 
-        const isPerfect = !isToday && rec && pct >= 100 && total > 0;
-        const hasData = isToday ? total > 0 : (!!rec && total > 0);
-
-        const itemClass = isToday ? 'qstats-dp-item today' : isPerfect ? 'qstats-dp-item perfect' : 'qstats-dp-item';
-        const scoreText = isFuture ? '-' : hasData ? `${done}/${total}` : '-';
-        const barPct = isFuture ? 0 : pct;
-
-        rowsHTML += `
-            <div class="${itemClass}">
-                <div class="qstats-dp-date">
-                    <span class="qstats-dp-daynum">${d}</span>
-                    <span class="qstats-dp-dayname">${(dayNames[lang] || dayNames.en)[dow]}</span>
-                </div>
-                <div class="qstats-dp-bar-wrap">
-                    <div class="qstats-dp-bar-fill" style="width:${barPct}%"></div>
-                </div>
-                <div class="qstats-dp-score">${scoreText}</div>
+        if (isFuture || (!rec && !isToday)) {
+            contentHTML = `<div class="qstats-quest-detail">
+                <div class="qstats-quest-detail-header">${dateLabel}</div>
+                <div style="font-size:0.65rem; color:var(--text-sub); padding:6px 0;">-</div>
             </div>`;
+        } else {
+            const pct = total > 0 ? Math.round(done / total * 100) : 0;
+            const isPerfect = total > 0 && pct >= 100;
+            const rl = regularLabel[lang] || regularLabel.en;
+            const dl = diyLabel[lang] || diyLabel.en;
+            const tl = totalLabel[lang] || totalLabel.en;
+
+            let rowsHTML = '';
+            if (!_qstatsDiyOnly) {
+                const rPct = totalR > 0 ? Math.round(doneR / totalR * 100) : 0;
+                rowsHTML += `<div class="qstats-quest-detail-row">
+                    <div class="qstats-quest-detail-label">${rl}</div>
+                    <div class="qstats-quest-detail-bar-wrap"><div class="qstats-quest-detail-bar-fill" style="width:${rPct}%"></div></div>
+                    <div class="qstats-quest-detail-score">${doneR}/${totalR}</div>
+                </div>`;
+            }
+            if (totalD > 0 || _qstatsDiyOnly) {
+                const dPct = totalD > 0 ? Math.round(doneD / totalD * 100) : 0;
+                rowsHTML += `<div class="qstats-quest-detail-row">
+                    <div class="qstats-quest-detail-label">${dl}</div>
+                    <div class="qstats-quest-detail-bar-wrap"><div class="qstats-quest-detail-bar-fill" style="width:${dPct}%; background:linear-gradient(90deg,rgba(255,200,0,0.6),rgba(255,200,0,1));"></div></div>
+                    <div class="qstats-quest-detail-score">${doneD}/${totalD}</div>
+                </div>`;
+            }
+            rowsHTML += `<div class="qstats-quest-detail-row qstats-quest-detail-total">
+                <div class="qstats-quest-detail-label">${tl}${isPerfect ? ' ⭐' : ''}</div>
+                <div class="qstats-quest-detail-bar-wrap"><div class="qstats-quest-detail-bar-fill" style="width:${pct}%"></div></div>
+                <div class="qstats-quest-detail-score">${done}/${total}</div>
+            </div>`;
+
+            contentHTML = `<div class="qstats-quest-detail">
+                <div class="qstats-quest-detail-header">${dateLabel}</div>
+                ${rowsHTML}
+            </div>`;
+        }
     }
 
     container.innerHTML = `
         <div class="qstats-dp-title">${labels[lang] || labels.en}</div>
-        <div class="qstats-dp-list">${rowsHTML}</div>
+        ${contentHTML}
     `;
 }
 
