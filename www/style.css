@@ -541,6 +541,21 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .qstats-dp-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, rgba(0,217,255,0.6), rgba(0,217,255,1)); transition: width 0.3s ease; }
 .qstats-dp-score { font-size: 0.6rem; color: var(--neon-gold); width: 38px; text-align: right; flex-shrink: 0; }
 
+/* Quest stats - DIY 퀘스트 드롭다운 필터 */
+.qstats-diy-dropdown-menu {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 200;
+    background: var(--card-bg, #1a1a2e); border: 1px solid var(--border-color);
+    border-radius: 6px; min-width: 150px; max-height: 200px; overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.qstats-diy-dd-item {
+    padding: 7px 12px; font-size: 0.78rem; color: var(--text-sub); cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.qstats-diy-dd-item:last-child { border-bottom: none; }
+.qstats-diy-dd-item:hover { background: rgba(0,217,255,0.08); color: var(--text-main); }
+.qstats-diy-dd-item.active { color: var(--neon-gold); font-weight: bold; background: rgba(255,200,0,0.05); }
+
 /* Quest stats - 퀘스트별 진척도 (날짜 선택 상세) */
 .qstats-quest-detail-prompt { font-size: 0.7rem; color: var(--text-sub); text-align: center; padding: 14px 0; }
 .qstats-quest-detail { padding: 10px 8px; border-radius: 6px; background: rgba(0,217,255,0.03); border: 1px solid rgba(0,217,255,0.15); margin-top: 4px; }

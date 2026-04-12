@@ -610,8 +610,13 @@
 
                 <!-- Statistics content -->
                 <div class="quest-tab-content" id="quest-tab-stats">
-                    <!-- DIY Only Filter -->
-                    <div style="display:flex; align-items:center; justify-content:flex-end; margin-bottom:8px;">
+                    <!-- DIY Only Filter + DIY Quest Dropdown -->
+                    <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:8px;">
+                        <!-- 특정 DIY 퀘스트 선택 드롭다운 -->
+                        <div id="qstats-diy-dropdown-wrap" style="position:relative; display:none;">
+                            <button id="qstats-diy-dropdown-btn" class="btn-info-sm" onclick="window.toggleQstatsDiyDropdown()" style="font-size:0.72rem; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">DIY ▾</button>
+                            <div id="qstats-diy-dropdown-menu" class="d-none qstats-diy-dropdown-menu"></div>
+                        </div>
                         <label class="qstats-diy-filter-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; color:var(--text-sub);">
                             <input type="checkbox" id="qstats-diy-filter" style="accent-color:var(--neon-blue); cursor:pointer;">
                             <span data-i18n="qstats_diy_only">DIY 퀘스트만</span>
