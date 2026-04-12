@@ -521,6 +521,22 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .qstats-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 8px; font-size: 0.5rem; color: var(--text-sub); }
 .qstats-legend-cell { width: 10px; height: 10px; border-radius: 2px; }
 
+/* Quest stats - monthly daily progress */
+.qstats-dp-title { font-size: 0.65rem; font-weight: bold; color: var(--neon-blue); margin-top: 14px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.qstats-dp-list { display: flex; flex-direction: column; gap: 3px; max-height: 220px; overflow-y: auto; padding-right: 2px; }
+.qstats-dp-list::-webkit-scrollbar { width: 3px; }
+.qstats-dp-list::-webkit-scrollbar-track { background: transparent; }
+.qstats-dp-list::-webkit-scrollbar-thumb { background: rgba(0,217,255,0.3); border-radius: 2px; }
+.qstats-dp-item { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 4px; background: rgba(255,255,255,0.02); border: 1px solid transparent; }
+.qstats-dp-item.today { background: rgba(0,217,255,0.08); border-color: rgba(0,217,255,0.3); }
+.qstats-dp-item.perfect { background: rgba(0,217,255,0.05); }
+.qstats-dp-date { display: flex; flex-direction: column; align-items: center; width: 24px; flex-shrink: 0; }
+.qstats-dp-daynum { font-size: 0.78rem; font-weight: bold; color: var(--text-main); line-height: 1; }
+.qstats-dp-dayname { font-size: 0.5rem; color: var(--text-sub); margin-top: 1px; }
+.qstats-dp-bar-wrap { flex: 1; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.qstats-dp-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, rgba(0,217,255,0.6), rgba(0,217,255,1)); transition: width 0.3s ease; }
+.qstats-dp-score { font-size: 0.6rem; color: var(--neon-gold); width: 38px; text-align: right; flex-shrink: 0; }
+
 /* 플래너 통합 태스크 목록 */
 .planner-section-title { font-size: 0.65rem; font-weight: bold; color: var(--neon-blue); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
 .planner-unified-box { margin-bottom: 10px; }

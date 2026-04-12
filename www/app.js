@@ -3572,6 +3572,7 @@ function renderQuestStats() {
     const m = _qstatsMonth.getMonth();
     renderMonthlySummary(y, m, history);
     renderMonthlyHeatmap(y, m, history);
+    renderMonthlyDailyProgress(y, m, history);
     renderAnnualChart(_qstatsYear, history);
 
     const lang = AppState.currentLang;
@@ -3675,6 +3676,73 @@ function renderMonthlyHeatmap(year, month, history) {
     </div>`;
 
     container.innerHTML = headerHTML + gridHTML + legendHTML;
+}
+
+function renderMonthlyDailyProgress(year, month, history) {
+    const container = document.getElementById('qstats-daily-progress');
+    if (!container) return;
+    const lang = AppState.currentLang;
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["S","M","T","W","T","F","S"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+    const labels = {
+        ko: '일자별 진척도',
+        en: 'Daily Progress',
+        ja: '日別進捗'
+    };
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr = (() => {
+        const t = new Date();
+        return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    })();
+
+    let rowsHTML = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const rec = history[key];
+        const dow = new Date(year, month, d).getDay();
+        const isToday = (key === todayStr);
+        const isFuture = (key > todayStr);
+
+        let done = 0, total = 0, pct = 0;
+        if (rec) {
+            if (_qstatsDiyOnly) {
+                done = rec.d || 0;
+                total = rec.dt != null ? rec.dt : (rec.t - 12);
+            } else {
+                done = (rec.r || 0) + (rec.d || 0);
+                total = rec.t || 0;
+            }
+            pct = total > 0 ? Math.round(done / total * 100) : 0;
+        }
+
+        const isPerfect = rec && pct >= 100 && total > 0;
+        const hasData = !!rec && total > 0;
+
+        const itemClass = isToday ? 'qstats-dp-item today' : isPerfect ? 'qstats-dp-item perfect' : 'qstats-dp-item';
+        const scoreText = isFuture ? '-' : hasData ? `${done}/${total}` : '-';
+        const barPct = isFuture ? 0 : pct;
+
+        rowsHTML += `
+            <div class="${itemClass}">
+                <div class="qstats-dp-date">
+                    <span class="qstats-dp-daynum">${d}</span>
+                    <span class="qstats-dp-dayname">${(dayNames[lang] || dayNames.en)[dow]}</span>
+                </div>
+                <div class="qstats-dp-bar-wrap">
+                    <div class="qstats-dp-bar-fill" style="width:${barPct}%"></div>
+                </div>
+                <div class="qstats-dp-score">${scoreText}</div>
+            </div>`;
+    }
+
+    container.innerHTML = `
+        <div class="qstats-dp-title">${labels[lang] || labels.en}</div>
+        <div class="qstats-dp-list">${rowsHTML}</div>
+    `;
 }
 
 function renderAnnualChart(year, history) {
