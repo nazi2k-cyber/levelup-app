@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.309] - 2026-04-12
+
+### 변경
+- feat: 퀘스트 주간/월간 통합 - 주간 진척도 통계탭 이동 및 주간/월간 전환 기능 추가
+
 ## [1.0.308] - 2026-04-12
 
 ### 변경
