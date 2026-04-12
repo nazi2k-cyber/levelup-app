@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.307] - 2026-04-12
+
+### 변경
+- fix: 월간 일자별 진척도 오늘 날짜 데이터 불일치 수정
+
 ## [1.0.306] - 2026-04-12
 
 ### 변경
