@@ -4807,7 +4807,6 @@ function openProfileStatsModal(userId) {
                 <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
                     <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
                     ${followBtnHTML}
-                    <button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
                     ${saveBtnHTML}
                 </div>
                 <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
@@ -4849,75 +4848,6 @@ async function toggleProfileModalFollow(userId) {
     openProfileStatsModal(userId);
 }
 window.toggleProfileModalFollow = toggleProfileModalFollow;
-
-// --- 프로필 모달에서 당일 플래너 열람 ---
-async function viewUserTodayPlanner(userId) {
-    const lang = AppState.currentLang;
-    const isMe = userId === auth.currentUser?.uid;
-    let blocks = null;
-    let tasks = null;
-
-    if (isMe) {
-        // 현재 유저: localStorage에서 오늘 플래너 가져오기
-        const todayStr = getTodayStr();
-        const entry = getDiaryEntry(todayStr);
-        if (entry && entry.blocks && Object.keys(entry.blocks).length > 0) {
-            blocks = entry.blocks;
-            tasks = entry.tasks || [];
-        }
-    } else {
-        // 다른 유저: 오늘 날짜의 릴스 포스트에서 가져오기
-        const todayKST = getTodayKST();
-        if (Array.isArray(window._reelsCachedPosts)) {
-            const post = window._reelsCachedPosts.find(p => p.uid === userId && p.dateKST === todayKST);
-            if (post && post.blocks && Object.keys(post.blocks).length > 0) {
-                blocks = post.blocks;
-                tasks = post.tasks || [];
-            }
-        }
-    }
-
-    if (!blocks) {
-        // 당일 플랜 없음 안내 팝업
-        const noPlanner = i18n[lang]?.profile_no_today_plan || '당일 플랜이 없습니다.';
-        const m = document.getElementById('infoModal');
-        document.getElementById('info-modal-title').textContent = i18n[lang]?.profile_view_planner || '당일 플래너';
-        document.getElementById('info-modal-body').innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-sub); font-size:0.9rem;">${noPlanner}</div>`;
-        m.classList.remove('d-none');
-        m.classList.add('d-flex');
-        return;
-    }
-
-    // ★ 보상형 광고: 최초 및 매 10회 열람 시
-    let viewCount = parseInt(localStorage.getItem('planner_view_count') || '0', 10);
-    viewCount++;
-    localStorage.setItem('planner_view_count', String(viewCount));
-    const shouldShowAd = (viewCount === 1) || (viewCount % 10 === 0);
-    if (shouldShowAd && typeof isNativePlatform !== 'undefined' && isNativePlatform && window.AdManager) {
-        try { await window.AdManager.showPlannerRewardedAd(lang); } catch (e) { console.warn('[PlannerAd] Ad failed:', e); }
-    }
-
-    // 시간표 렌더링
-    const mergedBlocks = window.mergeConsecutiveBlocks ? window.mergeConsecutiveBlocks(blocks) : [];
-    const scheduleLabel = i18n[lang]?.planner_tab_schedule || '시간표';
-    let scheduleHTML = mergedBlocks.map(({time, task}) =>
-        `<div style="display:flex; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
-            <span style="color:var(--neon-blue); font-size:0.8rem; white-space:nowrap; min-width:100px;">${time}</span>
-            <span style="color:var(--text-main); font-size:0.8rem;">${sanitizeText(task)}</span>
-        </div>`
-    ).join('');
-
-    const m = document.getElementById('infoModal');
-    document.getElementById('info-modal-title').textContent = i18n[lang]?.profile_view_planner || '당일 플래너';
-    document.getElementById('info-modal-body').innerHTML = `
-        <div style="padding:8px 0;">
-            <div style="font-size:0.85rem; font-weight:bold; color:var(--neon-blue); margin-bottom:8px;">📋 ${scheduleLabel}</div>
-            ${scheduleHTML}
-        </div>`;
-    m.classList.remove('d-none');
-    m.classList.add('d-flex');
-}
-window.viewUserTodayPlanner = viewUserTodayPlanner;
 
 // --- 프로필카드 이미지 저장 (보상형 광고 연동) ---
 window.saveProfileCardAsImage = async function(userId) {
@@ -6411,14 +6341,6 @@ function registerBackButtonHandler() {
                 }
                 return;
             }
-        }
-
-        // 2-a) 알림 모달이 열려있으면 닫기
-        const notiModal = document.getElementById('notification-modal');
-        if (notiModal && !notiModal.classList.contains('d-none')) {
-            if (window.NotificationModule) window.NotificationModule.closeModal();
-            else notiModal.classList.add('d-none');
-            return;
         }
 
         // 2) 카드 에디터가 열려있으면 닫기

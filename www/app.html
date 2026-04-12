@@ -313,24 +313,6 @@
                     </div>
                 </div>
 
-                <div class="system-card status-reorderable" data-card-id="step-count" id="step-count-card" style="display:none; margin-bottom: 10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="font-size:1.2rem;">🚶</span>
-                            <span style="font-size:0.85rem; color:var(--text-sub);" data-i18n="step_title">오늘의 걸음수</span>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:1.3rem; font-weight:900; color:var(--neon-blue);"><span id="step-count-value">0</span><span style="font-size:0.7rem; color:var(--text-sub);" data-i18n="step_unit"> 보</span></div>
-                            <div id="step-count-info" style="font-size:0.65rem; color:var(--neon-gold);"></div>
-                        </div>
-                    </div>
-                    <div id="step-req-panel" style="display:none; margin-top:10px; padding:10px; background:rgba(0,217,255,0.05); border:1px solid var(--border-color); border-radius:6px;">
-                        <div id="step-req-title" style="font-size:0.75rem; font-weight:bold; color:var(--neon-gold); margin-bottom:6px;"></div>
-                        <ul id="step-req-list" style="margin:0; padding-left:18px; list-style:none; font-size:0.7rem; color:var(--text-sub); line-height:1.7;">
-                        </ul>
-                    </div>
-                </div>
-
                 <div class="system-card status-reorderable" data-card-id="stat-radar" style="margin-bottom: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
                         <h2 data-i18n="radar_title" style="margin:0;">STAT RADAR</h2>
@@ -748,160 +730,23 @@
                 <div class="user-list" id="user-list-container"></div>
             </section>
 
+
             <section id="diary" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <h2 data-i18n="diary_tab_title" style="margin:0;">🗓️ 플래너</h2>
-                        <button class="btn-info-sm" id="btn-planner-info">ℹ️ <span data-i18n="btn_planner_info">가이드</span></button>
-                    </div>
-                    <span id="planner-week-label" style="font-size:0.7rem; color:var(--neon-gold);"></span>
-                </div>
-
-                <!-- 타임박스 플래너 (일론 머스크 스타일) -->
-                <div class="system-card" id="planner-write-card">
-                    <!-- 날짜 + 무드 헤더 -->
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <div id="planner-selected-date" style="font-size:0.9rem; font-weight:bold; color:var(--neon-gold);"></div>
-                        <div id="planner-mood-selector" style="display:flex; gap:6px;">
-                            <button class="diary-mood-btn" data-mood="great" data-i18n-title="mood_great" title="최고">😄</button>
-                            <button class="diary-mood-btn" data-mood="good" data-i18n-title="mood_good" title="좋음">🙂</button>
-                            <button class="diary-mood-btn" data-mood="neutral" data-i18n-title="mood_neutral" title="보통">😐</button>
-                            <button class="diary-mood-btn" data-mood="bad" data-i18n-title="mood_bad" title="나쁨">😞</button>
-                            <button class="diary-mood-btn" data-mood="terrible" data-i18n-title="mood_terrible" title="최악">😫</button>
-                        </div>
-                    </div>
-
-                    <!-- 주간 플래너 캘린더 (탭 바로 위) -->
-                    <div class="calendar-wrapper" id="weekly-calendar-card" style="margin-bottom:12px;">
-                        <div class="cal-header" style="display:flex; justify-content:space-between; align-items:center;">
-                            <button class="planner-week-nav-btn" onclick="window.changePlannerWeek(-1)">◀</button>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span data-i18n="planner_weekly">주간 플래너</span>
-                                <span style="font-size:0.75rem; color:var(--text-sub);" id="planner-cal-month"></span>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:4px;">
-                                <button class="planner-week-nav-btn" onclick="window.changePlannerWeek(1)">▶</button>
-                                <button class="planner-monthly-btn" id="btn-monthly-calendar" onclick="window.openMonthlyCalendar()">
-                                    📅 <span data-i18n="planner_monthly">월간</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="cal-grid" id="planner-calendar-grid"></div>
-                    </div>
-
-                    <!-- 월간 플래너 캘린더 (기본 숨김, 주간과 같은 위치) -->
-                    <div class="calendar-wrapper d-none" id="monthly-calendar-card" style="margin-bottom:12px;">
-                        <div class="cal-header" style="display:flex; justify-content:space-between; align-items:center;">
-                            <button class="planner-week-nav-btn" onclick="window.changeMonthlyCalendar(-1)">◀</button>
-                            <span id="monthly-cal-title" style="font-weight:bold;"></span>
-                            <div style="display:flex; align-items:center; gap:4px;">
-                                <button class="planner-week-nav-btn" onclick="window.changeMonthlyCalendar(1)">▶</button>
-                                <button class="planner-monthly-btn" onclick="window.closeMonthlyCalendar()">
-                                    📋 <span data-i18n="planner_weekly_short">주간</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div id="monthly-calendar-grid" class="monthly-calendar-grid"></div>
-                    </div>
-
-                    <!-- 플래너 탭 버튼 -->
-                    <div class="planner-tab-bar">
-                        <button class="planner-tab-btn active" data-planner-tab="priority" data-i18n="planner_tab_priority">⭐ 우선순위 태스크</button>
-                        <button class="planner-tab-btn" data-planner-tab="schedule" data-i18n="planner_tab_schedule">🕐 시간표</button>
-                    </div>
-
-                    <!-- 우선순위 태스크 탭 -->
-                    <div class="planner-tab-content active" id="planner-tab-priority">
-                        <div class="planner-unified-box">
-                            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:6px;">
-                                <button class="btn-add-task" id="btn-add-task" data-i18n="planner_add_btn">+ 추가</button>
-                            </div>
-                            <div id="planner-tasks-list"></div>
-                        </div>
-                    </div>
-
-                    <!-- 시간표 탭 -->
-                    <div class="planner-tab-content" id="planner-tab-schedule">
-                        <!-- 타임박스 그리드 헤더 -->
-                        <div class="timebox-grid-header">
-                            <span class="timebox-hour-col"></span>
-                            <span class="timebox-col-header">:00</span>
-                            <span class="timebox-col-header">:30</span>
-                        </div>
-
-                        <!-- 타임박스 그리드 -->
-                        <div id="planner-timebox-grid" class="planner-timebox-grid"></div>
-
-                        <!-- 전일 시간표 복사 체크박스 + 오늘 적용 버튼 -->
-                        <div style="display:flex; justify-content:flex-start; align-items:center; margin:10px 0 6px 0; gap:10px;">
-                            <label class="copy-prev-plan-label" id="copy-prev-schedule-label">
-                                <input type="checkbox" id="chk-copy-prev-schedule" onchange="window.copyPrevDaySchedule(this.checked)">
-                                <span data-i18n="copy_prev_schedule">전일 시간표 복사</span>
-                            </label>
-                            <button class="btn-apply-today" id="btn-apply-today" onclick="window.openApplyTodayModal()" data-i18n="apply_today_btn">오늘 적용</button>
-                        </div>
-
-                        <!-- 사진 캡션 텍스트 -->
-                        <div class="planner-caption-box">
-                            <textarea id="planner-caption" class="planner-caption-input" maxlength="280"
-                                      placeholder="오늘의 한마디를 남겨보세요..." data-i18n-placeholder="planner_caption_placeholder"
-                                      oninput="window.updateCaptionCounter()"></textarea>
-                            <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
-                        </div>
-
-                        <!-- 위치 태그 -->
-                        <div class="planner-location-box" id="planner-location-box">
-                            <button type="button" class="planner-location-btn" id="btn-location-tag" onclick="window.openLocationModal()">
-                                <span>📍</span> <span data-i18n="location_add">위치 추가</span>
-                            </button>
-                            <div class="planner-location-result d-none" id="planner-location-result">
-                                <span class="planner-location-name" id="planner-location-name"></span>
-                                <button type="button" class="planner-location-remove" id="btn-location-remove" onclick="window.removeSelectedLocation()">✕</button>
-                            </div>
-                        </div>
-
-                        <!-- 사진 첨부 -->
-                        <div class="planner-photo-box" id="planner-photo-box">
-                            <label class="planner-photo-label" id="planner-photo-label">
-                                <div class="planner-photo-placeholder" id="planner-photo-placeholder">
-                                    <span style="font-size:1.5rem;">📷</span>
-                                    <span style="font-size:0.7rem; color:var(--text-sub);" data-i18n="planner_photo_required">사진 추가</span>
-                                </div>
-                                <img id="planner-photo-preview" class="planner-photo-preview d-none" alt="Timetable Photo">
-                            </label>
-                            <input type="file" id="plannerPhotoUpload" accept="image/*" class="d-none">
-                            <button class="planner-photo-remove d-none" id="planner-photo-remove" onclick="window.removePlannerPhoto()">✕</button>
-                            <div style="font-size:0.6rem; color:var(--accent-warning, #ff6b6b); margin-top:4px; text-align:center;" data-i18n="planner_photo_warning">⚠️ 로그아웃 시 사진이 삭제됩니다. 중요한 사진은 미리 저장하세요.</div>
-                        </div>
-
-                        <!-- 저장 버튼 + Day1 포스팅 버튼 (시간표 탭 전용) -->
-                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px;">
-                            <div style="display:flex; gap:8px; align-items:center;">
-                                <button class="btn-primary" id="btn-planner-save" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
-                                <button class="btn-primary" id="btn-reels-post" style="width:auto; padding:8px 20px; background:var(--neon-gold); color:#000;" data-i18n="reels_post_btn">Day1 포스팅</button>
-                                <button class="btn-planner-share" id="btn-planner-share" title="공유">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div style="font-size:0.65rem; color:var(--neon-gold); margin-top:4px; text-align:right;" id="reels-reset-timer"></div>
-                    </div>
-
-                    <!-- 우선순위 탭 저장 버튼 -->
-                    <div id="priority-save-area" style="display:block;">
-                        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px; gap:12px;">
-                            <label class="copy-prev-plan-label" id="copy-prev-tasks-label">
-                                <input type="checkbox" id="chk-copy-prev-tasks" onchange="window.copyPrevDayTasks(this.checked)">
-                                <span data-i18n="copy_prev_plan">전일 플랜 복사</span>
-                            </label>
-                            <button class="btn-primary" id="btn-planner-save-priority" style="width:auto; padding:8px 20px;" data-i18n="diary_save">저장</button>
-                        </div>
                     </div>
                 </div>
+
+                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:10px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="btn-primary" id="btn-reels-post" style="width:auto; padding:8px 20px; background:var(--neon-gold); color:#000;" data-i18n="reels_post_btn">Day1 포스팅</button>
+                    </div>
+                </div>
+                <div style="font-size:0.65rem; color:var(--neon-gold); margin-top:4px; text-align:right;" id="reels-reset-timer"></div>
 
             </section>
+
 
             <section id="reels" class="view-section">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -946,16 +791,6 @@
                 </div>
                 <div class="system-card">
                     <div class="setting-row">
-                        <span data-i18n="set_push">푸시 알림 수신</span>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button class="btn-info-sm" id="btn-settings-push-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
-                            <label class="switch"><input type="checkbox" id="push-toggle"><span class="slider"></span></label>
-                        </div>
-                    </div>
-                    <div class="setting-row" id="push-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
-                </div>
-                <div class="system-card">
-                    <div class="setting-row">
                         <span data-i18n="set_gps">앱 실행 시 현위치 탐색</span>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <button class="btn-info-sm" id="btn-settings-gps-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
@@ -963,15 +798,6 @@
                         </div>
                     </div>
                     <div class="setting-row" id="gps-status" style="font-size:0.7rem; color:var(--text-sub); display:none; justify-content:flex-end; padding-top:0;"></div>
-
-                    <div class="setting-row">
-                        <span data-i18n="set_sync">구글 피트니스 앱 동기화</span>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <button class="btn-info-sm" id="btn-settings-fitness-guide" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
-                            <label class="switch"><input type="checkbox" id="sync-toggle"><span class="slider"></span></label>
-                        </div>
-                    </div>
-                    <div class="setting-row" id="sync-status" style="font-size:0.7rem; color:var(--neon-blue); display:none; justify-content:flex-end; padding-top:0; text-align:right;"></div>
 
                     <div class="setting-row">
                         <span data-i18n="set_camera">카메라</span>
@@ -1067,11 +893,6 @@
         <button id="btn-edit-status-cards" class="hamburger-menu-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
             <span data-i18n="home_editor_title">홈 화면 편집</span>
-        </button>
-        <button id="btn-open-notification" class="hamburger-menu-item">
-            <span style="font-size:1rem;">🔔</span>
-            <span data-i18n="card_notification">알림</span>
-            <span id="noti-unread-badge" class="noti-hamburger-badge" style="display:none;"></span>
         </button>
         <button id="btn-goto-settings" class="hamburger-menu-item">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/></svg>
@@ -1832,20 +1653,6 @@
         <div id="editor-card-list" class="editor-card-list"></div>
     </div>
 
-    <!-- Notification Modal (알림/공지사항) -->
-    <div id="notification-modal" class="notification-modal d-none">
-        <div class="notification-modal-header">
-            <button id="btn-noti-back" class="editor-nav-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
-            </button>
-            <h2 class="editor-title" data-i18n="card_notification">알림</h2>
-            <button id="btn-noti-clear" class="editor-nav-btn" style="font-size:0.7rem; width:auto; padding:0 8px;" data-i18n="noti_clear_history">이력 지우기</button>
-        </div>
-        <div class="notification-modal-body">
-            <div id="noti-announcements-area"></div>
-            <div id="noti-history-area"></div>
-        </div>
-    </div>
 
     <!-- Card Selection Modal (추가할 카드 선택) -->
     <div id="card-select-modal" class="card-select-overlay d-none">
@@ -1973,63 +1780,8 @@
         </div>
     </div>
 
-    <!-- 플래너 공유 모달 -->
-    <div class="modal-overlay d-none" id="shareModal" onclick="if(event.target===this){document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');}">
-        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px; text-align:center;">
-            <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 8px;">
-                <span id="share-modal-title" style="font-weight:bold; color:var(--neon-blue);" data-i18n="share_modal_title">플래너 공유</span>
-                <button class="modal-close" onclick="document.getElementById('shareModal').classList.add('d-none');document.getElementById('shareModal').classList.remove('d-flex');">×</button>
-            </div>
-            <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
-                <button class="btn-share-option" id="btn-share-save-image" onclick="window.sharePlannerAsImage()">
-                    <span class="share-option-icon">📥</span>
-                    <div class="share-option-text">
-                        <span class="share-option-label" data-i18n="share_save_local">이미지 로컬 저장</span>
-                        <span class="share-option-desc" data-i18n="share_save_local_desc">플래너를 이미지로 저장합니다</span>
-                    </div>
-                </button>
-                <button class="btn-share-option" id="btn-share-link" onclick="window.sharePlannerLink()">
-                    <span class="share-option-icon">🔗</span>
-                    <div class="share-option-text">
-                        <span class="share-option-label" data-i18n="share_link">링크 공유</span>
-                        <span class="share-option-desc" data-i18n="share_link_desc">플래너 요약을 클립보드에 복사합니다</span>
-                    </div>
-                </button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 오늘 적용 확인 모달 -->
-    <div class="modal-overlay d-none" id="applyTodayModal" onclick="if(event.target===this){window.closeApplyTodayModal();}">
-        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px;">
-            <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 8px;">
-                <span id="apply-today-modal-title" style="font-weight:bold; color:var(--neon-gold);" data-i18n="apply_today_confirm_title">⚠️ 플래너 덮어쓰기 경고</span>
-                <button class="modal-close" onclick="window.closeApplyTodayModal()">×</button>
-            </div>
-            <div class="modal-body" id="apply-today-modal-body" style="color:var(--text); font-size:0.9rem; line-height:1.6;">
-            </div>
-            <div style="display:flex; gap:10px; margin-top:16px;">
-                <button class="btn-share-option" id="btn-apply-today-cancel" style="flex:1;" onclick="window.closeApplyTodayModal()" data-i18n="apply_today_cancel_btn">취소</button>
-                <button class="btn-share-option" id="btn-apply-today-confirm" style="flex:1; background:var(--neon-blue); color:#fff;" onclick="window.confirmApplyToday()" data-i18n="apply_today_confirm_btn">적용하기</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- 플래너 복사 확인 모달 -->
-    <div class="modal-overlay d-none" id="copyPlannerModal" onclick="if(event.target===this){closeCopyPlannerModal();}">
-        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 20px;">
-            <div class="modal-header" style="margin-bottom: 12px; padding-bottom: 8px;">
-                <span id="copy-planner-modal-title" style="font-weight:bold; color:var(--neon-gold);" data-i18n="reels_copy_confirm_title">⚠️ 플래너 덮어쓰기 경고</span>
-                <button class="modal-close" onclick="closeCopyPlannerModal()">×</button>
-            </div>
-            <div class="modal-body" id="copy-planner-modal-body" style="color:var(--text); font-size:0.9rem; line-height:1.6;">
-            </div>
-            <div style="display:flex; gap:10px; margin-top:16px;">
-                <button class="btn-share-option" id="btn-copy-planner-cancel" style="flex:1;" onclick="closeCopyPlannerModal()" data-i18n="reels_copy_cancel_btn">취소</button>
-                <button class="btn-share-option" id="btn-copy-planner-confirm" style="flex:1; background:var(--neon-blue); color:#fff;" onclick="confirmCopyPlanner()" data-i18n="reels_copy_confirm_btn">복사하기</button>
-            </div>
-        </div>
-    </div>
 
     <script src="logger.js"></script>
     <!-- 위치 검색 모달 -->

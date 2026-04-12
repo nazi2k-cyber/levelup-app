@@ -37,8 +37,7 @@
     }
 
     // --- ★ Day1 포스트 → 내 플래너 복사 기능 ★ ---
-let _pendingCopyPost = null;
-let _reelsCachedPosts = []; // 렌더링된 포스트 캐시 (복사 기능용)
+let _reelsCachedPosts = []; // 렌더링된 포스트 캐시
 let _reelsSearchQuery = ''; // Day1 검색어
 let _reelsSortMode = 'latest'; // 'latest' | 'friends' | 'likes'
 
@@ -83,91 +82,6 @@ function filterReelsFeed(query) {
             </div>`;
         }
     }
-};
-
-function openCopyPlannerModal(postId) {
-    const lang = AppState.currentLang;
-    // 캐시된 포스트에서 해당 postId 찾기
-    const post = _reelsCachedPosts.find(p => `${p.uid}_${p.timestamp}` === postId);
-    if (!post) return;
-
-    // blocks 데이터 유효성 체크
-    if (!post.blocks || Object.keys(post.blocks).length === 0) {
-        alert(i18n[lang]?.reels_copy_no_data || '복사할 시간표 데이터가 없습니다.');
-        return;
-    }
-
-    _pendingCopyPost = post;
-
-    // 모달 타이틀 & 본문 렌더링
-    const titleEl = document.getElementById('copy-planner-modal-title');
-    const bodyEl = document.getElementById('copy-planner-modal-body');
-    const confirmBtn = document.getElementById('btn-copy-planner-confirm');
-    const cancelBtn = document.getElementById('btn-copy-planner-cancel');
-
-    if (titleEl) titleEl.textContent = i18n[lang]?.reels_copy_confirm_title || '⚠️ 플래너 덮어쓰기 경고';
-    if (confirmBtn) confirmBtn.textContent = i18n[lang]?.reels_copy_confirm_btn || '복사하기';
-    if (cancelBtn) cancelBtn.textContent = i18n[lang]?.reels_copy_cancel_btn || '취소';
-
-    const msgTemplate = i18n[lang]?.reels_copy_confirm_msg || '현재 플래너의 우선순위 태스크와 시간표가 <b>{name}</b>님의 데이터로 덮어쓰기됩니다.<br><br>※ 우선순위 태스크는 시간표에 기록된 순서대로 자동 입력됩니다.';
-    if (bodyEl) bodyEl.innerHTML = msgTemplate.replace('{name}', sanitizeText(post.userName || '헌터'));
-
-    // 모달 열기
-    const modal = document.getElementById('copyPlannerModal');
-    if (modal) { modal.classList.remove('d-none'); modal.classList.add('d-flex'); }
-};
-
-function closeCopyPlannerModal() {
-    _pendingCopyPost = null;
-    const modal = document.getElementById('copyPlannerModal');
-    if (modal) { modal.classList.add('d-none'); modal.classList.remove('d-flex'); }
-};
-
-function confirmCopyPlanner() {
-    if (!_pendingCopyPost) return;
-    const lang = AppState.currentLang;
-    const post = _pendingCopyPost;
-
-    // 1. blocks 객체에서 고유 태스크를 시간순으로 추출
-    const blockEntries = Object.entries(post.blocks).sort(([a], [b]) => a.localeCompare(b));
-    const uniqueTasks = [];
-    const seen = new Set();
-    blockEntries.forEach(([time, task]) => {
-        if (task && !seen.has(task)) {
-            seen.add(task);
-            uniqueTasks.push(task);
-        }
-    });
-
-    // 2. plannerTasks 생성 (시간표 순서 = 우선순위 순서)
-    const newTasks = uniqueTasks.map((text, i) => ({ text, ranked: true, rankOrder: i + 1 }));
-    while (newTasks.length < 6) newTasks.push({ text: '', ranked: false, rankOrder: 0 });
-
-    // 3. localStorage diary_entries에 먼저 저장 (switchTab → loadPlannerForDate에서 읽힘)
-    const dateStr = window.diarySelectedDate;
-    let diaries;
-    try { diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}'); } catch(e) { diaries = {}; }
-
-    const existingEntry = diaries[dateStr] || {};
-    diaries[dateStr] = {
-        ...existingEntry,
-        blocks: post.blocks,
-        tasks: newTasks,
-        priorities: newTasks.filter(t => t.ranked && t.text).sort((a, b) => a.rankOrder - b.rankOrder).map(t => t.text),
-        brainDump: existingEntry.brainDump || '',
-        text: Object.entries(post.blocks).map(([t, v]) => `[${t}] ${v}`).join(' | ').substring(0, 500),
-        timestamp: Date.now()
-    };
-    localStorage.setItem('diary_entries', JSON.stringify(diaries));
-
-    // 4. 모달 닫기
-    closeCopyPlannerModal();
-
-    // 5. diary 탭으로 전환 (loadPlannerForDate가 localStorage에서 저장된 데이터를 읽어 렌더링)
-    window.switchTab('diary', document.querySelector('.nav-item[data-tab="diary"]'));
-
-    // 6. 성공 알림
-    alert(i18n[lang]?.reels_copy_success || '플래너에 복사되었습니다. 플래너 탭에서 확인하세요.');
 };
 
     // --- ★ 릴스 기능 ★ ---
@@ -690,7 +604,6 @@ function renderReelsCards(posts, lang) {
 
     const heartOutline = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
     const commentIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
-    const copyIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
     const reportIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`;
 
     // 팔로워 카운트 맵 사전 계산 (Day1)
@@ -764,7 +677,6 @@ function renderReelsCards(posts, lang) {
             <div class="reels-actions">
                 <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count"></span>
                 <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button><span class="reels-comment-count"></span>
-                ${!isMe ? `<button class="reels-copy-btn" onclick="window.openCopyPlannerModal('${postId}')" title="${i18n[lang].reels_copy_planner || '플래너 복사'}">${copyIcon}</button>` : ''}
                 ${!isMe ? `<button class="reels-report-btn" onclick="toggleReportPost('${postId}')" title="${i18n[lang].reels_report || '신고'}">${reportIcon}<span class="reels-report-label">${i18n[lang].reels_report || '신고'}</span></button>` : ''}
             </div>
             <div class="reels-report-warning" data-report-warning="${postId}" style="display:none;">
@@ -1319,9 +1231,6 @@ function toggleScheduleFold(postId) {
 
     // --- Public API (window.* 노출) ---
     window.filterReelsFeed = filterReelsFeed;
-    window.openCopyPlannerModal = openCopyPlannerModal;
-    window.closeCopyPlannerModal = closeCopyPlannerModal;
-    window.confirmCopyPlanner = confirmCopyPlanner;
     window.renderReelsFeed = renderReelsFeed;
     window.updateReelsResetTimer = updateReelsResetTimer;
     window.postToReels = postToReels;
