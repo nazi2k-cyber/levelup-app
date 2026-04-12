@@ -499,10 +499,14 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .qstats-heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .qstats-heatmap-cell {
     aspect-ratio: 1; border-radius: 3px; position: relative;
-    font-size: 0.55rem; display: flex; align-items: center; justify-content: center;
-    color: var(--text-sub);
+    font-size: 0.55rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--text-sub); cursor: pointer; gap: 1px; transition: opacity 0.1s;
 }
-.qstats-heatmap-cell.empty { background: transparent; }
+.qstats-heatmap-cell:not(.empty):hover { opacity: 0.8; }
+.qstats-heatmap-cell.selected { outline: 2px solid rgba(0,217,255,0.9); outline-offset: -2px; }
+.qstats-heatmap-cell .cell-day { font-size: 0.58rem; font-weight: bold; line-height: 1.1; }
+.qstats-heatmap-cell .cell-ratio { font-size: 0.38rem; line-height: 1; color: var(--neon-gold); }
+.qstats-heatmap-cell.empty { background: transparent; cursor: default; }
 .qstats-heatmap-cell.level-0 { background: rgba(255,255,255,0.05); }
 .qstats-heatmap-cell.level-1 { background: rgba(0,217,255,0.15); }
 .qstats-heatmap-cell.level-2 { background: rgba(0,217,255,0.3); }
@@ -536,6 +540,18 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .qstats-dp-bar-wrap { flex: 1; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
 .qstats-dp-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, rgba(0,217,255,0.6), rgba(0,217,255,1)); transition: width 0.3s ease; }
 .qstats-dp-score { font-size: 0.6rem; color: var(--neon-gold); width: 38px; text-align: right; flex-shrink: 0; }
+
+/* Quest stats - 퀘스트별 진척도 (날짜 선택 상세) */
+.qstats-quest-detail-prompt { font-size: 0.7rem; color: var(--text-sub); text-align: center; padding: 14px 0; }
+.qstats-quest-detail { padding: 10px 8px; border-radius: 6px; background: rgba(0,217,255,0.03); border: 1px solid rgba(0,217,255,0.15); margin-top: 4px; }
+.qstats-quest-detail-header { font-size: 0.72rem; font-weight: bold; color: var(--neon-cyan); margin-bottom: 8px; }
+.qstats-quest-detail-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.qstats-quest-detail-row:last-child { margin-bottom: 0; }
+.qstats-quest-detail-total { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.07); }
+.qstats-quest-detail-label { font-size: 0.62rem; color: var(--text-sub); width: 82px; flex-shrink: 0; }
+.qstats-quest-detail-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.qstats-quest-detail-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, rgba(0,217,255,0.6), rgba(0,217,255,1)); transition: width 0.3s ease; }
+.qstats-quest-detail-score { font-size: 0.62rem; color: var(--neon-gold); width: 34px; text-align: right; flex-shrink: 0; }
 
 /* 플래너 통합 태스크 목록 */
 .planner-section-title { font-size: 0.65rem; font-weight: bold; color: var(--neon-blue); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
