@@ -3708,7 +3708,20 @@ function renderMonthlyDailyProgress(year, month, history) {
         const isFuture = (key > todayStr);
 
         let done = 0, total = 0, pct = 0;
-        if (rec) {
+        if (isToday) {
+            // 오늘은 주간 진척도와 동일하게 라이브 데이터 사용
+            const diyCount = AppState.diyQuests.definitions.length;
+            const regularDone = (AppState.quest.completedState[AppState.quest.currentDayOfWeek] || []).filter(v => v).length;
+            const diyDone = Object.values(AppState.diyQuests.completedToday || {}).filter(v => v).length;
+            if (_qstatsDiyOnly) {
+                done = diyDone;
+                total = diyCount;
+            } else {
+                done = regularDone + diyDone;
+                total = 12 + diyCount;
+            }
+            pct = total > 0 ? Math.round(done / total * 100) : 0;
+        } else if (!isFuture && rec) {
             if (_qstatsDiyOnly) {
                 done = rec.d || 0;
                 total = rec.dt != null ? rec.dt : (rec.t - 12);
@@ -3719,8 +3732,8 @@ function renderMonthlyDailyProgress(year, month, history) {
             pct = total > 0 ? Math.round(done / total * 100) : 0;
         }
 
-        const isPerfect = rec && pct >= 100 && total > 0;
-        const hasData = !!rec && total > 0;
+        const isPerfect = !isToday && rec && pct >= 100 && total > 0;
+        const hasData = isToday ? total > 0 : (!!rec && total > 0);
 
         const itemClass = isToday ? 'qstats-dp-item today' : isPerfect ? 'qstats-dp-item perfect' : 'qstats-dp-item';
         const scoreText = isFuture ? '-' : hasData ? `${done}/${total}` : '-';
