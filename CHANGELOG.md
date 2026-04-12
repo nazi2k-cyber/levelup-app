@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.304] - 2026-04-12
+
+### 변경
+- ci: remove deleted plugin references from workflow files (GoogleFit, HealthConnect, FCM)
+- Step 2 청크 A: 독립 파일 정리 — FCM/건강동기화 네이티브 플러그인 삭제 + 모듈 비우기
+
 ## [1.0.303] - 2026-04-12
 
 ### 변경
