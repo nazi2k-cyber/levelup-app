@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.302] - 2026-04-12
+
+### 변경
+- docs: move STEP2-PLAN.md to docs/ folder
+
 ## [1.0.301] - 2026-04-12
 
 ### 변경
