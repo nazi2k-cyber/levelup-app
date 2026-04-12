@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.306] - 2026-04-12
+
+### 변경
+- Step 2 청크 G 보완: step-count 카드 에디터 잔여 참조 제거 + notification 모듈 임포트 제거
+- Step 2 청크 G: HTML 정리 — 플래너/푸시/건강동기화 UI 마크업 제거
+
 ## [1.0.305] - 2026-04-12
 
 ### 변경
