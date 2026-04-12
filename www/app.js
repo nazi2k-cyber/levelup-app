@@ -781,7 +781,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -899,7 +899,6 @@ function initStatusCardReorder() {
 
 // --- 햄버거 메뉴 & 상태창 편집 ---
 const STATUS_CARD_LABELS = {
-    'step-count': { name_key: 'card_step_count', name: '걸음수', icon: '🚶' },
     'stat-radar': { name: 'STAT RADAR', icon: '📊' },
     'bonus-exp': { name_key: 'card_bonus_exp', name: '보너스 EXP', icon: '🎬' },
     'pomodoro': { name_key: 'card_pomodoro', name: 'POMODORO', icon: '🍅' },
@@ -913,7 +912,7 @@ const STATUS_CARD_LABELS = {
     'orm-calc': { name_key: 'card_orm_calc', name: '1RM 계산기', icon: '🏋️' },
     'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -965,7 +964,7 @@ function applyCardVisibility() {
         if (hidden.includes(cardId)) {
             card.style.display = 'none';
         } else {
-            // 숨김 해제 시 표시 복원 (step-count 포함)
+            // 숨김 해제 시 표시 복원
             card.style.display = '';
         }
     });
@@ -6598,9 +6597,6 @@ import('./modules/library.js').catch(e => console.error('[Library] 모듈 로드
 
 // --- Movie 모듈 동적 로드 ---
 import('./modules/movie.js').catch(e => console.error('[Movie] 모듈 로드 실패:', e));
-
-// --- Notification 모듈 동적 로드 ---
-import('./modules/notification.js').catch(e => console.error('[Notification] 모듈 로드 실패:', e));
 
 // --- Quotes 모듈 동적 로드 ---
 import('./modules/quotes.js').catch(e => console.error('[Quotes] 모듈 로드 실패:', e));

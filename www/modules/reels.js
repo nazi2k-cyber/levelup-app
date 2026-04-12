@@ -36,7 +36,7 @@
         }
     }
 
-    // --- ★ Day1 포스트 → 내 플래너 복사 기능 ★ ---
+    // --- ★ Day1 포스트 캐시 & 검색 ★ ---
 let _reelsCachedPosts = []; // 렌더링된 포스트 캐시
 let _reelsSearchQuery = ''; // Day1 검색어
 let _reelsSortMode = 'latest'; // 'latest' | 'friends' | 'likes'
