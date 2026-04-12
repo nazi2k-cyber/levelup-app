@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.305] - 2026-04-12
+
+### 변경
+- fix: stat radar 수치 클램핑 추가 (0~100 범위 보장)
+
 ## [1.0.304] - 2026-04-12
 
 ### 변경
