@@ -1,4 +1,4 @@
-// LEVEL UP: REBOOT — Service Worker (오프라인 모드 + FCM)
+// LEVEL UP: REBOOT — Service Worker (오프라인 모드)
 const CACHE_VERSION = 'levelup-v1.0.303';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
@@ -20,41 +20,8 @@ const APP_SHELL = [
 const FIREBASE_CDN = [
     'https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js',
     'https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js',
-    'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js',
-    'https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js'
+    'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js'
 ];
-
-// --- Firebase Cloud Messaging (기존 firebase-messaging-sw.js 기능 통합) ---
-importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
-try { importScripts('./firebase-config.js'); } catch (e) {
-    console.warn('[SW] firebase-config.js 로드 실패 — FCM 비활성화');
-}
-
-const __fbConfig = self.__FIREBASE_CONFIG;
-firebase.initializeApp(__fbConfig);
-
-const messaging = firebase.messaging();
-
-// 백그라운드 메시지 처리
-messaging.onBackgroundMessage((payload) => {
-    console.log('[SW] 백그라운드 메시지 수신:', payload);
-
-    const notificationTitle = payload.notification?.title || 'LEVEL UP: REBOOT';
-    const notificationOptions = {
-        body: payload.notification?.body || '',
-        icon: '/play_store_512.png',
-        badge: '/play_store_512.png',
-        tag: payload.data?.tag || 'levelup-notification',
-        data: payload.data || {},
-        actions: [
-            { action: 'open', title: '열기' }
-        ],
-        vibrate: [200, 100, 200]
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-});
 
 // --- Service Worker 라이프사이클 ---
 
@@ -266,30 +233,6 @@ async function trimCache(cacheName, maxEntries) {
         }
     }
 }
-
-// --- 알림 클릭 처리 ---
-self.addEventListener('notificationclick', (event) => {
-    console.log('[SW] 알림 클릭:', event);
-    event.notification.close();
-
-    const data = event.notification.data || {};
-    const targetTab = data.tab || '';
-    const urlToOpen = '/app.html' + (targetTab ? '#' + targetTab : '');
-
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            for (const client of clientList) {
-                if (client.url.includes('app.html') && 'focus' in client) {
-                    client.postMessage({ type: 'NOTIFICATION_CLICK', tab: targetTab, data: data, title: event.notification.title, body: event.notification.body });
-                    return client.focus();
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
-    );
-});
 
 // --- 오프라인 큐 (Firestore 쓰기 작업 대기열) ---
 const OFFLINE_QUEUE_KEY = 'offline-queue';
