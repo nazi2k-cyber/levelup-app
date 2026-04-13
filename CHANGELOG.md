@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.311] - 2026-04-12
+
+### 변경
+- feat: 월간 퀘스트 통계 - DIY 퀘스트별 진척도 드롭다운 필터 추가
+
 ## [1.0.310] - 2026-04-12
 
 ### 변경
