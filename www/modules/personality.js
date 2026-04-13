@@ -450,9 +450,8 @@
         var _t     = (i18n && i18n[_lang]) || (i18n && i18n.ko) || {};
         var labels = getTraitLabels(_lang);
         var scores = { O: big5Data.o, C: big5Data.c, E: big5Data.e, A: big5Data.a, N: big5Data.n };
-        container.innerHTML =
-            '<div style="font-size:0.65rem;color:var(--text-sub);margin-bottom:4px;font-weight:bold;letter-spacing:0.05em;">' + (_t.card_big5 || 'Big5 성격검사') + '</div>' +
-            buildBarChartSVG(scores, labels, 240, 0.8);
+        var svgHtml = buildBarChartSVG(scores, labels, 240, 0.8).replace('margin:0 auto', 'margin:0');
+        container.innerHTML = svgHtml;
     };
 
     // ── 검사 결과 초기화 ───────────────────────────────────────────
