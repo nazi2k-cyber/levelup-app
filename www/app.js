@@ -5491,7 +5491,7 @@ function openProfileStatsModal(userId) {
 
     // 좌우명 (본인은 AppState, 타인은 Firestore 데이터)
     const caption = isMe ? (AppState.ddayCaption || '') : (u.ddayCaption || '');
-    const captionHTML = caption ? `<div style="margin-top:8px; padding:6px 10px; background:rgba(0,217,255,0.06); border-left:2px solid var(--neon-blue); border-radius:4px; font-size:0.75rem; color:var(--text-sub); font-style:italic;">${sanitizeText(caption)}</div>` : '';
+    const captionHTML = caption ? `<div style="margin-top:8px; padding:6px 10px; background:rgba(255,204,0,0.06); border:1px solid var(--neon-gold); border-radius:4px; font-size:0.75rem; color:var(--text-sub); font-style:italic;">${sanitizeText(caption)}</div>` : '';
 
     const profileHTML = `
         <div style="display:flex; align-items:center; gap:12px;">
