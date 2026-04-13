@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.326] - 2026-04-13
+
+### 변경
+- fix: 영화광 탭 위치 독서왕 우측으로 이동 + 호칭 가이드에 영화 달성 호칭 섹션 추가
+
 ## [1.0.325] - 2026-04-13
 
 ### 변경
