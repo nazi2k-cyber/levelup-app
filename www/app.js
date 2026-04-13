@@ -791,7 +791,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -5007,6 +5007,7 @@ function changeLanguage(langCode) {
         if (typeof window.refreshOrmCalcSummary === 'function') window.refreshOrmCalcSummary();
         window._reelsFeedLastKey = null; // 언어 변경 시 리렌더 강제
         if (window.renderReelsFeed) window.renderReelsFeed();
+        if (window.renderBig5Card) window.renderBig5Card();
         if (document.querySelector('.quest-tab-btn[data-quest-tab="stats"].active')) renderQuestStats();
     }
 }

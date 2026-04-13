@@ -621,7 +621,8 @@ const i18n = {
         big5_result_subtitle: "BIG FIVE 성격 특성",
         big5_result_hint: "결과는 저장 후 소셜 프로필에 표시됩니다.",
         big5_card_empty: "검사를 완료하면 성격 특성이 표시됩니다.",
-        card_big5: "BIG FIVE"
+        card_big5: "Big5 성격검사",
+        big5_cha_reward: "Big5 성격 검사 완료! CHA +3"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -1241,7 +1242,8 @@ const i18n = {
         big5_result_subtitle: "BIG FIVE Personality Profile",
         big5_result_hint: "Results will appear on your social profile after saving.",
         big5_card_empty: "Complete the test to see your personality traits.",
-        card_big5: "BIG FIVE"
+        card_big5: "Big5 Personality Test",
+        big5_cha_reward: "Big5 Complete! CHA +3"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -1861,7 +1863,8 @@ const i18n = {
         big5_result_subtitle: "BIG FIVE 性格特性",
         big5_result_hint: "結果は保存後にソーシャルプロフィールに表示されます。",
         big5_card_empty: "検査を完了すると性格特性が表示されます。",
-        card_big5: "BIG FIVE"
+        card_big5: "Big5 性格検査",
+        big5_cha_reward: "Big5 完了！CHA +3"
     }
 };
 
