@@ -15,6 +15,7 @@
     // ── 모듈 상태 ──────────────────────────────────────────────────
     let _currentPage = 0;   // 0=동의, 1..6=문항, 7=결과
     let _answers = {};      // { [questionId]: 1..5 }
+    let _big5IsPublic = true; // 소셜 프로필 공개 여부
 
     // ── 특성별 색상 / 아이콘 ───────────────────────────────────────
     const TRAIT_COLORS = {
@@ -86,7 +87,11 @@
     function buildBarChartSVG(scores, traitLabels, width) {
         var traits  = ['O', 'C', 'E', 'A', 'N'];
         var barH    = 18;
-        var labelW  = 52;
+        // 레이블 길이에 따른 동적 labelW (영문 겹침 방지)
+        var maxLen = 0;
+        traits.forEach(function(t) { var l = (traitLabels[t] || t).length; if (l > maxLen) maxLen = l; });
+        var isLatin = /[a-zA-Z]/.test(traitLabels['O'] || '');
+        var labelW  = Math.max(52, Math.ceil(maxLen * (isLatin ? 6.5 : 10)) + 6);
         var scoreW  = 26;
         var padX    = 10;
         var gapY    = 9;
@@ -125,6 +130,7 @@
     function openPersonalityTest() {
         _currentPage = 0;
         _answers = {};
+        _big5IsPublic = (AppState.user.big5 && AppState.user.big5.isPublic === false) ? false : true;
 
         var overlay = document.createElement('div');
         overlay.className = 'report-modal-overlay';
@@ -338,6 +344,7 @@
         var inner  = document.getElementById('big5-test-inner');
         if (!inner) return;
 
+        var publicChecked = _big5IsPublic ? ' checked' : '';
         inner.innerHTML =
             '<div style="font-size:1rem;font-weight:bold;color:var(--neon-blue);text-align:center;margin-bottom:4px;">' +
                 (_t.big5_result_title || '검사 결과') +
@@ -346,8 +353,14 @@
                 (_t.big5_result_subtitle || 'BIG FIVE 성격 특성') +
             '</div>' +
             buildBarChartSVG(scores, labels, 300) +
-            '<div style="font-size:0.7rem;color:var(--text-sub);text-align:center;margin:10px 0 16px;">' +
+            '<div style="font-size:0.7rem;color:var(--text-sub);text-align:center;margin:10px 0 12px;">' +
                 (_t.big5_result_hint || '결과는 저장 후 소셜 프로필에 표시됩니다.') +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:8px;">' +
+                '<input type="checkbox" id="big5-public-cb" style="accent-color:var(--neon-blue);width:15px;height:15px;flex-shrink:0;cursor:pointer;"' + publicChecked + '>' +
+                '<label for="big5-public-cb" style="font-size:0.78rem;color:var(--text-main);cursor:pointer;line-height:1.4;">' +
+                    (_t.big5_public_label || '소셜 프로필 공개') +
+                '</label>' +
             '</div>' +
             '<div style="display:flex;gap:8px;">' +
                 '<button onclick="window.closePersonalityTest()" style="flex:1;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-sub);font-size:0.85rem;cursor:pointer;">' +
@@ -357,6 +370,11 @@
                     (_t.big5_btn_save || '저장') +
                 '</button>' +
             '</div>';
+
+        var publicCb = inner.querySelector('#big5-public-cb');
+        if (publicCb) {
+            publicCb.addEventListener('change', function() { _big5IsPublic = publicCb.checked; });
+        }
     }
 
     // ── 결과 저장 ──────────────────────────────────────────────────
@@ -375,7 +393,8 @@
             e: scores.E,
             a: scores.A,
             n: scores.N,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
+            isPublic: _big5IsPublic
         };
         if (typeof window.saveUserData === 'function') window.saveUserData();
 
@@ -420,7 +439,7 @@
     window.renderBig5ForProfile = function (big5Data, lang) {
         var container = document.getElementById('profile-big5-section');
         if (!container) return;
-        if (!big5Data || !big5Data.completedAt) {
+        if (!big5Data || !big5Data.completedAt || big5Data.isPublic === false) {
             container.style.display = 'none';
             return;
         }
@@ -434,10 +453,81 @@
             buildBarChartSVG(scores, labels, 300);
     };
 
+    // ── 검사 결과 초기화 ───────────────────────────────────────────
+    window.resetBig5Results = function () {
+        var lang = AppState.currentLang || 'ko';
+        var _t   = (window.i18n && window.i18n[lang]) || (window.i18n && window.i18n.ko) || {};
+        if (!confirm(_t.big5_reset_confirm || '검사 결과를 초기화하시겠습니까?')) return;
+        AppState.user.big5 = null;
+        if (typeof window.saveUserData === 'function') window.saveUserData();
+        renderBig5Card();
+        alert(_t.big5_reset_done || '검사 결과가 초기화되었습니다.');
+    };
+
+    // ── 가이드 모달 ────────────────────────────────────────────────
+    function openBig5Guide() {
+        var lang = AppState.currentLang || 'ko';
+        var _t   = (window.i18n && window.i18n[lang]) || (window.i18n && window.i18n.ko) || {};
+
+        var traits = [
+            { key: 'O', color: '#b08aff', title: _t.big5_guide_O_title || '개방성 (Openness)',          desc: _t.big5_guide_O_desc || '새로운 경험·아이디어에 대한 호기심.' },
+            { key: 'C', color: '#00d9ff', title: _t.big5_guide_C_title || '성실성 (Conscientiousness)', desc: _t.big5_guide_C_desc || '목표 달성을 위한 자기 규율.' },
+            { key: 'E', color: '#ffcc00', title: _t.big5_guide_E_title || '외향성 (Extraversion)',      desc: _t.big5_guide_E_desc || '사회적 상황에서의 활력.' },
+            { key: 'A', color: '#00ff88', title: _t.big5_guide_A_title || '친화성 (Agreeableness)',     desc: _t.big5_guide_A_desc || '타인에 대한 공감과 협력.' },
+            { key: 'N', color: '#ff6b6b', title: _t.big5_guide_N_title || '신경증 (Neuroticism)',       desc: _t.big5_guide_N_desc || '정서적 불안정성.' }
+        ];
+
+        var traitsHTML = traits.map(function(t) {
+            return '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-left:3px solid ' + t.color + ';border-radius:0 6px 6px 0;">' +
+                '<div style="font-size:0.82rem;font-weight:bold;color:' + t.color + ';margin-bottom:4px;">' + t.title + '</div>' +
+                '<div style="font-size:0.75rem;color:var(--text-sub);line-height:1.6;word-break:keep-all;">' + t.desc + '</div>' +
+            '</div>';
+        }).join('');
+
+        var overlay = document.createElement('div');
+        overlay.className = 'report-modal-overlay';
+        overlay.id = 'big5-guide-overlay';
+        overlay.innerHTML =
+            '<div class="report-modal-content" style="max-width:400px;width:92%;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:88vh;">' +
+                '<div style="flex:1;overflow-y:auto;padding:20px 18px 16px;">' +
+                    '<div style="font-size:1rem;font-weight:bold;color:var(--neon-blue);margin-bottom:16px;">' +
+                        (_t.big5_guide_title || 'Big5 성격검사 가이드') +
+                    '</div>' +
+                    traitsHTML +
+                    '<div style="margin-top:14px;padding:12px;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.3);border-radius:8px;">' +
+                        '<div style="font-size:0.82rem;font-weight:bold;color:var(--neon-gold, #ffd700);margin-bottom:6px;">🏆 ' +
+                            (_t.big5_guide_reward_title || '보상 안내') +
+                        '</div>' +
+                        '<div style="font-size:0.75rem;color:var(--text-sub);line-height:1.6;word-break:keep-all;">' +
+                            (_t.big5_guide_reward_desc || '최초 검사 완료 시 CHA (매력) 스탯 +3을 획득합니다.') +
+                        '</div>' +
+                    '</div>' +
+                    '<button onclick="window.closeBig5Guide()" style="width:100%;margin-top:16px;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-sub);font-size:0.85rem;cursor:pointer;">' +
+                        (_t.big5_guide_close || '닫기') +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        requestAnimationFrame(function () { overlay.classList.add('active'); });
+    }
+    window.openBig5Guide = openBig5Guide;
+
+    window.closeBig5Guide = function () {
+        var overlay = document.getElementById('big5-guide-overlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+            setTimeout(function () { overlay.remove(); }, 250);
+        }
+    };
+
     // ── 초기화 ─────────────────────────────────────────────────────
     function init() {
         var btn = document.getElementById('btn-big5-detail');
         if (btn) btn.addEventListener('click', openPersonalityTest);
+        var btnGuide = document.getElementById('btn-big5-guide');
+        if (btnGuide) btnGuide.addEventListener('click', openBig5Guide);
+        var btnReset = document.getElementById('btn-big5-reset');
+        if (btnReset) btnReset.addEventListener('click', window.resetBig5Results);
         renderBig5Card();
     }
 
