@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.313] - 2026-04-13
+
+### 변경
+- fix: DIY 드롭다운 버튼 골드 테두리 고정 + 드롭다운 항목에 stat 태그 추가
+
 ## [1.0.312] - 2026-04-13
 
 ### 변경
