@@ -524,6 +524,17 @@
                     <div id="life-status-content"></div>
                 </div>
 
+                <!-- BIG FIVE Card -->
+                <div class="system-card status-reorderable big5-card" data-card-id="big5" style="margin-top: 10px; margin-bottom: 0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <h2 style="margin:0; color:var(--neon-blue);">BIG FIVE</h2>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn-info-sm" id="btn-big5-detail" style="font-size:0.75rem;" data-i18n="big5_btn_detail">상세</button>
+                        </div>
+                    </div>
+                    <div id="big5-card-content"></div>
+                </div>
+
                 <!-- D-Day Card -->
                 <div class="system-card status-reorderable dday-card" data-card-id="dday" style="margin-top: 10px; margin-bottom: 0;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
@@ -1930,6 +1941,7 @@
                         <g id="profileRadarLabels"></g>
                     </svg>
                 </div>
+                <div id="profile-big5-section" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);"></div>
             </div>
         </div>
     </div>
