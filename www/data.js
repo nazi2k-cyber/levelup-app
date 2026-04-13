@@ -593,7 +593,35 @@ const i18n = {
         // Running Calculator time units
         rc_time_unit_min: "분",
         rc_time_unit_sec: "초",
-        rc_time_unit_hour: "시간"
+        rc_time_unit_hour: "시간",
+
+        // Big5 성격 검사
+        big5_title: "BIG FIVE 성격 검사",
+        big5_consent_desc: "이 검사는 성격의 5가지 주요 특성(개방성, 성실성, 외향성, 친화성, 신경증)을 측정합니다. 총 30문항이며 약 5분 소요됩니다.",
+        big5_storage_notice: "검사 결과는 서버에 저장되며 소셜 프로필에서 공개될 수 있습니다.",
+        big5_consent_label: "개인정보 수집 및 결과 저장에 동의합니다 (필수)",
+        big5_consent_required: "검사를 시작하려면 동의가 필요합니다.",
+        big5_btn_start: "검사 시작",
+        big5_btn_next: "다음",
+        big5_btn_prev: "이전",
+        big5_btn_finish: "결과 보기",
+        big5_btn_save: "저장",
+        big5_btn_cancel: "취소",
+        big5_btn_detail: "상세",
+        big5_answer_required: "이 페이지의 모든 질문에 응답해주세요.",
+        big5_likert_1: "전혀 아니다",
+        big5_likert_3: "보통",
+        big5_likert_5: "매우 그렇다",
+        big5_trait_O: "개방성",
+        big5_trait_C: "성실성",
+        big5_trait_E: "외향성",
+        big5_trait_A: "친화성",
+        big5_trait_N: "신경증",
+        big5_result_title: "검사 결과",
+        big5_result_subtitle: "BIG FIVE 성격 특성",
+        big5_result_hint: "결과는 저장 후 소셜 프로필에 표시됩니다.",
+        big5_card_empty: "검사를 완료하면 성격 특성이 표시됩니다.",
+        card_big5: "BIG FIVE"
     },
     en: {
         login_desc: "Level up together,<br>become the best you", btn_login_submit: "System Access", btn_signup_submit: "Register Player",
@@ -1185,7 +1213,35 @@ const i18n = {
         // Running Calculator time units (en already uses data-i18n keys rc_min/rc_sec/rc_hour)
         rc_time_unit_min: "min",
         rc_time_unit_sec: "sec",
-        rc_time_unit_hour: "hr"
+        rc_time_unit_hour: "hr",
+
+        // Big5 Personality Test
+        big5_title: "BIG FIVE Personality Test",
+        big5_consent_desc: "This test measures 5 major personality traits (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism). 30 questions, approx. 5 minutes.",
+        big5_storage_notice: "Your results will be saved on the server and may appear on your public profile.",
+        big5_consent_label: "I agree to personal data collection and result storage (required)",
+        big5_consent_required: "You must agree before starting the test.",
+        big5_btn_start: "Start Test",
+        big5_btn_next: "Next",
+        big5_btn_prev: "Back",
+        big5_btn_finish: "See Results",
+        big5_btn_save: "Save",
+        big5_btn_cancel: "Cancel",
+        big5_btn_detail: "Detail",
+        big5_answer_required: "Please answer all questions on this page.",
+        big5_likert_1: "Strongly Disagree",
+        big5_likert_3: "Neutral",
+        big5_likert_5: "Strongly Agree",
+        big5_trait_O: "Openness",
+        big5_trait_C: "Conscientiousness",
+        big5_trait_E: "Extraversion",
+        big5_trait_A: "Agreeableness",
+        big5_trait_N: "Neuroticism",
+        big5_result_title: "Test Results",
+        big5_result_subtitle: "BIG FIVE Personality Profile",
+        big5_result_hint: "Results will appear on your social profile after saving.",
+        big5_card_empty: "Complete the test to see your personality traits.",
+        card_big5: "BIG FIVE"
     },
     ja: {
         login_desc: "レベルアップと一緒に<br>最高の自分を作りましょう", btn_login_submit: "システムアクセス", btn_signup_submit: "プレイヤー登録",
@@ -1777,7 +1833,35 @@ const i18n = {
         // ランニング計算機の時間単位
         rc_time_unit_min: "分",
         rc_time_unit_sec: "秒",
-        rc_time_unit_hour: "時間"
+        rc_time_unit_hour: "時間",
+
+        // Big5 性格検査
+        big5_title: "BIG FIVE 性格検査",
+        big5_consent_desc: "この検査は性格の5つの主要特性（開放性、誠実性、外向性、協調性、神経症傾向）を測定します。30問、約5分かかります。",
+        big5_storage_notice: "検査結果はサーバーに保存され、ソーシャルプロフィールで公開される場合があります。",
+        big5_consent_label: "個人情報の収集および結果保存に同意します（必須）",
+        big5_consent_required: "検査を開始するには同意が必要です。",
+        big5_btn_start: "検査開始",
+        big5_btn_next: "次へ",
+        big5_btn_prev: "戻る",
+        big5_btn_finish: "結果を見る",
+        big5_btn_save: "保存",
+        big5_btn_cancel: "キャンセル",
+        big5_btn_detail: "詳細",
+        big5_answer_required: "このページのすべての質問に回答してください。",
+        big5_likert_1: "全くそうでない",
+        big5_likert_3: "普通",
+        big5_likert_5: "非常にそう思う",
+        big5_trait_O: "開放性",
+        big5_trait_C: "誠実性",
+        big5_trait_E: "外向性",
+        big5_trait_A: "協調性",
+        big5_trait_N: "神経症傾向",
+        big5_result_title: "検査結果",
+        big5_result_subtitle: "BIG FIVE 性格特性",
+        big5_result_hint: "結果は保存後にソーシャルプロフィールに表示されます。",
+        big5_card_empty: "検査を完了すると性格特性が表示されます。",
+        card_big5: "BIG FIVE"
     }
 };
 

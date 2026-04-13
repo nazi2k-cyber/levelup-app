@@ -12,7 +12,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.316';
+const APP_VERSION = '1.0.317';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -682,7 +682,8 @@ function getInitialAppState() {
             nameLastChanged: null,
             rareTitle: { unlocked: [] },
             cameraEnabled: false,
-            privateAccount: false
+            privateAccount: false,
+            big5: null
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),
@@ -920,9 +921,10 @@ const STATUS_CARD_LABELS = {
     'my-movies': { name_key: 'card_my_movies', name: '내 영화', icon: '🎬' },
     'running-calc': { name_key: 'card_running_calc', name: '러닝 계산기', icon: '🏃' },
     'orm-calc': { name_key: 'card_orm_calc', name: '1RM 계산기', icon: '🏋️' },
-    'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' }
+    'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' },
+    'big5': { name_key: 'card_big5', name: 'BIG FIVE', icon: '🧠' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -2025,7 +2027,8 @@ async function _doSaveUserData() {
             ormCalcHistoryStr: localStorage.getItem('orm_calc_history') || '[]',
             rcLastRewardDate: localStorage.getItem('rc_last_reward_date') || '',
             ormLastRewardDate: localStorage.getItem('orm_last_reward_date') || '',
-            onboardingSeen: localStorage.getItem(ONBOARDING_STORAGE_KEY) || ''
+            onboardingSeen: localStorage.getItem(ONBOARDING_STORAGE_KEY) || '',
+            big5Str: JSON.stringify(AppState.user.big5 || null)
         };
         // Firestore 보안 규칙 크기 제한에 맞춰 클라이언트에서 사전 검증/절삭
         const _strLimits = {
@@ -2033,7 +2036,8 @@ async function _doSaveUserData() {
             dungeonStr: 50000, diyQuestsStr: 50000, questHistoryStr: 200000,
             titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
             ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000,
-            libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000
+            libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000,
+            big5Str: 500
         };
         const _overflowed = [];
         for (const [key, limit] of Object.entries(_strLimits)) {
@@ -2082,7 +2086,8 @@ async function _doSaveUserData() {
                     'dungeonStr','diyQuestsStr','questHistoryStr','titleHistoryStr',
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
-                    'libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr'
+                    'libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
+                    'big5Str'
                 ]);
                 // 기존 문서의 허용되지 않은 필드
                 const _extraFields = _existingKeys.filter(k => !_allowedFields.has(k));
@@ -2343,6 +2348,16 @@ async function loadUserDataFromDB(user) {
             // 온보딩 완료 상태 복원 (재설치 시 재노출 방지)
             if (data.onboardingSeen) {
                 localStorage.setItem(ONBOARDING_STORAGE_KEY, data.onboardingSeen);
+            }
+            // Big5 결과 복원
+            if (data.big5Str) {
+                try {
+                    const parsed = JSON.parse(data.big5Str);
+                    if (parsed && typeof parsed === 'object' && 'o' in parsed) {
+                        AppState.user.big5 = parsed;
+                    }
+                } catch(e) { AppState.user.big5 = null; }
+                if (typeof window.renderBig5Card === 'function') window.renderBig5Card();
             }
             // 계산기 상태창 메인 데이터 갱신 (Firebase 복원 후)
             if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();
@@ -5501,6 +5516,15 @@ function openProfileStatsModal(userId) {
 
     document.getElementById('profile-stats-user-info').innerHTML = profileHTML;
     drawRadarChartForUser(u.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0});
+
+    // Big5 프로필 렌더링
+    if (typeof window.renderBig5ForProfile === 'function') {
+        const isMe = userId === auth.currentUser?.uid;
+        const big5Raw = isMe
+            ? AppState.user.big5
+            : (u.big5Str ? (() => { try { return JSON.parse(u.big5Str); } catch(e) { return null; } })() : null);
+        window.renderBig5ForProfile(big5Raw, lang);
+    }
 
     const m = document.getElementById('profileStatsModal');
     m.classList.remove('d-none');
@@ -9694,3 +9718,4 @@ import('./modules/challenge-roulette.js').catch(e => console.error('[ChallengeRo
 
 // --- Reels (Day1) 모듈 동적 로드 ---
 import('./modules/reels.js').catch(e => console.error('[Reels] 모듈 로드 실패:', e));
+import('./modules/personality.js').catch(e => console.error('[Personality] 모듈 로드 실패:', e));
