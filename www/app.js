@@ -5539,7 +5539,7 @@ function openProfileStatsModal(userId) {
 
     const isMe = userId === auth.currentUser?.uid;
     const isFollowing = (AppState.user.friends || []).includes(userId);
-    const followBtnHTML = !isMe ? `<button id="profile-modal-follow-btn" class="btn-reels-follow ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation();window.toggleProfileModalFollow('${sanitizeAttr(userId)}')" style="margin-left:6px;">${isFollowing ? (i18n[lang]?.btn_added || '팔로잉') : (i18n[lang]?.btn_add || '팔로우')}</button>` : '';
+    const followBtnHTML = !isMe ? `<button id="profile-modal-follow-btn" class="btn-reels-follow ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation();window.toggleProfileModalFollow('${sanitizeAttr(userId)}')">${isFollowing ? (i18n[lang]?.btn_added || '팔로잉') : (i18n[lang]?.btn_add || '팔로우')}</button>` : '';
     const saveBtnHTML = isMe ? `<button class="btn-profile-save" onclick="event.stopPropagation();window.saveProfileCardAsImage('${sanitizeAttr(userId)}')">${i18n[lang]?.profile_save_btn || '저장'}</button>` : '';
 
     const profileHTML = `
@@ -5549,8 +5549,8 @@ function openProfileStatsModal(userId) {
                 : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue); flex-shrink:0;"></div>`}
             <div style="flex:1; min-width:0;">
                 ${titleBadgeHTML}
-                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
-                    <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
+                <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:4px;">
                     ${followBtnHTML}
                     <button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
                     ${saveBtnHTML}
