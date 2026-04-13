@@ -2774,7 +2774,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- ★ 희귀 호칭 시스템 ★ ---
 
 // 우선순위: rank_global > rank_stat > streak > steps (높을수록 우선)
-const _rarePriority = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10 };
+const _rarePriority = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10, movies: 10 };
 
 // 우선순위에 따라 자동으로 가장 높은 희귀 호칭 반환
 function getBestRareTitle() {
@@ -2847,6 +2847,28 @@ function checkReadingRareTitles() {
             });
             newUnlock = true;
             AppLogger.info(`[RareTitle] 독서 희귀 호칭 해금: ${rt.title.ko} (${rt.books}권)`);
+        }
+    });
+    if (newUnlock) {
+        saveUserData();
+        updatePointUI();
+        const newest = AppState.user.rareTitle.unlocked[AppState.user.rareTitle.unlocked.length - 1];
+        showRareTitleNotification(newest);
+    }
+}
+
+// 영화 시청 마일스톤 달성 시 희귀 호칭 해금 체크
+function checkMovieRareTitles() {
+    const watchedCount = (AppState.movies?.items || []).filter(m => m.category === 'watched').length;
+    let newUnlock = false;
+    rareMovieTitles.forEach(rt => {
+        const titleId = `movies_${rt.movies}`;
+        if (watchedCount >= rt.movies && !AppState.user.rareTitle.unlocked.find(u => u.id === titleId)) {
+            AppState.user.rareTitle.unlocked.push({
+                id: titleId, type: 'movies', rarity: rt.rarity, icon: rt.icon,
+                title: rt.title, unlockedAt: new Date().toISOString()
+            });
+            newUnlock = true;
         }
     });
     if (newUnlock) {
@@ -9679,6 +9701,7 @@ window.changeLanguage = changeLanguage;
 window._httpsCallable = httpsCallable;
 window._functions = functions;
 window.checkReadingRareTitles = checkReadingRareTitles;
+window.checkMovieRareTitles = checkMovieRareTitles;
 window.updateCameraToggleUI = updateCameraToggleUI;
 window.openAppSettings = openAppSettings;
 

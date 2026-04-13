@@ -15,7 +15,7 @@ const i18n = {
         str: "근력", int: "지능", cha: "매력", vit: "체력", wlth: "재력", agi: "민첩",
         quest_title: "Daily Quests", quest_hint: "※ 완료 시 +20P & 스탯 +0.5 (스트릭 배율 적용 · 15% 크리티컬 확률)", cal_title: "주간 진척도",
         raid_title: "Local Raid", raid_boss: "⚠️ 연합 보스 출현", raid_desc1: "이상 현상이 감지되었습니다.", raid_desc2: "연합 목표를 달성하고 전리품을 획득하세요.", raid_part: "참여 인원: ", raid_btn: "레이드 입장하기", raid_joined: "참여 완료", raid_success: "레이드 완료!", raid_waiting: "던전 출현 대기 중...", raid_time_info: "출현 시간: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
-        soc_global: "🏆 글로벌 랭킹", soc_friend: "👥 팔로잉", soc_follower: "👤 팔로워", sort_tot: "종합스코어", sort_str: "근력", sort_int: "지능", sort_cha: "매력", sort_vit: "체력", sort_wlth: "재력", sort_agi: "민첩", sort_steps: "🚶 걸음수", sort_books: "📚 독서왕",
+        soc_global: "🏆 글로벌 랭킹", soc_friend: "👥 팔로잉", soc_follower: "👤 팔로워", sort_tot: "종합스코어", sort_str: "근력", sort_int: "지능", sort_cha: "매력", sort_vit: "체력", sort_wlth: "재력", sort_agi: "민첩", sort_steps: "🚶 걸음수", sort_books: "📚 독서왕", sort_movies: "🎬 영화광",
         step_title: "오늘의 걸음수", step_unit: "보", step_next_reward: "다음 보상까지 {n}보 남음",
         step_req_title: "걸음수 연동 필수 조건",
         step_req_1: "Google Fit 또는 Health Connect 앱 설치 필요",
@@ -659,7 +659,7 @@ const i18n = {
         str: "STR", int: "INT", cha: "CHA", vit: "VIT", wlth: "WLTH", agi: "AGI",
         quest_title: "Daily Quests", quest_hint: "※ +20P & +0.5 stat per quest (streak multiplier · 15% critical chance)", cal_title: "Weekly Progress",
         raid_title: "Local Raid", raid_boss: "⚠️ Alliance Boss", raid_desc1: "Anomaly detected.", raid_desc2: "Achieve alliance goals to get loot.", raid_part: "Participants: ", raid_btn: "Enter Raid", raid_joined: "Joined", raid_success: "Raid Success!", raid_waiting: "Waiting for Dungeon...", raid_time_info: "Open Hours: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
-        soc_global: "🏆 Global Rank", soc_friend: "👥 Following", soc_follower: "👤 Followers", sort_tot: "Total", sort_str: "STR", sort_int: "INT", sort_cha: "CHA", sort_vit: "VIT", sort_wlth: "WLTH", sort_agi: "AGI", sort_steps: "🚶 Steps", sort_books: "📚 Books Read",
+        soc_global: "🏆 Global Rank", soc_friend: "👥 Following", soc_follower: "👤 Followers", sort_tot: "Total", sort_str: "STR", sort_int: "INT", sort_cha: "CHA", sort_vit: "VIT", sort_wlth: "WLTH", sort_agi: "AGI", sort_steps: "🚶 Steps", sort_books: "📚 Books Read", sort_movies: "🎬 Cinephile",
         step_title: "Today's Steps", step_unit: "steps", step_next_reward: "{n} steps to next reward",
         step_req_title: "Step Tracking Requirements",
         step_req_1: "Google Fit or Health Connect app required",
@@ -1299,7 +1299,7 @@ const i18n = {
         str: "筋力", int: "知能", cha: "魅力", vit: "体力", wlth: "財力", agi: "敏捷",
         quest_title: "デイリークエスト", quest_hint: "※ +20P & +0.5ステータス (ストリーク倍率 · 15%クリティカル確率)", cal_title: "週間進捗度",
         raid_title: "ローカルレイド", raid_boss: "⚠️ 連合ボス出現", raid_desc1: "異常現象を感知。", raid_desc2: "連合の目標を達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
-        soc_global: "🏆 グローバルランク", soc_friend: "👥 フォロー中", soc_follower: "👤 フォロワー", sort_tot: "総合", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷", sort_steps: "🚶 歩数", sort_books: "📚 読書王",
+        soc_global: "🏆 グローバルランク", soc_friend: "👥 フォロー中", soc_follower: "👤 フォロワー", sort_tot: "総合", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷", sort_steps: "🚶 歩数", sort_books: "📚 読書王", sort_movies: "🎬 映画マニア",
         step_title: "今日の歩数", step_unit: "歩", step_next_reward: "次の報酬まで{n}歩",
         step_req_title: "歩数連動の必須条件",
         step_req_1: "Google Fit または Health Connect アプリが必要",
@@ -2010,6 +2010,14 @@ const rareReadingTitles = [
     { books: 15,  rarity: 'rare',      icon: '📚', title: { ko: '지식 탐험가', en: 'Knowledge Explorer', ja: '知識探検家' } },
     { books: 30,  rarity: 'epic',      icon: '🏛️', title: { ko: '서재의 현자', en: 'Library Sage', ja: '書斎の賢者' } },
     { books: 50,  rarity: 'legendary', icon: '👑', title: { ko: '독서왕', en: 'Reading Champion', ja: '読書王' } }
+];
+
+// 영화 시청 마일스톤 기반 희귀 호칭
+const rareMovieTitles = [
+    { movies: 10,  rarity: 'uncommon',  icon: '🎬', title: { ko: '영화 입문자', en: 'Film Rookie', ja: '映画入門者' } },
+    { movies: 30,  rarity: 'rare',      icon: '🎥', title: { ko: '시네마 팬', en: 'Cinema Fan', ja: 'シネマファン' } },
+    { movies: 70,  rarity: 'epic',      icon: '🏆', title: { ko: '영화 비평가', en: 'Film Critic', ja: '映画評論家' } },
+    { movies: 150, rarity: 'legendary', icon: '👑', title: { ko: '영화광', en: 'Cinephile', ja: '映画狂' } }
 ];
 
 // 희귀도별 CSS 클래스 매핑

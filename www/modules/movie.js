@@ -447,6 +447,7 @@
 
         if (category === 'watched') {
             grantWatchReward(movie);
+            if (window.checkMovieRareTitles) window.checkMovieRareTitles();
         }
 
         var modal = document.getElementById('movie-add-modal');
@@ -760,6 +761,7 @@
         if (newCat === 'watched' && oldCat !== 'watched') {
             movie.finishedDate = todayStr();
             grantWatchReward(movie);
+            if (window.checkMovieRareTitles) window.checkMovieRareTitles();
         }
 
         updateMoviePeriodCounts();
