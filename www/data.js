@@ -117,6 +117,7 @@ const i18n = {
         // 릴스 탭
         nav_reels: "Day1", reels_title: "🎬 Day1", reels_search_placeholder: "@닉네임 검색 / 캡션 검색", reels_post_btn: "Day1 포스팅",
         reels_sort_latest: "최신순", reels_sort_friends: "친구순", reels_sort_likes: "좋아요순",
+        reels_cat_all: "전체", reels_cat_running: "러닝", reels_cat_health: "헬스", reels_cat_reading: "독서", reels_cat_movies: "영화", reels_cat_other: "기타", reels_cat_label: "카테고리",
         reels_post_hint: "업로드 1일 후 자동 삭제",
         reels_empty: "아직 포스팅이 없습니다. 타임테이블을 완성하고 포스팅해보세요!",
         reels_search_empty: "검색 결과가 없습니다.",
@@ -757,6 +758,7 @@ const i18n = {
         // Reels tab
         nav_reels: "Reels", reels_title: "🎬 Reels", reels_search_placeholder: "@nickname search / caption search", reels_post_btn: "Post Timetable",
         reels_sort_latest: "Latest", reels_sort_friends: "Friends", reels_sort_likes: "Most Liked",
+        reels_cat_all: "All", reels_cat_running: "Running", reels_cat_health: "Health", reels_cat_reading: "Reading", reels_cat_movies: "Movies", reels_cat_other: "Other", reels_cat_label: "Category",
         reels_post_hint: "Complete your timetable and add a photo to post",
         reels_empty: "No posts yet. Complete your timetable and share it!",
         reels_search_empty: "No results found.",
@@ -1397,6 +1399,7 @@ const i18n = {
         // リールタブ
         nav_reels: "リール", reels_title: "🎬 リール", reels_search_placeholder: "@ニックネーム検索 / キャプション検索", reels_post_btn: "タイムテーブル投稿",
         reels_sort_latest: "最新順", reels_sort_friends: "フレンド順", reels_sort_likes: "いいね順",
+        reels_cat_all: "全て", reels_cat_running: "ランニング", reels_cat_health: "フィットネス", reels_cat_reading: "読書", reels_cat_movies: "映画", reels_cat_other: "その他", reels_cat_label: "カテゴリ",
         reels_post_hint: "タイムテーブルを完成し、写真を追加すると投稿できます",
         reels_empty: "まだ投稿がありません。タイムテーブルを完成して共有しましょう！",
         reels_search_empty: "検索結果がありません。",

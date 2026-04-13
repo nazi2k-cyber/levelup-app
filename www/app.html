@@ -915,6 +915,18 @@
                             <div class="planner-caption-counter" id="planner-caption-counter">0 / 140</div>
                         </div>
 
+                        <!-- 카테고리 선택 -->
+                        <div class="planner-category-box" id="planner-category-box">
+                            <div class="planner-category-label" data-i18n="reels_cat_label">카테고리</div>
+                            <div class="planner-category-selector" id="planner-category-selector">
+                                <button class="planner-category-btn selected" data-category="기타" data-i18n="reels_cat_other">기타</button>
+                                <button class="planner-category-btn" data-category="러닝" data-i18n="reels_cat_running">러닝</button>
+                                <button class="planner-category-btn" data-category="헬스" data-i18n="reels_cat_health">헬스</button>
+                                <button class="planner-category-btn" data-category="독서" data-i18n="reels_cat_reading">독서</button>
+                                <button class="planner-category-btn" data-category="영화" data-i18n="reels_cat_movies">영화</button>
+                            </div>
+                        </div>
+
                         <!-- 위치 태그 -->
                         <div class="planner-location-box" id="planner-location-box">
                             <button type="button" class="planner-location-btn" id="btn-location-tag" onclick="window.openLocationModal()">
@@ -985,6 +997,16 @@
                     <button class="reels-sort-btn active" data-reels-sort="latest" data-i18n="reels_sort_latest">최신순</button>
                     <button class="reels-sort-btn" data-reels-sort="friends" data-i18n="reels_sort_friends">친구순</button>
                     <button class="reels-sort-btn" data-reels-sort="likes" data-i18n="reels_sort_likes">좋아요순</button>
+                </div>
+
+                <!-- Day1 카테고리 필터 -->
+                <div class="reels-category-tabs" id="reels-category-tabs">
+                    <button class="reels-category-btn active" data-reels-category="all" data-i18n="reels_cat_all">전체</button>
+                    <button class="reels-category-btn" data-reels-category="러닝" data-i18n="reels_cat_running">러닝</button>
+                    <button class="reels-category-btn" data-reels-category="헬스" data-i18n="reels_cat_health">헬스</button>
+                    <button class="reels-category-btn" data-reels-category="독서" data-i18n="reels_cat_reading">독서</button>
+                    <button class="reels-category-btn" data-reels-category="영화" data-i18n="reels_cat_movies">영화</button>
+                    <button class="reels-category-btn" data-reels-category="기타" data-i18n="reels_cat_other">기타</button>
                 </div>
 
                 <!-- Day1 피드 -->

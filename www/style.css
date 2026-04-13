@@ -1038,6 +1038,24 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .reels-sort-tabs::-webkit-scrollbar { display: none; }
 .reels-sort-btn { white-space: nowrap; padding: 5px 12px; font-size: 0.75rem; background: transparent; border: 1px solid var(--border-color); color: var(--text-sub); border-radius: 20px; cursor: pointer; transition: all 0.2s; }
 .reels-sort-btn.active { background: var(--neon-blue); color: #000; border-color: var(--neon-blue); font-weight: bold; }
+
+/* 포스팅 폼 카테고리 선택기 */
+.planner-category-box { margin-bottom: 12px; }
+.planner-category-label { font-size: 0.7rem; color: var(--text-sub); margin-bottom: 6px; }
+.planner-category-selector { display: flex; flex-wrap: wrap; gap: 6px; }
+.planner-category-btn { padding: 4px 12px; font-size: 0.72rem; background: transparent; border: 1px solid var(--border-color); color: var(--text-sub); border-radius: 20px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.planner-category-btn.selected { background: var(--neon-gold); color: #000; border-color: var(--neon-gold); font-weight: bold; }
+.planner-category-btn:hover:not(.selected) { border-color: var(--neon-gold); color: var(--neon-gold); }
+
+/* 피드 카테고리 필터 탭 */
+.reels-category-tabs { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; }
+.reels-category-tabs::-webkit-scrollbar { display: none; }
+.reels-category-btn { white-space: nowrap; padding: 4px 10px; font-size: 0.72rem; background: transparent; border: 1px solid var(--border-color); color: var(--text-sub); border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+.reels-category-btn.active { background: var(--neon-gold); color: #000; border-color: var(--neon-gold); font-weight: bold; }
+
+/* 포스트 카드 카테고리 뱃지 */
+.reels-category-badge { display: inline-block; padding: 2px 8px; font-size: 0.65rem; border-radius: 12px; font-weight: bold; margin: 4px 12px 0; background: rgba(255,204,0,0.12); color: var(--neon-gold); border: 1px solid rgba(255,204,0,0.3); }
+
 .reels-feed-container { display: flex; flex-direction: column; gap: 12px; }
 .reels-card { padding: 12px; }
 .reels-header {
