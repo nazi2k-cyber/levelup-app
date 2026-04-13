@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.325] - 2026-04-13
+
+### 변경
+- feat: 글로벌 랭크 UI 개선 - 유형별 스코어 레이블 조건부 표시 + 영화광 탭 추가
+
 ## [1.0.324] - 2026-04-13
 
 ### 변경
