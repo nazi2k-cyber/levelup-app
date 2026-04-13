@@ -3820,12 +3820,12 @@ function renderQstatsDiyDropdown() {
     const btnLabel = rawLabel.length > 9 ? rawLabel.slice(0, 9) + '…' : rawLabel;
     btn.innerHTML = `${btnLabel} <span style="font-size:0.6em;">▾</span>`;
     btn.style.color = _qstatsSelectedDiyId ? 'var(--neon-gold)' : '';
-    btn.style.borderColor = _qstatsSelectedDiyId ? 'var(--neon-gold)' : '';
+    btn.style.borderColor = 'var(--neon-gold)'; // 항상 골드 테두리
 
     const allLabel = { ko: '전체 보기', en: 'All DIY', ja: '全て' };
     const items = [
         `<div class="qstats-diy-dd-item${!_qstatsSelectedDiyId ? ' active' : ''}" onclick="window.selectQstatsDiyQuest(null)">${allLabel[lang] || allLabel.en}</div>`,
-        ...defs.map(q => `<div class="qstats-diy-dd-item${_qstatsSelectedDiyId === q.id ? ' active' : ''}" onclick="window.selectQstatsDiyQuest('${q.id}')">${q.title}</div>`)
+        ...defs.map(q => `<div class="qstats-diy-dd-item${_qstatsSelectedDiyId === q.id ? ' active' : ''}" onclick="window.selectQstatsDiyQuest('${q.id}')"><span class="quest-stat-tag" style="font-size:0.55rem; padding:1px 4px; margin-right:4px;">${q.stat}</span>${q.title}</div>`)
     ];
     menu.innerHTML = items.join('');
 }
