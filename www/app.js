@@ -1864,11 +1864,14 @@ function bindEvents() {
     document.getElementById('btn-qstats-next-year').addEventListener('click', () => { _qstatsYear++; renderQuestStats(); });
     // DIY 전용 통계 필터
     document.getElementById('qstats-diy-filter')?.addEventListener('change', (e) => { _qstatsDiyOnly = e.target.checked; renderQuestStats(); });
-    // DIY 퀘스트 드롭다운 외부 클릭 시 닫기
+    // 드롭다운 외부 클릭 시 닫기
     document.addEventListener('click', function(e) {
-        const wrap = document.getElementById('qstats-diy-dropdown-wrap');
-        const menu = document.getElementById('qstats-diy-dropdown-menu');
-        if (wrap && menu && !wrap.contains(e.target)) menu.classList.add('d-none');
+        const diyWrap = document.getElementById('qstats-diy-dropdown-wrap');
+        const diyMenu = document.getElementById('qstats-diy-dropdown-menu');
+        if (diyWrap && diyMenu && !diyWrap.contains(e.target)) diyMenu.classList.add('d-none');
+        const dailyWrap = document.getElementById('qstats-daily-dropdown-wrap');
+        const dailyMenu = document.getElementById('qstats-daily-dropdown-menu');
+        if (dailyWrap && dailyMenu && !dailyWrap.contains(e.target)) dailyMenu.classList.add('d-none');
     });
 
     document.getElementById('btn-raid-complete').addEventListener('click', window.completeDungeon);
@@ -3276,7 +3279,9 @@ function updateQuestHistory() {
     AppState.diyQuests.definitions.forEach(q => {
         dc[q.id] = AppState.diyQuests.completedToday[q.id] === true;
     });
-    AppState.questHistory[today] = { r: regularCompleted, d: diyCompleted, t: totalPossible, dt: diyTotal, dc };
+    // 데일리 퀘스트 완료 상태 스냅샷 (rc: boolean[12])
+    const rc = [...(AppState.quest.completedState[day] || [])];
+    AppState.questHistory[today] = { r: regularCompleted, d: diyCompleted, t: totalPossible, dt: diyTotal, dc, rc };
 }
 
 window.toggleQuest = (i) => {
@@ -3574,6 +3579,8 @@ let _qstatsMonth = new Date();
 let _qstatsYear = new Date().getFullYear();
 let _qstatsDiyOnly = false;
 let _qstatsSelectedDiyId = null;    // 특정 DIY 퀘스트 진척도 필터 (null = 전체)
+let _qstatsSelectedDailyDow = null; // 특정 데일리 퀘스트 필터 - 요일(0-6)
+let _qstatsSelectedDailyIdx = null; // 특정 데일리 퀘스트 필터 - 퀘스트 인덱스(0-11)
 let _qstatsWeekOffset = 0;          // 주간 진척도 캘린더 주 오프셋 (0=이번주, -1=지난주 ...)
 let _qstatsMonthlyUnlocked = false; // 오늘 보상형 광고 시청 완료 여부 (주간↔월간 전환)
 let _qstatsSelectedDate = null;     // 월간 캘린더에서 선택된 날짜 (퀘스트별 진척도 표시용)
@@ -3711,6 +3718,81 @@ window.selectQstatsDate = function(dateStr) {
     renderMonthlyDailyProgress(y, m, history);
 };
 
+// 특정 데일리 퀘스트(요일+인덱스)의 특정 날짜 완료/미완료 여부 반환 { done: 0|1, total: 0|1 }
+// 호출 전 날짜의 요일이 dow와 일치하는지 확인 필요
+function _getDailyQuestDoneTotal(dow, idx, rec, isToday) {
+    if (isToday) {
+        const state = AppState.quest.completedState[AppState.quest.currentDayOfWeek] || [];
+        return { done: state[idx] ? 1 : 0, total: 1 };
+    }
+    if (!rec || !Array.isArray(rec.rc) || rec.rc[idx] === undefined) return { done: 0, total: 0 };
+    return { done: rec.rc[idx] ? 1 : 0, total: 1 };
+}
+
+// 데일리 퀘스트 드롭다운 렌더링
+function renderQstatsDailyDropdown() {
+    const btn = document.getElementById('qstats-daily-dropdown-btn');
+    const menu = document.getElementById('qstats-daily-dropdown-menu');
+    if (!btn || !menu) return;
+
+    const lang = AppState.currentLang;
+    // 참조 요일: 선택된 퀘스트의 요일 > 캘린더 선택 날짜 > 오늘
+    const refDow = _qstatsSelectedDailyDow !== null
+        ? _qstatsSelectedDailyDow
+        : _qstatsSelectedDate
+            ? new Date(_qstatsSelectedDate + 'T00:00:00').getDay()
+            : new Date().getDay();
+    const quests = weeklyQuestData[refDow] || [];
+
+    const isSelected = _qstatsSelectedDailyDow !== null;
+    const selectedQ = isSelected ? weeklyQuestData[_qstatsSelectedDailyDow]?.[_qstatsSelectedDailyIdx] : null;
+    const rawLabel = selectedQ ? (selectedQ.title[lang] || selectedQ.title.ko) : '데일리';
+    const btnLabel = rawLabel.length > 9 ? rawLabel.slice(0, 9) + '…' : rawLabel;
+    btn.innerHTML = `${btnLabel} <span style="font-size:0.6em;">▾</span>`;
+    btn.style.color = isSelected ? 'var(--neon-cyan)' : '';
+    btn.style.borderColor = isSelected ? 'var(--neon-cyan)' : '';
+
+    const dayNames = {
+        ko: ["일","월","화","수","목","금","토"],
+        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
+        ja: ["日","月","火","水","木","金","土"]
+    };
+    const allLabel = { ko: '전체 보기', en: 'All Daily', ja: '全て' };
+    const dowName = (dayNames[lang] || dayNames.en)[refDow];
+    const items = [
+        `<div class="qstats-diy-dd-item${!isSelected ? ' active' : ''}" onclick="window.selectQstatsDailyQuest(null, null)">${allLabel[lang] || allLabel.en}</div>`,
+        `<div style="padding:4px 12px; font-size:0.62rem; color:var(--text-sub); border-bottom:1px solid rgba(255,255,255,0.06);">${dowName}요일 퀘스트</div>`,
+        ...quests.map((q, i) => {
+            const isActive = _qstatsSelectedDailyDow === refDow && _qstatsSelectedDailyIdx === i;
+            const title = q.title[lang] || q.title.ko;
+            return `<div class="qstats-diy-dd-item${isActive ? ' active' : ''}" onclick="window.selectQstatsDailyQuest(${refDow}, ${i})"><span class="quest-stat-tag" style="font-size:0.55rem; padding:1px 4px; margin-right:4px;">${q.stat}</span>${title}</div>`;
+        })
+    ];
+    menu.innerHTML = items.join('');
+}
+
+window.toggleQstatsDailyDropdown = function() {
+    const menu = document.getElementById('qstats-daily-dropdown-menu');
+    if (!menu) return;
+    const isHidden = menu.classList.contains('d-none');
+    if (isHidden) {
+        renderQstatsDailyDropdown(); // 열기 직전 내용 갱신
+        menu.classList.remove('d-none');
+    } else {
+        menu.classList.add('d-none');
+    }
+};
+
+window.selectQstatsDailyQuest = function(dow, idx) {
+    _qstatsSelectedDailyDow = dow;
+    _qstatsSelectedDailyIdx = idx;
+    _qstatsSelectedDiyId = null; // 두 필터는 상호 배타적
+    _qstatsSelectedDate = null;
+    const menu = document.getElementById('qstats-daily-dropdown-menu');
+    if (menu) menu.classList.add('d-none');
+    renderQuestStats();
+};
+
 // 특정 DIY 퀘스트의 특정 날짜 완료/미완료 여부 반환 { done: 0|1, total: 0|1 }
 function _getDiyQuestDoneTotal(questId, rec, isToday) {
     if (isToday) {
@@ -3755,6 +3837,8 @@ window.toggleQstatsDiyDropdown = function() {
 
 window.selectQstatsDiyQuest = function(questId) {
     _qstatsSelectedDiyId = questId;
+    _qstatsSelectedDailyDow = null; // 두 필터는 상호 배타적
+    _qstatsSelectedDailyIdx = null;
     _qstatsSelectedDate = null;
     const menu = document.getElementById('qstats-diy-dropdown-menu');
     if (menu) menu.classList.add('d-none');
@@ -3768,6 +3852,7 @@ function renderQuestStats() {
     if (emptyEl) emptyEl.classList.toggle('d-none', hasData);
 
     renderQstatsCalendar(); // 주간 진척도 캘린더 갱신
+    renderQstatsDailyDropdown(); // 데일리 퀘스트 드롭다운 갱신
     renderQstatsDiyDropdown(); // DIY 퀘스트 드롭다운 갱신
 
     const y = _qstatsMonth.getFullYear();
@@ -3795,7 +3880,20 @@ function renderMonthlySummary(year, month, history) {
 
     let activeDays = 0, totalRate = 0, perfectDays = 0;
 
-    if (_qstatsSelectedDiyId) {
+    if (_qstatsSelectedDailyDow !== null) {
+        // 특정 데일리 퀘스트 필터: 해당 요일 발생일만 집계
+        const dow = _qstatsSelectedDailyDow, idx = _qstatsSelectedDailyIdx;
+        const allKeys = [...keys];
+        if (!allKeys.includes(todayStr) && todayStr.startsWith(prefix)) allKeys.push(todayStr);
+        allKeys.forEach(k => {
+            const dateDow = new Date(k + 'T00:00:00').getDay();
+            if (dateDow !== dow) return;
+            const rec = history[k];
+            const isToday = (k === todayStr);
+            const { done, total } = _getDailyQuestDoneTotal(dow, idx, rec, isToday);
+            if (total > 0) { activeDays++; totalRate += done; if (done >= total) perfectDays++; }
+        });
+    } else if (_qstatsSelectedDiyId) {
         const questId = _qstatsSelectedDiyId;
         keys.forEach(k => {
             const rec = history[k];
@@ -3873,7 +3971,15 @@ function renderMonthlyHeatmap(year, month, history) {
         const isSelected = (_qstatsSelectedDate === key);
 
         let level = 0, done = 0, total = 0;
-        if (_qstatsSelectedDiyId && !isFuture) {
+        if (_qstatsSelectedDailyDow !== null && !isFuture) {
+            // 특정 데일리 퀘스트 필터: 해당 요일만 표시
+            const dateDow = new Date(key + 'T00:00:00').getDay();
+            if (dateDow === _qstatsSelectedDailyDow) {
+                const result = _getDailyQuestDoneTotal(_qstatsSelectedDailyDow, _qstatsSelectedDailyIdx, rec, isToday);
+                done = result.done; total = result.total;
+                if (total > 0) level = done > 0 ? 4 : 1;
+            }
+        } else if (_qstatsSelectedDiyId && !isFuture) {
             const result = _getDiyQuestDoneTotal(_qstatsSelectedDiyId, rec, isToday);
             done = result.done; total = result.total;
             if (total > 0) level = done > 0 ? 4 : 1; // 완료=4, 미완료지만 존재=1
@@ -3947,7 +4053,7 @@ function renderMonthlyDailyProgress(year, month, history) {
         en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
         ja: ["日","月","火","水","木","金","土"]
     };
-    const regularLabel = { ko: '레귤러 퀘스트', en: 'Regular', ja: 'レギュラー' };
+    const regularLabel = { ko: '데일리 퀘스트', en: 'Daily', ja: 'デイリー' };
     const diyLabel    = { ko: 'DIY 퀘스트',    en: 'DIY',     ja: 'DIY' };
     const totalLabel  = { ko: '전체',           en: 'Total',   ja: '合計' };
 
@@ -3996,6 +4102,37 @@ function renderMonthlyDailyProgress(year, month, history) {
                 <div class="qstats-quest-detail-header">${dateLabel}</div>
                 <div style="font-size:0.65rem; color:var(--text-sub); padding:6px 0;">-</div>
             </div>`;
+        } else if (_qstatsSelectedDailyDow !== null) {
+            // 특정 데일리 퀘스트 진척도 표시
+            const dow = _qstatsSelectedDailyDow, idx = _qstatsSelectedDailyIdx;
+            const dateDow = new Date(key + 'T00:00:00').getDay();
+            const questDef = weeklyQuestData[dow]?.[idx];
+            const questTitle = questDef ? (questDef.title[lang] || questDef.title.ko) : '-';
+            const wrongDay = { ko: '해당 퀘스트는 이 요일의 항목이 아닙니다', en: 'Quest is not for this weekday', ja: 'この曜日のクエストではありません' };
+            if (dateDow !== dow) {
+                contentHTML = `<div class="qstats-quest-detail">
+                    <div class="qstats-quest-detail-header">${dateLabel}</div>
+                    <div style="font-size:0.62rem; color:var(--text-sub); padding:6px 0;">${wrongDay[lang] || wrongDay.en}</div>
+                </div>`;
+            } else {
+                const { done: qDone, total: qTotal } = _getDailyQuestDoneTotal(dow, idx, rec, isToday);
+                if (qTotal === 0) {
+                    contentHTML = `<div class="qstats-quest-detail">
+                        <div class="qstats-quest-detail-header">${dateLabel}</div>
+                        <div style="font-size:0.65rem; color:var(--text-sub); padding:6px 0;">-</div>
+                    </div>`;
+                } else {
+                    const qPct = qDone > 0 ? 100 : 0;
+                    contentHTML = `<div class="qstats-quest-detail">
+                        <div class="qstats-quest-detail-header">${dateLabel}</div>
+                        <div class="qstats-quest-detail-row">
+                            <div class="qstats-quest-detail-label" style="color:var(--neon-cyan);">${questTitle}</div>
+                            <div class="qstats-quest-detail-bar-wrap"><div class="qstats-quest-detail-bar-fill" style="width:${qPct}%"></div></div>
+                            <div class="qstats-quest-detail-score">${qDone}/1</div>
+                        </div>
+                    </div>`;
+                }
+            }
         } else if (_qstatsSelectedDiyId) {
             // 특정 DIY 퀘스트 진척도 표시
             const questId = _qstatsSelectedDiyId;
@@ -4096,7 +4233,13 @@ function renderAnnualChart(year, history) {
             keys.forEach(k => {
                 const rec = history[k];
                 let done, total;
-                if (_qstatsSelectedDiyId) {
+                if (_qstatsSelectedDailyDow !== null) {
+                    const dateDow = new Date(k + 'T00:00:00').getDay();
+                    if (dateDow !== _qstatsSelectedDailyDow) return;
+                    const result = _getDailyQuestDoneTotal(_qstatsSelectedDailyDow, _qstatsSelectedDailyIdx, rec, k === todayStr);
+                    done = result.done; total = result.total;
+                    if (total > 0) { totalRate += done; divisor++; }
+                } else if (_qstatsSelectedDiyId) {
                     const result = _getDiyQuestDoneTotal(_qstatsSelectedDiyId, rec, k === todayStr);
                     done = result.done; total = result.total;
                     if (total > 0) { totalRate += done; divisor++; }
