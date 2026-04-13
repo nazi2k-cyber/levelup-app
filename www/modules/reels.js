@@ -41,6 +41,7 @@ let _pendingCopyPost = null;
 let _reelsCachedPosts = []; // 렌더링된 포스트 캐시 (복사 기능용)
 let _reelsSearchQuery = ''; // Day1 검색어
 let _reelsSortMode = 'latest'; // 'latest' | 'friends' | 'likes'
+let _reelsCategoryFilter = 'all'; // 'all' | '러닝' | '헬스' | '독서' | '영화' | '기타'
 
 // Day1 검색 필터 (@닉네임 → 닉네임 검색, 그 외 → 캡션 검색)
 function filterReelsFeed(query) {
@@ -520,6 +521,7 @@ async function postToReels() {
             blocks: entry.blocks,
             tasks: entry.tasks || [],
             mood: entry.mood || '',
+            category: entry.category || '기타',
             userName: AppState.user.name,
             userPhoto: AppState.user.photoURL || null,
             userLevel: AppState.user.level,
@@ -576,12 +578,15 @@ async function renderReelsFeed() {
 
     // 포스트 데이터 키 생성 (uid_timestamp 목록으로 변경 감지)
     function postsKey(posts) {
-        return _reelsSortMode + ':' + posts.map(p => `${p.uid}_${p.timestamp}`).join(',');
+        return _reelsSortMode + ':' + _reelsCategoryFilter + ':' + posts.map(p => `${p.uid}_${p.timestamp}`).join(',');
     }
 
     // 로컬 캐시 먼저 표시 (단, 이전 렌더와 동일하면 스킵)
     const localData = getReelsData();
-    const localPosts = (localData.posts || []);
+    const allLocalPosts = (localData.posts || []);
+    const localPosts = _reelsCategoryFilter === 'all'
+        ? allLocalPosts
+        : allLocalPosts.filter(p => (p.category || '기타') === _reelsCategoryFilter);
     // 로컬 캐시: latest/friends는 동기 정렬, likes는 서버 데이터에서 처리
     if (_reelsSortMode === 'friends') {
         const myFriends = new Set(AppState.user.friends || []);
@@ -616,7 +621,10 @@ async function renderReelsFeed() {
             fetchAllReelsPosts(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
         ]);
-        const posts = await applySortToReelsPosts(rawPosts);
+        const categoryFiltered = _reelsCategoryFilter === 'all'
+            ? rawPosts
+            : rawPosts.filter(p => (p.category || '기타') === _reelsCategoryFilter);
+        const posts = await applySortToReelsPosts(categoryFiltered);
         if (posts.length === 0) {
             if (window._reelsFeedLastKey !== '') {
                 container.innerHTML = `<div class="system-card" style="text-align:center; padding:30px; color:var(--text-sub);">
@@ -750,6 +758,7 @@ function renderReelsCards(posts, lang) {
             </div>
             ${post.photo ? `<div class="reels-photo-container"><img class="reels-photo" src="${sanitizeURL(window.getThumbnailURL(post.photo))}" onerror="this.onerror=null;if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${sanitizeAttr(post.photo)}';}else{window._retryFirebaseImg(this,'${sanitizeAttr(post.photo)}');}" alt="Timetable"></div>` : ''}
             ${post.caption ? `<div class="reels-caption">${sanitizeText(post.caption).replace(/\n/g,'<br>')}</div>` : ''}
+            ${(post.category && post.category !== '기타') ? `<div class="reels-category-badge">${sanitizeText(post.category)}</div>` : ''}
             <div class="reels-timetable">
                 <div class="reels-timetable-title" ${moreCount > 0 ? `onclick="toggleScheduleFold('${postId}')" style="cursor:pointer;"` : ''}>
                     📋 ${i18n[lang]?.planner_tab_schedule || '시간표'}
@@ -1349,6 +1358,12 @@ function toggleScheduleFold(postId) {
     Object.defineProperty(window, '_reelsSortMode', {
         get: function() { return _reelsSortMode; },
         set: function(v) { _reelsSortMode = v; },
+        configurable: true
+    });
+    // _reelsCategoryFilter를 getter/setter로 노출 (카테고리 버튼에서 접근)
+    Object.defineProperty(window, '_reelsCategoryFilter', {
+        get: function() { return _reelsCategoryFilter; },
+        set: function(v) { _reelsCategoryFilter = v; },
         configurable: true
     });
 

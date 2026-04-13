@@ -1755,6 +1755,15 @@ function bindEvents() {
             if (window.renderReelsFeed) window.renderReelsFeed();
         });
     });
+    document.querySelectorAll('.reels-category-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.reels-category-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            window._reelsCategoryFilter = btn.dataset.reelsCategory;
+            window._reelsFeedLastKey = null;
+            if (window.renderReelsFeed) window.renderReelsFeed();
+        });
+    });
 
     document.getElementById('lang-select').addEventListener('change', (e) => changeLanguage(e.target.value));
 
@@ -1830,6 +1839,12 @@ function bindEvents() {
     document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('#planner-mood-selector .diary-mood-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+    document.querySelectorAll('#planner-category-selector .planner-category-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#planner-category-selector .planner-category-btn').forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
         });
     });
@@ -7772,6 +7787,17 @@ function loadPlannerForDate(dateStr) {
         if (moodBtn) moodBtn.classList.add('selected');
     }
 
+    // 카테고리 버튼 복원
+    document.querySelectorAll('#planner-category-selector .planner-category-btn').forEach(btn => btn.classList.remove('selected'));
+    const savedCategory = (saved && saved.category) ? saved.category : '기타';
+    const catBtn = document.querySelector(`#planner-category-selector .planner-category-btn[data-category="${savedCategory}"]`);
+    if (catBtn) {
+        catBtn.classList.add('selected');
+    } else {
+        const fallbackBtn = document.querySelector('#planner-category-selector .planner-category-btn[data-category="기타"]');
+        if (fallbackBtn) fallbackBtn.classList.add('selected');
+    }
+
     // 태스크 로드 (새 형식 우선, 구 형식 마이그레이션)
     if (saved && saved.tasks && Array.isArray(saved.tasks)) {
         plannerTasks = saved.tasks.map(t => {
@@ -7950,6 +7976,8 @@ async function savePlannerEntry() {
 
     const selectedMood = document.querySelector('#planner-mood-selector .diary-mood-btn.selected');
     const mood = selectedMood ? selectedMood.dataset.mood : '';
+    const selectedCategoryBtn = document.querySelector('#planner-category-selector .planner-category-btn.selected');
+    const category = selectedCategoryBtn ? selectedCategoryBtn.dataset.category : '기타';
 
     const hasContent = Object.keys(blocks).length > 0 || tasksData.some(t => t.text);
 
@@ -7994,7 +8022,7 @@ async function savePlannerEntry() {
         }
 
         diaries[dateStr] = {
-            text, mood, timestamp: Date.now(), blocks,
+            text, mood, category, timestamp: Date.now(), blocks,
             tasks: tasksData,
             priorities: rankedByOrder,
             brainDump,
