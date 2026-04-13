@@ -1851,8 +1851,17 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 [data-theme="light"] .pomo-settings-modal input[type="number"] { background: rgba(0,0,0,0.04); }
 
-/* 명상 타이머 */
-#med-progress-ring { transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+/* 명상 타이머 - 모래시계 */
+@keyframes medSandFall {
+    0%   { transform: translateY(-4px); opacity: 0.9; }
+    60%  { opacity: 0.6; }
+    100% { transform: translateY(4px);  opacity: 0; }
+}
+#med-sand-drop.med-sand-falling {
+    animation: medSandFall 0.45s ease-in infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+}
 .med-preset-chip {
     padding: 4px 10px; border-radius: 12px; font-size: 0.65rem; cursor: pointer;
     background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3);

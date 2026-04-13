@@ -391,17 +391,44 @@
                         </div>
                     </div>
                     <div id="med-timer-container" style="display:flex; align-items:center; gap:16px;">
-                        <div id="med-clock" style="position:relative; width:120px; height:120px; flex-shrink:0;">
-                            <svg viewBox="0 0 200 200" width="120" height="120">
-                                <circle cx="100" cy="100" r="90" fill="none" stroke="var(--border-color)" stroke-width="6" opacity="0.3"/>
-                                <circle id="med-progress-ring" cx="100" cy="100" r="90" fill="none"
-                                    stroke="#00e5a0" stroke-width="6" stroke-linecap="round"
-                                    stroke-dasharray="565.48" stroke-dashoffset="0"
-                                    transform="rotate(-90 100 100)" style="transition:stroke-dashoffset 1s linear;"/>
+                        <div id="med-clock" style="display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0; width:90px;">
+                            <svg id="med-hourglass-svg" viewBox="0 0 90 120" width="90" height="120">
+                                <defs>
+                                    <clipPath id="med-top-clip">
+                                        <polygon points="8,4 82,4 45,58"/>
+                                    </clipPath>
+                                    <clipPath id="med-bot-clip">
+                                        <polygon points="45,62 8,116 82,116"/>
+                                    </clipPath>
+                                    <linearGradient id="med-sand-grad-t" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="rgba(0,229,160,0.25)"/>
+                                        <stop offset="100%" stop-color="rgba(0,229,160,0.65)"/>
+                                    </linearGradient>
+                                    <linearGradient id="med-sand-grad-b" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="rgba(0,229,160,0.65)"/>
+                                        <stop offset="100%" stop-color="rgba(0,229,160,0.3)"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Top chamber frame -->
+                                <polygon points="8,4 82,4 45,58" fill="rgba(0,229,160,0.05)" stroke="#00e5a0" stroke-width="1.8" stroke-linejoin="round"/>
+                                <!-- Bottom chamber frame -->
+                                <polygon points="45,62 8,116 82,116" fill="rgba(0,229,160,0.05)" stroke="#00e5a0" stroke-width="1.8" stroke-linejoin="round"/>
+                                <!-- Top cap -->
+                                <line x1="5" y1="4" x2="85" y2="4" stroke="#00e5a0" stroke-width="3" stroke-linecap="round"/>
+                                <!-- Bottom cap -->
+                                <line x1="5" y1="116" x2="85" y2="116" stroke="#00e5a0" stroke-width="3" stroke-linecap="round"/>
+                                <!-- Neck connector -->
+                                <line x1="45" y1="58" x2="45" y2="62" stroke="#00e5a0" stroke-width="1.5" opacity="0.5"/>
+                                <!-- Sand in top chamber (full at start, empties over time) -->
+                                <rect id="med-sand-top" x="0" y="4" width="90" height="54" fill="url(#med-sand-grad-t)" clip-path="url(#med-top-clip)"/>
+                                <!-- Sand in bottom chamber (empty at start, fills over time) -->
+                                <rect id="med-sand-bot" x="0" y="116" width="90" height="0" fill="url(#med-sand-grad-b)" clip-path="url(#med-bot-clip)"/>
+                                <!-- Falling sand particle (animated during meditation) -->
+                                <circle id="med-sand-drop" cx="45" cy="60" r="2" fill="#00e5a0" opacity="0"/>
                             </svg>
-                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-                                <div id="med-time-display" style="font-size:1.6rem; font-weight:900; color:var(--text-main); font-variant-numeric:tabular-nums;">10:00</div>
-                                <div id="med-phase-label" style="font-size:0.65rem; color:#00e5a0; font-weight:700;" data-i18n="med_ready">준비</div>
+                            <div style="text-align:center; margin-top:2px;">
+                                <div id="med-time-display" style="font-size:1.2rem; font-weight:900; color:var(--text-main); font-variant-numeric:tabular-nums; line-height:1.2;">10:00</div>
+                                <div id="med-phase-label" style="font-size:0.6rem; color:#00e5a0; font-weight:700;" data-i18n="med_ready">준비</div>
                             </div>
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:flex-start; gap:8px; flex:1;">

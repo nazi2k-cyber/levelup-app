@@ -37,7 +37,9 @@
     function updateMedUI() {
         const display = document.getElementById('med-time-display');
         const phaseLabel = document.getElementById('med-phase-label');
-        const ring = document.getElementById('med-progress-ring');
+        const sandTop = document.getElementById('med-sand-top');
+        const sandBot = document.getElementById('med-sand-bot');
+        const sandDrop = document.getElementById('med-sand-drop');
         const startBtn = document.getElementById('med-start-btn');
         const sessionCount = document.getElementById('med-session-count');
         const lang = i18n[AppState.currentLang] || i18n.ko;
@@ -56,11 +58,27 @@
             else phaseLabel.textContent = lang.med_ready || '준비';
         }
 
-        // Progress ring
-        if (ring) {
-            const circumference = 2 * Math.PI * 90; // 565.48
-            const progress = medState.totalSeconds > 0 ? medState.secondsLeft / medState.totalSeconds : 1;
-            ring.setAttribute('stroke-dashoffset', circumference * (1 - progress));
+        // Hourglass sand update
+        const progress = medState.totalSeconds > 0 ? medState.secondsLeft / medState.totalSeconds : 1;
+        // Top chamber: full at start (progress=1), empty at end (progress=0)
+        // Sand fills bottom portion of top triangle (y: 4..58, height span=54)
+        if (sandTop) {
+            sandTop.setAttribute('y', String(58 - progress * 54));
+            sandTop.setAttribute('height', String(progress * 54));
+        }
+        // Bottom chamber: empty at start, full at end
+        // Sand fills from bottom of bottom triangle upward (y: 62..116, height span=54)
+        if (sandBot) {
+            sandBot.setAttribute('y', String(62 + progress * 54));
+            sandBot.setAttribute('height', String((1 - progress) * 54));
+        }
+        // Falling particle: visible only while actively meditating
+        if (sandDrop) {
+            if (medState.phase === 'meditating' && !medState.isPaused && progress > 0) {
+                sandDrop.classList.add('med-sand-falling');
+            } else {
+                sandDrop.classList.remove('med-sand-falling');
+            }
         }
 
         // Button text
