@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.322] - 2026-04-13
+
+### 변경
+- feat: Big5 차트 겹침 수정/초기화·가이드 버튼/소셜 공개 옵션 추가
+
 ## [1.0.321] - 2026-04-13
 
 ### 변경
