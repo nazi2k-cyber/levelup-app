@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.323] - 2026-04-13
+
+### 변경
+- fix: social profile layout - golden motto border and side-by-side radar
+
 ## [1.0.322] - 2026-04-13
 
 ### 변경
