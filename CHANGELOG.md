@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.321] - 2026-04-13
+
+### 변경
+- feat: Big5 성격검사 개선 - 명칭변경/위치고정/i18n수정/광고+CHA보상
+
 ## [1.0.320] - 2026-04-13
 
 ### 변경
