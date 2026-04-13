@@ -9,6 +9,8 @@
     const CONSENT_KEY = 'big5_consent';   // localStorage: ISO 타임스탬프
     const PAGES = 6;
     const PER_PAGE = 5;
+    const BIG5_CHA_REWARD = 3;
+    const BIG5_CHA_KEY = 'big5_cha_claimed';
 
     // ── 모듈 상태 ──────────────────────────────────────────────────
     let _currentPage = 0;   // 0=동의, 1..6=문항, 7=결과
@@ -197,13 +199,26 @@
         var cb = document.getElementById('big5-consent-cb');
         if (!cb || !cb.checked) {
             var lang = AppState.currentLang || 'ko';
-            var _t   = (i18n && i18n[lang]) || (i18n && i18n.ko) || {};
+            var _t   = (window.i18n && window.i18n[lang]) || (window.i18n && window.i18n.ko) || {};
             alert(_t.big5_consent_required || '검사를 시작하려면 동의가 필요합니다.');
             return;
         }
         localStorage.setItem(CONSENT_KEY, new Date().toISOString());
-        _currentPage = 1;
-        renderPage();
+
+        function proceedToTest() {
+            _currentPage = 1;
+            renderPage();
+        }
+
+        if (window.AdManager) {
+            window.AdManager.showRewarded({
+                context: 'big5Test',
+                onSuccess: proceedToTest,
+                onFail: proceedToTest
+            });
+        } else {
+            proceedToTest();
+        }
     };
 
     // ── 페이지 1-6: 문항 ───────────────────────────────────────────
@@ -348,10 +363,11 @@
     window.saveBig5Results = function () {
         if (!localStorage.getItem(CONSENT_KEY)) {
             var lang = AppState.currentLang || 'ko';
-            var _t   = (i18n && i18n[lang]) || (i18n && i18n.ko) || {};
+            var _t   = (window.i18n && window.i18n[lang]) || (window.i18n && window.i18n.ko) || {};
             alert(_t.big5_consent_required || '동의 후 저장할 수 있습니다.');
             return;
         }
+        var isFirstCompletion = !(AppState.user.big5 && AppState.user.big5.completedAt);
         var scores = calculateScores();
         AppState.user.big5 = {
             o: scores.O,
@@ -362,6 +378,18 @@
             completedAt: new Date().toISOString()
         };
         if (typeof window.saveUserData === 'function') window.saveUserData();
+
+        // ── CHA 보상 (최초 완료 1회) ───────────────────────────────
+        var alreadyClaimed = !!localStorage.getItem(BIG5_CHA_KEY);
+        if (isFirstCompletion && !alreadyClaimed) {
+            localStorage.setItem(BIG5_CHA_KEY, '1');
+            AppState.user.pendingStats.cha = (AppState.user.pendingStats.cha || 0) + BIG5_CHA_REWARD;
+            if (typeof window.saveUserData === 'function') window.saveUserData();
+            var lang = AppState.currentLang || 'ko';
+            var _t   = (window.i18n && window.i18n[lang]) || (window.i18n && window.i18n.ko) || {};
+            alert(_t.big5_cha_reward || 'Big5 성격 검사 완료! CHA +3');
+        }
+
         closePersonalityTest();
         renderBig5Card();
     };
@@ -402,7 +430,7 @@
         var labels = getTraitLabels(_lang);
         var scores = { O: big5Data.o, C: big5Data.c, E: big5Data.e, A: big5Data.a, N: big5Data.n };
         container.innerHTML =
-            '<div style="font-size:0.72rem;color:var(--text-sub);margin-bottom:6px;font-weight:bold;letter-spacing:0.05em;">BIG FIVE</div>' +
+            '<div style="font-size:0.72rem;color:var(--text-sub);margin-bottom:6px;font-weight:bold;letter-spacing:0.05em;">' + (_t.card_big5 || 'Big5 성격검사') + '</div>' +
             buildBarChartSVG(scores, labels, 300);
     };
 
