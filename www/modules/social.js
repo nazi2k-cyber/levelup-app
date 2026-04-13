@@ -22,6 +22,7 @@
     const sanitizeURL       = window.sanitizeURL;
     const sanitizeAttr      = window.sanitizeAttr;
     const sanitizeInstaId   = window.sanitizeInstaId;
+    const sanitizeLinkedInId = window.sanitizeLinkedInId;
     const buildUserTitleBadgeHTML = window.buildUserTitleBadgeHTML;
 
     // 게임 로직
@@ -118,6 +119,7 @@
         }
 
         const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: #ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+        const linkedinSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="color: #0077b5;"><path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854zm4.943 12.248V6.169H2.542v7.225zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248S2.4 3.226 2.4 3.934c0 .694.521 1.248 1.327 1.248zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016l.016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225z"/></svg>`;
 
         // 현재 유저의 팔로잉/팔로워 수 계산 (my-rank 카드용)
         const myUid = auth.currentUser?.uid;
@@ -153,6 +155,7 @@
                             <div class="name-container">
                                 <div style="font-size: 0.9rem; font-weight: bold;">${sanitizeText(u.name)}</div>
                                 ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : `<button onclick="document.getElementById('btn-edit-insta').click()" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>`}
+                                ${u.linkedinId ? `<button onclick="window.open('https://www.linkedin.com/in/${sanitizeLinkedInId(u.linkedinId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>` : `<button onclick="document.getElementById('btn-edit-linkedin').click()" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>`}
                             </div>
                             <div class="profile-follow-stats">
                                 <span class="follow-stat-item" onclick="window.goToSocialTab('friends')">
@@ -179,7 +182,7 @@
                     <div class="user-info" style="margin-left:0;">
                         ${titleBadgeHTML}
                         <div style="font-size:0.9rem; display:flex; align-items:center;">
-                            ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+                            ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''} ${u.linkedinId ? `<button onclick="window.open('https://www.linkedin.com/in/${sanitizeLinkedInId(u.linkedinId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:5px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>` : ''}
                         </div>
                         <div class="profile-follow-stats" style="margin-top:2px;">
                             <span class="follow-stat-item"><strong>${formatFollowCount(uFollowingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span>
@@ -214,6 +217,7 @@
             AppState.social.users[idx].name = AppState.user.name;
             AppState.social.users[idx].photoURL = AppState.user.photoURL;
             AppState.social.users[idx].instaId = AppState.user.instaId || '';
+            AppState.social.users[idx].linkedinId = AppState.user.linkedinId || '';
             AppState.social.users[idx].stats = { ...AppState.user.stats };
             renderUsers(AppState.social.sortCriteria);
         }

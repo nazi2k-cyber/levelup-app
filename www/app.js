@@ -678,6 +678,7 @@ function getInitialAppState() {
             fcmToken: null,
             stepData: { date: "", rewardedSteps: 0, totalSteps: 0 },
             instaId: "",
+            linkedinId: "",
             streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0, activeDates: [] },
             nameLastChanged: null,
             rareTitle: { unlocked: [] },
@@ -1722,6 +1723,7 @@ function bindEvents() {
 
     document.getElementById('btn-edit-name').addEventListener('click', changePlayerName);
     document.getElementById('btn-edit-insta').addEventListener('click', changeInstaId);
+    document.getElementById('btn-edit-linkedin').addEventListener('click', changeLinkedInId);
     document.getElementById('imageUploadLabel').addEventListener('click', function(e) {
         e.preventDefault();
         showPhotoSourceSheet('imageUpload');
@@ -2023,6 +2025,7 @@ async function _doSaveUserData() {
             lang: AppState.currentLang || 'ko',
             stepData: normalizedStepData,
             instaId: AppState.user.instaId || "",
+            linkedinId: AppState.user.linkedinId || "",
             nameLastChanged: normalizedNameLastChanged,
             streak: normalizeStreakMapForFirestore(AppState.user.streak),
             streakStr: JSON.stringify(AppState.user.streak ?? {}),
@@ -2096,7 +2099,7 @@ async function _doSaveUserData() {
                 const _allowedFields = new Set([
                     'name','level','points','photoURL','stats','pendingStats',
                     'friends','fcmToken','syncEnabled','gpsEnabled','pushEnabled',
-                    'instaId','nameLastChanged','lastRouletteDate','lastReelsPostTs',
+                    'instaId','linkedinId','nameLastChanged','lastRouletteDate','lastReelsPostTs',
                     'stepData','streak','questStr','questWeekStart','diaryStr','reelsStr',
                     'dungeonStr','diyQuestsStr','questHistoryStr','titleHistoryStr',
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
@@ -2123,6 +2126,7 @@ async function _doSaveUserData() {
                 if ('lastReelsPostTs' in _merged && typeof _merged.lastReelsPostTs !== 'number') _issues.push(`lastReelsPostTs(type=${typeof _merged.lastReelsPostTs})`);
                 if ('fcmToken' in _merged && _merged.fcmToken !== null && typeof _merged.fcmToken !== 'string') _issues.push(`fcmToken(type=${typeof _merged.fcmToken})`);
                 if ('instaId' in _merged && (typeof _merged.instaId !== 'string' || _merged.instaId.length > 30)) _issues.push(`instaId(len=${_merged.instaId?.length})`);
+                if ('linkedinId' in _merged && (typeof _merged.linkedinId !== 'string' || _merged.linkedinId.length > 100)) _issues.push(`linkedinId(len=${_merged.linkedinId?.length})`);
                 // streak 맵 검증 (기존 문서에 map으로 존재할 수 있음)
                 if ('streak' in _merged) {
                     const _s = _merged.streak;
@@ -2312,6 +2316,7 @@ async function loadUserDataFromDB(user) {
             }
             if(data.stepData) AppState.user.stepData = data.stepData;
             if(data.instaId) AppState.user.instaId = data.instaId;
+            if(data.linkedinId) AppState.user.linkedinId = data.linkedinId;
             if(data.nameLastChanged != null) AppState.user.nameLastChanged = data.nameLastChanged;
             if(data.streakStr) {
                 try {
@@ -3184,6 +3189,15 @@ function changeInstaId() {
     const newId = prompt(i18n[AppState.currentLang].insta_prompt || "인스타 ID를 입력하세요", AppState.user.instaId);
     if (newId !== null) {
         AppState.user.instaId = newId.trim().replace('@', '');
+        if (window.SocialModule) window.SocialModule.updateUserData();
+        saveUserData();
+    }
+}
+
+function changeLinkedInId() {
+    const newId = prompt(i18n[AppState.currentLang].linkedin_prompt || "링크드인 ID를 입력하세요", AppState.user.linkedinId);
+    if (newId !== null) {
+        AppState.user.linkedinId = newId.trim().replace('@', '');
         if (window.SocialModule) window.SocialModule.updateUserData();
         saveUserData();
     }
@@ -4470,6 +4484,7 @@ window.syncGlobalDungeon = async () => {
                                 photoURL: data.photoURL || null,
                                 title, rareTitle,
                                 instaId: data.instaId || '',
+                                linkedinId: data.linkedinId || '',
                                 hasContributed: !!dng.hasContributed,
                                 statValue: Number(stats[AppState.dungeon.targetStat]) || 0,
                                 isMe
@@ -4576,6 +4591,7 @@ function renderRaidParticipants(participants) {
     const lang = AppState.currentLang;
     const t = i18n[lang];
     const instaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="color:#ff3c3c;"><path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 8 0zm0 1.44c2.136 0 2.409.01 3.264.048.789.037 1.213.15 1.494.263.372.145.639.319.918.598.28.28.453.546.598.918.113.281.226.705.263 1.494.039.855.048 1.128.048 3.264s-.01 2.409-.048 3.264c-.037.789-.15 1.213-.263 1.494-.145.372-.319.639-.598.918-.28.28-.546.453-.918.598-.281.113-.705.226-1.494.263-.855.039-1.128.048-3.264.048s-2.409-.01-3.264-.048c-.789-.037-1.213-.15-1.494-.263-.372-.145-.639-.319-.918-.598-.28-.28-.453-.546-.598-.918-.113-.281-.226-.705-.263-1.494-.039-.855-.048-1.128-.048-3.264s.01-2.409.048-3.264c.037-.789.15-1.213.263-1.494.145-.372.319-.639.598-.918.28-.28.546-.453.918-.598.281-.113.705-.226 1.494-.263.855-.039 1.128-.048 3.264-.048z"/><path d="M8 3.89a4.11 4.11 0 1 0 0 8.22 4.11 4.11 0 0 0 0-8.22zm0 1.44a2.67 2.67 0 1 1 0 5.34 2.67 2.67 0 0 1 0-5.34z"/><path d="M12.333 4.667a.96.96 0 1 0 0-1.92.96.96 0 0 0 0 1.92z"/></svg>`;
+    const linkedinSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style="color:#0077b5;"><path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854zm4.943 12.248V6.169H2.542v7.225zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248S2.4 3.226 2.4 3.934c0 .694.521 1.248 1.327 1.248zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016l.016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225z"/></svg>`;
 
     const cards = participants.map(u => {
         const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.55rem');
@@ -4586,7 +4602,7 @@ function renderRaidParticipants(participants) {
                 <div>
                     ${titleBadgeHTML}
                     <div style="font-size:0.8rem; display:flex; align-items:center;">
-                        ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''}
+                        ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''} ${u.linkedinId ? `<button onclick="window.open('https://www.linkedin.com/in/${sanitizeLinkedInId(u.linkedinId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -9661,6 +9677,12 @@ function sanitizeInstaId(id) {
     return id.replace(/[^a-zA-Z0-9._]/g, '');
 }
 
+/** 링크드인 ID 검증 (영문, 숫자, 하이픈만 허용) */
+function sanitizeLinkedInId(id) {
+    if (typeof id !== 'string') return '';
+    return id.replace(/[^a-zA-Z0-9-]/g, '');
+}
+
 /** URL 새니타이즈 (javascript: 프로토콜 차단) */
 function sanitizeURL(url) {
     if (typeof url !== 'string' || !url) return '';
@@ -9707,6 +9729,7 @@ window.sanitizeText = sanitizeText;
 window.sanitizeURL = sanitizeURL;
 window.sanitizeAttr = sanitizeAttr;
 window.sanitizeInstaId = sanitizeInstaId;
+window.sanitizeLinkedInId = sanitizeLinkedInId;
 window.buildUserTitleBadgeHTML = buildUserTitleBadgeHTML;
 window.checkRankRareTitles = checkRankRareTitles;
 

@@ -44,6 +44,8 @@ const i18n = {
         // ★ 추가됨: 인스타그램 관련 텍스트 ★
         insta_prompt: "인스타그램 사용자 이름(ID)을 입력하세요.\n(예: levelup_official)\n빈칸 입력 시 링크가 삭제됩니다.",
         insta_success: "인스타그램 링크가 업데이트되었습니다.",
+        linkedin_prompt: "링크드인 사용자 이름(ID)을 입력하세요.\n(예: levelup-official)\n빈칸 입력 시 링크가 삭제됩니다.",
+        linkedin_success: "링크드인 링크가 업데이트되었습니다.",
         diary_title: "오늘의 다이어리", diary_empty: "오늘의 기록을 남겨보세요", diary_write: "기록하기",
         diary_modal_title: "다이어리", diary_placeholder: "오늘 하루를 기록해보세요...",
         diary_save: "저장", diary_saved: "플래너가 저장되었습니다.", diary_written: "작성 완료 ✓",
@@ -688,6 +690,8 @@ const i18n = {
         
         insta_prompt: "Enter Instagram Username (ID).\n(e.g., levelup_official)\nLeave blank to remove.",
         insta_success: "Instagram link updated.",
+        linkedin_prompt: "Enter LinkedIn Username (ID).\n(e.g., levelup-official)\nLeave blank to remove.",
+        linkedin_success: "LinkedIn link updated.",
         diary_title: "Today's Diary", diary_empty: "Write about your day", diary_write: "Write",
         diary_modal_title: "Diary", diary_placeholder: "How was your day?",
         diary_save: "Save", diary_saved: "Planner saved.", diary_written: "Written ✓",
@@ -1329,6 +1333,8 @@ const i18n = {
         
         insta_prompt: "Instagramユーザー名(ID)を入力してください。\n(例: levelup_official)\n空白でリンクが削除されます。",
         insta_success: "Instagramリンクが更新されました。",
+        linkedin_prompt: "LinkedInユーザー名(ID)を入力してください。\n(例: levelup-official)\n空白でリンクが削除されます。",
+        linkedin_success: "LinkedInリンクが更新されました。",
         diary_title: "今日のプランナー", diary_empty: "今日の予定を記入しましょう", diary_write: "記録する",
         diary_modal_title: "プランナー", diary_placeholder: "タスクを入力してください...",
         diary_save: "保存", diary_saved: "プランナーが保存されました。", diary_written: "記録完了 ✓",

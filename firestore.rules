@@ -75,6 +75,7 @@ service cloud.firestore {
         && (!('privateAccount' in d) || d.privateAccount is bool)
         // ── 짧은 문자열/숫자 필드 ──
         && (!('instaId' in d) || d.instaId == null || (d.instaId is string && d.instaId.size() <= 30))
+        && (!('linkedinId' in d) || d.linkedinId == null || (d.linkedinId is string && d.linkedinId.size() <= 100))
         && (!('fcmToken' in d) || d.fcmToken == null || (d.fcmToken is string && d.fcmToken.size() <= 500))
         && (!('questWeekStart' in d) || d.questWeekStart == null || (d.questWeekStart is string && d.questWeekStart.size() <= 10))
         && (!('lastRouletteDate' in d) || d.lastRouletteDate == null || (d.lastRouletteDate is string && d.lastRouletteDate.size() <= 10))
