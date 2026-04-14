@@ -150,6 +150,84 @@ input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-ca
     letter-spacing: 2px; margin-top: 4px;
 }
 
+/* ===== 라이트 테마 — 로그인 화면 오버라이드 ===== */
+[data-theme="light"] #login-screen {
+    background: linear-gradient(180deg, #f0f4ff 0%, #e8edf8 50%, #f4f6fb 100%);
+}
+[data-theme="light"] .login-top-logo {
+    border-bottom-color: rgba(43,108,176,0.15);
+}
+[data-theme="light"] .login-logo-text {
+    color: #1a202c;
+}
+[data-theme="light"] .login-logo-sub {
+    color: rgba(43,108,176,0.8);
+}
+[data-theme="light"] .login-brand-badge {
+    color: rgba(180,83,9,0.75);
+}
+[data-theme="light"] .login-hero-title {
+    color: #1a202c;
+}
+[data-theme="light"] .login-google-btn {
+    background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.12); color: #333;
+}
+[data-theme="light"] .login-google-btn:active {
+    background: rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.2);
+}
+[data-theme="light"] .login-google-hint {
+    color: rgba(43,108,176,0.7);
+}
+[data-theme="light"] .login-divider {
+    color: rgba(0,0,0,0.3);
+}
+[data-theme="light"] .login-divider::before,
+[data-theme="light"] .login-divider::after {
+    background: rgba(0,0,0,0.1);
+}
+[data-theme="light"] .login-input {
+    background: #ffffff; border-color: rgba(0,0,0,0.15); color: #1a202c;
+}
+[data-theme="light"] .login-input::placeholder {
+    color: rgba(0,0,0,0.3);
+}
+[data-theme="light"] .login-input:focus {
+    border-color: rgba(43,108,176,0.5);
+}
+[data-theme="light"] .login-terms {
+    color: rgba(0,0,0,0.4);
+}
+[data-theme="light"] .login-terms a {
+    color: rgba(0,0,0,0.55);
+}
+[data-theme="light"] .forgot-pw-link {
+    color: rgba(0,0,0,0.35);
+}
+[data-theme="light"] .login-toggle {
+    color: rgba(0,0,0,0.4);
+}
+[data-theme="light"] .login-lang-btn {
+    color: rgba(0,0,0,0.35);
+}
+[data-theme="light"] .login-lang-btn:hover {
+    color: rgba(0,0,0,0.65);
+}
+[data-theme="light"] .login-lang-sep {
+    color: rgba(0,0,0,0.12);
+}
+[data-theme="light"] .verify-title {
+    color: #1a202c;
+}
+[data-theme="light"] .verify-desc {
+    color: rgba(0,0,0,0.45);
+}
+[data-theme="light"] .login-bottom-brand-name {
+    color: rgba(0,0,0,0.2);
+}
+[data-theme="light"] .login-bottom-brand-tagline {
+    color: rgba(43,108,176,0.2);
+}
+
 #app-container { flex-direction: column; width: 100%; height: 100%; }
 header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--panel-bg); z-index: 10; }
 #sys-title { font-weight: 900; letter-spacing: 1px; font-size: 1.1rem; flex-shrink: 1; min-width: 0; }
