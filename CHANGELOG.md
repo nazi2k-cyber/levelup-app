@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.361] - 2026-04-14
+
+### 변경
+- ci: auto-version 커밋 시 AAB 자동 빌드 트리거 추가
+
 ## [1.0.360] - 2026-04-14
 
 ### 변경
