@@ -12,7 +12,11 @@ on:
         required: true
         default: '1'
       changelog_entry:
-        description: '이번 릴리즈 변경사항 (CHANGELOG.md에 자동 추가)'
+        description: '이번 릴리즈 변경사항 (CHANGELOG.md에 자동 추가, 한국어)'
+        required: false
+        default: ''
+      en_changelog_entry:
+        description: '영문 출시 노트 (구글 플레이 en-US, 미입력 시 기본 메시지 사용)'
         required: false
         default: ''
 
@@ -379,12 +383,56 @@ jobs:
           cp "${AAB_DIR}/app-release.aab" "${AAB_DIR}/levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab"
           echo "✅ AAB 파일명: levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab"
 
-      # 22. AAB 아티팩트 업로드
-      - name: AAB 업로드 (Artifact)
+      # 21-2. 출시 노트 문서 생성 (플레이스토어 형식)
+      - name: 출시 노트 문서 생성
+        id: release_notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # CHANGELOG.md에서 현재 버전의 한국어 항목 추출 (bullet points만)
+          KO_NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found && /^- /{print}" CHANGELOG.md \
+            | sed 's/^- feat: /- /; s/^- fix: /- /; s/^- ci: /- /; s/^- chore: /- /; s/^- refactor: /- /; s/^- style: /- /')
+
+          if [ -z "$KO_NOTES" ]; then
+            KO_NOTES="- 버그 수정 및 성능 개선"
+          fi
+
+          # 영문 노트 (입력값 우선, 없으면 기본 메시지)
+          EN_NOTES="${{ github.event.inputs.en_changelog_entry }}"
+          if [ -z "$EN_NOTES" ]; then
+            EN_NOTES="Bug fixes and performance improvements."
+          fi
+
+          # 500자 초과 경고 (플레이스토어 제한)
+          KO_LEN=$(printf '%s' "$KO_NOTES" | wc -c)
+          EN_LEN=$(printf '%s' "$EN_NOTES" | wc -c)
+          [ "$KO_LEN" -gt 500 ] && echo "⚠️ 한국어 출시 노트 ${KO_LEN}자 — 500자 초과 시 플레이스토어에서 잘릴 수 있습니다."
+          [ "$EN_LEN" -gt 500 ] && echo "⚠️ 영문 출시 노트 ${EN_LEN}자 — 500자 초과 시 플레이스토어에서 잘릴 수 있습니다."
+
+          # 플레이스토어 형식 파일 생성
+          mkdir -p release-notes
+          NOTES_FILE="release-notes/release-notes-v${VERSION}.txt"
+          {
+            printf '<ko-KR>\n'
+            printf '%s\n' "$KO_NOTES"
+            printf '</ko-KR>\n'
+            printf '<en-US>\n'
+            printf '%s\n' "$EN_NOTES"
+            printf '</en-US>\n'
+          } > "$NOTES_FILE"
+
+          echo "✅ 출시 노트 생성 완료: $NOTES_FILE"
+          echo "--- 파일 내용 미리보기 ---"
+          cat "$NOTES_FILE"
+
+      # 22. AAB 및 출시 노트 아티팩트 업로드
+      - name: AAB 및 출시 노트 업로드 (Artifact)
         uses: actions/upload-artifact@v5
         with:
           name: levelup-reboot-v${{ steps.version.outputs.version }}-(${{ github.event.inputs.version_code }})-release
-          path: android/app/build/outputs/bundle/release/levelup-reboot-v${{ steps.version.outputs.version }}-(${{ github.event.inputs.version_code }})-release.aab
+          path: |
+            android/app/build/outputs/bundle/release/levelup-reboot-v${{ steps.version.outputs.version }}-(${{ github.event.inputs.version_code }})-release.aab
+            release-notes/
           retention-days: 90
 
       # 22-1. 릴리즈 Git 태그 생성
@@ -409,6 +457,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           VERSION_CODE="${{ github.event.inputs.version_code }}"
+          NOTES_FILE="release-notes/release-notes-v${VERSION}.txt"
           echo "## ✅ 플레이스토어 릴리즈 AAB 빌드 완료" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
@@ -417,12 +466,18 @@ jobs:
           echo "| 버전 이름 | \`v${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 버전 코드 | \`${VERSION_CODE}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 빌드 유형 | Release AAB |" >> $GITHUB_STEP_SUMMARY
-          echo "| 파일명 | \`levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| AAB 파일 | \`levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 출시 노트 | \`release-notes-v${VERSION}.txt\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Git 태그 | \`v${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 출시 노트 (플레이 콘솔 복붙용)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat "$NOTES_FILE" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 다음 단계" >> $GITHUB_STEP_SUMMARY
-          echo "1. 위 아티팩트에서 AAB 파일을 다운로드하세요" >> $GITHUB_STEP_SUMMARY
+          echo "1. 위 아티팩트에서 AAB 파일과 출시 노트를 다운로드하세요" >> $GITHUB_STEP_SUMMARY
           echo "2. Google Play Console → 프로덕션 트랙 → 새 릴리즈 만들기" >> $GITHUB_STEP_SUMMARY
           echo "3. AAB 파일을 업로드하세요" >> $GITHUB_STEP_SUMMARY
-          echo "4. 출시 노트(한국어)를 작성하세요" >> $GITHUB_STEP_SUMMARY
+          echo "4. 위 출시 노트를 플레이 콘솔 '출시 노트' 필드에 붙여넣으세요" >> $GITHUB_STEP_SUMMARY
           echo "5. 검토를 위해 제출하세요" >> $GITHUB_STEP_SUMMARY
