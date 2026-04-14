@@ -4609,7 +4609,7 @@ function renderRaidParticipants(participants) {
                 <div>
                     ${titleBadgeHTML}
                     <div style="font-size:0.8rem; display:flex; align-items:center;">
-                        ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''} ${u.linkedinId ? `<button onclick="window.open('https://www.linkedin.com/in/${sanitizeLinkedInId(u.linkedinId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>` : ''}
+                        ${sanitizeText(u.name)} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''} ${u.linkedinId ? `<button onclick="window.openLinkedInProfile('${sanitizeLinkedInId(u.linkedinId)}')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -9743,6 +9743,17 @@ function sanitizeLinkedInId(id) {
     return id.replace(/[^a-zA-Z0-9-]/g, '');
 }
 
+/** 링크드인 프로필 열기: 네이티브 환경에서는 App.openUrl()로 LinkedIn 앱 직접 실행 */
+function openLinkedInProfile(linkedinId) {
+    const url = 'https://www.linkedin.com/in/' + linkedinId;
+    const cap = window.Capacitor;
+    if (isNativePlatform && cap && cap.Plugins && cap.Plugins.App && cap.Plugins.App.openUrl) {
+        cap.Plugins.App.openUrl({ url });
+    } else {
+        window.open(url, '_blank');
+    }
+}
+
 /** URL 새니타이즈 (javascript: 프로토콜 차단) */
 function sanitizeURL(url) {
     if (typeof url !== 'string' || !url) return '';
@@ -9790,6 +9801,7 @@ window.sanitizeURL = sanitizeURL;
 window.sanitizeAttr = sanitizeAttr;
 window.sanitizeInstaId = sanitizeInstaId;
 window.sanitizeLinkedInId = sanitizeLinkedInId;
+window.openLinkedInProfile = openLinkedInProfile;
 window.buildUserTitleBadgeHTML = buildUserTitleBadgeHTML;
 window.checkRankRareTitles = checkRankRareTitles;
 
