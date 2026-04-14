@@ -5543,19 +5543,21 @@ function openProfileStatsModal(userId) {
     const saveBtnHTML = isMe ? `<button class="btn-profile-save" onclick="event.stopPropagation();window.saveProfileCardAsImage('${sanitizeAttr(userId)}')">${i18n[lang]?.profile_save_btn || '저장'}</button>` : '';
 
     const profileHTML = `
-        <div style="display:flex; align-items:center; gap:12px;">
-            ${u.photoURL
-                ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-blue); flex-shrink:0;">`
-                : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue); flex-shrink:0;"></div>`}
+        <div style="display:flex; align-items:flex-start; gap:10px;">
+            <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">
+                ${u.photoURL
+                    ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-blue);">`
+                    : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue);"></div>`}
+                <div style="font-size:0.75rem; color:var(--text-sub); margin-top:4px; text-align:center;">Lv. ${u.level || 1}</div>
+            </div>
             <div style="flex:1; min-width:0;">
-                ${titleBadgeHTML}
-                <span style="font-size:1rem; font-weight:bold; color:var(--text-main);">${sanitizeText(u.name)}</span>
+                <div style="margin-bottom:2px;">${titleBadgeHTML}</div>
+                <div style="font-size:1rem; font-weight:bold; color:var(--text-main); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${sanitizeText(u.name)}</div>
                 <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:4px;">
                     ${followBtnHTML}
                     <button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>
                     ${saveBtnHTML}
                 </div>
-                <div style="font-size:0.75rem; color:var(--text-sub); margin-top:2px;">Lv. ${u.level || 1}</div>
                 <div class="profile-follow-stats" style="margin-top:4px;">
                     <span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount||String)(followingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span>
                     <span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount||String)(followerCount)}</strong> <span>${i18n[lang]?.prof_followers || '팔로워'}</span></span>
