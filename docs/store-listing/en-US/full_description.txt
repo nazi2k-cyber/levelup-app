@@ -42,6 +42,10 @@ LEVEL UP: REBOOT is a self-improvement app that gamifies your daily life using R
 • My Library — Manage your reading list (Babel's Library)
 • Running Calculator — Auto-calculate pace, distance & time
 • Life Progress — Visualize your remaining time
+• Pomodoro Timer — Focused work sessions with break intervals
+• Big5 Personality Test — Discover your personality type & earn CHA stat
+• My Movies — Track films you've watched & want to see
+• Challenges & Roulette — Daily bonus missions with random rewards
 
 🌍 Multilingual Support
 • Korean · English · Japanese
