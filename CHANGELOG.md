@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.332] - 2026-04-14
+
+### 변경
+- Reorganize profile modal layout
+
 ## [1.0.331] - 2026-04-14
 
 ### 변경
