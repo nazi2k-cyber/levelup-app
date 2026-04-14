@@ -543,6 +543,7 @@ const i18n = {
         // D-Day Caption
         dday_caption_title: "목표 / 좌우명",
         dday_caption_input_placeholder: "나의 목표 또는 좌우명을 입력하세요...",
+        dday_caption_profile_notice: "소셜 프로필에 공개됩니다",
 
         // Card names (home editor)
         card_bonus_exp: "보너스 EXP",
@@ -1186,6 +1187,7 @@ const i18n = {
         // D-Day Caption
         dday_caption_title: "Goal / Motto",
         dday_caption_input_placeholder: "Enter your goal or motto...",
+        dday_caption_profile_notice: "Shown on your social profile",
 
         // Card names (home editor)
         card_bonus_exp: "Bonus EXP",
@@ -1829,6 +1831,7 @@ const i18n = {
         // D-Dayキャプション
         dday_caption_title: "目標 / 座右の銘",
         dday_caption_input_placeholder: "目標や座右の銘を入力してください...",
+        dday_caption_profile_notice: "ソーシャルプロフィールに公開されます",
 
         // カード名（ホーム編集）
         card_bonus_exp: "ボーナスEXP",

@@ -5581,7 +5581,7 @@ function openProfileStatsModal(userId) {
     if (mottoEl) {
         if (caption) {
             mottoEl.style.display = 'block';
-            mottoEl.innerHTML = `<div style="padding:6px 10px; background:rgba(255,204,0,0.06); border:1px solid var(--neon-gold); border-radius:4px; font-size:0.75rem; color:var(--text-sub); font-style:italic;">${sanitizeText(caption)}</div>`;
+            mottoEl.innerHTML = `<div style="padding:6px 10px; background:rgba(255,204,0,0.06); border-radius:4px; font-size:0.75rem; color:var(--text-sub); font-style:italic;">${sanitizeText(caption)}</div>`;
         } else {
             mottoEl.style.display = 'none';
             mottoEl.innerHTML = '';
