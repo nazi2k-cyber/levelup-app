@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.343] - 2026-04-14
+
+### 변경
+- ci: 랜딩페이지 양방향 동기화 워크플로우 추가
+
 ## [1.0.342] - 2026-04-14
 
 ### 변경
