@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.337] - 2026-04-14
+
+### 변경
+- feat: 라이트/다크 테마 변경 가능 문구 추가
+- feat: 랜딩페이지 스크린샷 업데이트 (2026-04-14 신규 스크린샷 반영)
+
 ## [1.0.336] - 2026-04-14
 
 ### 변경
