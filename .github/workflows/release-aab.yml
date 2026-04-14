@@ -147,6 +147,61 @@ jobs:
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
           echo "✅ 릴리즈 키스토어 복원 완료"
 
+      # 5-1. 키스토어 자격증명 사전 검증
+      - name: 키스토어 자격증명 검증
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          echo "🔍 키스토어 자격증명 검증 중..."
+
+          # 1) 스토어 비밀번호 + alias 검증
+          if ! keytool -list -alias "$RELEASE_KEY_ALIAS" \
+              -keystore release.keystore \
+              -storepass "$RELEASE_KEYSTORE_PASSWORD" \
+              -noprompt > /dev/null 2>&1; then
+            echo "❌ 키스토어 검증 실패!"
+            echo ""
+            echo "원인: RELEASE_KEYSTORE_PASSWORD 또는 RELEASE_KEY_ALIAS 시크릿이 틀렸습니다."
+            echo "  현재 설정된 alias: $RELEASE_KEY_ALIAS"
+            echo ""
+            echo "키스토어에 실제로 존재하는 alias 목록:"
+            keytool -list -keystore release.keystore \
+              -storepass "$RELEASE_KEYSTORE_PASSWORD" \
+              -noprompt 2>/dev/null | grep "Alias name:" || echo "  (스토어 비밀번호도 틀렸거나 키스토어가 손상됨)"
+            echo ""
+            echo "해결 방법:"
+            echo "  GitHub Settings → Secrets → RELEASE_KEY_ALIAS 값을 위 목록의 alias로 수정하거나"
+            echo "  RELEASE_KEYSTORE_PASSWORD 값이 올바른지 확인하세요."
+            exit 1
+          fi
+          echo "  ✅ 스토어 비밀번호 및 alias 확인 완료: $RELEASE_KEY_ALIAS"
+
+          # 2) 키 비밀번호 검증 (jarsigner로 실제 키 접근 시도)
+          echo "test" > /tmp/_ks_test.txt
+          zip -q /tmp/_ks_test.jar /tmp/_ks_test.txt
+          if ! jarsigner \
+              -keystore release.keystore \
+              -storepass "$RELEASE_KEYSTORE_PASSWORD" \
+              -keypass "$RELEASE_KEY_PASSWORD" \
+              -signedjar /tmp/_ks_signed.jar \
+              /tmp/_ks_test.jar \
+              "$RELEASE_KEY_ALIAS" > /dev/null 2>&1; then
+            echo "❌ 키 비밀번호 검증 실패!"
+            echo ""
+            echo "원인: RELEASE_KEY_PASSWORD 시크릿이 틀렸습니다."
+            echo "  현재 alias: $RELEASE_KEY_ALIAS"
+            echo ""
+            echo "해결 방법:"
+            echo "  GitHub Settings → Secrets → RELEASE_KEY_PASSWORD 값이"
+            echo "  키스토어 생성 시 '-keypass'에 사용한 비밀번호와 일치하는지 확인하세요."
+            exit 1
+          fi
+          rm -f /tmp/_ks_test.txt /tmp/_ks_test.jar /tmp/_ks_signed.jar
+          echo "  ✅ 키 비밀번호 확인 완료"
+          echo "✅ 키스토어 자격증명 검증 성공"
+
       # 6. npm 패키지 설치
       - name: npm 패키지 설치
         run: npm ci
