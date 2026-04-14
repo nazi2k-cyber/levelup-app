@@ -40,7 +40,7 @@
         <button class="back-btn" onclick="history.back()">←</button>
         <span class="legal-title" id="page-title">개인정보 처리방침</span>
     </div>
-    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 10일</div>
+    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 14일</div>
 
     <!-- 한국어 -->
     <div class="content-block active" id="content-ko">
@@ -69,7 +69,7 @@
             </tr>
             <tr>
                 <td>프로필 정보</td>
-                <td>닉네임, 프로필 사진, 인스타그램 ID</td>
+                <td>닉네임, 프로필 사진, 인스타그램 ID, LinkedIn 프로필 URL(선택)</td>
                 <td>사용자 직접 입력/업로드</td>
             </tr>
             <tr>
@@ -123,6 +123,11 @@
                 <td>KOBIS/KMDb API를 통한 검색, 사용자 선택/입력</td>
             </tr>
             <tr>
+                <td>Big5 성격검사</td>
+                <td>성격 특성 점수 5개 항목(개방성·성실성·외향성·친화성·신경증), 검사 일시</td>
+                <td>앱 내 검사 수행 (별도 동의 후 저장)</td>
+            </tr>
+            <tr>
                 <td>언어 설정</td>
                 <td>앱 언어 선택(한국어, 영어, 일본어)</td>
                 <td>사용자 선택 시 자동 저장</td>
@@ -159,6 +164,8 @@
             <li><strong>D-Day:</strong> 목표 날짜 관리 및 남은 일수 표시</li>
             <li><strong>내 서재:</strong> 독서 기록 관리, ISBN 바코드 스캔을 통한 도서 검색, 독서 보상 지급</li>
             <li><strong>내 영화:</strong> 영화 감상 기록 관리, KOBIS/KMDb API를 통한 영화 검색, 감상 보상 지급</li>
+            <li><strong>Big5 성격검사:</strong> 성격 유형 분석 결과 표시, 맞춤형 퀘스트 추천, 자기계발 동기 부여</li>
+            <li><strong>LinkedIn 프로필:</strong> 프로필 페이지 내 커리어 정보 표시</li>
             <li><strong>푸시 알림:</strong> 퀘스트 알림, 레이드 알림, 스트릭 알림, 서비스 공지 전달(언어별 분리 발송)</li>
             <li><strong>광고:</strong> 서비스 운영 비용 충당을 위한 광고 표시(Google AdMob)</li>
             <li><strong>서비스 개선:</strong> 이용 통계 분석, 오류 진단 및 서비스 품질 향상</li>
@@ -229,6 +236,16 @@
                 <td>내 영화 데이터</td>
                 <td>회원 탈퇴 시까지 (Firestore 동기화)</td>
                 <td>로그아웃 시 로컬 데이터 삭제, 서버 데이터는 탈퇴 시 삭제</td>
+            </tr>
+            <tr>
+                <td>LinkedIn 프로필 데이터</td>
+                <td>회원 탈퇴 시까지</td>
+                <td>사용자 직접 삭제 가능, 탈퇴 시 즉시 삭제</td>
+            </tr>
+            <tr>
+                <td>Big5 검사 데이터</td>
+                <td>회원 탈퇴 시 또는 사용자 초기화 시까지</td>
+                <td>별도 동의 기반, 암호화 저장</td>
             </tr>
             <tr>
                 <td>언어 설정</td>
@@ -394,7 +411,7 @@
             </tr>
             <tr>
                 <td>Profile Information</td>
-                <td>Nickname, profile photo, Instagram ID</td>
+                <td>Nickname, profile photo, Instagram ID, LinkedIn profile URL (optional)</td>
                 <td>User input / upload</td>
             </tr>
             <tr>
@@ -448,6 +465,11 @@
                 <td>Search via KOBIS/KMDb API, user selection/input</td>
             </tr>
             <tr>
+                <td>Big5 Personality Test</td>
+                <td>Personality trait scores for 5 dimensions (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism), test date/time</td>
+                <td>In-app test completion (stored after separate consent)</td>
+            </tr>
+            <tr>
                 <td>Language Settings</td>
                 <td>App language selection (Korean, English, Japanese)</td>
                 <td>Automatically saved on user selection</td>
@@ -484,6 +506,8 @@
             <li><strong>D-Day:</strong> Target date management and remaining days display</li>
             <li><strong>My Library:</strong> Reading record management, book search via ISBN barcode scanning, reading rewards</li>
             <li><strong>My Movies:</strong> Movie viewing record management, movie search via KOBIS/KMDb API, viewing rewards</li>
+            <li><strong>Big5 Personality Test:</strong> Displaying personality type analysis results, personalized quest recommendations, self-improvement motivation</li>
+            <li><strong>LinkedIn Profile:</strong> Displaying career information on the user's profile page</li>
             <li><strong>Push Notifications:</strong> Quest alerts, raid alerts, streak alerts, service announcements (sent by language)</li>
             <li><strong>Advertising:</strong> Ad display to cover service operating costs (Google AdMob)</li>
             <li><strong>Service Improvement:</strong> Usage analytics, error diagnosis and service quality improvement</li>
@@ -554,6 +578,16 @@
                 <td>My Movies Data</td>
                 <td>Until account deletion (synced via Firestore)</td>
                 <td>Local data deleted on logout; server data deleted on withdrawal</td>
+            </tr>
+            <tr>
+                <td>LinkedIn Profile Data</td>
+                <td>Until account deletion</td>
+                <td>User may delete at any time; deleted immediately upon withdrawal</td>
+            </tr>
+            <tr>
+                <td>Big5 Test Data</td>
+                <td>Until account deletion or user reset</td>
+                <td>Separate consent-based, encrypted storage</td>
             </tr>
             <tr>
                 <td>Language Settings</td>
@@ -719,7 +753,7 @@
             </tr>
             <tr>
                 <td>プロフィール情報</td>
-                <td>ニックネーム、プロフィール写真、Instagram ID</td>
+                <td>ニックネーム、プロフィール写真、Instagram ID、LinkedInプロフィールURL（任意）</td>
                 <td>ユーザー直接入力/アップロード</td>
             </tr>
             <tr>
@@ -773,6 +807,11 @@
                 <td>KOBIS/KMDb APIによる検索、ユーザー選択/入力</td>
             </tr>
             <tr>
+                <td>Big5性格検査</td>
+                <td>性格特性スコア5項目（開放性・誠実性・外向性・協調性・神経症傾向）、検査日時</td>
+                <td>アプリ内検査実施（別途同意後に保存）</td>
+            </tr>
+            <tr>
                 <td>言語設定</td>
                 <td>アプリ言語選択（韓国語、英語、日本語）</td>
                 <td>ユーザー選択時に自動保存</td>
@@ -809,6 +848,8 @@
             <li><strong>D-Day:</strong> 目標日管理および残日数表示</li>
             <li><strong>マイ書斎:</strong> 読書記録管理、ISBNバーコードスキャンによる書籍検索、読書報酬</li>
             <li><strong>マイ映画:</strong> 映画鑑賞記録管理、KOBIS/KMDb APIによる映画検索、鑑賞報酬</li>
+            <li><strong>Big5性格検査:</strong> 性格タイプ分析結果の表示、カスタマイズドクエスト推薦、自己啓発モチベーション向上</li>
+            <li><strong>LinkedInプロフィール:</strong> プロフィールページにおけるキャリア情報の表示</li>
             <li><strong>プッシュ通知:</strong> クエスト通知、レイド通知、ストリーク通知、サービスお知らせ（言語別分離送信）</li>
             <li><strong>広告:</strong> サービス運営費用充当のための広告表示（Google AdMob）</li>
             <li><strong>サービス改善:</strong> 利用統計分析、エラー診断およびサービス品質向上</li>
@@ -879,6 +920,16 @@
                 <td>マイ映画データ</td>
                 <td>退会時まで（Firestore同期）</td>
                 <td>ログアウト時ローカルデータ削除、サーバーデータは退会時削除</td>
+            </tr>
+            <tr>
+                <td>LinkedInプロフィールデータ</td>
+                <td>退会時まで</td>
+                <td>ユーザーによる削除可能、退会時即時削除</td>
+            </tr>
+            <tr>
+                <td>Big5検査データ</td>
+                <td>退会時またはユーザーリセット時まで</td>
+                <td>別途同意ベース、暗号化保存</td>
             </tr>
             <tr>
                 <td>言語設定</td>
@@ -1020,9 +1071,9 @@
 
 <script>
 const TITLES = {
-    ko: { title: '개인정보 처리방침', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 10일' },
-    en: { title: 'Privacy Policy', date: 'Effective: March 1, 2025 | Last updated: April 10, 2026' },
-    ja: { title: 'プライバシーポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月10日' }
+    ko: { title: '개인정보 처리방침', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 14일' },
+    en: { title: 'Privacy Policy', date: 'Effective: March 1, 2025 | Last updated: April 14, 2026' },
+    ja: { title: 'プライバシーポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月14日' }
 };
 function setLang(lang) {
     const t = TITLES[lang] || TITLES.ko;
