@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.365] - 2026-04-14
+
+### 변경
+- fix: Google 로그인 코드 10 근본 원인 수정 — Web Client ID 미주입
+
 ## [1.0.364] - 2026-04-14
 
 ### 변경
