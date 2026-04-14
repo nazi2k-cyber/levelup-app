@@ -19,12 +19,20 @@ on:
         description: '영문 출시 노트 (구글 플레이 en-US, 미입력 시 기본 메시지 사용)'
         required: false
         default: ''
+  push:
+    branches: [ "main" ]
 
 permissions:
   contents: write
 
 jobs:
   build-release-aab:
+    # push 이벤트 시 [auto-version] 커밋(자동 버전 업데이트)만 빌드 트리거
+    # workflow_dispatch 시 항상 실행 (수동 빌드)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+       contains(github.event.head_commit.message, '[auto-version]'))
     runs-on: ubuntu-22.04
 
     steps:
@@ -645,6 +653,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          TRIGGER_TYPE="${{ github.event_name == 'push' && '자동 (auto-version)' || '수동 (workflow_dispatch)' }}"
+          echo "| 트리거 | ${TRIGGER_TYPE} |" >> $GITHUB_STEP_SUMMARY
           echo "| 앱 ID | \`com.levelup.reboot\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 버전 이름 | \`v${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 버전 코드 | \`${VERSION_CODE}\` |" >> $GITHUB_STEP_SUMMARY
