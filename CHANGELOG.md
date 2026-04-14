@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.354] - 2026-04-14
+
+### 변경
+- fix(ci): 버전 코드 중복 오류 해결 — 버전명에서 자동 계산
+- fix(ci): release-aab 워크플로우 targetSdkVersion 35 및 ProGuard 활성화
+
 ## [1.0.353] - 2026-04-14
 
 ### 변경
