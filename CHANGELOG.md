@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.331] - 2026-04-14
+
+### 변경
+- Update profile UI: motto notice, remove gold border, remove Big5 label
+
 ## [1.0.330] - 2026-04-13
 
 ### 변경
