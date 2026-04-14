@@ -5221,10 +5221,12 @@ async function logout() {
         }
     }
     await fbSignOut(auth);
-    // 관리자 설정 값은 clear 전에 보존
+    // 관리자 설정 값 및 테마 설정은 clear 전에 보존
     const _loginLogVisible = localStorage.getItem('loginLogVisible');
+    const _theme = localStorage.getItem('theme');
     localStorage.clear();
     if (_loginLogVisible !== null) localStorage.setItem('loginLogVisible', _loginLogVisible);
+    if (_theme !== null) localStorage.setItem('theme', _theme);
     window.location.reload();
 }
 
@@ -5251,8 +5253,10 @@ async function deleteMyAccount() {
         if (result.data && result.data.success) {
             AppLogger.info('[Auth] 계정 삭제 완료');
             const _loginLogVisible = localStorage.getItem('loginLogVisible');
+            const _theme = localStorage.getItem('theme');
             localStorage.clear();
             if (_loginLogVisible !== null) localStorage.setItem('loginLogVisible', _loginLogVisible);
+            if (_theme !== null) localStorage.setItem('theme', _theme);
             alert(t.del_done || "계정이 삭제되었습니다. 이용해 주셔서 감사합니다.");
             window.location.reload();
         }
