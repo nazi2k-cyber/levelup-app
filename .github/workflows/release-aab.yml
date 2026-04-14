@@ -193,9 +193,32 @@ jobs:
             echo "원인: RELEASE_KEY_PASSWORD 시크릿이 틀렸습니다."
             echo "  현재 alias: $RELEASE_KEY_ALIAS"
             echo ""
-            echo "해결 방법:"
-            echo "  GitHub Settings → Secrets → RELEASE_KEY_PASSWORD 값이"
-            echo "  키스토어 생성 시 '-keypass'에 사용한 비밀번호와 일치하는지 확인하세요."
+            # 힌트: 스토어 비밀번호 == 키 비밀번호인지 확인
+            if jarsigner \
+                -keystore release.keystore \
+                -storepass "$RELEASE_KEYSTORE_PASSWORD" \
+                -keypass "$RELEASE_KEYSTORE_PASSWORD" \
+                -signedjar /tmp/_ks_signed2.jar \
+                /tmp/_ks_test.jar \
+                "$RELEASE_KEY_ALIAS" > /dev/null 2>&1; then
+              rm -f /tmp/_ks_signed2.jar
+              echo "💡 힌트: RELEASE_KEY_PASSWORD = RELEASE_KEYSTORE_PASSWORD 로 설정하면 됩니다!"
+              echo "   (키스토어 생성 시 -keypass를 -storepass와 동일하게 설정했습니다)"
+              echo ""
+              echo "해결 방법:"
+              echo "  GitHub Settings → Secrets → RELEASE_KEY_PASSWORD 값을"
+              echo "  RELEASE_KEYSTORE_PASSWORD 값과 동일하게 설정하세요."
+            else
+              echo "해결 방법:"
+              echo "  GitHub Settings → Secrets → RELEASE_KEY_PASSWORD 값이"
+              echo "  키스토어 생성 시 '-keypass'에 사용한 비밀번호와 일치하는지 확인하세요."
+              echo ""
+              echo "  로컬에서 올바른 키 비밀번호 찾는 방법:"
+              echo "    jarsigner -keystore levelup-release.keystore \\"
+              echo "      -storepass <스토어비밀번호> \\"
+              echo "      -keypass <시도할_키비밀번호> \\"
+              echo "      -signedjar /tmp/s.jar /tmp/t.jar <alias>"
+            fi
             exit 1
           fi
           rm -f /tmp/_ks_test.txt /tmp/_ks_test.jar /tmp/_ks_signed.jar
