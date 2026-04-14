@@ -726,7 +726,7 @@ function renderReelsCards(posts, lang) {
         const profileSrc = post.userPhoto ? sanitizeURL(post.userPhoto) : DEFAULT_PROFILE_SVG;
         const isMe = post.uid === auth.currentUser?.uid;
         const instaLink = post.userInstaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(post.userInstaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${instaSvg}</button>` : '';
-        const linkedinLink = post.userLinkedinId ? `<button onclick="window.open('https://www.linkedin.com/in/${sanitizeLinkedInId(post.userLinkedinId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${linkedinSvg}</button>` : '';
+        const linkedinLink = post.userLinkedinId ? `<button onclick="window.openLinkedInProfile('${sanitizeLinkedInId(post.userLinkedinId)}')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex; vertical-align:middle;">${linkedinSvg}</button>` : '';
         const reelsLang = AppState.currentLang;
         const isFollowingPost = (AppState.user.friends || []).includes(post.uid);
         const followBtn = !isMe ? `<button class="btn-reels-follow ${isFollowingPost ? 'following' : ''}" onclick="event.stopPropagation();window.toggleFriend('${sanitizeAttr(post.uid)}')">${isFollowingPost ? (i18n[reelsLang]?.btn_added || '팔로잉') : (i18n[reelsLang]?.btn_add || '팔로우')}</button>` : '';
@@ -1099,7 +1099,7 @@ function renderCommentsSection(postId, comments) {
         container.innerHTML = comments.map(c => {
             const cPhoto = c.photoURL ? sanitizeURL(c.photoURL) : DEFAULT_PROFILE_SVG;
             const instaBtn = c.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(c.instaId)}', '_blank')" class="reels-comment-insta-btn">${instaSvgSmall}</button>` : '';
-            const linkedinBtn = c.linkedinId ? `<button onclick="window.open('https://www.linkedin.com/in/${sanitizeLinkedInId(c.linkedinId)}', '_blank')" class="reels-comment-insta-btn">${linkedinSvgSmall}</button>` : '';
+            const linkedinBtn = c.linkedinId ? `<button onclick="window.openLinkedInProfile('${sanitizeLinkedInId(c.linkedinId)}')" class="reels-comment-insta-btn">${linkedinSvgSmall}</button>` : '';
             const timeAgo = getTimeAgo(c.timestamp, lang);
             return `<div class="reels-comment-item">
                 <img class="reels-comment-avatar" src="${cPhoto}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(cPhoto)}','${DEFAULT_PROFILE_SVG}')" alt="" onclick="window.openProfileStatsModal('${sanitizeAttr(c.uid)}')" style="cursor:pointer;">
