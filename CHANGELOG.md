@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.342] - 2026-04-14
+
+### 변경
+- feat: docs/index.html & intro-style.css를 www와 동기화
+
 ## [1.0.341] - 2026-04-14
 
 ### 변경
