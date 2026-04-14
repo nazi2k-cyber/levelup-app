@@ -292,9 +292,12 @@ body {
 .stat-dot.wlt { background: var(--accent-gold); }
 .stat-dot.agi { background: #ff8800; }
 
-/* Hero Phone */
+/* Hero Phone — dual layout */
 .hero-phone {
     flex-shrink: 0;
+    position: relative;
+    width: 320px;
+    height: 520px;
     opacity: 0;
     transform: translateY(40px);
     transition: opacity 0.8s 0.2s, transform 0.8s 0.2s;
@@ -305,16 +308,41 @@ body {
     transform: translateY(0);
 }
 
-.hero-phone-frame {
+.hero-phone-frame--front {
     width: 260px;
     border-radius: 28px;
     overflow: hidden;
-    border: 2px solid rgba(0, 217, 255, 0.2);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(0, 217, 255, 0.08);
-    position: relative;
+    border: 2px solid rgba(0, 217, 255, 0.3);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65), 0 0 100px rgba(0, 217, 255, 0.1);
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 2;
 }
 
-.hero-phone-frame img {
+.hero-phone-frame--back {
+    width: 220px;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 2px solid rgba(181, 60, 255, 0.2);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5), 0 0 60px rgba(181, 60, 255, 0.07);
+    position: absolute;
+    left: 0;
+    top: 60px;
+    z-index: 1;
+    opacity: 0.82;
+    transform: rotate(-3deg);
+    transition: transform 0.4s, opacity 0.4s, z-index 0s;
+}
+
+.hero-phone-frame--back:hover {
+    opacity: 1;
+    transform: rotate(-1deg) translateY(-4px);
+    z-index: 3;
+}
+
+.hero-phone-frame--front img,
+.hero-phone-frame--back img {
     width: 100%;
     height: auto;
     display: block;
@@ -996,4 +1024,198 @@ body {
         align-items: center;
         gap: 12px;
     }
+}
+
+/* ===== Hero Dual Phone — Responsive ===== */
+@media (max-width: 900px) {
+    .hero-phone {
+        width: 280px;
+        height: 460px;
+    }
+    .hero-phone-frame--front { width: 220px; }
+    .hero-phone-frame--back  { width: 190px; top: 50px; }
+}
+
+@media (max-width: 600px) {
+    .hero-phone {
+        width: 240px;
+        height: 400px;
+    }
+    .hero-phone-frame--front { width: 190px; }
+    .hero-phone-frame--back  { width: 165px; top: 50px; }
+}
+
+/* ===== Hero Glow 3 (gold accent) ===== */
+.hero-glow-3 {
+    width: 400px;
+    height: 400px;
+    background: var(--accent-gold);
+    bottom: -100px;
+    right: 40%;
+    opacity: 0.06;
+}
+
+/* ===== App Preview Marquee Strip ===== */
+.marquee-section {
+    padding: 0 0 80px;
+    background: var(--bg-section);
+    overflow: hidden;
+}
+
+.marquee-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--accent-blue);
+    opacity: 0.5;
+    padding: 32px 0 24px;
+}
+
+.marquee-track-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+.marquee-track-wrapper::before,
+.marquee-track-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 120px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.marquee-track-wrapper::before {
+    left: 0;
+    background: linear-gradient(to right, var(--bg-section), transparent);
+}
+
+.marquee-track-wrapper::after {
+    right: 0;
+    background: linear-gradient(to left, var(--bg-section), transparent);
+}
+
+.marquee-track {
+    display: flex;
+    gap: 16px;
+    width: max-content;
+    will-change: transform;
+}
+
+.marquee-track--row1 {
+    animation: marquee-left 40s linear infinite;
+    margin-bottom: 16px;
+}
+
+.marquee-track--row2 {
+    animation: marquee-right 44s linear infinite;
+}
+
+@keyframes marquee-left {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+@keyframes marquee-right {
+    from { transform: translateX(-50%); }
+    to   { transform: translateX(0); }
+}
+
+.marquee-track-wrapper:hover .marquee-track {
+    animation-play-state: paused;
+}
+
+.marquee-phone {
+    flex-shrink: 0;
+    width: 130px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s, border-color 0.3s;
+}
+
+.marquee-phone:hover {
+    transform: translateY(-6px) scale(1.04);
+    border-color: rgba(0, 217, 255, 0.3);
+}
+
+.marquee-phone img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none; }
+    .marquee-track--row2 { transform: translateX(-50%); }
+}
+
+/* ===== Per-section Badge Colour Variants ===== */
+
+/* Gold — Weekly Quests, Social Ranking */
+.showcase-badge--gold {
+    color: var(--accent-gold);
+    background: rgba(255, 204, 0, 0.08);
+    border-color: rgba(255, 204, 0, 0.2);
+}
+
+.showcase--gold .showcase-list li::before {
+    background: var(--accent-gold);
+}
+
+.showcase--gold .phone-frame:hover {
+    border-color: rgba(255, 204, 0, 0.3);
+    box-shadow: 0 16px 50px rgba(255, 204, 0, 0.08);
+}
+
+/* Green — Life Tracker */
+.showcase-badge--green {
+    color: var(--accent-green);
+    background: rgba(0, 255, 136, 0.08);
+    border-color: rgba(0, 255, 136, 0.2);
+}
+
+.showcase--green .showcase-list li::before {
+    background: var(--accent-green);
+}
+
+.showcase--green .phone-frame:hover {
+    border-color: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 16px 50px rgba(0, 255, 136, 0.08);
+}
+
+/* Red — Dungeon Raid */
+.showcase-badge--red {
+    color: var(--accent-red);
+    background: rgba(255, 60, 60, 0.08);
+    border-color: rgba(255, 60, 60, 0.2);
+}
+
+.showcase--red .showcase-list li::before {
+    background: var(--accent-red);
+}
+
+.showcase--red .phone-frame:hover {
+    border-color: rgba(255, 60, 60, 0.3);
+    box-shadow: 0 16px 50px rgba(255, 60, 60, 0.08);
+}
+
+/* Purple — Planner & Day1 */
+.showcase-badge--purple {
+    color: var(--accent-purple);
+    background: rgba(181, 60, 255, 0.08);
+    border-color: rgba(181, 60, 255, 0.2);
+}
+
+.showcase--purple .showcase-list li::before {
+    background: var(--accent-purple);
+}
+
+.showcase--purple .phone-frame:hover {
+    border-color: rgba(181, 60, 255, 0.3);
+    box-shadow: 0 16px 50px rgba(181, 60, 255, 0.08);
 }
