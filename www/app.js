@@ -5186,11 +5186,13 @@ async function simulateGoogleLogin() {
             if (errCode === '10') {
                 errMsg = 'DEVELOPER_ERROR (코드 10)\n\n' +
                     'APK 서명 SHA-1 지문이 Firebase에 등록되지 않았습니다.\n\n' +
+                    '등록 필요 SHA-1 지문:\n' +
+                    '00:93:73:FD:F7:90:AF:07:6E:49:EA:D5:DB:68:44:70:82:EF:9D:20\n\n' +
                     '해결 방법:\n' +
-                    '1. GitHub Actions 빌드 로그 → "SHA-1 지문 출력" 단계에서 SHA-1 확인\n' +
-                    '2. Firebase Console → 프로젝트 설정 → Android 앱(com.levelup.reboot)\n' +
-                    '3. "SHA 인증서 지문" 섹션에 SHA-1 추가\n' +
-                    '4. google-services.json 다시 다운로드 → 저장소에 커밋 후 재빌드';
+                    '1. Firebase Console → 프로젝트 설정 → Android 앱 (com.levelup.reboot)\n' +
+                    '2. "SHA 인증서 지문" 섹션에 위 SHA-1 추가\n' +
+                    '3. google-services.json 다시 다운로드\n' +
+                    '4. GitHub Secrets → GOOGLE_SERVICES_JSON 값 업데이트 후 재빌드';
             }
             alert((i18n[AppState.currentLang]?.google_login_fail || "Google 로그인 실패:\n") + errMsg);
         }

@@ -144,10 +144,18 @@ jobs:
           if [ -n "$GOOGLE_SERVICES_JSON" ] && echo "$GOOGLE_SERVICES_JSON" | grep -q '"com.levelup.reboot"'; then
             echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
             echo "✅ GOOGLE_SERVICES_JSON 시크릿 사용 (패키지명 확인됨)"
-          else
+          elif [ -f "google-services.json" ]; then
             cp google-services.json android/app/google-services.json
-            echo "⚠️ 템플릿 google-services.json 사용 (시크릿 미설정 또는 패키지명 불일치)"
+            echo "⚠️ 저장소 템플릿 google-services.json 사용 (시크릿 미설정 또는 패키지명 불일치)"
             echo "   → Firebase 콘솔에서 Android 앱(com.levelup.reboot)을 등록 후 시크릿을 업데이트하세요."
+          else
+            echo "❌ google-services.json을 찾을 수 없습니다."
+            echo "   GOOGLE_SERVICES_JSON 시크릿이 설정되지 않았고 저장소에 템플릿도 없습니다."
+            echo "   해결 방법:"
+            echo "   1. Firebase Console → 프로젝트 설정 → Android 앱(com.levelup.reboot) 등록"
+            echo "   2. google-services.json 다운로드"
+            echo "   3. GitHub Secrets에 GOOGLE_SERVICES_JSON으로 파일 내용 등록"
+            exit 1
           fi
 
       # 7-2. 네이티브 플러그인 소스 주입 (커스텀 Capacitor 플러그인)
@@ -410,13 +418,35 @@ jobs:
       # 9-1. 디버그 키스토어 SHA-1 출력 (Firebase 등록용)
       - name: SHA-1 지문 출력 (Firebase 등록용)
         run: |
-          echo "========== APK 서명 SHA-1 지문 =========="
-          cd android
-          ./gradlew signingReport 2>/dev/null | grep -A 1 -E "Variant:|SHA[-]?1:" || true
+          echo "========== APK 서명 SHA-1/SHA-256 지문 =========="
+          keytool -list -v -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey -storepass android 2>/dev/null \
+            | grep -E "SHA(1|256|[-]?1|[-]?256):" || true
           echo ""
           echo "⚠️  위 SHA-1이 Firebase Console에 등록되어 있어야 Google 로그인이 작동합니다."
           echo "    Firebase Console → 프로젝트 설정 → Android 앱 → SHA 인증서 지문"
-          echo "========================================="
+          echo "=================================================="
+
+          # Gradle signingReport로도 확인
+          cd android
+          ./gradlew signingReport 2>/dev/null | grep -E "Variant:|SHA[-]?1:|SHA[-]?256:" || true
+
+          # GitHub Step Summary에 기록
+          SHA1=$(keytool -list -v -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey -storepass android 2>/dev/null \
+            | grep -E "SHA1:" | awk '{print $2}' | head -1)
+          SHA256=$(keytool -list -v -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey -storepass android 2>/dev/null \
+            | grep -E "SHA256:" | awk '{print $2}' | head -1)
+          {
+            echo "## 🔑 APK 서명 지문 (Firebase 등록 필요)"
+            echo "| 종류 | 지문 |"
+            echo "|------|------|"
+            echo "| SHA-1 | \`${SHA1}\` |"
+            echo "| SHA-256 | \`${SHA256}\` |"
+            echo ""
+            echo "> **Google 로그인 오류(코드 10) 발생 시**: Firebase Console → 프로젝트 설정 → Android 앱(com.levelup.reboot) → SHA 인증서 지문에 위 SHA-1을 추가하세요."
+          } >> $GITHUB_STEP_SUMMARY
 
       # 10. 빌드된 APK 파일을 Artifact로 업로드
       - name: APK 업로드 (Artifact)
