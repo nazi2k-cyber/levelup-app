@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.339] - 2026-04-14
+
+### 변경
+- fix: 스크린샷 이미지를 www/store-listing/screenshot/로 추가
+
 ## [1.0.338] - 2026-04-14
 
 ### 변경
