@@ -8,9 +8,9 @@ on:
         required: false
         default: ''
       version_code:
-        description: '버전 코드 (정수, 매 릴리즈마다 증가)'
-        required: true
-        default: '1'
+        description: '버전 코드 (정수, 생략 시 버전명에서 자동 계산: 1.0.353 → 1000353)'
+        required: false
+        default: ''
       changelog_entry:
         description: '이번 릴리즈 변경사항 (CHANGELOG.md에 자동 추가, 한국어)'
         required: false
@@ -49,6 +49,21 @@ jobs:
             echo "📦 VERSION 파일에서 읽음: $VERSION"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          # 버전 코드: 입력값 우선, 없으면 버전명으로 자동 계산
+          # 계산식: MAJOR*1000000 + MINOR*10000 + PATCH  (예: 1.0.353 → 1000353)
+          INPUT_VERSION_CODE="${{ github.event.inputs.version_code }}"
+          if [ -n "$INPUT_VERSION_CODE" ]; then
+            VERSION_CODE="$INPUT_VERSION_CODE"
+            echo "📊 입력된 버전 코드 사용: $VERSION_CODE"
+          else
+            MAJOR=$(echo "$VERSION" | cut -d. -f1)
+            MINOR=$(echo "$VERSION" | cut -d. -f2)
+            PATCH=$(echo "$VERSION" | cut -d. -f3 | sed 's/-.*//')
+            VERSION_CODE=$(( MAJOR * 1000000 + MINOR * 10000 + PATCH ))
+            echo "📊 자동 계산된 버전 코드: $VERSION_CODE (v${VERSION} → ${MAJOR}*1000000 + ${MINOR}*10000 + ${PATCH})"
+          fi
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       # 1-2. 버전 동기화 (package.json, sw.js 등)
       - name: 버전 동기화
@@ -399,7 +414,7 @@ PYEOF
         run: |
           BUILD_GRADLE="android/app/build.gradle"
           VERSION_NAME="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           sed -i "s/versionCode [0-9]\+/versionCode ${VERSION_CODE}/" "$BUILD_GRADLE"
           sed -i "s/versionName \"[^\"]*\"/versionName \"${VERSION_NAME}\"/" "$BUILD_GRADLE"
           echo "✅ 버전 정보 설정: versionName=${VERSION_NAME}, versionCode=${VERSION_CODE}"
@@ -512,7 +527,7 @@ PYEOF
       - name: AAB 파일명 버전 반영
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           AAB_DIR="android/app/build/outputs/bundle/release"
           cp "${AAB_DIR}/app-release.aab" "${AAB_DIR}/levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab"
           echo "✅ AAB 파일명: levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab"
@@ -563,9 +578,9 @@ PYEOF
       - name: AAB 및 출시 노트 업로드 (Artifact)
         uses: actions/upload-artifact@v5
         with:
-          name: levelup-reboot-v${{ steps.version.outputs.version }}-(${{ github.event.inputs.version_code }})-release
+          name: levelup-reboot-v${{ steps.version.outputs.version }}-(${{ steps.version.outputs.version_code }})-release
           path: |
-            android/app/build/outputs/bundle/release/levelup-reboot-v${{ steps.version.outputs.version }}-(${{ github.event.inputs.version_code }})-release.aab
+            android/app/build/outputs/bundle/release/levelup-reboot-v${{ steps.version.outputs.version }}-(${{ steps.version.outputs.version_code }})-release.aab
             android/app/build/outputs/mapping/release/mapping.txt
             release-notes/
           retention-days: 90
@@ -574,7 +589,7 @@ PYEOF
       - name: 릴리즈 Git 태그 생성
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           TAG="v${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -591,7 +606,7 @@ PYEOF
         if: success()
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           NOTES_FILE="release-notes/release-notes-v${VERSION}.txt"
           echo "## ✅ 플레이스토어 릴리즈 AAB 빌드 완료" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
