@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.353] - 2026-04-14
+
+### 변경
+- fix: Google Play targetSdkVersion 34→35 오류 및 ProGuard 경고 해결
+
 ## [1.0.352] - 2026-04-14
 
 ### 변경
