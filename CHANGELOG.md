@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.336] - 2026-04-14
+
+### 변경
+- 스크린샷 수정
+- 스크린샷 수정
+
 ## [1.0.335] - 2026-04-14
 
 ### 변경
