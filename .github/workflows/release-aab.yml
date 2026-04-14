@@ -311,41 +311,72 @@ jobs:
         run: |
           cp release.keystore android/app/release.keystore
 
-          # signingConfigs 블록 추가
-          cat > /tmp/release_signing.gradle << 'GRADLEOF'
-              release {
-                  storeFile file("release.keystore")
-                  storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")
-                  keyAlias System.getenv("RELEASE_KEY_ALIAS")
-                  keyPassword System.getenv("RELEASE_KEY_PASSWORD")
-              }
-          GRADLEOF
+          python3 - << 'PYEOF'
+          import re, sys
 
-          BUILD_GRADLE="android/app/build.gradle"
+          path = 'android/app/build.gradle'
+          with open(path) as f:
+              content = f.read()
 
-          # signingConfigs { debug { ... } } 블록에 release 추가
-          if ! grep -q "signingConfigs" "$BUILD_GRADLE"; then
-            sed -i '/^android {$/a\    signingConfigs {\n        release {\n            storeFile file("release.keystore")\n            storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")\n            keyAlias System.getenv("RELEASE_KEY_ALIAS")\n            keyPassword System.getenv("RELEASE_KEY_PASSWORD")\n        }\n    }' "$BUILD_GRADLE"
-          else
-            # 기존 signingConfigs에 release 블록 추가
-            if ! grep -q "signingConfigs.*release\|release.*signingConfigs" "$BUILD_GRADLE"; then
-              sed -i '/signingConfigs {/a\        release {\n            storeFile file("release.keystore")\n            storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")\n            keyAlias System.getenv("RELEASE_KEY_ALIAS")\n            keyPassword System.getenv("RELEASE_KEY_PASSWORD")\n        }' "$BUILD_GRADLE"
-            fi
-          fi
+          signing_config_block = (
+              '\n        release {\n'
+              '            storeFile file("release.keystore")\n'
+              '            storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD")\n'
+              '            keyAlias System.getenv("RELEASE_KEY_ALIAS")\n'
+              '            keyPassword System.getenv("RELEASE_KEY_PASSWORD")\n'
+              '        }'
+          )
 
-          # release buildType에 signingConfig 참조 추가
-          if grep -q "buildTypes" "$BUILD_GRADLE"; then
-            sed -i '/buildTypes/,/^    }/ {
-              /release {/,/}/ {
-                /signingConfig/!{/release {/a\                signingConfig signingConfigs.release}
-              }
-            }' "$BUILD_GRADLE" 2>/dev/null || true
-          fi
+          # 1. signingConfigs 블록 삽입
+          if 'signingConfigs' not in content:
+              # android { 바로 다음에 signingConfigs 블록 전체 삽입
+              signing_full = (
+                  '\n    signingConfigs {'
+                  + signing_config_block
+                  + '\n    }'
+              )
+              content = re.sub(r'(android\s*\{)', r'\1' + signing_full, content, count=1)
+              print('signingConfigs 블록 신규 삽입')
+          elif 'storeFile file("release.keystore")' not in content:
+              # 기존 signingConfigs에 release 블록 추가
+              content = re.sub(
+                  r'(signingConfigs\s*\{)',
+                  r'\1' + signing_config_block,
+                  content, count=1
+              )
+              print('signingConfigs에 release 블록 추가')
+          else:
+              print('signingConfigs.release 이미 존재')
 
-          echo "✅ 릴리즈 서명 설정 완료"
+          # 2. buildTypes.release에 signingConfig signingConfigs.release 참조 삽입
+          if 'signingConfig signingConfigs.release' not in content:
+              # buildTypes { ... release { 패턴을 찾아 signingConfig 한 줄 삽입
+              content = re.sub(
+                  r'(buildTypes\s*\{.*?release\s*\{)',
+                  r'\1\n            signingConfig signingConfigs.release',
+                  content, count=1, flags=re.DOTALL
+              )
+              print('buildTypes.release에 signingConfig 참조 삽입')
+          else:
+              print('signingConfig signingConfigs.release 이미 존재')
+
+          with open(path, 'w') as f:
+              f.write(content)
+
+          # 검증
+          final = open(path).read()
+          if 'signingConfig signingConfigs.release' not in final:
+              print('ERROR: signingConfig signingConfigs.release 주입 실패')
+              sys.exit(1)
+          if 'storeFile file("release.keystore")' not in final:
+              print('ERROR: signingConfigs.release 블록 주입 실패')
+              sys.exit(1)
+          print('OK: 릴리즈 서명 설정 주입 완료')
+          PYEOF
+
           echo ""
-          echo "📋 signingConfigs 확인:"
-          grep -A 6 "signingConfigs" "$BUILD_GRADLE" | head -20 || true
+          echo "📋 서명 설정 확인:"
+          grep -n "signingConfig\|signingConfigs\|storeFile\|storePassword\|keyAlias\|keyPassword" android/app/build.gradle | head -30
 
       # 19. Gradle 실행 권한 부여
       - name: Gradle 실행 권한 부여
