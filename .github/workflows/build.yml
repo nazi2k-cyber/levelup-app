@@ -118,11 +118,18 @@ jobs:
 
       # 6-1. Google OAuth Web Client ID를 capacitor.config.json에 주입
       - name: Google Web Client ID 주입
-        if: env.GOOGLE_WEB_CLIENT_ID != ''
         env:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
         run: |
-          sed -i "s|233040099152-REPLACE_WITH_WEB_CLIENT_HASH.apps.googleusercontent.com|$GOOGLE_WEB_CLIENT_ID|g" capacitor.config.json
+          if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "❌ GOOGLE_WEB_CLIENT_ID 시크릿이 설정되지 않았습니다."
+            echo "   Firebase Console → 인증 → 로그인 방법 → Google → 웹 SDK 구성 → 웹 클라이언트 ID 값을"
+            echo "   GitHub Secrets에 GOOGLE_WEB_CLIENT_ID로 등록하세요."
+            exit 1
+          fi
+          sed -i "s|GOOGLE_WEB_CLIENT_ID_PLACEHOLDER|$GOOGLE_WEB_CLIENT_ID|g" capacitor.config.json
+          sed -i "s|GOOGLE_WEB_CLIENT_ID_PLACEHOLDER|$GOOGLE_WEB_CLIENT_ID|g" www/app.js
+          echo "✅ Google Web Client ID 주입 완료: ${GOOGLE_WEB_CLIENT_ID:0:40}..."
 
       # 7. Android 플랫폼 추가 (android/ 폴더가 없을 때 자동 생성)
       - name: Android 플랫폼 추가

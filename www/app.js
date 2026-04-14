@@ -5152,7 +5152,7 @@ async function simulateGoogleLogin() {
             // Without this, GoogleSignInClient remains null → NullPointerException
             // 주의: 프로그래밍 방식에서는 'clientId'를 사용 (capacitor.config.json의 'serverClientId'와 키 이름이 다름)
             await GoogleAuth.initialize({
-                clientId: '233040099152-htr1tnuqmpadikjvj9hbitf4tuh0ako5.apps.googleusercontent.com',
+                clientId: 'GOOGLE_WEB_CLIENT_ID_PLACEHOLDER',
                 scopes: ['profile', 'email'],
                 grantOfflineAccess: false
             });
@@ -5160,8 +5160,13 @@ async function simulateGoogleLogin() {
             let googleUser;
             try {
                 googleUser = await GoogleAuth.refresh();
-            } catch (_) {
-                // refresh 실패 시 (최초 로그인 등) 대화형 로그인 진행
+            } catch (refreshErr) {
+                const refreshCode = String(refreshErr.code || (refreshErr.error && refreshErr.error.code) || '');
+                if (refreshCode === '10') {
+                    // DEVELOPER_ERROR는 세션 없음이 아닌 설정 오류 → signIn() 시도해도 동일 실패
+                    throw refreshErr;
+                }
+                // refresh 실패 시 (최초 로그인, 세션 만료 등) 대화형 로그인 진행
                 googleUser = await GoogleAuth.signIn();
             }
             // v3.4.x: idToken이 최상위 또는 authentication 하위에 위치할 수 있음
@@ -5185,14 +5190,17 @@ async function simulateGoogleLogin() {
             }
             if (errCode === '10') {
                 errMsg = 'DEVELOPER_ERROR (코드 10)\n\n' +
-                    'APK 서명 SHA-1 지문이 Firebase에 등록되지 않았습니다.\n\n' +
-                    '등록 필요 SHA-1 지문:\n' +
-                    '00:93:73:FD:F7:90:AF:07:6E:49:EA:D5:DB:68:44:70:82:EF:9D:20\n\n' +
+                    '원인 (해당하는 항목 확인):\n' +
+                    'A) SHA-1 등록 후 google-services.json을 재다운로드하지 않은 경우\n' +
+                    'B) GOOGLE_WEB_CLIENT_ID 시크릿이 잘못 설정된 경우\n' +
+                    'C) GOOGLE_SERVICES_JSON 시크릿이 구버전인 경우\n\n' +
                     '해결 방법:\n' +
-                    '1. Firebase Console → 프로젝트 설정 → Android 앱 (com.levelup.reboot)\n' +
-                    '2. "SHA 인증서 지문" 섹션에 위 SHA-1 추가\n' +
-                    '3. google-services.json 다시 다운로드\n' +
-                    '4. GitHub Secrets → GOOGLE_SERVICES_JSON 값 업데이트 후 재빌드';
+                    '1. Firebase Console → 인증 → Google → 웹 클라이언트 ID 확인\n' +
+                    '   → GOOGLE_WEB_CLIENT_ID 시크릿과 일치하는지 확인\n' +
+                    '2. Firebase Console → 프로젝트 설정 → Android 앱\n' +
+                    '   → SHA 지문 등록 확인 후 google-services.json 재다운로드\n' +
+                    '3. GOOGLE_SERVICES_JSON 시크릿 업데이트\n' +
+                    '4. GitHub Actions에서 APK 재빌드 후 재설치';
             }
             alert((i18n[AppState.currentLang]?.google_login_fail || "Google 로그인 실패:\n") + errMsg);
         }
