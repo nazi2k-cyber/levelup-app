@@ -75,6 +75,15 @@
             });
             // 비공개 계정 필터링 (자기 자신은 항상 표시)
             AppState.social.users = AppState.social.users.filter(u => u.isMe || !u.privateAccount);
+            // 저장 디바운스(2초) 경쟁 조건 방지: 아직 Firestore에 반영되지 않은
+            // 최신 소셜 ID를 AppState.user에서 직접 덮어씀
+            if (auth.currentUser) {
+                const meIdx = AppState.social.users.findIndex(u => u.isMe);
+                if (meIdx !== -1) {
+                    AppState.social.users[meIdx].instaId = AppState.user.instaId || '';
+                    AppState.social.users[meIdx].linkedinId = AppState.user.linkedinId || '';
+                }
+            }
             renderUsers(AppState.social.sortCriteria);
             updateFollowCounts();
             // 랭킹 기반 희귀 호칭 평가
