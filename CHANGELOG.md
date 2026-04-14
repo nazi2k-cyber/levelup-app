@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.359] - 2026-04-14
+
+### 변경
+- fix(ci): AdMob App ID 누락으로 인한 앱 크래시 수정
+
 ## [1.0.358] - 2026-04-14
 
 ### 변경
