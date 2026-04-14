@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.346] - 2026-04-14
+
+### 변경
+- ci: AAB 빌드 시 플레이스토어 출시 노트 자동 생성
+- docs: 스토어 등록정보 글자수 수정 및 최신 기능 반영
+
 ## [1.0.345] - 2026-04-14
 
 ### 변경
