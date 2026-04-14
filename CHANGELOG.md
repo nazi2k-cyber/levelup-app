@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.341] - 2026-04-14
+
+### 변경
+- feat: 랜딩페이지 전면 재구성 — 14개 스크린샷 전면 활용
+
 ## [1.0.340] - 2026-04-14
 
 ### 변경
