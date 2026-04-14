@@ -4272,6 +4272,13 @@ function renderAnnualChart(year, history) {
     const lang = AppState.currentLang;
     const monthNames = i18n[lang]?.month_names_short || ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const gridStroke = isLight ? 'rgba(0,0,0,0.08)'  : 'rgba(255,255,255,0.1)';
+    const axisLabel  = isLight ? 'rgba(0,0,0,0.50)'  : 'rgba(255,255,255,0.4)';
+    const barBase    = isLight ? '43,108,176'         : '0,217,255';
+    const barLabel   = isLight ? 'rgba(0,0,0,0.60)'  : 'rgba(255,255,255,0.6)';
+    const monthLabel = isLight ? 'rgba(0,0,0,0.50)'  : 'rgba(255,255,255,0.5)';
+
     const padding = { top: 20, right: 10, bottom: 30, left: 30 };
     const W = 320, H = 180;
     const chartW = W - padding.left - padding.right;
@@ -4284,8 +4291,8 @@ function renderAnnualChart(year, history) {
     // Gridlines
     for (let pct = 0; pct <= 100; pct += 25) {
         const y = padding.top + chartH - (pct / 100 * chartH);
-        svgContent += `<line x1="${padding.left}" y1="${y}" x2="${W - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
-        svgContent += `<text x="${padding.left - 4}" y="${y + 3}" text-anchor="end" fill="rgba(255,255,255,0.4)" font-size="7">${pct}%</text>`;
+        svgContent += `<line x1="${padding.left}" y1="${y}" x2="${W - padding.right}" y2="${y}" stroke="${gridStroke}" stroke-width="0.5"/>`;
+        svgContent += `<text x="${padding.left - 4}" y="${y + 3}" text-anchor="end" fill="${axisLabel}" font-size="7">${pct}%</text>`;
     }
 
     // Bars
@@ -4330,14 +4337,14 @@ function renderAnnualChart(year, history) {
 
         if (barH > 0) {
             const opacity = 0.3 + (avgRate / 100) * 0.6;
-            svgContent += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="2" fill="rgba(0,217,255,${opacity.toFixed(2)})"/>`;
+            svgContent += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="2" fill="rgba(${barBase},${opacity.toFixed(2)})"/>`;
             if (avgRate >= 5) {
-                svgContent += `<text x="${x + barW / 2}" y="${y - 3}" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="6">${Math.round(avgRate)}%</text>`;
+                svgContent += `<text x="${x + barW / 2}" y="${y - 3}" text-anchor="middle" fill="${barLabel}" font-size="6">${Math.round(avgRate)}%</text>`;
             }
         }
 
         // Month label
-        svgContent += `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="7">${monthNames[m]}</text>`;
+        svgContent += `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" fill="${monthLabel}" font-size="7">${monthNames[m]}</text>`;
     }
 
     svg.innerHTML = svgContent;

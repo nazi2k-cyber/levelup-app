@@ -8,10 +8,10 @@
 }
 
 [data-theme="light"] {
-    --bg-dark: #f4f5f7; --panel-bg: #ffffff;
-    --text-main: #1a1a1a; --text-sub: #666666; --border-color: #dddddd;
-    --neon-blue: #0066cc; --neon-gold: #d4a017; --neon-purple: #8a2be2;
-    --neon-red: #dc3545; --neon-green: #00c853; --nav-bg: #ffffff;
+    --bg-dark: #F5F7FA; --panel-bg: #FFFFFF;
+    --text-main: #1A202C; --text-sub: #718096; --border-color: #E2E8F0;
+    --neon-blue: #2B6CB0; --neon-gold: #B45309; --neon-purple: #6B46C1;
+    --neon-red: #C53030; --neon-green: #276749; --nav-bg: #FFFFFF;
 }
 
 body {
