@@ -1990,17 +1990,19 @@
             <div class="modal-body" style="overflow-y: auto; max-height: 80vh;">
                 <div style="display:flex; align-items:flex-start; gap:8px;">
                     <div id="profile-stats-user-info" style="flex:1; min-width:0;"></div>
-                    <div class="radar-chart-container" style="width:120px; flex-shrink:0; margin:0;">
-                        <svg class="radar-chart" viewBox="0 0 100 100" id="profileRadarSvg">
-                            <g id="profileRadarGrid"></g>
-                            <g id="profileRadarAxes"></g>
-                            <polygon id="profilePlayerPolygon" class="radar-polygon" points="" />
-                            <g id="profileRadarPoints"></g>
-                            <g id="profileRadarLabels"></g>
-                        </svg>
+                    <div style="display:flex; flex-direction:column; width:140px; flex-shrink:0;">
+                        <div class="radar-chart-container" style="width:140px; margin:0;">
+                            <svg class="radar-chart" viewBox="0 0 100 100" id="profileRadarSvg">
+                                <g id="profileRadarGrid"></g>
+                                <g id="profileRadarAxes"></g>
+                                <polygon id="profilePlayerPolygon" class="radar-polygon" points="" />
+                                <g id="profileRadarPoints"></g>
+                                <g id="profileRadarLabels"></g>
+                            </svg>
+                        </div>
+                        <div id="profile-big5-section" style="display:none; margin-top:4px;"></div>
                     </div>
                 </div>
-                <div id="profile-big5-section" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);"></div>
                 <div id="profile-motto-section" style="display:none; margin-top:10px; padding-top:10px; border-top:1px solid var(--border-color);"></div>
             </div>
         </div>
