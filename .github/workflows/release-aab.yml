@@ -388,25 +388,25 @@ jobs:
           # ProGuard/R8 활성화 — release 빌드 minifyEnabled false → true
           # (Google Play 가독화 파일 경고 해결)
           python3 - << 'PYEOF'
-import re
-path = 'android/app/build.gradle'
-with open(path) as f:
-    content = f.read()
-def replace_in_release(m):
-    return m.group(0).replace('minifyEnabled false', 'minifyEnabled true', 1)
-patched = re.sub(
-    r'(release\s*\{[^}]*minifyEnabled\s+false[^}]*\})',
-    replace_in_release,
-    content,
-    flags=re.DOTALL
-)
-if 'minifyEnabled true' in patched:
-    print('✅ ProGuard/R8: minifyEnabled = true (release)')
-else:
-    print('⚠️ minifyEnabled 항목 없음 — 기본값 false로 진행')
-with open(path, 'w') as f:
-    f.write(patched)
-PYEOF
+          import re
+          path = 'android/app/build.gradle'
+          with open(path) as f:
+              content = f.read()
+          def replace_in_release(m):
+              return m.group(0).replace('minifyEnabled false', 'minifyEnabled true', 1)
+          patched = re.sub(
+              r'(release\s*\{[^}]*minifyEnabled\s+false[^}]*\})',
+              replace_in_release,
+              content,
+              flags=re.DOTALL
+          )
+          if 'minifyEnabled true' in patched:
+              print('ProGuard/R8: minifyEnabled = true (release)')
+          else:
+              print('minifyEnabled 항목 없음 - 기본값 false로 진행')
+          with open(path, 'w') as f:
+              f.write(patched)
+          PYEOF
           echo "✅ Gradle 의존성 및 SDK 버전 설정 완료 (targetSdkVersion=35, ProGuard 활성화)"
 
       # 17. 버전 코드 / 버전 이름 주입
