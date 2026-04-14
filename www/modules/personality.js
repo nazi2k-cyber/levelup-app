@@ -450,7 +450,7 @@
         var _t     = (i18n && i18n[_lang]) || (i18n && i18n.ko) || {};
         var labels = getTraitLabels(_lang);
         var scores = { O: big5Data.o, C: big5Data.c, E: big5Data.e, A: big5Data.a, N: big5Data.n };
-        var svgHtml = buildBarChartSVG(scores, labels, 200, 0.85).replace('margin:0 auto', 'margin:0');
+        var svgHtml = buildBarChartSVG(scores, labels, 170, 0.78).replace('margin:0 auto', 'margin:0');
         container.innerHTML = svgHtml;
     };
 

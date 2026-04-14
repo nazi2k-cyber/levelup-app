@@ -5576,6 +5576,13 @@ function openProfileStatsModal(userId) {
             : (u.big5Str ? (() => { try { return JSON.parse(u.big5Str); } catch(e) { return null; } })() : null);
         window.renderBig5ForProfile(big5Raw, lang);
     }
+    // Big5 없으면 레이더 가운데 정렬, 있으면 좌측 정렬
+    const tier2El = document.getElementById('profile-tier2');
+    const big5El = document.getElementById('profile-big5-section');
+    if (tier2El && big5El) {
+        const big5Visible = big5El.style.display !== 'none';
+        tier2El.style.justifyContent = big5Visible ? 'flex-start' : 'center';
+    }
 
     // 좌우명 (프로필·Big5 아래 별도 렌더링)
     const caption = isMe ? (AppState.ddayCaption || '') : (u.ddayCaption || '');
