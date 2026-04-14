@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.360] - 2026-04-14
+
+### 변경
+- ci: ClipboardPlugin MainActivity 등록을 GitHub Actions에 자동화
+- fix: Android 클립보드 접근 오류 해결 (포커스 제한 우회)
+
 ## [1.0.359] - 2026-04-14
 
 ### 변경
