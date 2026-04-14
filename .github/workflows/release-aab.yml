@@ -8,9 +8,9 @@ on:
         required: false
         default: ''
       version_code:
-        description: '버전 코드 (정수, 매 릴리즈마다 증가)'
-        required: true
-        default: '1'
+        description: '버전 코드 (정수, 생략 시 버전명에서 자동 계산: 1.0.353 → 1000353)'
+        required: false
+        default: ''
       changelog_entry:
         description: '이번 릴리즈 변경사항 (CHANGELOG.md에 자동 추가, 한국어)'
         required: false
@@ -49,6 +49,21 @@ jobs:
             echo "📦 VERSION 파일에서 읽음: $VERSION"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          # 버전 코드: 입력값 우선, 없으면 버전명으로 자동 계산
+          # 계산식: MAJOR*1000000 + MINOR*10000 + PATCH  (예: 1.0.353 → 1000353)
+          INPUT_VERSION_CODE="${{ github.event.inputs.version_code }}"
+          if [ -n "$INPUT_VERSION_CODE" ]; then
+            VERSION_CODE="$INPUT_VERSION_CODE"
+            echo "📊 입력된 버전 코드 사용: $VERSION_CODE"
+          else
+            MAJOR=$(echo "$VERSION" | cut -d. -f1)
+            MINOR=$(echo "$VERSION" | cut -d. -f2)
+            PATCH=$(echo "$VERSION" | cut -d. -f3 | sed 's/-.*//')
+            VERSION_CODE=$(( MAJOR * 1000000 + MINOR * 10000 + PATCH ))
+            echo "📊 자동 계산된 버전 코드: $VERSION_CODE (v${VERSION} → ${MAJOR}*1000000 + ${MINOR}*10000 + ${PATCH})"
+          fi
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
 
       # 1-2. 버전 동기화 (package.json, sw.js 등)
       - name: 버전 동기화
@@ -360,21 +375,46 @@ jobs:
             sed -i '/^dependencies {/a\    implementation "com.google.android.gms:play-services-ads:23.6.0"' "$BUILD_GRADLE"
           fi
 
-          # compileSdk / targetSdk → 34 이상
-          sed -i 's/compileSdk\s*=\s*3[0-3]/compileSdk = 34/' "$BUILD_GRADLE"
-          sed -i 's/compileSdkVersion\s*3[0-3]/compileSdkVersion 34/' "$BUILD_GRADLE"
-          sed -i 's/targetSdk\s*=\s*3[0-3]/targetSdk = 34/' "$BUILD_GRADLE"
-          sed -i 's/targetSdkVersion\s*3[0-3]/targetSdkVersion 34/' "$BUILD_GRADLE"
+          # compileSdk / targetSdk → 35 (Google Play 요구사항 — API 35 이상 필수)
+          sed -i 's/compileSdk\s*=\s*[0-9]\+/compileSdk = 35/' "$BUILD_GRADLE"
+          sed -i 's/compileSdkVersion\s*[0-9]\+/compileSdkVersion 35/' "$BUILD_GRADLE"
+          sed -i 's/targetSdk\s*=\s*[0-9]\+/targetSdk = 35/' "$BUILD_GRADLE"
+          sed -i 's/targetSdkVersion\s*[0-9]\+/targetSdkVersion 35/' "$BUILD_GRADLE"
+          # variables.gradle SDK 버전도 35로 패치
+          sed -i 's/compileSdkVersion = [0-9]\+/compileSdkVersion = 35/' android/variables.gradle
+          sed -i 's/targetSdkVersion = [0-9]\+/targetSdkVersion = 35/' android/variables.gradle
           # minSdk → 26 (Health Connect 필수)
           sed -i 's/minSdkVersion\s*=\s*[0-9]\+/minSdkVersion = 26/' android/variables.gradle
-          echo "✅ Gradle 의존성 및 SDK 버전 설정 완료"
+          # ProGuard/R8 활성화 — release 빌드 minifyEnabled false → true
+          # (Google Play 가독화 파일 경고 해결)
+          python3 - << 'PYEOF'
+import re
+path = 'android/app/build.gradle'
+with open(path) as f:
+    content = f.read()
+def replace_in_release(m):
+    return m.group(0).replace('minifyEnabled false', 'minifyEnabled true', 1)
+patched = re.sub(
+    r'(release\s*\{[^}]*minifyEnabled\s+false[^}]*\})',
+    replace_in_release,
+    content,
+    flags=re.DOTALL
+)
+if 'minifyEnabled true' in patched:
+    print('✅ ProGuard/R8: minifyEnabled = true (release)')
+else:
+    print('⚠️ minifyEnabled 항목 없음 — 기본값 false로 진행')
+with open(path, 'w') as f:
+    f.write(patched)
+PYEOF
+          echo "✅ Gradle 의존성 및 SDK 버전 설정 완료 (targetSdkVersion=35, ProGuard 활성화)"
 
       # 17. 버전 코드 / 버전 이름 주입
       - name: 버전 정보 주입
         run: |
           BUILD_GRADLE="android/app/build.gradle"
           VERSION_NAME="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           sed -i "s/versionCode [0-9]\+/versionCode ${VERSION_CODE}/" "$BUILD_GRADLE"
           sed -i "s/versionName \"[^\"]*\"/versionName \"${VERSION_NAME}\"/" "$BUILD_GRADLE"
           echo "✅ 버전 정보 설정: versionName=${VERSION_NAME}, versionCode=${VERSION_CODE}"
@@ -487,7 +527,7 @@ jobs:
       - name: AAB 파일명 버전 반영
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           AAB_DIR="android/app/build/outputs/bundle/release"
           cp "${AAB_DIR}/app-release.aab" "${AAB_DIR}/levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab"
           echo "✅ AAB 파일명: levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab"
@@ -538,9 +578,10 @@ jobs:
       - name: AAB 및 출시 노트 업로드 (Artifact)
         uses: actions/upload-artifact@v5
         with:
-          name: levelup-reboot-v${{ steps.version.outputs.version }}-(${{ github.event.inputs.version_code }})-release
+          name: levelup-reboot-v${{ steps.version.outputs.version }}-(${{ steps.version.outputs.version_code }})-release
           path: |
-            android/app/build/outputs/bundle/release/levelup-reboot-v${{ steps.version.outputs.version }}-(${{ github.event.inputs.version_code }})-release.aab
+            android/app/build/outputs/bundle/release/levelup-reboot-v${{ steps.version.outputs.version }}-(${{ steps.version.outputs.version_code }})-release.aab
+            android/app/build/outputs/mapping/release/mapping.txt
             release-notes/
           retention-days: 90
 
@@ -548,7 +589,7 @@ jobs:
       - name: 릴리즈 Git 태그 생성
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           TAG="v${VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -565,7 +606,7 @@ jobs:
         if: success()
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          VERSION_CODE="${{ github.event.inputs.version_code }}"
+          VERSION_CODE="${{ steps.version.outputs.version_code }}"
           NOTES_FILE="release-notes/release-notes-v${VERSION}.txt"
           echo "## ✅ 플레이스토어 릴리즈 AAB 빌드 완료" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -575,7 +616,10 @@ jobs:
           echo "| 버전 이름 | \`v${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 버전 코드 | \`${VERSION_CODE}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| 빌드 유형 | Release AAB |" >> $GITHUB_STEP_SUMMARY
+          echo "| targetSdkVersion | 35 |" >> $GITHUB_STEP_SUMMARY
+          echo "| ProGuard/R8 | 활성화 (minifyEnabled=true) |" >> $GITHUB_STEP_SUMMARY
           echo "| AAB 파일 | \`levelup-reboot-v${VERSION}-(${VERSION_CODE})-release.aab\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| ProGuard 매핑 | \`mapping.txt\` (아티팩트 포함) |" >> $GITHUB_STEP_SUMMARY
           echo "| 출시 노트 | \`release-notes-v${VERSION}.txt\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Git 태그 | \`v${VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -585,8 +629,9 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 다음 단계" >> $GITHUB_STEP_SUMMARY
-          echo "1. 위 아티팩트에서 AAB 파일과 출시 노트를 다운로드하세요" >> $GITHUB_STEP_SUMMARY
+          echo "1. 위 아티팩트에서 AAB 파일, mapping.txt, 출시 노트를 다운로드하세요" >> $GITHUB_STEP_SUMMARY
           echo "2. Google Play Console → 프로덕션 트랙 → 새 릴리즈 만들기" >> $GITHUB_STEP_SUMMARY
           echo "3. AAB 파일을 업로드하세요" >> $GITHUB_STEP_SUMMARY
-          echo "4. 위 출시 노트를 플레이 콘솔 '출시 노트' 필드에 붙여넣으세요" >> $GITHUB_STEP_SUMMARY
-          echo "5. 검토를 위해 제출하세요" >> $GITHUB_STEP_SUMMARY
+          echo "4. mapping.txt 를 Play Console '난독화 파일' 섹션에 업로드하세요 (경고 해결)" >> $GITHUB_STEP_SUMMARY
+          echo "5. 위 출시 노트를 플레이 콘솔 '출시 노트' 필드에 붙여넣으세요" >> $GITHUB_STEP_SUMMARY
+          echo "6. 검토를 위해 제출하세요" >> $GITHUB_STEP_SUMMARY
