@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.368] - 2026-04-15
+
+### 변경
+- fix: AAB 빌드 Google 로그인 실패 수정 (DEVELOPER_ERROR 코드 10)
+
 ## [1.0.367] - 2026-04-14
 
 ### 변경
