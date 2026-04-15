@@ -974,7 +974,7 @@ function applyCardVisibility() {
     ALL_CARD_IDS.forEach(cardId => {
         const card = document.querySelector(`#status .status-reorderable[data-card-id="${cardId}"]`);
         if (!card) return;
-        if (hidden.includes(cardId)) {
+        if (hidden.includes(cardId) || (AppState.isEmailUser && cardId === 'step-count')) {
             card.style.display = 'none';
         } else {
             // 숨김 해제 시 표시 복원 (step-count 포함)
@@ -1050,7 +1050,10 @@ function renderEditorCardList() {
     const hidden = getHiddenCards();
     const section = document.getElementById('status');
     const cards = Array.from(section.querySelectorAll('.status-reorderable'));
-    const visibleCards = cards.filter(c => !hidden.includes(c.dataset.cardId));
+    const visibleCards = cards.filter(c => {
+        if (AppState.isEmailUser && c.dataset.cardId === 'step-count') return false;
+        return !hidden.includes(c.dataset.cardId);
+    });
 
     list.innerHTML = '';
     visibleCards.forEach(card => {
@@ -1191,7 +1194,7 @@ function openCardSelectModal() {
     list.innerHTML = '';
     selectAll.checked = false;
 
-    hidden.forEach(cardId => {
+    hidden.filter(cardId => !(AppState.isEmailUser && cardId === 'step-count')).forEach(cardId => {
         const info = STATUS_CARD_LABELS[cardId] || { name: cardId, icon: '📦' };
         const item = document.createElement('label');
         item.className = 'card-select-item';
