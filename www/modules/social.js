@@ -70,8 +70,12 @@
                 if (data.moviesStr) {
                     try { const mov = JSON.parse(data.moviesStr); watchedMovies = (mov.items || []).filter(m => m.category === 'watched').length; } catch(e) {}
                 }
+                let currentStreak = 0;
+                if (data.streakStr) {
+                    try { const sk = JSON.parse(data.streakStr); currentStreak = Number(sk.currentStreak) || 0; } catch(e) {}
+                }
                 const uid = auth.currentUser?.uid;
-                return { id: d.id, ...data, title, rareTitle, books: readBooks, movies: watchedMovies, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isFollower: uid && Array.isArray(data.friends) && data.friends.includes(uid), isMe: uid === d.id, privateAccount: !!data.privateAccount };
+                return { id: d.id, ...data, title, rareTitle, books: readBooks, movies: watchedMovies, streak: currentStreak, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isFollower: uid && Array.isArray(data.friends) && data.friends.includes(uid), isMe: uid === d.id, privateAccount: !!data.privateAccount };
             });
             // 비공개 계정 필터링 (자기 자신은 항상 표시)
             AppState.social.users = AppState.social.users.filter(u => u.isMe || !u.privateAccount);
@@ -110,7 +114,8 @@
             const s = u.stats;
             const total = Math.round(Number(s.str)||0) + Math.round(Number(s.int)||0) + Math.round(Number(s.cha)||0) + Math.round(Number(s.vit)||0) + Math.round(Number(s.wlth)||0) + Math.round(Number(s.agi)||0);
             const steps = Number(u.stepData?.totalSteps) || 0;
-            return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps, books: u.books || 0, movies: u.movies || 0 };
+            const streak = Number(u.streak) || 0;
+            return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps, books: u.books || 0, movies: u.movies || 0, streak };
         });
 
         if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
@@ -177,8 +182,8 @@
                         </div>
                     </div>
                     <div class="compact-score-box">
-                        ${criteria === 'total' ? `<div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.tot_score || '종합 스코어'}</div>` : ''}
-                        <div class="compact-score-val">${(typeof u[criteria] === 'number' ? u[criteria] : u.total).toLocaleString()}</div>
+                        ${criteria === 'total' ? `<div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.tot_score || '종합 스코어'}</div>` : criteria === 'streak' ? `<div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.streak_days || '스트릭 일수'}</div>` : ''}
+                        <div class="compact-score-val">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.6em; font-weight:normal; margin-left:1px;">${lang === 'en' ? 'd' : '일'}</span>` : (typeof u[criteria] === 'number' ? u[criteria] : u.total).toLocaleString()}</div>
                     </div>
                 </div>
             </div>`;
@@ -199,7 +204,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria]}</div>
+                <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.7em; font-weight:normal; margin-left:1px;">${AppState.currentLang === 'en' ? 'd' : '일'}</span>` : (typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria])}</div>
                 <button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? (i18n[AppState.currentLang]?.btn_added || '친구✓') : (i18n[AppState.currentLang]?.btn_add || '추가')}</button>
             </div>`;
             }
