@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.374] - 2026-04-15
+
+### 변경
+- feat: add light mode styles for dungeon screen
+
 ## [1.0.373] - 2026-04-15
 
 ### 변경
