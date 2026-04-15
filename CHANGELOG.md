@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.373] - 2026-04-15
+
+### 변경
+- feat: 생년월일 입력을 연/월/일 분리 셀렉트박스로 개선
+
 ## [1.0.372] - 2026-04-15
 
 ### 변경
