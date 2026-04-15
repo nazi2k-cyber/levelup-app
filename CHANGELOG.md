@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.380] - 2026-04-15
+
+### 변경
+- Fix app-ads.txt location: move to docs (GitHub Pages)
+
 ## [1.0.379] - 2026-04-15
 
 ### 변경
