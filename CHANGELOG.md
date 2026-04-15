@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.378] - 2026-04-15
+
+### 변경
+- docs: Quest/Planner 도메인 모듈 분리 단계별 계획 문서 추가
+
 ## [1.0.377] - 2026-04-15
 
 ### 변경
