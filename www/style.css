@@ -942,6 +942,36 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 [data-theme="light"] .boss-hp-bar-bg { background: #e0e0e0; }
 
+/* ===== 라이트 테마 - 던전 ===== */
+[data-theme="light"] .dungeon-active {
+    background: linear-gradient(180deg, rgba(43, 108, 176, 0.06) 0%, #ffffff 100%);
+    box-shadow: inset 0 0 20px rgba(43, 108, 176, 0.06);
+}
+[data-theme="light"] .active-header {
+    border-bottom-color: var(--border-color);
+}
+[data-theme="light"] .raid-reward-box {
+    background: rgba(180, 83, 9, 0.05);
+    border-color: rgba(180, 83, 9, 0.25);
+}
+[data-theme="light"] .raid-reward-header {
+    border-bottom-color: var(--border-color);
+}
+[data-theme="light"] .raid-progress-box {
+    background: rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .anomaly-boss-icon {
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+    animation: anomalyPulseLight 2s ease-in-out infinite;
+}
+@keyframes anomalyPulseLight {
+    0%, 100% { box-shadow: 0 0 8px rgba(0, 0, 0, 0.1); }
+    50% { box-shadow: 0 0 16px rgba(0, 0, 0, 0.25); }
+}
+[data-theme="light"] .cal-day {
+    background: rgba(0, 0, 0, 0.03);
+}
+
 /* ===== HP 히트 이펙트 ===== */
 .hp-hit-shake {
     animation: hpShake 0.4s ease-in-out;
