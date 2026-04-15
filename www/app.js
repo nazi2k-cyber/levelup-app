@@ -9747,15 +9747,10 @@ function sanitizeLinkedInId(id) {
     return id.replace(/[^a-zA-Z0-9-]/g, '');
 }
 
-/** 링크드인 프로필 열기: 네이티브 환경에서는 App.openUrl()로 LinkedIn 앱 직접 실행 */
+/** 링크드인 프로필 열기: Instagram과 동일하게 window.open(_blank)로 열어 앱을 백그라운드 유지 */
 function openLinkedInProfile(linkedinId) {
     const url = 'https://www.linkedin.com/in/' + linkedinId;
-    const cap = window.Capacitor;
-    if (isNativePlatform && cap && cap.Plugins && cap.Plugins.App && cap.Plugins.App.openUrl) {
-        cap.Plugins.App.openUrl({ url });
-    } else {
-        window.open(url, '_blank');
-    }
+    window.open(url, '_blank');
 }
 
 /** URL 새니타이즈 (javascript: 프로토콜 차단) */
