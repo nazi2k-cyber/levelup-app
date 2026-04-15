@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.375] - 2026-04-15
+
+### 변경
+- feat: 소셜 종합스코어 우측에 출석왕 탭 추가
+
 ## [1.0.374] - 2026-04-15
 
 ### 변경
