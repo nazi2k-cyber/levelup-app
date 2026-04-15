@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.372] - 2026-04-15
+
+### 변경
+- fix: 링크드인 프로필 열기 시 앱 백그라운드 유지 (인스타그램 방식 적용)
+
 ## [1.0.371] - 2026-04-15
 
 ### 변경
