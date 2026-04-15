@@ -46,13 +46,6 @@
         "headers": [
           { "key": "Cache-Control", "value": "no-cache" }
         ]
-      },
-      {
-        "source": "/app-ads.txt",
-        "headers": [
-          { "key": "Cache-Control", "value": "no-cache" },
-          { "key": "Content-Type", "value": "text/plain; charset=utf-8" }
-        ]
       }
     ],
     "rewrites": [
