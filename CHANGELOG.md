@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.371] - 2026-04-15
+
+### 변경
+- fix: 소셜탭에서 링크드인/인스타그램 미설정 시 아이콘 미표시
+
 ## [1.0.370] - 2026-04-15
 
 ### 변경
