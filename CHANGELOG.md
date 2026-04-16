@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.381] - 2026-04-16
+
+### 변경
+- feat: 플래너 카테고리 '감사인사' 추가 및 카테고리 아이콘 적용
+
 ## [1.0.380] - 2026-04-15
 
 ### 변경
