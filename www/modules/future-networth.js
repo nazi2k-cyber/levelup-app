@@ -173,7 +173,10 @@
                     ${_t('fnw_guide_title')}
                 </div>
                 ${guideContent[lang] || guideContent.ko}
-                <button id="fnw-guide-close-btn" style="margin-top:16px;width:100%;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-sub);cursor:pointer;font-size:0.85rem;">
+                <div style="margin-top:14px;padding:10px 12px;background:rgba(255,200,0,0.07);border:1px solid rgba(255,200,0,0.25);border-radius:8px;font-size:0.73rem;color:var(--text-sub);line-height:1.6;">
+                    ${_t('fnw_guide_currency_warning')}
+                </div>
+                <button id="fnw-guide-close-btn" style="margin-top:12px;width:100%;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-sub);cursor:pointer;font-size:0.85rem;">
                     ${_t('fnw_btn_cancel')}
                 </button>
             </div>`;

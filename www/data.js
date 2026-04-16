@@ -568,6 +568,7 @@ const i18n = {
         fnw_wlth_reward_title: "재력 보너스 획득!",
         fnw_wlth_reward_desc: "미래 순자산을 설정했습니다.\nWLTH 스탯과 포인트가 적립되었습니다.",
         fnw_wlth_reward_ok: "확인",
+        fnw_guide_currency_warning: "※ 언어 변경 시 화폐 단위 표기(만원 / K USD / 万円)가 변경되나, 실제 환율은 적용되지 않습니다. 입력 금액은 동일 단위 기준으로 계산됩니다.",
 
         // D-Day modal
         dday_modal_title_label: "제목",
@@ -1259,6 +1260,7 @@ const i18n = {
         fnw_wlth_reward_title: "Wealth Bonus Earned!",
         fnw_wlth_reward_desc: "You've set your future net worth.\nWLTH stat and points have been added.",
         fnw_wlth_reward_ok: "OK",
+        fnw_guide_currency_warning: "※ Currency unit labels change with language (만원 / K USD / 万円), but no actual exchange rates are applied. All amounts are calculated in the same unit as entered.",
 
         // D-Day modal
         dday_modal_title_label: "Title",
@@ -1950,6 +1952,7 @@ const i18n = {
         fnw_wlth_reward_title: "財力ボーナス獲得！",
         fnw_wlth_reward_desc: "将来の純資産を設定しました。\nWLTHステータスとポイントが追加されました。",
         fnw_wlth_reward_ok: "確認",
+        fnw_guide_currency_warning: "※ 言語変更時に通貨単位表示（만원 / K USD / 万円）が変わりますが、実際の為替レートは適用されません。入力金額は同じ単位で計算されます。",
 
         // D-Dayモーダル
         dday_modal_title_label: "タイトル",
