@@ -30,6 +30,7 @@
     const switchTab           = window.switchTab;
     const renderReelsFeed     = window.renderReelsFeed;
     const isNativePlatform    = window.isNativePlatform;
+    const DEFAULT_PROFILE_SVG = window.DEFAULT_PROFILE_SVG;
 
     // --- 소셜 데이터 로드 ---
     async function fetchData() {
@@ -162,7 +163,7 @@
                 <div class="social-my-profile-inner">
                     <div class="profile-box">
                         <div class="profile-image-container" onclick="window.openProfileStatsModal('${sanitizeAttr(u.id)}')" style="cursor:pointer;">
-                            ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" class="profile-img" alt="Profile">` : ''}
+                            ${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}','${DEFAULT_PROFILE_SVG}',false)" class="profile-img" alt="Profile">` : ''}
                         </div>
                         <div>
                             ${titleBadgeHTML}

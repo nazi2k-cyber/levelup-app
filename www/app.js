@@ -2502,11 +2502,10 @@ async function loadUserDataFromDB(user) {
                             saveUserData();
                         })
                         .catch(e => {
-                            console.warn('[Migration] 프로필 이미지 마이그레이션 실패:', e);
-                            if (window.AppLogger) AppLogger.error('[ProfileImg:ERR] 마이그레이션 실패: ' + (e.code || '') + ' ' + (e.message || ''));
-                            AppState.user.photoURL = null;
+                            console.warn('[Migration] 프로필 이미지 마이그레이션 실패, 기존 photoURL 유지:', e);
+                            if (window.AppLogger) AppLogger.error('[ProfileImg:ERR] 마이그레이션 실패 (기존 URL 유지): ' + (e.code || '') + ' ' + (e.message || ''));
+                            // photoURL을 null로 덮어쓰지 않음 — 다음 앱 실행 시 재시도
                             _profileUploadInFlight = false;
-                            saveUserData();
                         });
                 }
             }
@@ -6868,9 +6867,11 @@ window.sharePlannerAsImage = async function() {
     ctx.fill();
 
     // 프로필 이미지 로드 시도
+    // _fetchAsBlobUrl 캐시를 먼저 활용하여 CORS/토큰 만료 문제 우회
     if (AppState.user.photoURL) {
         try {
-            const profImg = await loadImageSafe(AppState.user.photoURL);
+            const cachedBlobUrl = await _fetchAsBlobUrl(AppState.user.photoURL);
+            const profImg = await loadImageSafe(cachedBlobUrl || AppState.user.photoURL);
             if (profImg) {
                 ctx.save();
                 ctx.beginPath();
@@ -6879,7 +6880,9 @@ window.sharePlannerAsImage = async function() {
                 ctx.drawImage(profImg, avatarX, avatarCenterY - avatarSize / 2, avatarSize, avatarSize);
                 ctx.restore();
             }
-        } catch(e) {}
+        } catch(e) {
+            if (window.AppLogger) AppLogger.warn('[Planner] 프로필 이미지 canvas 로드 실패: ' + (e.message || e));
+        }
     }
 
     // 유저명
