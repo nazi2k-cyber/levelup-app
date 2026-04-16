@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.389] - 2026-04-16
+
+### 변경
+- feat: 미래 순자산(Future Net Worth) 카드 추가
+
 ## [1.0.388] - 2026-04-16
 
 ### 변경
