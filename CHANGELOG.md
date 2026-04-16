@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.387] - 2026-04-16
+
+### 변경
+- feat: add i18n keys for movie achievement title section
+
 ## [1.0.386] - 2026-04-16
 
 ### 변경
