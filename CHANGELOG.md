@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.383] - 2026-04-16
+
+### 변경
+- fix: Day1 카테고리 순서 변경 - '기타'를 맨 뒤(감사인사 우측)로 이동
+
 ## [1.0.382] - 2026-04-16
 
 ### 변경
