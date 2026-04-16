@@ -792,7 +792,7 @@ function initNavDragReorder() {
 }
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -915,6 +915,7 @@ const STATUS_CARD_LABELS = {
     'bonus-exp': { name_key: 'card_bonus_exp', name: '보너스 EXP', icon: '🎬' },
     'pomodoro': { name_key: 'card_pomodoro', name: 'POMODORO', icon: '🍅' },
     'life-status': { name: 'LIFE STATUS', icon: '📅' },
+    'future-networth': { name_key: 'fnw_card_title', name: '미래 순자산', icon: '💰' },
     'dday': { name: 'D-DAY', icon: '⏰' },
     'dday-caption': { name_key: 'card_dday_caption', name: '목표/좌우명', icon: '💬' },
     'daily-quote': { name_key: 'card_daily_quote', name: '오늘의 명언', icon: '❝' },
@@ -925,7 +926,7 @@ const STATUS_CARD_LABELS = {
     'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' },
     'big5': { name_key: 'card_big5', name: 'BIG FIVE', icon: '🧠' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -4907,7 +4908,7 @@ function switchTab(tabId, el) {
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
-        drawRadarChart(); updatePointUI(); window.renderQuote?.(); window.renderDDayList?.(); window.renderDDayCaption?.(); window.renderLifeStatus?.(); if (window.AdManager) window.AdManager.renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount(); if (window.updateMovieCardCount) window.updateMovieCardCount();
+        drawRadarChart(); updatePointUI(); window.renderQuote?.(); window.renderDDayList?.(); window.renderDDayCaption?.(); window.renderLifeStatus?.(); window.renderFutureNetworth?.(); if (window.AdManager) window.AdManager.renderBonusExp(); if (window.updateLibraryCardCount) window.updateLibraryCardCount(); if (window.updateMovieCardCount) window.updateMovieCardCount();
     } else {
         mainEl.style.overflowY = 'auto';
     }
@@ -5063,6 +5064,7 @@ function changeLanguage(langCode) {
         window.renderDDayList?.();
         window.renderDDayCaption?.();
         window.renderLifeStatus?.();
+        window.renderFutureNetworth?.();
         updatePointUI();
         updateDungeonStatus();
         loadPlayerName();
@@ -9880,6 +9882,7 @@ import('./modules/dday.js').catch(e => console.error('[DDay] 모듈 로드 실�
 
 // --- Life Status 모듈 동적 로드 ---
 import('./modules/life-status.js').catch(e => console.error('[LifeStatus] 모듈 로드 실패:', e));
+import('./modules/future-networth.js').catch(e => console.error('[FutureNetworth] 모듈 로드 실패:', e));
 
 // --- Challenge & Roulette 모듈 동적 로드 ---
 import('./modules/challenge-roulette.js').catch(e => console.error('[ChallengeRoulette] 모듈 로드 실패:', e));
