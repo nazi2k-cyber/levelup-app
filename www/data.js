@@ -76,7 +76,7 @@ const i18n = {
         rare_title_unlocked: "희귀 호칭 획득!", rare_title_rank_label: "랭킹 호칭", rare_title_streak_label: "스트릭 호칭",
         rare_title_equipped: "장착됨", rare_title_equip: "장착", rare_title_unequip: "해제",
         rare_title_guide: "희귀 호칭 가이드", rare_title_guide_desc: "스트릭 달성, 랭킹 상위권 진입, 걸음수·독서 마일스톤 달성 시 특별한 희귀 호칭이 부여됩니다.",
-        rare_title_streak_section: "스트릭 달성 호칭", rare_title_rank_section: "랭킹 호칭", rare_title_step_section: "걸음수 달성 호칭", rare_title_reading_section: "독서 달성 호칭", rare_title_reading_unit: "권",
+        rare_title_streak_section: "스트릭 달성 호칭", rare_title_rank_section: "랭킹 호칭", rare_title_step_section: "걸음수 달성 호칭", rare_title_reading_section: "독서 달성 호칭", rare_title_reading_unit: "권", rare_title_movie_section: "영화 시청 달성 호칭", rare_title_movie_unit: "편",
         rare_title_global_rank: "종합 순위", rare_title_stat_rank: "스탯별 1위", rare_title_step_unit: "보",
 
         // 던전 보스 HP
@@ -729,7 +729,7 @@ const i18n = {
         rare_title_unlocked: "Rare Title Unlocked!", rare_title_rank_label: "Rank Title", rare_title_streak_label: "Streak Title",
         rare_title_equipped: "Equipped", rare_title_equip: "Equip", rare_title_unequip: "Unequip",
         rare_title_guide: "Rare Title Guide", rare_title_guide_desc: "Special rare titles are awarded for streak milestones, top rankings, steps, and reading achievements.",
-        rare_title_streak_section: "Streak Titles", rare_title_rank_section: "Ranking Titles", rare_title_step_section: "Step Titles", rare_title_reading_section: "Reading Titles", rare_title_reading_unit: "books",
+        rare_title_streak_section: "Streak Titles", rare_title_rank_section: "Ranking Titles", rare_title_step_section: "Step Titles", rare_title_reading_section: "Reading Titles", rare_title_reading_unit: "books", rare_title_movie_section: "Movie Achievement Titles", rare_title_movie_unit: "movies",
         rare_title_global_rank: "Global Rank", rare_title_stat_rank: "Stat #1", rare_title_step_unit: "steps",
         streak_multiplier: "Reward Multiplier",
 
@@ -1382,7 +1382,7 @@ const i18n = {
         rare_title_unlocked: "希少称号獲得！", rare_title_rank_label: "ランキング称号", rare_title_streak_label: "ストリーク称号",
         rare_title_equipped: "装着中", rare_title_equip: "装着", rare_title_unequip: "解除",
         rare_title_guide: "希少称号ガイド", rare_title_guide_desc: "ストリーク達成やランキング上位、歩数・読書マイルストーン達成で特別な希少称号が付与されます。",
-        rare_title_streak_section: "ストリーク称号", rare_title_rank_section: "ランキング称号", rare_title_step_section: "歩数称号", rare_title_reading_section: "読書称号", rare_title_reading_unit: "冊",
+        rare_title_streak_section: "ストリーク称号", rare_title_rank_section: "ランキング称号", rare_title_step_section: "歩数称号", rare_title_reading_section: "読書称号", rare_title_reading_unit: "冊", rare_title_movie_section: "映画視聴達成称号", rare_title_movie_unit: "本",
         rare_title_global_rank: "総合順位", rare_title_stat_rank: "ステータス1位", rare_title_step_unit: "歩",
 
         boss_hp: "ボスHP", boss_rush: "週末ボスラッシュ", boss_rush_desc: "ボスHP2倍、報酬2倍！", proximity_bonus: "近接ボーナス +50P",
