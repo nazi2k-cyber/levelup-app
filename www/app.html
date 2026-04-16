@@ -400,36 +400,37 @@
                             <svg id="med-hourglass-svg" viewBox="0 0 90 120" width="90" height="120">
                                 <defs>
                                     <clipPath id="med-top-clip">
-                                        <polygon points="8,4 82,4 45,58"/>
+                                        <polygon points="2,10 88,10 54,60 36,60"/>
                                     </clipPath>
                                     <clipPath id="med-bot-clip">
-                                        <polygon points="45,62 8,116 82,116"/>
+                                        <polygon points="36,60 54,60 88,110 2,110"/>
                                     </clipPath>
                                     <linearGradient id="med-sand-grad-t" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="rgba(0,229,160,0.25)"/>
-                                        <stop offset="100%" stop-color="rgba(0,229,160,0.65)"/>
+                                        <stop offset="0%" stop-color="rgba(0,229,160,0.15)"/>
+                                        <stop offset="100%" stop-color="rgba(0,229,160,0.72)"/>
                                     </linearGradient>
                                     <linearGradient id="med-sand-grad-b" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="rgba(0,229,160,0.65)"/>
-                                        <stop offset="100%" stop-color="rgba(0,229,160,0.3)"/>
+                                        <stop offset="0%" stop-color="rgba(0,229,160,0.72)"/>
+                                        <stop offset="100%" stop-color="rgba(0,229,160,0.28)"/>
                                     </linearGradient>
                                 </defs>
-                                <!-- Top chamber frame -->
-                                <polygon points="8,4 82,4 45,58" fill="rgba(0,229,160,0.05)" stroke="#00e5a0" stroke-width="1.8" stroke-linejoin="round"/>
-                                <!-- Bottom chamber frame -->
-                                <polygon points="45,62 8,116 82,116" fill="rgba(0,229,160,0.05)" stroke="#00e5a0" stroke-width="1.8" stroke-linejoin="round"/>
-                                <!-- Top cap -->
-                                <line x1="5" y1="4" x2="85" y2="4" stroke="#00e5a0" stroke-width="3" stroke-linecap="round"/>
-                                <!-- Bottom cap -->
-                                <line x1="5" y1="116" x2="85" y2="116" stroke="#00e5a0" stroke-width="3" stroke-linecap="round"/>
-                                <!-- Neck connector -->
-                                <line x1="45" y1="58" x2="45" y2="62" stroke="#00e5a0" stroke-width="1.5" opacity="0.5"/>
+                                <!-- Top chamber background -->
+                                <polygon points="2,10 88,10 54,60 36,60" fill="rgba(0,229,160,0.04)"/>
+                                <!-- Bottom chamber background -->
+                                <polygon points="36,60 54,60 88,110 2,110" fill="rgba(0,229,160,0.04)"/>
                                 <!-- Sand in top chamber (full at start, empties over time) -->
-                                <rect id="med-sand-top" x="0" y="4" width="90" height="54" fill="url(#med-sand-grad-t)" clip-path="url(#med-top-clip)"/>
+                                <rect id="med-sand-top" x="0" y="10" width="90" height="50" fill="url(#med-sand-grad-t)" clip-path="url(#med-top-clip)"/>
                                 <!-- Sand in bottom chamber (empty at start, fills over time) -->
-                                <rect id="med-sand-bot" x="0" y="116" width="90" height="0" fill="url(#med-sand-grad-b)" clip-path="url(#med-bot-clip)"/>
-                                <!-- Falling sand particle (animated during meditation) -->
-                                <circle id="med-sand-drop" cx="45" cy="60" r="2" fill="#00e5a0" opacity="0"/>
+                                <rect id="med-sand-bot" x="0" y="110" width="90" height="0" fill="url(#med-sand-grad-b)" clip-path="url(#med-bot-clip)"/>
+                                <!-- Hourglass outline (drawn on top so it covers sand edges) -->
+                                <path d="M 2,10 L 88,10 L 54,60 L 88,110 L 2,110 L 36,60 Z" fill="none" stroke="#00e5a0" stroke-width="2" stroke-linejoin="round"/>
+                                <!-- Top cap bar -->
+                                <rect x="2" y="2" width="86" height="9" rx="3" fill="rgba(0,229,160,0.12)" stroke="#00e5a0" stroke-width="1.5"/>
+                                <!-- Bottom cap bar -->
+                                <rect x="2" y="109" width="86" height="9" rx="3" fill="rgba(0,229,160,0.12)" stroke="#00e5a0" stroke-width="1.5"/>
+                                <!-- Falling sand particles (animated during meditation) -->
+                                <circle id="med-sand-drop" cx="45" cy="61" r="1.8" fill="#00e5a0" opacity="0"/>
+                                <circle id="med-sand-drop2" cx="45" cy="61" r="1.5" fill="#00e5a0" opacity="0"/>
                             </svg>
                             <div style="text-align:center; margin-top:2px;">
                                 <div id="med-time-display" style="font-size:1.2rem; font-weight:900; color:var(--text-main); font-variant-numeric:tabular-nums; line-height:1.2;">10:00</div>

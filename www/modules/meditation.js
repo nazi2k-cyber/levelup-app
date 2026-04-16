@@ -61,23 +61,32 @@
         // Hourglass sand update
         const progress = medState.totalSeconds > 0 ? medState.secondsLeft / medState.totalSeconds : 1;
         // Top chamber: full at start (progress=1), empty at end (progress=0)
-        // Sand fills bottom portion of top triangle (y: 4..58, height span=54)
+        // Sand fills bottom portion of top trapezoid (y: 10..60, span=50)
         if (sandTop) {
-            sandTop.setAttribute('y', String(58 - progress * 54));
-            sandTop.setAttribute('height', String(progress * 54));
+            sandTop.setAttribute('y', String(60 - progress * 50));
+            sandTop.setAttribute('height', String(progress * 50));
         }
         // Bottom chamber: empty at start, full at end
-        // Sand fills from bottom of bottom triangle upward (y: 62..116, height span=54)
+        // Sand fills from bottom of bottom trapezoid upward (y: 60..110, span=50)
         if (sandBot) {
-            sandBot.setAttribute('y', String(62 + progress * 54));
-            sandBot.setAttribute('height', String((1 - progress) * 54));
+            sandBot.setAttribute('y', String(60 + progress * 50));
+            sandBot.setAttribute('height', String((1 - progress) * 50));
         }
-        // Falling particle: visible only while actively meditating
+        // Falling particles: visible only while actively meditating
+        const sandDrop2 = document.getElementById('med-sand-drop2');
+        const isFlowing = medState.phase === 'meditating' && !medState.isPaused && progress > 0;
         if (sandDrop) {
-            if (medState.phase === 'meditating' && !medState.isPaused && progress > 0) {
+            if (isFlowing) {
                 sandDrop.classList.add('med-sand-falling');
             } else {
                 sandDrop.classList.remove('med-sand-falling');
+            }
+        }
+        if (sandDrop2) {
+            if (isFlowing) {
+                sandDrop2.classList.add('med-sand-falling2');
+            } else {
+                sandDrop2.classList.remove('med-sand-falling2');
             }
         }
 
