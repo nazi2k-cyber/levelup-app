@@ -10,8 +10,24 @@
     const AppState = window.AppState;
     const i18n = window.i18n;
     const sanitizeText = window.sanitizeText;
+    const sanitizeAttr = window.sanitizeAttr;
     const httpsCallable = window._httpsCallable;
     const functions = window._functions;
+
+    // URL을 클릭 가능한 링크로 변환 (XSS 안전)
+    function linkifyText(text) {
+        if (!text) return '';
+        const urlPattern = /(https?:\/\/[^\s<>"]+)/g;
+        const parts = text.split(urlPattern);
+        return parts.map((part, i) => {
+            if (i % 2 === 1) {
+                return '<a href="#" data-href="' + sanitizeAttr(part)
+                    + '" class="ann-url-link" style="color:var(--neon-blue);text-decoration:underline;word-break:break-all;">'
+                    + sanitizeText(part) + '</a>';
+            }
+            return sanitizeText(part);
+        }).join('');
+    }
 
     let _announcementsCache = null;
     let _lastFetchTime = 0;
@@ -268,7 +284,7 @@
                     + pinnedBadge
                     + '<span class="noti-ann-title">' + sanitizeText(title) + '</span>'
                     + '</div>'
-                    + '<div class="noti-ann-body">' + sanitizeText(body) + '</div>'
+                    + '<div class="noti-ann-body">' + linkifyText(body) + '</div>'
                     + '</div>';
             });
             annArea.innerHTML = html;
@@ -289,6 +305,17 @@
 
     // --- 초기화 ---
     function init() {
+        // 공지사항 URL 링크 클릭 핸들러 (이벤트 위임)
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('.ann-url-link');
+            if (!link) return;
+            e.preventDefault();
+            const url = link.getAttribute('data-href');
+            if (url && /^https?:\/\//.test(url)) {
+                window.open(url, '_blank');
+            }
+        });
+
         // 이력 지우기 버튼
         const clearBtn = document.getElementById('btn-noti-clear');
         if (clearBtn) {

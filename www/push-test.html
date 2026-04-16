@@ -376,13 +376,13 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
             <span class="tab-icon">💬</span>
             <span class="tab-label">Feedback</span>
         </button>
-        <button class="tab-btn" data-tab="permissions" onclick="switchTab('permissions')">
-            <span class="tab-icon">🔐</span>
-            <span class="tab-label">Permissions</span>
-        </button>
         <button class="tab-btn" data-tab="announcements" onclick="switchTab('announcements')">
             <span class="tab-icon">📢</span>
             <span class="tab-label">공지사항</span>
+        </button>
+        <button class="tab-btn" data-tab="permissions" onclick="switchTab('permissions')">
+            <span class="tab-icon">🔐</span>
+            <span class="tab-label">Permissions</span>
         </button>
     </nav>
 
@@ -902,30 +902,47 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
             <h2 id="ann-form-title">새 공지사항 작성</h2>
             <input type="hidden" id="ann-edit-id" value="">
 
-            <div class="form-group">
-                <label>제목 (한국어) <span style="color:var(--error)">*</span></label>
-                <input type="text" id="ann-title-ko" placeholder="공지사항 제목 (한국어)">
-            </div>
-            <div class="form-group">
-                <label>제목 (English)</label>
-                <input type="text" id="ann-title-en" placeholder="Announcement title (English)">
-            </div>
-            <div class="form-group">
-                <label>제목 (日本語)</label>
-                <input type="text" id="ann-title-ja" placeholder="お知らせタイトル (日本語)">
+            <!-- 언어 탭 -->
+            <div style="display:flex; gap:6px; margin-bottom:12px;">
+                <button type="button" id="ann-lang-btn-ko" class="btn btn-primary btn-sm" onclick="annSwitchLang('ko')">한국어</button>
+                <button type="button" id="ann-lang-btn-en" class="btn btn-ghost btn-sm" onclick="annSwitchLang('en')">English</button>
+                <button type="button" id="ann-lang-btn-ja" class="btn btn-ghost btn-sm" onclick="annSwitchLang('ja')">日本語</button>
             </div>
 
-            <div class="form-group">
-                <label>본문 (한국어) <span style="color:var(--error)">*</span></label>
-                <textarea id="ann-body-ko" rows="3" placeholder="공지사항 본문 (한국어)" style="width:100%;resize:vertical;"></textarea>
+            <!-- 한국어 패널 -->
+            <div id="ann-panel-ko">
+                <div class="form-group">
+                    <label>제목 (한국어) <span style="color:var(--error)">*</span></label>
+                    <input type="text" id="ann-title-ko" placeholder="공지사항 제목 (한국어)">
+                </div>
+                <div class="form-group">
+                    <label>본문 (한국어) <span style="color:var(--error)">*</span></label>
+                    <textarea id="ann-body-ko" rows="3" placeholder="공지사항 본문 (한국어)" style="width:100%;resize:vertical;"></textarea>
+                </div>
             </div>
-            <div class="form-group">
-                <label>본문 (English)</label>
-                <textarea id="ann-body-en" rows="3" placeholder="Announcement body (English)" style="width:100%;resize:vertical;"></textarea>
+
+            <!-- English 패널 -->
+            <div id="ann-panel-en" style="display:none;">
+                <div class="form-group">
+                    <label>제목 (English)</label>
+                    <input type="text" id="ann-title-en" placeholder="Announcement title (English)">
+                </div>
+                <div class="form-group">
+                    <label>본문 (English)</label>
+                    <textarea id="ann-body-en" rows="3" placeholder="Announcement body (English)" style="width:100%;resize:vertical;"></textarea>
+                </div>
             </div>
-            <div class="form-group">
-                <label>본문 (日本語)</label>
-                <textarea id="ann-body-ja" rows="3" placeholder="お知らせ本文 (日本語)" style="width:100%;resize:vertical;"></textarea>
+
+            <!-- 日本語 패널 -->
+            <div id="ann-panel-ja" style="display:none;">
+                <div class="form-group">
+                    <label>제목 (日本語)</label>
+                    <input type="text" id="ann-title-ja" placeholder="お知らせタイトル (日本語)">
+                </div>
+                <div class="form-group">
+                    <label>본문 (日本語)</label>
+                    <textarea id="ann-body-ja" rows="3" placeholder="お知らせ本文 (日本語)" style="width:100%;resize:vertical;"></textarea>
+                </div>
             </div>
 
             <div style="display:flex; gap:16px; align-items:center; margin-bottom:12px;">
@@ -2003,6 +2020,16 @@ window.permForceRefresh = async function() {
 
 let annCache = [];
 
+window.annSwitchLang = function(lang) {
+    ['ko', 'en', 'ja'].forEach(l => {
+        document.getElementById('ann-panel-' + l).style.display = (l === lang) ? '' : 'none';
+        const btn = document.getElementById('ann-lang-btn-' + l);
+        if (btn) {
+            btn.className = 'btn btn-sm ' + (l === lang ? 'btn-primary' : 'btn-ghost');
+        }
+    });
+};
+
 window.annLoad = async function() {
     const el = document.getElementById("ann-list");
     el.innerHTML = '<span style="color:var(--text-sub)">로딩 중...</span>';
@@ -2078,6 +2105,7 @@ window.annShowForm = function(ann) {
         document.getElementById("ann-pinned").checked = false;
         document.getElementById("ann-active").checked = true;
     }
+    annSwitchLang('ko');
     document.getElementById("ann-form-card").scrollIntoView({ behavior: 'smooth' });
 };
 
