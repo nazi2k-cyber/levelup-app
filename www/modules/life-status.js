@@ -73,14 +73,14 @@
         container.innerHTML = `
         <div class="life-status-item">
             <div>
-                <div class="ls-label">${_t.ls_days_lived || '📅 살아온 날'}</div>
+                <div class="ls-label">${_t.ls_days_lived || '살아온 날'}</div>
                 <div class="ls-sub">${(_t.ls_current_age || '현재 나이: {age}세').replace('{age}', currentAge)}</div>
             </div>
             <div class="ls-value blue">${daysLived.toLocaleString()}${_t.ls_unit_days || '일'}</div>
         </div>
         <div class="life-status-item">
             <div>
-                <div class="ls-label">${_t.ls_remaining || '⏳ 남은 시간'}</div>
+                <div class="ls-label">${_t.ls_remaining || '남은 시간'}</div>
                 <div class="ls-sub">${(_t.ls_based_on_age || '{age}세 기준').replace('{age}', expectAge)}</div>
             </div>
             <div style="text-align:right;">
@@ -91,7 +91,7 @@
         <div class="life-status-item">
             <div style="width:100%;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="ls-label">${(_t.ls_progress || '📊 인생 진행률 ({age}세)').replace('{age}', expectAge)}</div>
+                    <div class="ls-label">${(_t.ls_progress || '인생 진행률 ({age}세)').replace('{age}', expectAge)}</div>
                     <div class="ls-value gold" style="font-size:1rem;">${progress.toFixed(1)}%</div>
                 </div>
                 <div class="life-status-progress-bar">
