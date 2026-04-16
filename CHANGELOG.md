@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.390] - 2026-04-16
+
+### 변경
+- fix/feat: 미래 순자산 카드 개선 6개 항목
+
 ## [1.0.389] - 2026-04-16
 
 ### 변경
