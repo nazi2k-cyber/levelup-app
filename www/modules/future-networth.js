@@ -197,6 +197,9 @@
         if (document.getElementById('future-networth-modal-overlay')) return;
 
         const cfg    = getConfig() || {};
+        // 저장 시점 언어로 화폐단위 표기 (없으면 현재 언어)
+        const labelLang = cfg._lang || (_app().currentLang || 'ko');
+        const _tL = key => window.i18n?.[labelLang]?.[key] ?? key;
         const iStyle = 'width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--panel-bg);color:var(--text-main);font-size:0.85rem;box-sizing:border-box;';
         const lStyle = 'display:block;font-size:0.75rem;color:var(--text-sub);margin-bottom:4px;';
         const fWrap  = 'margin-bottom:10px;';
@@ -237,7 +240,7 @@
                         value="${fmtComma(cfg.n)}" placeholder="10" style="${iStyle}">
                 </div>
                 <div style="${fWrap}">
-                    <label style="${lStyle}">${_t('fnw_label_w0')}</label>
+                    <label style="${lStyle}">${_tL('fnw_label_w0')}</label>
                     <input id="fnw-i-w0" type="text" inputmode="numeric"
                         value="${fmtComma(cfg.W_0)}" placeholder="0" style="${iStyle}">
                 </div>
@@ -247,12 +250,12 @@
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
                     <div>
-                        <label style="${lStyle}">${_t('fnw_label_assets')}</label>
+                        <label style="${lStyle}">${_tL('fnw_label_assets')}</label>
                         <input id="fnw-i-assets" type="text" inputmode="numeric"
                             value="${assetsVal}" placeholder="0" style="${iStyle}">
                     </div>
                     <div>
-                        <label style="${lStyle}">${_t('fnw_label_liabilities')}</label>
+                        <label style="${lStyle}">${_tL('fnw_label_liabilities')}</label>
                         <input id="fnw-i-liabilities" type="text" inputmode="numeric"
                             value="${liabilitiesVal}" placeholder="0" style="${iStyle}">
                     </div>
@@ -273,7 +276,7 @@
                 </div>
 
                 <div style="font-size:0.8rem;color:var(--text-sub);margin-bottom:8px;padding-top:6px;border-top:1px solid var(--border-color);">
-                    ${_t('fnw_section_lump')}
+                    ${_tL('fnw_section_lump')}
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
                     ${lumpGrid}
@@ -318,7 +321,7 @@
             const el  = document.getElementById('fnw-net-auto');
             if (!el) return;
             if (a || l) {
-                el.textContent = `${_t('fnw_label_net_auto')}: ${net.toLocaleString()}${_t('fnw_unit_man')}`;
+                el.textContent = `${_t('fnw_label_net_auto')}: ${net.toLocaleString()}${_tL('fnw_unit_man')}`;
                 el.style.color = net >= 0 ? 'var(--neon-green,#00ff88)' : 'var(--neon-red,#ff4d6d)';
             } else {
                 el.textContent = '';
