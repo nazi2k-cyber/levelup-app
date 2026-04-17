@@ -12,7 +12,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.395';
+const APP_VERSION = '1.0.398';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -2360,6 +2360,7 @@ async function loadUserDataFromDB(user) {
                 localStorage.setItem('future_networth_config', data.futureNetworthStr);
                 localStorage.setItem('fnw_consent', '1');
             }
+            window.renderFutureNetworth?.();
             // 러닝 계산기 기록 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.runningCalcHistoryStr) {
                 localStorage.setItem('running_calc_history', data.runningCalcHistoryStr);
@@ -6189,6 +6190,10 @@ function buildRareTitleCollectionHTML(lang) {
         renderItem(rt, `movies_${rt.movies}`, `${rt.movies}${li18n.rare_title_movie_unit || '편'}`)
     ).join('');
 
+    const savingsHTML = rareSavingsTitles.map(rt =>
+        renderItem(rt, rt.id, `${rt.threshold}% ${li18n.rare_title_savings_rate_unit || '저축률'}`)
+    ).join('');
+
     return `
         <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
             <div style="font-size:0.9rem; font-weight:bold; color:var(--neon-gold); margin-bottom:10px;">
@@ -6221,6 +6226,10 @@ function buildRareTitleCollectionHTML(lang) {
                 🎬 ${li18n.rare_title_movie_section || '영화 시청 달성 호칭'}
             </div>
             ${movieHTML}
+            <div style="font-size:0.8rem; font-weight:bold; color:var(--neon-blue); margin:15px 0 6px;">
+                💰 ${li18n.rare_title_savings_section || '저축률 달성 호칭'}
+            </div>
+            ${savingsHTML}
         </div>
     `;
 }
