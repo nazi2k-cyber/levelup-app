@@ -23,6 +23,55 @@
         if (lang === 'ja') return '万円';
         return '만원';
     }
+    function langToSavingsCurrency(lang) {
+        if (lang === 'en') return 'USD';
+        if (lang === 'ja') return 'JPY';
+        return 'KRW';
+    }
+    function currencyToLang(currency) {
+        if (currency === 'USD') return 'en';
+        if (currency === 'JPY') return 'ja';
+        return 'ko';
+    }
+
+    // 저축왕 탭 선택 시 KRW/USD/JPY 서브탭 렌더링
+    function renderSavingsCurrencyTabs(criteria) {
+        const existing = document.getElementById('savings-currency-tabs');
+        if (existing) existing.remove();
+        if (criteria !== 'savings') return;
+
+        if (!AppState.social.savingsCurrency) {
+            AppState.social.savingsCurrency = langToSavingsCurrency(AppState.currentLang);
+        }
+
+        const tabs = document.createElement('div');
+        tabs.id = 'savings-currency-tabs';
+        tabs.style.cssText = 'display:flex;gap:6px;padding:6px 12px 8px;overflow-x:auto;scrollbar-width:none;';
+
+        const currencies = [
+            { code: 'KRW', label: 'KRW', unit: '만원' },
+            { code: 'USD', label: 'USD', unit: 'K USD' },
+            { code: 'JPY', label: 'JPY', unit: '万円' },
+        ];
+        const cur = AppState.social.savingsCurrency;
+        tabs.innerHTML = currencies.map(c => {
+            const isActive = cur === c.code;
+            return `<button class="savings-currency-btn" data-currency="${c.code}"
+                style="padding:4px 14px;border-radius:20px;border:1px solid ${isActive ? 'var(--neon-blue)' : 'var(--border-color)'};background:${isActive ? 'var(--neon-blue)' : 'transparent'};color:${isActive ? '#000' : 'var(--text-sub)'};font-size:0.75rem;cursor:pointer;white-space:nowrap;font-weight:${isActive ? 'bold' : 'normal'};">
+                ${c.label} <span style="opacity:0.7;font-size:0.65rem;">${c.unit}</span>
+            </button>`;
+        }).join('');
+
+        const container = document.getElementById('user-list-container');
+        if (container) container.insertAdjacentElement('beforebegin', tabs);
+
+        tabs.querySelectorAll('.savings-currency-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                AppState.social.savingsCurrency = btn.dataset.currency;
+                renderUsers(AppState.social.sortCriteria);
+            });
+        });
+    }
 
     // UI 헬퍼
     const sanitizeText      = window.sanitizeText;
@@ -131,8 +180,13 @@
 
         if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
         if(AppState.social.mode === 'followers') list = list.filter(u => u.isFollower || u.isMe);
-        // 저축왕 탭: 동일 언어(화폐단위) 사용자만 노출
-        if (criteria === 'savings') list = list.filter(u => u.isMe || u.savingsLang === AppState.currentLang);
+        // 저축왕 탭: 선택된 화폐 탭(KRW/USD/JPY)에 해당하는 사용자만 노출
+        if (criteria === 'savings') {
+            if (!AppState.social.savingsCurrency) {
+                AppState.social.savingsCurrency = langToSavingsCurrency(AppState.currentLang);
+            }
+            list = list.filter(u => u.savingsLang === currencyToLang(AppState.social.savingsCurrency));
+        }
         list.sort((a,b) => b[criteria] - a[criteria]);
 
         // 빈 상태 메시지 (팔로잉/팔로워 탭에서 자기 자신만 있을 때)
@@ -161,6 +215,7 @@
             }
         });
 
+        renderSavingsCurrencyTabs(criteria);
         container.innerHTML = list.map((u, i) => {
             const titleBadgeHTML = buildUserTitleBadgeHTML(u, '0.6rem');
             const uFollowingCount = (u.friends || []).length;
@@ -196,7 +251,7 @@
                     </div>
                     <div class="compact-score-box">
                         ${criteria === 'total' ? `<div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.tot_score || '종합 스코어'}</div>` : criteria === 'streak' ? `<div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.streak_days || '스트릭 일수'}</div>` : ''}
-                        <div class="compact-score-val">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.6em; font-weight:normal; margin-left:1px;">${lang === 'en' ? 'd' : '일'}</span>` : criteria === 'savings' ? `${Math.round(typeof u[criteria] === 'number' ? u[criteria] : u.savings).toLocaleString()}<span style="font-size:0.55em; font-weight:normal; margin-left:2px;">${getCurrencyUnit(AppState.currentLang)}</span>` : (typeof u[criteria] === 'number' ? u[criteria] : u.total).toLocaleString()}</div>
+                        <div class="compact-score-val">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.6em; font-weight:normal; margin-left:1px;">${lang === 'en' ? 'd' : '일'}</span>` : criteria === 'savings' ? `${Math.round(typeof u[criteria] === 'number' ? u[criteria] : u.savings).toLocaleString()}<span style="font-size:0.55em; font-weight:normal; margin-left:2px;">${getCurrencyUnit(currencyToLang(AppState.social.savingsCurrency || langToSavingsCurrency(AppState.currentLang)))}</span>` : (typeof u[criteria] === 'number' ? u[criteria] : u.total).toLocaleString()}</div>
                     </div>
                 </div>
             </div>`;
@@ -217,7 +272,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.7em; font-weight:normal; margin-left:1px;">${AppState.currentLang === 'en' ? 'd' : '일'}</span>` : criteria === 'savings' ? `${Math.round(u[criteria]).toLocaleString()}<span style="font-size:0.65em; font-weight:normal; margin-left:2px;">${getCurrencyUnit(AppState.currentLang)}</span>` : (typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria])}</div>
+                <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.7em; font-weight:normal; margin-left:1px;">${AppState.currentLang === 'en' ? 'd' : '일'}</span>` : criteria === 'savings' ? `${Math.round(u[criteria]).toLocaleString()}<span style="font-size:0.65em; font-weight:normal; margin-left:2px;">${getCurrencyUnit(currencyToLang(AppState.social.savingsCurrency || langToSavingsCurrency(AppState.currentLang)))}</span>` : (typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria])}</div>
                 <button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? (i18n[AppState.currentLang]?.btn_added || '친구✓') : (i18n[AppState.currentLang]?.btn_add || '추가')}</button>
             </div>`;
             }

@@ -691,7 +691,7 @@ function getInitialAppState() {
             completedState: Array.from({length: 7}, () => Array(12).fill(false)),
             weekStart: getWeekStartDate()
         },
-        social: { mode: 'global', sortCriteria: 'total', users: [] },
+        social: { mode: 'global', sortCriteria: 'total', users: [], savingsCurrency: '' },
         dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0, raidParticipants: [] },
         diyQuests: { definitions: [], completedToday: {}, lastResetDate: null },
         questHistory: {},
