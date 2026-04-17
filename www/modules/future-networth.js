@@ -456,8 +456,11 @@
     function resetFutureNetworth() {
         if (!confirm(_t('fnw_reset_confirm'))) return;
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(CONSENT_KEY);
         closeFutureNetworthModal();
         renderFutureNetworth();
+        // Firestore에서도 제거 (동의 해제 상태로 빈 문자열 저장)
+        try { window.saveUserData?.(); } catch (e) {}
     }
 
     function closeFutureNetworthModal() {
@@ -469,6 +472,8 @@
     function initFutureNetworth() {
         document.getElementById('btn-future-networth-guide')
             ?.addEventListener('click', openFutureNetworthGuide);
+        document.getElementById('btn-future-networth-reset')
+            ?.addEventListener('click', resetFutureNetworth);
         document.getElementById('btn-future-networth-settings')
             ?.addEventListener('click', openFutureNetworthSettings);
         renderFutureNetworth();
