@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.395] - 2026-04-17
+
+### 변경
+- feat: 저축왕 기능 추가 (Firestore 동의 저장, 칭호, 소셜 순위)
+
 ## [1.0.394] - 2026-04-17
 
 ### 변경
