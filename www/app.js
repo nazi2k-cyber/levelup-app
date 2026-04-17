@@ -7,6 +7,7 @@ import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, del
 import { getRemoteConfig, fetchAndActivate, getValue, getString } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-remote-config.js";
 import { getAnalytics, logEvent as fbLogEvent } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
+import { NetworkMonitor } from './modules/network-monitor.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -15,6 +16,7 @@ const firebaseConfig = self.__FIREBASE_CONFIG;
 const APP_VERSION = '1.0.406';
 
 const app = initializeApp(firebaseConfig);
+NetworkMonitor.init(firebaseConfig.apiKey);
 const auth = getAuth(app);
 const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 const db = initializeFirestore(app, {
@@ -154,65 +156,6 @@ try {
 } catch (e) {
     console.warn('[FCM] Messaging 초기화 스킵:', e.message);
 }
-
-// --- 네트워크 연결 품질 모니터 (제1원칙: 연결은 이분법이 아닌 스펙트럼) ---
-const NetworkMonitor = (() => {
-    let _quality = 'good'; // 'good' | 'weak' | 'offline'
-    let _listeners = [];
-    let _lastCheck = 0;
-
-    function getQuality() { return _quality; }
-    function isUsable() { return _quality !== 'offline'; }
-
-    async function checkNow() {
-        if (!navigator.onLine) { _setQuality('offline'); return 'offline'; }
-        const now = Date.now();
-        if (now - _lastCheck < 5000) return _quality; // 5초 내 중복 방지
-        _lastCheck = now;
-        try {
-            const start = performance.now();
-            // Firebase Auth 엔드포인트에 HEAD 요청 — 실제 연결 품질 측정
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            await fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=' + firebaseConfig.apiKey, {
-                method: 'HEAD', mode: 'no-cors', signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            const latency = performance.now() - start;
-            _setQuality(latency > 3000 ? 'weak' : 'good');
-        } catch (e) {
-            _setQuality(navigator.onLine ? 'weak' : 'offline');
-        }
-        return _quality;
-    }
-
-    function _setQuality(q) {
-        if (_quality !== q) {
-            const prev = _quality;
-            _quality = q;
-            if (window.AppLogger) AppLogger.info(`[Network] 품질 변경: ${prev} → ${q}`);
-            _listeners.forEach(fn => { try { fn(q, prev); } catch(e) {} });
-        }
-    }
-
-    function onQualityChange(fn) { _listeners.push(fn); }
-
-    // navigator.connection API 활용 (지원 브라우저)
-    if (navigator.connection) {
-        navigator.connection.addEventListener('change', () => {
-            const conn = navigator.connection;
-            if (conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g') {
-                _setQuality('weak');
-            } else if (!navigator.onLine) {
-                _setQuality('offline');
-            } else {
-                _setQuality('good');
-            }
-        });
-    }
-
-    return { getQuality, isUsable, checkNow, onQualityChange };
-})();
 
 const googleProvider = new GoogleAuthProvider();
 
