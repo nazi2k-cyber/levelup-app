@@ -4,6 +4,7 @@
 
     const STORAGE_KEY     = 'future_networth_config';
     const WLTH_REWARD_KEY = 'fnw_wlth_reward_date';
+    const CONSENT_KEY     = 'fnw_consent';
 
     // AppState / i18n 은 함수 내부에서 동적 참조 (로그아웃 상태에서도 안전)
     function _app() { return window.AppState || {}; }
@@ -278,6 +279,14 @@
                     ${lumpGrid}
                 </div>
 
+                <div style="margin-bottom:14px;padding:12px;background:rgba(0,217,255,0.05);border:1px solid rgba(0,217,255,0.2);border-radius:8px;">
+                    <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;">
+                        <input type="checkbox" id="fnw-consent-checkbox" ${localStorage.getItem(CONSENT_KEY) ? 'checked' : ''} style="margin-top:3px;flex-shrink:0;">
+                        <span style="font-size:0.72rem;color:var(--text-sub);line-height:1.55;">${_t('fnw_consent_label')}</span>
+                    </label>
+                    <div style="margin-top:8px;font-size:0.71rem;color:var(--neon-blue);opacity:0.85;line-height:1.5;padding-left:20px;">${_t('fnw_consent_social_notice')}</div>
+                </div>
+
                 <div style="display:flex;gap:8px;">
                     ${hasConfig ? `<button id="fnw-btn-reset" style="flex:1;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-sub);cursor:pointer;font-size:0.85rem;">${_t('fnw_btn_reset')}</button>` : ''}
                     <button id="fnw-btn-cancel" style="flex:1;padding:10px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-sub);cursor:pointer;font-size:0.85rem;">${_t('fnw_btn_cancel')}</button>
@@ -346,18 +355,37 @@
             s_travel:  parseComma(document.getElementById('fnw-i-s_travel')?.value),
         };
 
-        // 2. 저장 (로그인 여부 무관)
+        // 2. 동의 상태 저장
+        const consentChecked = document.getElementById('fnw-consent-checkbox')?.checked;
+        if (consentChecked) {
+            localStorage.setItem(CONSENT_KEY, '1');
+        } else {
+            localStorage.removeItem(CONSENT_KEY);
+        }
+
+        // 3. M_avail 계산 및 lang 포함하여 저장
+        const res = calcNetWorth(cfg);
+        if (res) cfg._M_avail = res.M_avail;
+        cfg._lang = _app().currentLang || 'ko';
         saveConfig(cfg);
 
-        // 3. UI 갱신 + 모달 닫기 (반드시 실행)
+        // 4. UI 갱신 + 모달 닫기 (반드시 실행)
         try { renderFutureNetworth(); } catch (e) {}
         closeFutureNetworthModal();
 
-        // 4. WLTH 보상 (로그인 필요, 독립 try-catch)
+        // 5. Firestore 저장 (동의 + 로그인 시)
+        if (consentChecked) {
+            try { window.saveUserData?.(); } catch (e) {}
+        }
+
+        // 6. 저축왕 칭호 체크
+        try { window.checkSavingsRareTitles?.(); } catch (e) {}
+
+        // 7. WLTH 보상 (로그인 필요, 독립 try-catch)
         let rewarded = false;
         try { rewarded = _grantWlthReward(); } catch (e) {}
 
-        // 5. 보상 팝업 (별도 실행)
+        // 8. 보상 팝업 (별도 실행)
         if (rewarded) {
             setTimeout(() => _showRewardPopup(), 350);
         }

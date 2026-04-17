@@ -2050,7 +2050,8 @@ async function _doSaveUserData() {
             rcLastRewardDate: localStorage.getItem('rc_last_reward_date') || '',
             ormLastRewardDate: localStorage.getItem('orm_last_reward_date') || '',
             onboardingSeen: localStorage.getItem(ONBOARDING_STORAGE_KEY) || '',
-            big5Str: JSON.stringify(AppState.user.big5 || null)
+            big5Str: JSON.stringify(AppState.user.big5 || null),
+            futureNetworthStr: localStorage.getItem('fnw_consent') ? (localStorage.getItem('future_networth_config') || '') : ''
         };
         // Firestore 보안 규칙 크기 제한에 맞춰 클라이언트에서 사전 검증/절삭
         const _strLimits = {
@@ -2059,7 +2060,7 @@ async function _doSaveUserData() {
             titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
             ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000,
             libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000,
-            big5Str: 500
+            big5Str: 500, futureNetworthStr: 1000
         };
         const _overflowed = [];
         for (const [key, limit] of Object.entries(_strLimits)) {
@@ -2109,7 +2110,7 @@ async function _doSaveUserData() {
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
                     'libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
-                    'big5Str'
+                    'big5Str','futureNetworthStr'
                 ]);
                 // 기존 문서의 허용되지 않은 필드
                 const _extraFields = _existingKeys.filter(k => !_allowedFields.has(k));
@@ -2159,7 +2160,7 @@ async function _doSaveUserData() {
                     if (bk in _merged && typeof _merged[bk] !== 'boolean') _issues.push(`${bk}(type=${typeof _merged[bk]})`);
                 });
                 // 문자열 크기 검증
-                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10};
+                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10,futureNetworthStr:1000};
                 for (const [sk, sl] of Object.entries(_strChecks)) {
                     if (sk in _merged && (typeof _merged[sk] !== 'string' || _merged[sk].length > sl)) _issues.push(`${sk}(type=${typeof _merged[sk]},len=${_merged[sk]?.length},limit=${sl})`);
                 }
@@ -2353,6 +2354,11 @@ async function loadUserDataFromDB(user) {
             // Life Status 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.lifeStatusStr) {
                 localStorage.setItem('life_status_config', data.lifeStatusStr);
+            }
+            // 미래 순자산 복원
+            if (data.futureNetworthStr) {
+                localStorage.setItem('future_networth_config', data.futureNetworthStr);
+                localStorage.setItem('fnw_consent', '1');
             }
             // 러닝 계산기 기록 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.runningCalcHistoryStr) {
@@ -2798,7 +2804,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- ★ 희귀 호칭 시스템 ★ ---
 
 // 우선순위: rank_global > rank_stat > streak > steps (높을수록 우선)
-const _rarePriority = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10, movies: 10 };
+const _rarePriority = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10, movies: 10, savings: 10 };
 
 // 우선순위에 따라 자동으로 가장 높은 희귀 호칭 반환
 function getBestRareTitle() {
@@ -2890,6 +2896,38 @@ function checkMovieRareTitles() {
         if (watchedCount >= rt.movies && !AppState.user.rareTitle.unlocked.find(u => u.id === titleId)) {
             AppState.user.rareTitle.unlocked.push({
                 id: titleId, type: 'movies', rarity: rt.rarity, icon: rt.icon,
+                title: rt.title, unlockedAt: new Date().toISOString()
+            });
+            newUnlock = true;
+        }
+    });
+    if (newUnlock) {
+        saveUserData();
+        updatePointUI();
+        const newest = AppState.user.rareTitle.unlocked[AppState.user.rareTitle.unlocked.length - 1];
+        showRareTitleNotification(newest);
+    }
+}
+
+// 저축률 마일스톤 달성 시 희귀 호칭 해금 체크
+function checkSavingsRareTitles() {
+    if (!AppState.user?.rareTitle) return;
+    let cfg;
+    try { cfg = JSON.parse(localStorage.getItem('future_networth_config') || '{}'); } catch(e) { return; }
+    const W0 = parseFloat(cfg.W_0) || 0;
+    const e  = parseFloat(cfg.e  !== undefined ? cfg.e  : 70);
+    const r  = parseFloat(cfg.r  !== undefined ? cfg.r  : 2.5);
+    const n  = parseFloat(cfg.n) || 0;
+    if (W0 <= 0 || n <= 0) return;
+    const rDec   = r / 100;
+    const WTotal = rDec > 0 ? W0 * ((Math.pow(1 + rDec, n) - 1) / rDec) : W0 * n;
+    const MAvail = WTotal * (1 - e / 100) / (n * 12);
+    const savingsRate = (MAvail / (W0 / 12)) * 100;
+    let newUnlock = false;
+    rareSavingsTitles.forEach(rt => {
+        if (savingsRate >= rt.threshold && !AppState.user.rareTitle.unlocked.find(u => u.id === rt.id)) {
+            AppState.user.rareTitle.unlocked.push({
+                id: rt.id, type: 'savings', rarity: rt.rarity, icon: rt.icon,
                 title: rt.title, unlockedAt: new Date().toISOString()
             });
             newUnlock = true;
@@ -9840,6 +9878,7 @@ window._httpsCallable = httpsCallable;
 window._functions = functions;
 window.checkReadingRareTitles = checkReadingRareTitles;
 window.checkMovieRareTitles = checkMovieRareTitles;
+window.checkSavingsRareTitles = checkSavingsRareTitles;
 window.updateCameraToggleUI = updateCameraToggleUI;
 window.openAppSettings = openAppSettings;
 
