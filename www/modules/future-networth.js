@@ -373,7 +373,7 @@
         try { renderFutureNetworth(); } catch (e) {}
         closeFutureNetworthModal();
 
-        // 5. Firestore 저장 (동의 + 로그인 시)
+        // 5. Firestore 저장
         try { window.saveUserData?.(); } catch (e) {}
 
         // 6. 저축왕 칭호 체크
