@@ -355,15 +355,10 @@
             s_travel:  parseComma(document.getElementById('fnw-i-s_travel')?.value),
         };
 
-        // 2. 동의 상태 처리
+        // 2. 동의 필수 확인 — 미동의 시 저장 차단
         const consentChecked = document.getElementById('fnw-consent-checkbox')?.checked;
         if (!consentChecked) {
-            // 동의 거부 시: localStorage 완전 삭제 + Firestore 제거 + 빈 상태 렌더
-            localStorage.removeItem(CONSENT_KEY);
-            localStorage.removeItem(STORAGE_KEY);
-            try { window.saveUserData?.(); } catch (e) {}
-            closeFutureNetworthModal();
-            try { renderFutureNetworth(); } catch (e) {}
+            alert(_t('fnw_consent_required'));
             return;
         }
         localStorage.setItem(CONSENT_KEY, '1');
