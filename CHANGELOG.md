@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.399] - 2026-04-17
+
+### 변경
+- fix: Firestore 저장 주석 정리 (동의 조건 제거)
+
 ## [1.0.398] - 2026-04-17
 
 ### 변경
