@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.401] - 2026-04-17
+
+### 변경
+- feat: 저축왕 정수 표시, 저장언어 기준 화폐단위, 안내문 보완
+
 ## [1.0.400] - 2026-04-17
 
 ### 변경
