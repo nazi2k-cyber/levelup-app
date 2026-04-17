@@ -17,6 +17,13 @@
     const arrayUnion  = window._arrayUnion;
     const arrayRemove = window._arrayRemove;
 
+    // 저축왕 화폐단위: 저장 시점 언어 기준
+    function getCurrencyUnit(lang) {
+        if (lang === 'en') return 'K USD';
+        if (lang === 'ja') return '万円';
+        return '만원';
+    }
+
     // UI 헬퍼
     const sanitizeText      = window.sanitizeText;
     const sanitizeURL       = window.sanitizeURL;
@@ -189,7 +196,7 @@
                     </div>
                     <div class="compact-score-box">
                         ${criteria === 'total' ? `<div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.tot_score || '종합 스코어'}</div>` : criteria === 'streak' ? `<div style="font-size: 0.65rem; color: var(--text-sub);">${i18n[lang]?.streak_days || '스트릭 일수'}</div>` : ''}
-                        <div class="compact-score-val">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.6em; font-weight:normal; margin-left:1px;">${lang === 'en' ? 'd' : '일'}</span>` : (typeof u[criteria] === 'number' ? u[criteria] : u.total).toLocaleString()}</div>
+                        <div class="compact-score-val">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.6em; font-weight:normal; margin-left:1px;">${lang === 'en' ? 'd' : '일'}</span>` : criteria === 'savings' ? `${Math.round(typeof u[criteria] === 'number' ? u[criteria] : u.savings).toLocaleString()}<span style="font-size:0.55em; font-weight:normal; margin-left:2px;">${getCurrencyUnit(u.savingsLang)}</span>` : (typeof u[criteria] === 'number' ? u[criteria] : u.total).toLocaleString()}</div>
                     </div>
                 </div>
             </div>`;
@@ -210,7 +217,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.7em; font-weight:normal; margin-left:1px;">${AppState.currentLang === 'en' ? 'd' : '일'}</span>` : (typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria])}</div>
+                <div class="user-score" style="font-weight:900; color:var(--neon-blue);">${criteria === 'streak' ? `${u.streak}<span style="font-size:0.7em; font-weight:normal; margin-left:1px;">${AppState.currentLang === 'en' ? 'd' : '일'}</span>` : criteria === 'savings' ? `${Math.round(u[criteria]).toLocaleString()}<span style="font-size:0.65em; font-weight:normal; margin-left:2px;">${getCurrencyUnit(u.savingsLang)}</span>` : (typeof u[criteria] === 'number' ? u[criteria].toLocaleString() : u[criteria])}</div>
                 <button class="btn-friend ${u.isFriend ? 'added' : ''}" onclick="window.toggleFriend('${sanitizeAttr(u.id)}')">${u.isFriend ? (i18n[AppState.currentLang]?.btn_added || '친구✓') : (i18n[AppState.currentLang]?.btn_add || '추가')}</button>
             </div>`;
             }

@@ -570,7 +570,7 @@ const i18n = {
         fnw_wlth_reward_ok: "확인",
         fnw_guide_currency_warning: "※ 언어 변경 시 화폐 단위 표기(만원 / K USD / 万円)가 변경되나, 실제 환율은 적용되지 않습니다. 입력 금액은 동일 단위 기준으로 계산됩니다.",
         fnw_consent_label: "미래 순자산 정보를 서버에 저장하고 소셜탭 저축왕 순위에 공개하는 것에 동의합니다.\n[수집 항목] 목표 기간, 연소득, 현재 자산/부채, 물가상승률, 지출 비율, 목돈 지출 계획, 월 가용 저축력 / [수집 목적] 저축왕 순위 제공 / [보관] 계정 삭제 또는 초기화 시까지",
-        fnw_consent_social_notice: "📌 소셜탭 저축왕 순위는 동일한 언어(화폐단위) 설정 사용자에게만 노출됩니다.",
+        fnw_consent_social_notice: "📌 소셜탭 저축왕 순위는 동일한 언어(화폐단위) 설정 사용자에게만 노출됩니다. 저장 시점의 언어를 기준으로 순위에 반영됩니다.",
         fnw_consent_required: "개인정보 수집 및 이용에 동의해야 저장할 수 있습니다.",
 
         // D-Day modal
@@ -1265,7 +1265,7 @@ const i18n = {
         fnw_wlth_reward_ok: "OK",
         fnw_guide_currency_warning: "※ Currency unit labels change with language (만원 / K USD / 万円), but no actual exchange rates are applied. All amounts are calculated in the same unit as entered.",
         fnw_consent_label: "I agree to store my future net worth data on the server and publish it in the Savings King ranking on the Social tab.\n[Data collected] Goal period, annual income, assets/liabilities, inflation rate, expense ratio, lump-sum plans, monthly savings capacity / [Purpose] Savings King ranking / [Retention] Until account deletion or data reset",
-        fnw_consent_social_notice: "📌 The Savings King ranking on the Social tab is only visible to users with the same language (currency) setting.",
+        fnw_consent_social_notice: "📌 The Savings King ranking on the Social tab is only visible to users with the same language (currency) setting. Rankings are reflected based on the language at the time of saving.",
         fnw_consent_required: "You must agree to the privacy policy to save.",
 
         // D-Day modal
@@ -1960,7 +1960,7 @@ const i18n = {
         fnw_wlth_reward_ok: "確認",
         fnw_guide_currency_warning: "※ 言語変更時に通貨単位表示（만원 / K USD / 万円）が変わりますが、実際の為替レートは適用されません。入力金額は同じ単位で計算されます。",
         fnw_consent_label: "将来の純資産情報をサーバーに保存し、ソーシャルタブの貯蓄王ランキングに公開することに同意します。\n[収集項目] 目標期間・年収・資産/負債・インフレ率・支出比率・一括支出計画・月積立能力 / [目的] 貯蓄王ランキング提供 / [保管] アカウント削除または初期化まで",
-        fnw_consent_social_notice: "📌 ソーシャルタブの貯蓄王ランキングは、同じ言語（通貨単位）設定のユーザーにのみ表示されます。",
+        fnw_consent_social_notice: "📌 ソーシャルタブの貯蓄王ランキングは、同じ言語（通貨単位）設定のユーザーにのみ表示されます。保存時の言語を基準にランキングへ反映されます。",
         fnw_consent_required: "保存するには個人情報の収集・利用に同意する必要があります。",
 
         // D-Dayモーダル
