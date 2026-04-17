@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.396] - 2026-04-17
+
+### 변경
+- feat: 미래 순자산 카드에 초기화 버튼 추가 (가이드 우측)
+
 ## [1.0.395] - 2026-04-17
 
 ### 변경
