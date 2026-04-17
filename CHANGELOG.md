@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.400] - 2026-04-17
+
+### 변경
+- fix: 미래 순자산 동의 미체크 시 저장 차단
+
 ## [1.0.399] - 2026-04-17
 
 ### 변경
