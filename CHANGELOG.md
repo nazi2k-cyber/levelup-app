@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.402] - 2026-04-17
+
+### 변경
+- fix: 랭킹 화폐단위 현재 언어 기준, 모달 저장시점 언어 기준으로 수정
+
 ## [1.0.401] - 2026-04-17
 
 ### 변경
