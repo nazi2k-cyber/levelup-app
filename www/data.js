@@ -75,9 +75,9 @@ const i18n = {
         // 희귀 호칭 시스템
         rare_title_unlocked: "희귀 호칭 획득!", rare_title_rank_label: "랭킹 호칭", rare_title_streak_label: "스트릭 호칭",
         rare_title_equipped: "장착됨", rare_title_equip: "장착", rare_title_unequip: "해제",
-        rare_title_guide: "희귀 호칭 가이드", rare_title_guide_desc: "스트릭 달성, 랭킹 상위권 진입, 걸음수·독서 마일스톤 달성 시 특별한 희귀 호칭이 부여됩니다.",
+        rare_title_guide: "희귀 호칭 가이드", rare_title_guide_desc: "스트릭 달성, 랭킹 상위권 진입, 걸음수·독서·저축률 마일스톤 달성 시 특별한 희귀 호칭이 부여됩니다.",
         rare_title_streak_section: "스트릭 달성 호칭", rare_title_rank_section: "랭킹 호칭", rare_title_step_section: "걸음수 달성 호칭", rare_title_reading_section: "독서 달성 호칭", rare_title_reading_unit: "권", rare_title_movie_section: "영화 시청 달성 호칭", rare_title_movie_unit: "편",
-        rare_title_global_rank: "종합 순위", rare_title_stat_rank: "스탯별 1위", rare_title_step_unit: "보",
+        rare_title_global_rank: "종합 순위", rare_title_stat_rank: "스탯별 1위", rare_title_step_unit: "보", rare_title_savings_section: "저축률 달성 호칭", rare_title_savings_rate_unit: "저축률",
 
         // 던전 보스 HP
         boss_hp: "보스 HP", boss_rush: "주말 보스 러시", boss_rush_desc: "보스 HP 2배, 보상 2배!", proximity_bonus: "근접 보너스 +50P",
@@ -569,7 +569,7 @@ const i18n = {
         fnw_wlth_reward_desc: "미래 순자산을 설정했습니다.\nWLTH 스탯과 포인트가 적립되었습니다.",
         fnw_wlth_reward_ok: "확인",
         fnw_guide_currency_warning: "※ 언어 변경 시 화폐 단위 표기(만원 / K USD / 万円)가 변경되나, 실제 환율은 적용되지 않습니다. 입력 금액은 동일 단위 기준으로 계산됩니다.",
-        fnw_consent_label: "미래 순자산 정보를 서버에 저장하고 소셜탭 저축왕 순위에 공개하는 것에 동의합니다.\n[수집 항목] 목표 기간, 연소득, 현재 자산/부채, 물가상승률, 지출 비율, 목돈 지출 계획, 월 가용 저축력 / [수집 목적] 저축왕 순위 제공 / [보관] 계정 삭제 시까지",
+        fnw_consent_label: "미래 순자산 정보를 서버에 저장하고 소셜탭 저축왕 순위에 공개하는 것에 동의합니다.\n[수집 항목] 목표 기간, 연소득, 현재 자산/부채, 물가상승률, 지출 비율, 목돈 지출 계획, 월 가용 저축력 / [수집 목적] 저축왕 순위 제공 / [보관] 계정 삭제 또는 초기화 시까지",
         fnw_consent_social_notice: "📌 소셜탭 저축왕 순위는 동일한 언어(화폐단위) 설정 사용자에게만 노출됩니다.",
 
         // D-Day modal
@@ -770,9 +770,9 @@ const i18n = {
         // Rare Title System
         rare_title_unlocked: "Rare Title Unlocked!", rare_title_rank_label: "Rank Title", rare_title_streak_label: "Streak Title",
         rare_title_equipped: "Equipped", rare_title_equip: "Equip", rare_title_unequip: "Unequip",
-        rare_title_guide: "Rare Title Guide", rare_title_guide_desc: "Special rare titles are awarded for streak milestones, top rankings, steps, and reading achievements.",
+        rare_title_guide: "Rare Title Guide", rare_title_guide_desc: "Special rare titles are awarded for streak milestones, top rankings, steps, reading, and savings rate achievements.",
         rare_title_streak_section: "Streak Titles", rare_title_rank_section: "Ranking Titles", rare_title_step_section: "Step Titles", rare_title_reading_section: "Reading Titles", rare_title_reading_unit: "books", rare_title_movie_section: "Movie Achievement Titles", rare_title_movie_unit: "movies",
-        rare_title_global_rank: "Global Rank", rare_title_stat_rank: "Stat #1", rare_title_step_unit: "steps",
+        rare_title_global_rank: "Global Rank", rare_title_stat_rank: "Stat #1", rare_title_step_unit: "steps", rare_title_savings_section: "Savings Rate Titles", rare_title_savings_rate_unit: "savings rate",
         streak_multiplier: "Reward Multiplier",
 
         boss_hp: "Boss HP", boss_rush: "Weekend Boss Rush", boss_rush_desc: "Boss HP x2, Rewards x2!", proximity_bonus: "Proximity Bonus +50P",
@@ -1263,7 +1263,7 @@ const i18n = {
         fnw_wlth_reward_desc: "You've set your future net worth.\nWLTH stat and points have been added.",
         fnw_wlth_reward_ok: "OK",
         fnw_guide_currency_warning: "※ Currency unit labels change with language (만원 / K USD / 万円), but no actual exchange rates are applied. All amounts are calculated in the same unit as entered.",
-        fnw_consent_label: "I agree to store my future net worth data on the server and publish it in the Savings King ranking on the Social tab.\n[Data collected] Goal period, annual income, assets/liabilities, inflation rate, expense ratio, lump-sum plans, monthly savings capacity / [Purpose] Savings King ranking / [Retention] Until account deletion",
+        fnw_consent_label: "I agree to store my future net worth data on the server and publish it in the Savings King ranking on the Social tab.\n[Data collected] Goal period, annual income, assets/liabilities, inflation rate, expense ratio, lump-sum plans, monthly savings capacity / [Purpose] Savings King ranking / [Retention] Until account deletion or data reset",
         fnw_consent_social_notice: "📌 The Savings King ranking on the Social tab is only visible to users with the same language (currency) setting.",
 
         // D-Day modal
@@ -1465,9 +1465,9 @@ const i18n = {
         // 希少称号システム
         rare_title_unlocked: "希少称号獲得！", rare_title_rank_label: "ランキング称号", rare_title_streak_label: "ストリーク称号",
         rare_title_equipped: "装着中", rare_title_equip: "装着", rare_title_unequip: "解除",
-        rare_title_guide: "希少称号ガイド", rare_title_guide_desc: "ストリーク達成やランキング上位、歩数・読書マイルストーン達成で特別な希少称号が付与されます。",
+        rare_title_guide: "希少称号ガイド", rare_title_guide_desc: "ストリーク達成やランキング上位、歩数・読書・貯蓄率マイルストーン達成で特別な希少称号が付与されます。",
         rare_title_streak_section: "ストリーク称号", rare_title_rank_section: "ランキング称号", rare_title_step_section: "歩数称号", rare_title_reading_section: "読書称号", rare_title_reading_unit: "冊", rare_title_movie_section: "映画視聴達成称号", rare_title_movie_unit: "本",
-        rare_title_global_rank: "総合順位", rare_title_stat_rank: "ステータス1位", rare_title_step_unit: "歩",
+        rare_title_global_rank: "総合順位", rare_title_stat_rank: "ステータス1位", rare_title_step_unit: "歩", rare_title_savings_section: "貯蓄率達成称号", rare_title_savings_rate_unit: "貯蓄率",
 
         boss_hp: "ボスHP", boss_rush: "週末ボスラッシュ", boss_rush_desc: "ボスHP2倍、報酬2倍！", proximity_bonus: "近接ボーナス +50P",
         boss_defeated: "ボス撃破完了！", boss_damage: "ダメージ",
@@ -1957,7 +1957,7 @@ const i18n = {
         fnw_wlth_reward_desc: "将来の純資産を設定しました。\nWLTHステータスとポイントが追加されました。",
         fnw_wlth_reward_ok: "確認",
         fnw_guide_currency_warning: "※ 言語変更時に通貨単位表示（만원 / K USD / 万円）が変わりますが、実際の為替レートは適用されません。入力金額は同じ単位で計算されます。",
-        fnw_consent_label: "将来の純資産情報をサーバーに保存し、ソーシャルタブの貯蓄王ランキングに公開することに同意します。\n[収集項目] 目標期間・年収・資産/負債・インフレ率・支出比率・一括支出計画・月積立能力 / [目的] 貯蓄王ランキング提供 / [保管] アカウント削除まで",
+        fnw_consent_label: "将来の純資産情報をサーバーに保存し、ソーシャルタブの貯蓄王ランキングに公開することに同意します。\n[収集項目] 目標期間・年収・資産/負債・インフレ率・支出比率・一括支出計画・月積立能力 / [目的] 貯蓄王ランキング提供 / [保管] アカウント削除または初期化まで",
         fnw_consent_social_notice: "📌 ソーシャルタブの貯蓄王ランキングは、同じ言語（通貨単位）設定のユーザーにのみ表示されます。",
 
         // D-Dayモーダル

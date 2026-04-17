@@ -355,13 +355,18 @@
             s_travel:  parseComma(document.getElementById('fnw-i-s_travel')?.value),
         };
 
-        // 2. 동의 상태 저장
+        // 2. 동의 상태 처리
         const consentChecked = document.getElementById('fnw-consent-checkbox')?.checked;
-        if (consentChecked) {
-            localStorage.setItem(CONSENT_KEY, '1');
-        } else {
+        if (!consentChecked) {
+            // 동의 거부 시: localStorage 완전 삭제 + Firestore 제거 + 빈 상태 렌더
             localStorage.removeItem(CONSENT_KEY);
+            localStorage.removeItem(STORAGE_KEY);
+            try { window.saveUserData?.(); } catch (e) {}
+            closeFutureNetworthModal();
+            try { renderFutureNetworth(); } catch (e) {}
+            return;
         }
+        localStorage.setItem(CONSENT_KEY, '1');
 
         // 3. M_avail 계산 및 lang 포함하여 저장
         const res = calcNetWorth(cfg);
@@ -374,9 +379,7 @@
         closeFutureNetworthModal();
 
         // 5. Firestore 저장 (동의 + 로그인 시)
-        if (consentChecked) {
-            try { window.saveUserData?.(); } catch (e) {}
-        }
+        try { window.saveUserData?.(); } catch (e) {}
 
         // 6. 저축왕 칭호 체크
         try { window.checkSavingsRareTitles?.(); } catch (e) {}
