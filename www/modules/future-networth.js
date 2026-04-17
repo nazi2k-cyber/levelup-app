@@ -235,7 +235,10 @@
                 </div>
 
                 <div style="${fWrap}">
-                    <label style="${lStyle}">${_t('fnw_label_n')}</label>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <label style="font-size:0.75rem;color:var(--text-sub);">${_t('fnw_label_n')}</label>
+                        <span style="font-size:0.68rem;color:var(--neon-blue);background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:1px 7px;">💰 ${_tL('fnw_unit_man')}</span>
+                    </div>
                     <input id="fnw-i-n" type="text" inputmode="numeric"
                         value="${fmtComma(cfg.n)}" placeholder="10" style="${iStyle}">
                 </div>
