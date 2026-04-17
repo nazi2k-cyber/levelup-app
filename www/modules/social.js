@@ -57,7 +57,7 @@
                         const ul = rt.unlocked || [];
                         if (ul.length > 0) {
                             const ro = ['uncommon', 'rare', 'epic', 'legendary'];
-                            const pp = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10, movies: 10 };
+                            const pp = { rank_global: 40, rank_stat: 30, streak: 20, steps: 10, reading: 10, movies: 10, savings: 10 };
                             rareTitle = [...ul].sort((a, b) => { const pd = (pp[b.type]||0) - (pp[a.type]||0); return pd !== 0 ? pd : ro.indexOf(b.rarity) - ro.indexOf(a.rarity); })[0];
                         }
                     } catch(e) {}
@@ -70,12 +70,16 @@
                 if (data.moviesStr) {
                     try { const mov = JSON.parse(data.moviesStr); watchedMovies = (mov.items || []).filter(m => m.category === 'watched').length; } catch(e) {}
                 }
+                let savings = 0, savingsLang = '';
+                if (data.futureNetworthStr) {
+                    try { const fnw = JSON.parse(data.futureNetworthStr); savings = Number(fnw._M_avail) || 0; savingsLang = fnw._lang || ''; } catch(e) {}
+                }
                 let currentStreak = 0;
                 if (data.streakStr) {
                     try { const sk = JSON.parse(data.streakStr); currentStreak = Number(sk.currentStreak) || 0; } catch(e) {}
                 }
                 const uid = auth.currentUser?.uid;
-                return { id: d.id, ...data, title, rareTitle, books: readBooks, movies: watchedMovies, streak: currentStreak, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isFollower: uid && Array.isArray(data.friends) && data.friends.includes(uid), isMe: uid === d.id, privateAccount: !!data.privateAccount };
+                return { id: d.id, ...data, title, rareTitle, books: readBooks, movies: watchedMovies, streak: currentStreak, savings, savingsLang, stats: data.stats || {str:0,int:0,cha:0,vit:0,wlth:0,agi:0}, stepData: data.stepData || { date: '', rewardedSteps: 0, totalSteps: 0 }, isFriend: (AppState.user.friends || []).includes(d.id), isFollower: uid && Array.isArray(data.friends) && data.friends.includes(uid), isMe: uid === d.id, privateAccount: !!data.privateAccount };
             });
             // 비공개 계정 필터링 (자기 자신은 항상 표시)
             AppState.social.users = AppState.social.users.filter(u => u.isMe || !u.privateAccount);
@@ -115,11 +119,13 @@
             const total = Math.round(Number(s.str)||0) + Math.round(Number(s.int)||0) + Math.round(Number(s.cha)||0) + Math.round(Number(s.vit)||0) + Math.round(Number(s.wlth)||0) + Math.round(Number(s.agi)||0);
             const steps = Number(u.stepData?.totalSteps) || 0;
             const streak = Number(u.streak) || 0;
-            return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps, books: u.books || 0, movies: u.movies || 0, streak };
+            return { ...u, total, str:Math.round(Number(s.str)||0), int:Math.round(Number(s.int)||0), cha:Math.round(Number(s.cha)||0), vit:Math.round(Number(s.vit)||0), wlth:Math.round(Number(s.wlth)||0), agi:Math.round(Number(s.agi)||0), steps, books: u.books || 0, movies: u.movies || 0, streak, savings: u.savings || 0, savingsLang: u.savingsLang || '' };
         });
 
         if(AppState.social.mode === 'friends') list = list.filter(u => u.isFriend || u.isMe);
         if(AppState.social.mode === 'followers') list = list.filter(u => u.isFollower || u.isMe);
+        // 저축왕 탭: 동일 언어(화폐단위) 사용자만 노출
+        if (criteria === 'savings') list = list.filter(u => u.isMe || u.savingsLang === AppState.currentLang);
         list.sort((a,b) => b[criteria] - a[criteria]);
 
         // 빈 상태 메시지 (팔로잉/팔로워 탭에서 자기 자신만 있을 때)

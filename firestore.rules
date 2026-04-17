@@ -103,7 +103,8 @@ service cloud.firestore {
         && (!('libraryStr' in d) || d.libraryStr == null || d.libraryStr is string)
         && (!('moviesStr' in d) || d.moviesStr == null || d.moviesStr is string)
         && (!('runningCalcHistoryStr' in d) || d.runningCalcHistoryStr == null || d.runningCalcHistoryStr is string)
-        && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || d.ormCalcHistoryStr is string);
+        && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || d.ormCalcHistoryStr is string)
+        && (!('futureNetworthStr' in d) || d.futureNetworthStr == null || d.futureNetworthStr is string);
     }
 
     // ──────────────────────────────────────────────
