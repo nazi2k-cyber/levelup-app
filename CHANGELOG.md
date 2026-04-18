@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.421] - 2026-04-18
+
+### 변경
+- security(phase1): firestore rules 강화 + storage MIME 허용리스트 + 계획서 업데이트
+
 ## [1.0.420] - 2026-04-18
 
 ### 변경
