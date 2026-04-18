@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.419] - 2026-04-18
+
+### 변경
+- docs: 단계별 보안강화 방안 검토 문서 작성
+
 ## [1.0.418] - 2026-04-18
 
 ### 변경
