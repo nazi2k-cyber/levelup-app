@@ -7,6 +7,7 @@ import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, del
 import { getRemoteConfig } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-remote-config.js";
 import { getAnalytics, logEvent as fbLogEvent } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app-check.js";
 import { NetworkMonitor } from './modules/network-monitor.js';
 import { ConversionTracker, initRemoteConfig, getExperimentVariant, init as initConversionTracker } from './modules/conversion-tracker.js';
 import { PerformanceMonitor } from './modules/performance-monitor.js';
@@ -21,6 +22,21 @@ const app = initializeApp(firebaseConfig);
 NetworkMonitor.init(firebaseConfig.apiKey);
 const auth = getAuth(app);
 const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+// App Check 초기화 (웹: reCAPTCHA v3 / 네이티브: Play Integrity는 네이티브 플러그인에서 처리)
+// APP_CHECK_SITE_KEY는 firebase-config.js 또는 window.__APP_CHECK_SITE_KEY로 주입
+try {
+    const appCheckSiteKey = (firebaseConfig && firebaseConfig.appCheckSiteKey) || window.__APP_CHECK_SITE_KEY;
+    if (!isNativePlatform && appCheckSiteKey) {
+        initializeAppCheck(app, {
+            provider: new ReCaptchaV3Provider(appCheckSiteKey),
+            isTokenAutoRefreshEnabled: true,
+        });
+    }
+} catch (e) {
+    console.warn('[AppCheck] 초기화 스킵:', e.message);
+}
+
 const db = initializeFirestore(app, {
     ...(isNativePlatform
         ? { experimentalForceLongPolling: true }

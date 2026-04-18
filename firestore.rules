@@ -60,6 +60,14 @@ service cloud.firestore {
         && (!('totalSteps' in s) || (s.totalSteps is number && s.totalSteps >= 0));
     }
 
+    // 업데이트 빈도 제한: 마지막 업데이트 후 5초 이상 경과 필요
+    // lastUpdatedAt 필드가 없는 문서(기존 유저)는 통과 허용
+    function notTooFrequent() {
+      return !('lastUpdatedAt' in resource.data)
+        || resource.data.lastUpdatedAt == null
+        || request.time > resource.data.lastUpdatedAt + duration.value(5, 's');
+    }
+
     // ──────────────────────────────────────────────
     // users 문서 필드 타입 검증
     // ──────────────────────────────────────────────
@@ -98,7 +106,8 @@ service cloud.firestore {
         && (!('questWeekStart' in d) || d.questWeekStart == null || (d.questWeekStart is string && d.questWeekStart.size() <= 10))
         && (!('lastRouletteDate' in d) || d.lastRouletteDate == null || (d.lastRouletteDate is string && d.lastRouletteDate.size() <= 10))
         && (!('nameLastChanged' in d) || d.nameLastChanged == null || d.nameLastChanged is number)
-        && (!('lastReelsPostTs' in d) || d.lastReelsPostTs == null || d.lastReelsPostTs is number);
+        && (!('lastReelsPostTs' in d) || d.lastReelsPostTs == null || d.lastReelsPostTs is number)
+        && (!('lastUpdatedAt' in d) || d.lastUpdatedAt == null || d.lastUpdatedAt is timestamp);
     }
 
     // Part 2: JSON 직렬화 문자열 필드 (타입만 검증, 크기는 클라이언트에서 검증)
@@ -137,12 +146,13 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.uid == userId
         && isValidUserFieldsPart1();
-      // update 시 타입 검증 + 델타 검증 (포인트·레벨 급변 방지)
+      // update 시 타입 검증 + 델타 검증 (포인트·레벨 급변 방지) + 빈도 제한
       allow update: if request.auth != null
         && request.auth.uid == userId
         && isValidUserFieldsPart1()
         && isValidPointsDelta()
-        && isValidLevelDelta();
+        && isValidLevelDelta()
+        && notTooFrequent();
       // 계정 삭제: 본인 문서만 삭제 가능 (Google 정책 준수)
       allow delete: if request.auth != null
         && request.auth.uid == userId;
@@ -284,6 +294,37 @@ service cloud.firestore {
         && request.resource.data.detail.size() <= 2000
         && request.resource.data.createdAt is number;
       allow read, update, delete: if request.auth != null && isAdminOrOperator();
+    }
+
+    // ──────────────────────────────────────────────
+    // security_alerts: Cloud Functions Admin SDK에서만 쓰기, 마스터만 읽기
+    // ──────────────────────────────────────────────
+    match /security_alerts/{alertId} {
+      allow read: if request.auth != null && request.auth.token.master == true;
+      allow write: if false;
+    }
+
+    // ──────────────────────────────────────────────
+    // rate_limits: Cloud Functions에서 Rate Limiter 관리 (클라이언트 접근 불가)
+    // ──────────────────────────────────────────────
+    match /rate_limits/{docId} {
+      allow read, write: if false;
+    }
+
+    // ──────────────────────────────────────────────
+    // admin_audit_log: 어드민 권한 부여 감사 로그 (마스터만 읽기)
+    // ──────────────────────────────────────────────
+    match /admin_audit_log/{logId} {
+      allow read: if request.auth != null && request.auth.token.master == true;
+      allow write: if false;
+    }
+
+    // ──────────────────────────────────────────────
+    // security_reports: 주간/일간 보안 진단 요약 (마스터만 읽기)
+    // ──────────────────────────────────────────────
+    match /security_reports/{reportId} {
+      allow read: if request.auth != null && request.auth.token.master == true;
+      allow write: if false;
     }
   }
 }

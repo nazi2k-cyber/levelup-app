@@ -6,6 +6,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { getStorage } = require("firebase-admin/storage");
 const { getAuth } = require("firebase-admin/auth");
+const { checkRateLimit } = require("./rateLimiter");
 
 initializeApp();
 const db = getFirestore();
@@ -2300,6 +2301,9 @@ exports.cleanupInactiveTokens = onSchedule({
 
 exports.sendTestNotification = onCall(callableOpts, async (request) => {
     try {
+        if (request.auth) {
+            await checkRateLimit(request.auth.uid, "sendTestNotification", 10, 60);
+        }
         return await handleSendTestNotification(request);
     } catch (e) {
         if (e instanceof HttpsError) throw e;
@@ -3775,3 +3779,22 @@ exports.generateThumbnail = onObjectFinalized({
         console.error(`[Thumbnail] 썸네일 생성 실패 (${filePath}):`, e.message);
     }
 });
+
+// ─── 보안 강화 모듈 (Phase 2) ───
+
+const securityTriggers = require("./securityTriggers");
+exports.onUserUpdate = securityTriggers.onUserUpdate;
+exports.onAdminClaimSet = securityTriggers.onAdminClaimSet;
+
+// ─── 보안 강화 모듈 (Phase 3) ───
+
+const securityScheduler = require("./securityScheduler");
+exports.detectAnomalousPoints = securityScheduler.detectAnomalousPoints;
+exports.detectBruteForce = securityScheduler.detectBruteForce;
+exports.auditAdminAccounts = securityScheduler.auditAdminAccounts;
+
+const textFilter = require("./textFilter");
+exports.onReelsReactionWrite = textFilter.onReelsReactionWrite;
+
+const securityDashboard = require("./securityDashboard");
+exports.getSecurityReport = securityDashboard.getSecurityReport;
