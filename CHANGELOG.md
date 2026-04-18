@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.409] - 2026-04-17
+
+### 변경
+- docs(terms): 미래 순자산 시뮬레이터 약관 항목 추가 (3개 언어)
+
 ## [1.0.408] - 2026-04-17
 
 ### 변경
