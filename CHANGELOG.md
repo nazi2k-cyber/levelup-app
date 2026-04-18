@@ -5,6 +5,15 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.413] - 2026-04-18
+
+### 변경
+- fix(lhci): split autorun into collect+assert to persist .lighthouseci/ artifacts
+- fix(lhci): use filesystem upload target to persist local report artifacts
+- fix(lhci): restrict scan to app.html and relax thresholds for CI
+- fix: package-lock.json 업데이트 (@lhci/cli, serve 의존성 동기화)
+- feat: Lighthouse CI + Core Web Vitals 성능 점수 계량화 인프라 추가
+
 ## [1.0.412] - 2026-04-18
 
 ### 변경
