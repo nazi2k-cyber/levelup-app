@@ -56,3 +56,4 @@ jobs:
           name: lighthouse-results
           path: .lighthouseci/
           retention-days: 30
+          include-hidden-files: true
