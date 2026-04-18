@@ -18,7 +18,9 @@
     "backup:full": "bash scripts/backup.sh --full",
     "backup:git": "bash scripts/github-backup.sh",
     "backup:bundle": "bash scripts/github-backup.sh --bundle",
-    "backup:cros": "bash scripts/cros-package.sh"
+    "backup:cros": "bash scripts/cros-package.sh",
+    "lhci": "lhci autorun",
+    "serve:www": "serve www -p 3000 -s"
   },
   "dependencies": {
     "@capacitor-community/admob": "^6.2.0",
@@ -32,6 +34,8 @@
     "@codetrix-studio/capacitor-google-auth": "3.4.0-rc.4"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.0"
+    "@capacitor/cli": "^6.2.0",
+    "@lhci/cli": "^0.14.0",
+    "serve": "^14.2.0"
   }
 }

@@ -1,0 +1,58 @@
+name: Lighthouse CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'www/**'
+      - '.lighthouserc.json'
+      - 'firebase.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lighthouse:
+    name: Lighthouse 성능 측정
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v5
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 패키지 설치
+        run: npm ci
+
+      - name: CI용 더미 Firebase 설정 생성
+        run: |
+          cat > www/firebase-config.js << 'EOF'
+          self.__FIREBASE_CONFIG = {
+            apiKey: "ci-dummy-key",
+            authDomain: "ci-dummy.firebaseapp.com",
+            projectId: "ci-dummy",
+            storageBucket: "ci-dummy.appspot.com",
+            messagingSenderId: "000000000000",
+            appId: "1:000000000000:web:0000000000000000"
+          };
+          EOF
+
+      - name: Lighthouse CI 수집
+        run: npx lhci collect
+
+      - name: Lighthouse CI 검증
+        run: npx lhci assert
+        continue-on-error: true
+
+      - name: Lighthouse 결과 업로드 (Artifacts)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+          retention-days: 30

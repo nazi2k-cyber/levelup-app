@@ -9,6 +9,7 @@ import { getAnalytics, logEvent as fbLogEvent } from "https://www.gstatic.com/fi
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
 import { NetworkMonitor } from './modules/network-monitor.js';
 import { ConversionTracker, initRemoteConfig, getExperimentVariant, init as initConversionTracker } from './modules/conversion-tracker.js';
+import { PerformanceMonitor } from './modules/performance-monitor.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -51,6 +52,7 @@ try {
 }
 
 initConversionTracker({ analytics, remoteConfig, auth, db });
+if (analytics) PerformanceMonitor.init(analytics);
 
 // --- Firestore 네트워크 복원력 ---
 // 오프라인→온라인 전환 시 Firestore 네트워크 재연결 (WebChannel 오류 복구)
