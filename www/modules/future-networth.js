@@ -82,7 +82,8 @@
                 return;
             }
             const f   = v => Math.round(v).toLocaleString();
-            const u   = _t('fnw_unit_man');
+            const cfgLang = cfg._lang || (_app().currentLang || 'ko');
+            const u   = window.i18n?.[cfgLang]?.['fnw_unit_man'] ?? _t('fnw_unit_man');
             const fc  = res.feasible ? 'var(--neon-green,#00ff88)' : 'var(--neon-red,#ff4d6d)';
             const ft  = res.feasible ? _t('fnw_feasible') : _t('fnw_not_feasible');
             const nwL = _t('fnw_label_nw').replace('{n}', cfg.n);
