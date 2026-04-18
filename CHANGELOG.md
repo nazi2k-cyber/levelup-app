@@ -5,6 +5,13 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.422] - 2026-04-18
+
+### 변경
+- fix: generate-firebase-config.sh exit code 1 when App Check token not set
+- security: inject App Check token via GitHub Actions secrets
+- security: implement Phase 2 — App Check, rate limiter, security triggers, CI scan
+
 ## [1.0.421] - 2026-04-18
 
 ### 변경
