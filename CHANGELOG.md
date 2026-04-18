@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.425] - 2026-04-18
+
+### 변경
+- fix: App Check sitekey error on native + CSP frame-src for Firebase auth
+
 ## [1.0.424] - 2026-04-18
 
 ### 변경
