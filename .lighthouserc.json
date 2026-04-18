@@ -21,8 +21,7 @@
       }
     },
     "upload": {
-      "target": "filesystem",
-      "outputDir": ".lighthouseci"
+      "target": "no-op"
     }
   }
 }

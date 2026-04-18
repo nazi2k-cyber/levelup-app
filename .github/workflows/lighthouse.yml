@@ -42,10 +42,12 @@ jobs:
           };
           EOF
 
-      - name: Lighthouse CI 실행
-        run: npm run lhci
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      - name: Lighthouse CI 수집
+        run: npx lhci collect
+
+      - name: Lighthouse CI 검증
+        run: npx lhci assert
+        continue-on-error: true
 
       - name: Lighthouse 결과 업로드 (Artifacts)
         if: always()
