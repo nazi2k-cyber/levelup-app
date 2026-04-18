@@ -12,16 +12,34 @@ service cloud.firestore {
       return request.auth.token.admin == true || request.auth.token.adminOperator == true;
     }
 
-    // stats 맵 검증 (str, int, cha, vit, wlth, agi — 모두 number >= 0)
+    // stats 맵 검증 (str, int, cha, vit, wlth, agi — 모두 number >= 0, 최대 9999)
     function isValidStatsMap(s) {
       return s is map
         && s.keys().hasOnly(['str', 'int', 'cha', 'vit', 'wlth', 'agi'])
-        && (!('str' in s) || (s.str is number && s.str >= 0))
-        && (!('int' in s) || (s.int is number && s.int >= 0))
-        && (!('cha' in s) || (s.cha is number && s.cha >= 0))
-        && (!('vit' in s) || (s.vit is number && s.vit >= 0))
-        && (!('wlth' in s) || (s.wlth is number && s.wlth >= 0))
-        && (!('agi' in s) || (s.agi is number && s.agi >= 0));
+        && (!('str' in s) || (s.str is number && s.str >= 0 && s.str <= 9999))
+        && (!('int' in s) || (s.int is number && s.int >= 0 && s.int <= 9999))
+        && (!('cha' in s) || (s.cha is number && s.cha >= 0 && s.cha <= 9999))
+        && (!('vit' in s) || (s.vit is number && s.vit >= 0 && s.vit <= 9999))
+        && (!('wlth' in s) || (s.wlth is number && s.wlth >= 0 && s.wlth <= 9999))
+        && (!('agi' in s) || (s.agi is number && s.agi >= 0 && s.agi <= 9999));
+    }
+
+    // 포인트 급증 방지: 1회 update 시 최대 50,000 포인트 증가 허용
+    function isValidPointsDelta() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return !('points' in after)
+        || !('points' in before)
+        || (after.points - before.points <= 50000);
+    }
+
+    // 레벨 급상승 방지: 1회 update 시 최대 1 레벨 증가 허용
+    function isValidLevelDelta() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return !('level' in after)
+        || !('level' in before)
+        || (after.level - before.level <= 1);
     }
 
     // streak 맵 검증
@@ -116,9 +134,15 @@ service cloud.firestore {
     // 표현식 한도로 인해 서버 검증 생략, 클라이언트에서 검증 (app.js _strLimits)
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null
+      allow create: if request.auth != null
         && request.auth.uid == userId
         && isValidUserFieldsPart1();
+      // update 시 타입 검증 + 델타 검증 (포인트·레벨 급변 방지)
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && isValidUserFieldsPart1()
+        && isValidPointsDelta()
+        && isValidLevelDelta();
       // 계정 삭제: 본인 문서만 삭제 가능 (Google 정책 준수)
       allow delete: if request.auth != null
         && request.auth.uid == userId;
