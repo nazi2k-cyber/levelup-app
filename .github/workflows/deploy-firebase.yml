@@ -214,19 +214,9 @@ jobs:
         if: steps.detect.outputs.deploy_hosting == 'true'
         env:
           FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_APPCHECK_SITE_KEY: ${{ secrets.FIREBASE_APPCHECK_SITE_KEY }}
         run: |
-          cat > www/firebase-config.js <<JSEOF
-          var __FIREBASE_CONFIG = {
-              apiKey: "${FIREBASE_WEB_API_KEY}",
-              authDomain: "levelup-app-53d02.firebaseapp.com",
-              projectId: "levelup-app-53d02",
-              storageBucket: "levelup-app-53d02.firebasestorage.app",
-              messagingSenderId: "233040099152",
-              appId: "1:233040099152:web:82310514d26c8c6d52de55",
-              measurementId: "G-4DBGG03CCJ"
-          };
-          JSEOF
-          sed -i 's/^[[:space:]]*//' www/firebase-config.js
+          npm run generate-config
           echo "✅ www/firebase-config.js 생성 완료"
 
       - name: firebase-config.js API 키 검증

@@ -101,13 +101,14 @@ jobs:
       - name: Firebase 클라이언트 설정 생성 (firebase-config.js)
         env:
           FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_APPCHECK_DEBUG_TOKEN: ${{ secrets.FIREBASE_APPCHECK_DEBUG_TOKEN }}
         run: |
           if [ -z "$FIREBASE_WEB_API_KEY" ]; then
             echo "⚠️ FIREBASE_WEB_API_KEY 시크릿이 설정되지 않았습니다."
             echo "   Firebase Console → 프로젝트 설정 → 웹 앱 → apiKey 값을 GitHub Secrets에 등록하세요."
             exit 1
           fi
-          FIREBASE_WEB_API_KEY="$FIREBASE_WEB_API_KEY" npm run generate-config
+          npm run generate-config
           echo "✅ www/firebase-config.js 생성 완료"
 
       # 7. 웹 빌드 디렉토리 준비 (Capacitor 엔트리포인트 오버라이드)
