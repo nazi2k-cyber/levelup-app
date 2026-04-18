@@ -8,7 +8,12 @@ service firebase.storage {
       allow read: if true;
       allow create, update: if request.auth != null && request.auth.uid == userId
                             && request.resource.size < 500 * 1024
-                            && request.resource.contentType.matches('image/.*');
+                            && (request.resource.contentType == 'image/jpeg'
+                              || request.resource.contentType == 'image/png'
+                              || request.resource.contentType == 'image/webp'
+                              || request.resource.contentType == 'image/gif'
+                              || request.resource.contentType == 'image/heic'
+                              || request.resource.contentType == 'image/heif');
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
@@ -17,7 +22,12 @@ service firebase.storage {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null && request.auth.uid == userId
                             && request.resource.size < 2 * 1024 * 1024
-                            && request.resource.contentType.matches('image/.*');
+                            && (request.resource.contentType == 'image/jpeg'
+                              || request.resource.contentType == 'image/png'
+                              || request.resource.contentType == 'image/webp'
+                              || request.resource.contentType == 'image/gif'
+                              || request.resource.contentType == 'image/heic'
+                              || request.resource.contentType == 'image/heif');
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
@@ -26,7 +36,12 @@ service firebase.storage {
       allow read: if true;
       allow create, update: if request.auth != null && request.auth.uid == userId
                             && request.resource.size < 2 * 1024 * 1024
-                            && request.resource.contentType.matches('image/.*');
+                            && (request.resource.contentType == 'image/jpeg'
+                              || request.resource.contentType == 'image/png'
+                              || request.resource.contentType == 'image/webp'
+                              || request.resource.contentType == 'image/gif'
+                              || request.resource.contentType == 'image/heic'
+                              || request.resource.contentType == 'image/heif');
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
