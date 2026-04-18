@@ -203,9 +203,10 @@ public class NativeAdPlugin extends Plugin {
                 // 클리핑 적용 (상단: sticky header 아래, 하단: nav bar 위로만 보이도록)
                 int pxClipTop = (int) (clipTop * density);
                 int pxClipBottom = (clipBottom > 0) ? (int) (clipBottom * density) : 0;
-                adContainer.post(() -> {
-                    int adH = adContainer.getHeight();
-                    int adW = adContainer.getWidth();
+                final FrameLayout capturedContainer = adContainer;
+                capturedContainer.post(() -> {
+                    int adH = capturedContainer.getHeight();
+                    int adW = capturedContainer.getWidth();
                     if (adW <= 0) adW = 9999;
                     if (adH <= 0) return;
 
@@ -227,9 +228,9 @@ public class NativeAdPlugin extends Plugin {
 
                     // 클리핑 적용 (보이는 영역이 없으면 숨김)
                     if (localTop >= localBottom) {
-                        adContainer.setClipBounds(new Rect(0, 0, 0, 0));
+                        capturedContainer.setClipBounds(new Rect(0, 0, 0, 0));
                     } else if (localTop > 0 || localBottom < adH) {
-                        adContainer.setClipBounds(new Rect(0, localTop, adW, localBottom));
+                        capturedContainer.setClipBounds(new Rect(0, localTop, adW, localBottom));
                     }
                 });
 

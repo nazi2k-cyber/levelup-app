@@ -4722,6 +4722,11 @@ async function logout() {
         try {
             const { GoogleAuth } = window.Capacitor.Plugins;
             if (GoogleAuth) {
+                await GoogleAuth.initialize({
+                    clientId: 'GOOGLE_WEB_CLIENT_ID_PLACEHOLDER',
+                    scopes: ['profile', 'email'],
+                    grantOfflineAccess: false
+                });
                 await GoogleAuth.signOut();
             }
         } catch (e) {
