@@ -4716,9 +4716,13 @@ async function logout() {
     // 관리자 설정 값 및 테마 설정은 clear 전에 보존
     const _loginLogVisible = localStorage.getItem('loginLogVisible');
     const _theme = localStorage.getItem('theme');
+    const _ratingDone = localStorage.getItem('levelup_rating_done');
+    const _ratingAskedTs = localStorage.getItem('levelup_rating_asked_ts');
     localStorage.clear();
     if (_loginLogVisible !== null) localStorage.setItem('loginLogVisible', _loginLogVisible);
     if (_theme !== null) localStorage.setItem('theme', _theme);
+    if (_ratingDone !== null) localStorage.setItem('levelup_rating_done', _ratingDone);
+    if (_ratingAskedTs !== null) localStorage.setItem('levelup_rating_asked_ts', _ratingAskedTs);
     window.location.reload();
 }
 
