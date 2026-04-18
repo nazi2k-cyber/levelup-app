@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.416] - 2026-04-18
+
+### 변경
+- fix: 평점 다이얼로그 별 5개 표시 및 버튼 텍스트 가운데 정렬
+
 ## [1.0.415] - 2026-04-18
 
 ### 변경
