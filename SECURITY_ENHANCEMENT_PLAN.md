@@ -25,8 +25,8 @@
 |------|------|
 | 인증 | Firebase Auth (이메일+Google OAuth), 이메일 인증 강제 |
 | 권한 | Custom Claims (admin / adminOperator / master) + 이메일 Fallback |
-| DB 규칙 | Firestore Rules 265줄 — 필드 단위 타입 검증 |
-| 스토리지 | Storage Rules — self-only 업로드, 파일 크기/형식 제한 |
+| DB 규칙 | Firestore Rules — 필드 단위 타입 검증, 포인트·레벨 델타 제한, 5초 빈도 제한 |
+| 스토리지 | Storage Rules — self-only 업로드, 파일 크기 제한, MIME 허용리스트 (jpeg/png/webp/gif/heic/heif) |
 | 콘텐츠 | NSFWJS(로컬 ML) + Azure Content Safety 2단계 이미지 검수 |
 | 오류 추적 | `app_error_logs` 컬렉션 (클라이언트 오류 수집) |
 | 백업 | 유저 데이터 수정 전 자동 백업 (`user_backups`) |
@@ -502,17 +502,28 @@ exports.onSecurityAlert = functions.firestore
 
 ## 6. 우선순위 로드맵
 
-### Phase 1 — 즉시 적용 (1~2일, app.js 변경 없음)
+### Phase 1 — 즉시 적용 (1~2일, app.js 변경 없음) — **구현 완료 2026-04-18**
 
 ```
-✅ 1. firebase.json — 보안 헤더 추가
-       (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+✅ 1. firebase.json — 보안 헤더 추가 (구현 완료)
+       X-Frame-Options: DENY, X-Content-Type-Options: nosniff,
+       Referrer-Policy: strict-origin-when-cross-origin, Permissions-Policy 적용됨
+       ※ CSP unsafe-inline/unsafe-eval 잔존 — Phase 3 (SRI/nonce) 에서 개선 예정
 
-✅ 2. firestore.rules — 게임 수치 범위 검증 추가
-       (포인트 1회 증가량 상한, 필드 업데이트 빈도 제한)
+✅ 2. firestore.rules — 게임 수치 범위 검증 추가 (구현 완료)
+       ✅ isValidPointsDelta(): 1회 50,000 포인트 증가 상한
+       ✅ isValidLevelDelta(): 1회 1레벨 증가 상한
+       ✅ notTooFrequent(): 5초 업데이트 빈도 제한
+          (인프라 구현 완료 — Phase 2 app.js에서 lastUpdatedAt 쓰기 시 완전 활성화)
+       ✅ security_alerts / rate_limits 컬렉션 규칙 추가 (Phase 2 준비 완료)
 
-✅ 3. Firebase Console — App Check 활성화
-       (웹: reCAPTCHA v3 / Android: Play Integrity)
+✅ 3. storage.rules — MIME 검증 강화 (구현 완료)
+       image/.* → 명시적 허용 목록 (jpeg/png/webp/gif/heic/heif)
+       SVG·BMP·TIFF 차단 (XSS 및 불필요 형식 배제)
+
+⏳ 4. Firebase Console — App Check 활성화 (수동 작업 필요)
+       콘솔에서 직접 활성화: 웹 reCAPTCHA v3 / Android Play Integrity
+       → Phase 2 완료 후 app.js App Check 초기화 1줄 추가 예정
 ```
 
 ### Phase 2 — 단기 적용 (1~2주)
@@ -563,7 +574,7 @@ exports.onSecurityAlert = functions.firestore
 |------|-------|---------|-----------|
 | `firebase.json` | 1 | 보안 헤더 추가 | **없음** |
 | `firestore.rules` | 1 | 범위/빈도 검증 추가 | **없음** |
-| `storage.rules` | 1 | MIME 검증 강화 | **없음** |
+| `storage.rules` | 1 | MIME 검증 강화 ✅ (jpeg/png/webp/gif/heic/heif 허용리스트) | **없음** |
 | `functions/securityTriggers.js` | 2 | **신규 파일** | **없음** |
 | `functions/rateLimiter.js` | 2 | **신규 파일** | **없음** |
 | `.github/workflows/security-scan.yml` | 2 | **신규 파일** | **없음** |
