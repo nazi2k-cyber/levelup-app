@@ -37,8 +37,5 @@
     "@capacitor/cli": "^6.2.0",
     "@lhci/cli": "^0.14.0",
     "serve": "^14.2.0"
-  },
-  "overrides": {
-    "tar": "^7.5.13"
   }
 }
