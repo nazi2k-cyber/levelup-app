@@ -777,11 +777,12 @@ function renderReelsCards(posts, lang) {
                 </div>` : ''}
             </div>
             <div class="reels-actions">
-                <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count"></span>
+                <button class="reels-like-btn" onclick="toggleReelsLike('${postId}')">${heartOutline}</button><span class="reels-like-count" onclick="toggleLikersPanel('${postId}')" style="cursor:pointer;"></span>
                 <button class="reels-comment-btn" onclick="toggleCommentsPanel('${postId}')">${commentIcon}</button><span class="reels-comment-count"></span>
                 ${!isMe ? `<button class="reels-copy-btn" onclick="window.openCopyPlannerModal('${postId}')" title="${i18n[lang].reels_copy_planner || '플래너 복사'}">${copyIcon}</button>` : ''}
                 ${!isMe ? `<button class="reels-report-btn" onclick="toggleReportPost('${postId}')" title="${i18n[lang].reels_report || '신고'}">${reportIcon}<span class="reels-report-label">${i18n[lang].reels_report || '신고'}</span></button>` : ''}
             </div>
+            <div class="reels-likers-panel" data-likers-panel="${postId}"></div>
             <div class="reels-report-warning" data-report-warning="${postId}" style="display:none;">
                 <span class="reels-report-warning-icon">&#9888;</span>
                 <span class="reels-report-warning-text">${i18n[lang].reels_report_warning || '이 게시물은 신고가 접수되었습니다. 관리자가 검토 중입니다.'}</span>
@@ -1055,6 +1056,31 @@ function updateLikeUI(postId, likes) {
     if (likeCount) {
         likeCount.textContent = formatReactCount(likes.length);
     }
+    updateLikersPanel(postId, likes);
+}
+
+// 좋아요 유저 패널 업데이트
+function updateLikersPanel(postId, likes) {
+    const panel = document.querySelector(`[data-likers-panel="${postId}"]`);
+    if (!panel) return;
+    if (likes.length === 0) {
+        panel.innerHTML = '';
+        panel.classList.remove('open');
+        return;
+    }
+    panel.innerHTML = likes.map(l => {
+        const photo = l.photoURL ? sanitizeURL(l.photoURL) : DEFAULT_PROFILE_SVG;
+        return `<div class="reels-liker-item" onclick="window.openProfileStatsModal('${sanitizeAttr(l.uid)}')">
+            <img class="reels-liker-avatar" src="${photo}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(photo)}','${DEFAULT_PROFILE_SVG}')" alt="">
+            <span class="reels-liker-name">${sanitizeText(l.name || '헌터')}</span>
+        </div>`;
+    }).join('');
+}
+
+// 좋아요 유저 패널 토글
+function toggleLikersPanel(postId) {
+    const panel = document.querySelector(`[data-likers-panel="${postId}"]`);
+    if (panel) panel.classList.toggle('open');
 }
 
 // 댓글 추가
@@ -1347,6 +1373,7 @@ function toggleScheduleFold(postId) {
     window.toggleReelsLike = toggleReelsLike;
     window.addReelsComment = addReelsComment;
     window.toggleCommentsPanel = toggleCommentsPanel;
+    window.toggleLikersPanel = toggleLikersPanel;
     window.toggleScheduleFold = toggleScheduleFold;
     window.toggleReportPost = toggleReportPost;
     window.openLocationModal = openLocationModal;

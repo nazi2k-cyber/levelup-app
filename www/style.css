@@ -1242,6 +1242,28 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     font-size: 0.75rem; color: var(--text-sub); margin-left: 2px; margin-right: 4px;
     vertical-align: middle;
 }
+.reels-comment-btn { margin-left: 12px; }
+.reels-likers-panel {
+    overflow: hidden; max-height: 0; transition: max-height 0.3s ease, padding 0.3s ease;
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 0;
+}
+.reels-likers-panel.open {
+    max-height: 200px; padding: 8px 0;
+}
+.reels-liker-item {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 4px 8px; border-radius: 12px; background: rgba(255,255,255,0.05);
+    transition: background 0.15s;
+}
+.reels-liker-item:active { background: rgba(255,255,255,0.1); }
+.reels-liker-avatar {
+    width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+}
+.reels-liker-name {
+    font-size: 0.7rem; color: var(--text-main);
+}
+[data-theme="light"] .reels-liker-item { background: rgba(0,0,0,0.04); }
+[data-theme="light"] .reels-liker-item:active { background: rgba(0,0,0,0.08); }
 .reels-comments-panel {
     max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
 }
