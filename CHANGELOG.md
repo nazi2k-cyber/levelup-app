@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.440] - 2026-04-19
+
+### 변경
+- feat: DIY 퀘스트 가이드에 플래너 연동 설명 추가
+
 ## [1.0.439] - 2026-04-19
 
 ### 변경
