@@ -456,4 +456,5 @@
     window.createUploadProgressCallback = createUploadProgressCallback;
     window.setProfilePreview            = setProfilePreview;
     window._retryFirebaseImg            = _retryFirebaseImg;
+    window._flushRetryQueue             = _flushRetryQueue;
 })();

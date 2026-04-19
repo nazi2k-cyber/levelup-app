@@ -753,7 +753,7 @@ function initOfflineDetection() {
     window.addEventListener('online', () => {
         updateOnlineStatus();
         // 제1원칙: 온라인 복귀 즉시 대기 중인 업로드 자동 재전송
-        setTimeout(() => _flushRetryQueue(), 2000); // 연결 안정화 2초 대기 후 실행
+        setTimeout(() => window._flushRetryQueue?.(), 2000); // 연결 안정화 2초 대기 후 실행
         NetworkMonitor.checkNow();
     });
     window.addEventListener('offline', () => {
@@ -785,7 +785,7 @@ function initOfflineDetection() {
                     _webChannelErrorCount = 0; // 복구 성공 시 카운터 리셋
                     if (window.AppLogger) AppLogger.info('[Firestore] WebChannel 복구 완료');
                     // 복구 후 재전송 큐 처리
-                    setTimeout(() => _flushRetryQueue(), 3000);
+                    setTimeout(() => window._flushRetryQueue?.(), 3000);
                 })
                 .catch((e) => { if (window.AppLogger) AppLogger.warn('[Firestore] WebChannel 복구 실패: ' + e.message); });
         };
@@ -816,7 +816,7 @@ function initOfflineDetection() {
     NetworkMonitor.onQualityChange((quality, prev) => {
         if (quality === 'good' && prev !== 'good') {
             // 연결 품질 복구 시 재전송 큐 처리
-            setTimeout(() => _flushRetryQueue(), 1000);
+            setTimeout(() => window._flushRetryQueue?.(), 1000);
         }
     });
 

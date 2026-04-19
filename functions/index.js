@@ -80,11 +80,13 @@ const callableOpts = {
 };
 
 // ping 함수 전용 옵션 (이미지 스크리닝 시 NSFWJS 모델 로딩에 메모리/타임아웃 필요)
+// enforceAppCheck 제거: Capacitor 네이티브 앱에는 App Check 플러그인이 없어
+// 토큰이 첨부되지 않으므로 enforceAppCheck=true 시 모든 네이티브 호출이
+// functions/unauthenticated 로 실패함. 검색 핸들러에서 request.auth 를 직접 검사.
 const pingCallableOpts = {
     region: "asia-northeast3",
     cors: true,
     invoker: "public",
-    enforceAppCheck: true,
     memory: "1GiB",
     timeoutSeconds: 120
 };
@@ -1282,6 +1284,7 @@ async function handleGetUserAnalytics(request) {
 
 // ─── ISBN 도서 검색 (한국 도서 API 프록시) ───
 async function handleLookupIsbn(request) {
+    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
     const isbn = (request.data?.isbn || "").replace(/[-\s]/g, "");
     if (!isbn || (isbn.length !== 10 && isbn.length !== 13)) {
         throw new HttpsError("invalid-argument", "유효한 ISBN을 입력해주세요 (10자리 또는 13자리)");
@@ -1382,6 +1385,7 @@ async function handleLookupIsbn(request) {
 
 // ─── 도서 키워드 검색 (제목/저자/출판사) ───
 async function handleSearchBooks(request) {
+    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
     const query = (request.data?.query || "").trim();
     const page = Math.max(1, parseInt(request.data?.page) || 1);
     if (!query) {
@@ -1462,6 +1466,7 @@ async function handleSearchBooks(request) {
 
 // ─── 영화 키워드 검색 (KOBIS → KMDb 폴백) ───
 async function handleSearchMovies(request) {
+    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
     const query = (request.data?.query || "").trim();
     const page = Math.max(1, parseInt(request.data?.page) || 1);
     if (!query) {
@@ -1565,6 +1570,7 @@ async function handleSearchMovies(request) {
 
 // ─── 영화 상세 조회 (KOBIS + KMDb 보강) ───
 async function handleLookupMovie(request) {
+    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
     const movieCd = String(request.data?.movieCd || "").trim();
     const title = String(request.data?.title || "").trim();
     const year = String(request.data?.year || "").trim();
