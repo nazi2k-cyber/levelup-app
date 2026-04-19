@@ -47,7 +47,6 @@
             <button class="tab-btn" data-tab="screening">포스팅 스크리닝</button>
             <button class="tab-btn" data-tab="autoscreen">자동 스크리닝</button>
             <button class="tab-btn" data-tab="reports">신고 관리</button>
-            <button class="tab-btn" data-tab="security" id="tab-btn-security" style="display:none;">보안 리포트</button>
         </nav>
 
         <!-- Tab Contents -->
@@ -60,7 +59,6 @@
         <div id="tab-screening" class="tab-content"></div>
         <div id="tab-autoscreen" class="tab-content"></div>
         <div id="tab-reports" class="tab-content"></div>
-        <div id="tab-security" class="tab-content"></div>
     </div>
 </div>
 
@@ -89,7 +87,7 @@
 <script type="module">
 import { auth, firebaseConfig } from "./js/firebase-init.js";
 import { onAdminAuth, doLogin, doLogout, isAdmin, isMaster } from "./js/auth.js";
-import { initLogPanel, tlog, tok, twarn, terror, timed } from "./js/log-panel.js";
+import { initLogPanel, tlog, tok, terror, timed } from "./js/log-panel.js";
 import { initTabs } from "./js/tab-nav.js";
 import { initDiagPermissions } from "./js/diag-permissions.js";
 import { initDiagRules } from "./js/diag-rules.js";
@@ -100,7 +98,6 @@ import { initUserManagement } from "./js/user-management.js";
 import { initPostScreening } from "./js/post-screening.js";
 import { initAutoScreening } from "./js/auto-screening.js";
 import { initReportManagement } from "./js/report-management.js";
-import { initSecurityReport, loadSecurityReport } from "./js/security-report.js";
 
 // Initialize log panel and tabs
 initLogPanel();
@@ -123,30 +120,19 @@ try {
 // Login / Logout buttons
 const loginErrorEl = document.getElementById("login-error");
 
-function showLoginError(msg, code) {
+function showLoginError(msg) {
     loginErrorEl.textContent = msg;
     loginErrorEl.style.display = "";
-    twarn("Auth Error", code ? `[${code}] ${msg}` : msg);
+    tlog("Auth Error", msg);
 }
 
-const btnLogin = document.getElementById("btn-login");
-btnLogin.addEventListener("click", async () => {
+document.getElementById("btn-login").addEventListener("click", async () => {
     loginErrorEl.style.display = "none";
-    btnLogin.disabled = true;
-    try { await doLogin(); } catch (e) {
-        showLoginError(e.userMessage || e.message, e.code);
-        if (e.serverDetail) twarn("Auth Server", e.serverDetail);
-    }
-    finally { btnLogin.disabled = false; }
+    try { await doLogin(); } catch (e) { showLoginError(e.userMessage || e.message); }
 });
 
 // 리다이렉트 로그인 에러 표시
-window.addEventListener('admin-auth-error', (e) => { showLoginError(e.detail); btnLogin.disabled = false; });
-// Firebase Auth 진단 이벤트 — 사용자 UI에는 표시하지 않고 로그 패널에만 기록
-window.addEventListener('admin-auth-diagnostic', (e) => {
-    const { source, code, message } = e.detail;
-    twarn("Auth Diagnostic", `[${source}] [${code}] ${message}`);
-});
+window.addEventListener('admin-auth-error', (e) => { showLoginError(e.detail); });
 document.getElementById("btn-logout").addEventListener("click", async () => {
     await doLogout();
 });
@@ -189,12 +175,6 @@ onAdminAuth((user, admin, master, operator) => {
         initPostScreening("tab-screening");
         initAutoScreening("tab-autoscreen");
         initReportManagement("tab-reports");
-
-        // 보안 리포트 탭은 마스터만 표시
-        if (master) {
-            document.getElementById("tab-btn-security").style.display = "";
-            initSecurityReport("tab-security");
-        }
 
         if (admin) { loadDashboard(); loadUserAnalytics(); }
     } else {
