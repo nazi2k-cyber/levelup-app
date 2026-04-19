@@ -75,22 +75,33 @@ export async function doLogin() {
             return;
         }
 
+        // Popup 채널 오류 (CSP frame-src 차단 등) → redirect fallback으로 우회
+        // auth/internal-error with DOM Event customData = popup postMessage 채널 실패
+        if (e.code === 'auth/popup-blocked' || e.code === 'auth/internal-error') {
+            console.warn("[Login] Popup 실패 → redirect fallback:", e.code, e.customData ?? '');
+            window.dispatchEvent(new CustomEvent('admin-auth-diagnostic', {
+                detail: { source: 'doLogin', code: e.code, message: 'Popup 채널 실패 → redirect 방식으로 재시도' }
+            }));
+            _redirectAttempted = true;
+            await signInWithRedirect(auth, provider);
+            return;
+        }
+
         console.error("[Login]", e.code, e.message, e.customData ?? '');
 
         const errorMessages = {
-            'auth/popup-blocked': '팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.',
             'auth/popup-closed-by-user': null,
             'auth/cancelled-popup-request': null,
             'auth/unauthorized-domain': `이 도메인(${location.hostname})이 Firebase 승인 도메인에 등록되지 않았습니다.`,
             'auth/network-request-failed': '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.',
-            'auth/internal-error': 'Firebase 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
         };
 
         const userMessage = errorMessages[e.code];
         if (userMessage === null) return; // 사용자 취소 — 무시
 
         e.userMessage = userMessage || `인증 오류 (${e.code}): ${e.message}`;
-        if (e.customData) e.serverDetail = JSON.stringify(e.customData);
+        // customData가 DOM Event일 경우 serverResponse만 추출 (isTrusted 등 raw event 필드 제외)
+        if (e.customData?.serverResponse) e.serverDetail = JSON.stringify(e.customData.serverResponse);
         throw e;
     }
 }
