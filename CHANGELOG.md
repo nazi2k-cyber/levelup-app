@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.429] - 2026-04-19
+
+### 변경
+- feat: Phase 3/4 보안 스케줄러 및 어드민 보안 리포트 탭 구현
+
 ## [1.0.428] - 2026-04-19
 
 ### 변경
