@@ -9,6 +9,7 @@ let _isMaster = false;
 let _isAdminOperator = false;
 let _onAuthCallbacks = [];
 let _redirectError = null;
+let _redirectAttempted = false;
 
 export function getCurrentUser() { return _currentUser; }
 export function isAdmin() { return _isAdmin; }
@@ -69,11 +70,12 @@ export async function doLogin() {
         // 모바일에서 popup 차단 시 redirect로 fallback
         if (isMobileBrowser() && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
             console.log("[Login] 모바일 popup 차단 → redirect fallback");
+            _redirectAttempted = true;
             await signInWithRedirect(auth, provider);
             return;
         }
 
-        console.error("[Login]", e.code, e.message);
+        console.error("[Login]", e.code, e.message, e.customData ?? '');
 
         const errorMessages = {
             'auth/popup-blocked': '팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.',
@@ -87,7 +89,8 @@ export async function doLogin() {
         const userMessage = errorMessages[e.code];
         if (userMessage === null) return; // 사용자 취소 — 무시
 
-        e.userMessage = userMessage || e.message;
+        e.userMessage = userMessage || `인증 오류 (${e.code}): ${e.message}`;
+        if (e.customData) e.serverDetail = JSON.stringify(e.customData);
         throw e;
     }
 }
@@ -117,15 +120,24 @@ async function syncClaimsFromServer(user) {
 
 // Handle redirect result (모바일 redirect fallback 복귀 시)
 getRedirectResult(auth).then(result => {
+    _redirectAttempted = false;
     if (result && result.user) {
         console.log("[Auth redirect] 리다이렉트 로그인 성공:", result.user.email);
     }
 }).catch(e => {
-    console.error("[Auth redirect]", e.code, e.message);
-    if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+    console.error("[Auth redirect]", e.code, e.message, e.customData ?? '');
+    // Always surface in log panel for developer diagnostics
+    window.dispatchEvent(new CustomEvent('admin-auth-diagnostic', {
+        detail: { source: 'getRedirectResult', code: e.code, message: e.message }
+    }));
+    // Show user-facing error only when redirect was explicitly attempted this session.
+    // auth/internal-error on cold load typically means the Firebase Auth iframe is
+    // blocked by CSP (frame-src not allowing firebaseapp.com) — not a user action.
+    if (_redirectAttempted && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
         _redirectError = e.message || '리다이렉트 로그인 중 오류가 발생했습니다.';
         window.dispatchEvent(new CustomEvent('admin-auth-error', { detail: _redirectError }));
     }
+    _redirectAttempted = false;
 });
 
 // Wait for persistence setup, then listen for auth state changes

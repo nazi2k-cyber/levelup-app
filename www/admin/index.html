@@ -133,12 +133,20 @@ const btnLogin = document.getElementById("btn-login");
 btnLogin.addEventListener("click", async () => {
     loginErrorEl.style.display = "none";
     btnLogin.disabled = true;
-    try { await doLogin(); } catch (e) { showLoginError(e.userMessage || e.message, e.code); }
+    try { await doLogin(); } catch (e) {
+        showLoginError(e.userMessage || e.message, e.code);
+        if (e.serverDetail) twarn("Auth Server", e.serverDetail);
+    }
     finally { btnLogin.disabled = false; }
 });
 
 // 리다이렉트 로그인 에러 표시
 window.addEventListener('admin-auth-error', (e) => { showLoginError(e.detail); btnLogin.disabled = false; });
+// Firebase Auth 진단 이벤트 — 사용자 UI에는 표시하지 않고 로그 패널에만 기록
+window.addEventListener('admin-auth-diagnostic', (e) => {
+    const { source, code, message } = e.detail;
+    twarn("Auth Diagnostic", `[${source}] [${code}] ${message}`);
+});
 document.getElementById("btn-logout").addEventListener("click", async () => {
     await doLogout();
 });
