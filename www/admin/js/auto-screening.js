@@ -146,10 +146,18 @@ async function loadStats(type) {
         let rateLimitAlert = "";
         if (stats.azureRateLimited) {
             const limitDt = new Date(stats.azureRateLimited).toLocaleString("ko-KR");
-            rateLimitAlert = `
+            rateLimitAlert += `
                 <div style="background:#ff525220; border:1px solid #ff5252; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
                     <strong style="color:#ff5252;">Azure F0 한도 초과</strong>
                     <span class="text-sm" style="margin-left:8px; color:var(--text);">${limitDt} — NSFWJS fallback 운영 중</span>
+                </div>`;
+        }
+        if (stats.perspectiveQuotaExceeded) {
+            const pDt = new Date(stats.perspectiveQuotaExceeded).toLocaleString("ko-KR");
+            rateLimitAlert += `
+                <div style="background:#ff980020; border:1px solid #ff9800; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+                    <strong style="color:#ff9800;">Perspective API 쿼터 초과</strong>
+                    <span class="text-sm" style="margin-left:8px; color:var(--text);">${pDt} — 인메모리 10분 냉각 후 자동 재시도</span>
                 </div>`;
         }
 
@@ -238,7 +246,13 @@ function renderCategoryBars(data) {
         hate: "혐오표현",
         spam: "스팸/홍보",
         nsfw: "음란물",
-        illegal: "불법정보"
+        illegal: "불법정보",
+        perspective_toxicity: "AI:독성",
+        perspective_severe_toxicity: "AI:극심한독성",
+        perspective_identity_attack: "AI:혐오",
+        perspective_insult: "AI:모욕",
+        perspective_profanity: "AI:비속어",
+        perspective_threat: "AI:위협",
     };
 
     return entries.map(([cat, count]) => `
@@ -377,6 +391,20 @@ async function batchScreen(forceRescan = false) {
             tlog("Text", "텍스트 스크리닝: 비활성화 상태");
         }
 
+        // Perspective API 상세
+        if (d.perspectiveEnabled) {
+            if (!d.perspectiveApiReady) {
+                twarn("Perspective", "Perspective API 키 미설정 — PERSPECTIVE_API_KEY 환경 변수를 Firebase Functions에 추가하세요");
+            } else if (d.perspectiveCount > 0) {
+                const pMsg = `Perspective AI: ${d.perspectiveCount}건 분석 → ${d.perspectiveFlaggedCount}건 플래그${d.perspectiveErrorCount ? ` (오류 ${d.perspectiveErrorCount})` : ""}`;
+                d.perspectiveFlaggedCount > 0 ? twarn("Perspective", pMsg) : tok("Perspective", pMsg);
+            } else {
+                tok("Perspective", "Perspective AI: 호출 없음 (텍스트 콘텐츠 없음)");
+            }
+        } else {
+            tlog("Perspective", "Perspective API: 비활성화 상태");
+        }
+
         // 이미지 스크리닝 상세
         if (d.imageEnabled) {
             if (d.imageScreenedCount > 0) {
@@ -441,6 +469,10 @@ async function batchScreen(forceRescan = false) {
         }
         alertMsg += `\n\n── 상세 ──`;
         if (d.textEnabled) alertMsg += `\n텍스트: ${d.textScreenedCount}건 검사 → ${d.textFlaggedCount}건 플래그`;
+        if (d.perspectiveEnabled) {
+            if (!d.perspectiveApiReady) alertMsg += `\nPerspective: API 키 미설정`;
+            else alertMsg += `\nPerspective AI: ${d.perspectiveCount}건 → ${d.perspectiveFlaggedCount}건 플래그${d.perspectiveErrorCount ? ` (오류 ${d.perspectiveErrorCount})` : ""}`;
+        }
         if (d.imageEnabled && d.imageScreenedCount > 0) {
             alertMsg += `\nNSFWJS: ${d.nsfwjsCount}건 (안전:${d.nsfwjsSafeCount||0} 애매:${d.nsfwjsAmbiguousCount||0} 플래그:${d.nsfwjsFlaggedCount||0} 오류:${d.nsfwjsErrorCount||0})`;
             if (d.azureEnabled) alertMsg += `\nAzure: ${d.azureCount}건 정밀검사 → ${d.azureFlaggedCount}건 플래그${d.azureErrorCount ? ` (오류 ${d.azureErrorCount})` : ""}`;
@@ -603,7 +635,10 @@ function renderResultTable(results) {
 
 function renderTextFlagsSummary(r) {
     const catLabels = {
-        profanity: "욕설", hate: "혐오", spam: "스팸", nsfw: "음란", illegal: "불법"
+        profanity: "욕설", hate: "혐오", spam: "스팸", nsfw: "음란", illegal: "불법",
+        perspective_toxicity: "AI:독성", perspective_severe_toxicity: "AI:극심한독성",
+        perspective_identity_attack: "AI:혐오", perspective_insult: "AI:모욕",
+        perspective_profanity: "AI:비속어", perspective_threat: "AI:위협",
     };
     if (!r.textFlags || r.textFlags.length === 0) {
         return '<span class="text-sub">없음</span>';
@@ -705,7 +740,13 @@ function selectResult(postId) {
         hate: "혐오표현",
         spam: "스팸/홍보",
         nsfw: "음란물",
-        illegal: "불법정보"
+        illegal: "불법정보",
+        perspective_toxicity: "AI:독성",
+        perspective_severe_toxicity: "AI:극심한독성",
+        perspective_identity_attack: "AI:혐오",
+        perspective_insult: "AI:모욕",
+        perspective_profanity: "AI:비속어",
+        perspective_threat: "AI:위협",
     };
 
     let textFlagsHtml = '<p class="text-sub text-sm">텍스트 플래그 없음</p>';
@@ -738,6 +779,37 @@ function selectResult(postId) {
         imageFlagsHtml = sourceBadge + '<div class="as-keyword-tags">' + mainFlags + '</div>' + nsfwScoresHtml;
     }
 
+    // Perspective 엔진 데이터 표시
+    let perspectiveHtml = "";
+    if (r.engineData && r.engineData.perspectiveVerdict) {
+        const pv = r.engineData.perspectiveVerdict;
+        const ps = r.engineData.perspectiveScores;
+        const pvBadge = pv === "flagged"
+            ? '<span class="badge badge-fail">플래그</span>'
+            : pv === "clean" ? '<span class="badge badge-ok">정상</span>'
+            : pv === "error" ? '<span class="badge badge-warn">오류</span>' : "";
+        let scoresHtml = "";
+        if (ps) {
+            const attrLabels = {
+                toxicity: "독성", severe_toxicity: "극심한독성",
+                identity_attack: "혐오", insult: "모욕",
+                profanity: "비속어", threat: "위협",
+            };
+            scoresHtml = Object.entries(ps)
+                .sort(([, a], [, b]) => b - a)
+                .map(([k, v]) => {
+                    const pct = Math.round(v * 100);
+                    const color = pct >= 70 ? "var(--error)" : pct >= 50 ? "#ff9800" : "var(--text-sub)";
+                    return `<span style="color:${color}; font-size:11px; margin-right:8px;">${attrLabels[k] || k}: ${pct}%</span>`;
+                }).join("");
+            scoresHtml = `<div style="margin-top:4px;">${scoresHtml}</div>`;
+        }
+        perspectiveHtml = `<div style="margin-top:12px;">
+            <h3 class="text-sm" style="color:var(--accent); margin-bottom:6px;">Perspective AI 분석 ${pvBadge}</h3>
+            ${scoresHtml || '<p class="text-sub text-sm">점수 없음</p>'}
+        </div>`;
+    }
+
     document.getElementById("as-detail-content").innerHTML = `
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(r.ownerName || r.ownerUid || "—")}</div><div class="stat-label">${isProfile ? "유저" : "작성자"}</div></div>
@@ -755,6 +827,7 @@ function selectResult(postId) {
             <h3 class="text-sm" style="color:var(--accent); margin-bottom:8px;">텍스트 플래그</h3>
             ${textFlagsHtml}
         </div>` : ""}
+        ${!isProfile ? perspectiveHtml : ""}
         <div style="margin-top:12px;">
             <h3 class="text-sm" style="color:var(--accent); margin-bottom:8px;">이미지 플래그</h3>
             ${imageFlagsHtml}
@@ -899,6 +972,10 @@ function renderConfigForm() {
                     <span>Azure 2차 정밀검사 <span class="text-sub">(F0: 5,000건/월 무료, 애매한 결과만 호출)</span></span>
                 </label>
                 <label class="as-toggle-row">
+                    <input type="checkbox" id="cfg-perspective-enabled" ${s.perspectiveEnabled ? "checked" : ""}>
+                    <span>Perspective API 텍스트 독성 분석 <span class="text-sub">(Google ML, 1 QPS 무료 — PERSPECTIVE_API_KEY 필요)</span></span>
+                </label>
+                <label class="as-toggle-row">
                     <input type="checkbox" id="cfg-notify" ${s.notifyOnFlag !== false ? "checked" : ""}>
                     <span>플래그 시 알림</span>
                 </label>
@@ -1016,6 +1093,7 @@ async function saveSettings() {
         textScreeningEnabled: document.getElementById("cfg-text-enabled").checked,
         imageScreeningEnabled: document.getElementById("cfg-image-enabled").checked,
         azureEnabled: document.getElementById("cfg-azure-enabled").checked,
+        perspectiveEnabled: document.getElementById("cfg-perspective-enabled").checked,
         notifyOnFlag: document.getElementById("cfg-notify").checked,
         autoHideThreshold: document.getElementById("cfg-hide-threshold").value,
         autoDeleteThreshold: document.getElementById("cfg-delete-threshold").value,
