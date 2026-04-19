@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.429] - 2026-04-19
+
+### 변경
+- revert: 1.0.428로 롤백
+
 ## [1.0.428] - 2026-04-19
 
 ### 변경
