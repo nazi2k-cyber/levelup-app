@@ -1332,7 +1332,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     background: none; border: none;
     color: var(--text-sub); cursor: pointer;
     padding: 4px; display: inline-flex; align-items: center;
-    transition: transform 0.15s; margin-left: 2px;
+    transition: transform 0.15s; margin-left: 12px;
 }
 .reels-copy-btn:hover { color: var(--neon-blue); }
 .reels-copy-btn:active { transform: scale(1.3); }
