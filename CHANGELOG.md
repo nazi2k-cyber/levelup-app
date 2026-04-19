@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.433] - 2026-04-19
+
+### 변경
+- fix: popup auth/internal-error 시 redirect fallback으로 자동 전환
+
 ## [1.0.432] - 2026-04-19
 
 ### 변경
