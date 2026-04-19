@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.443] - 2026-04-19
+
+### 변경
+- ci: Firestore Rules 테스트를 GitHub Actions에 통합
+- feat(test): Firestore Security Rules 자동화 테스트 추가 (Phase 3 #10)
+
 ## [1.0.442] - 2026-04-19
 
 ### 변경
