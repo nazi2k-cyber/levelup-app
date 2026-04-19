@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.437] - 2026-04-19
+
+### 변경
+- fix: 네이티브 앱 도서/영화 API unauthenticated 오류 및 _flushRetryQueue 미정의 오류 수정
+
 ## [1.0.436] - 2026-04-19
 
 ### 변경
