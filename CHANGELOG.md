@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.432] - 2026-04-19
+
+### 변경
+- fix: auth 로그 상세화 및 getRedirectResult 오류 분리 처리
+
 ## [1.0.431] - 2026-04-19
 
 ### 변경
