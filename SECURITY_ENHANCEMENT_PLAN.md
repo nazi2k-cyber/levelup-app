@@ -1,7 +1,7 @@
 # 보안강화 방안 검토 보고서
 
 > **대상 앱:** LEVEL UP: REBOOT (Firebase + Capacitor 기반 모바일/웹 앱)  
-> **기준일:** 2026-04-18  
+> **기준일:** 2026-04-19 (최종 업데이트)  
 > **원칙:** app.js 코드 추가 최소화 / 무료 또는 비용 최소화
 
 ---
@@ -27,7 +27,8 @@
 | 권한 | Custom Claims (admin / adminOperator / master) + 이메일 Fallback |
 | DB 규칙 | Firestore Rules — 필드 단위 타입 검증, 포인트·레벨 델타 제한, 5초 빈도 제한 |
 | 스토리지 | Storage Rules — self-only 업로드, 파일 크기 제한, MIME 허용리스트 (jpeg/png/webp/gif/heic/heif) |
-| 콘텐츠 | NSFWJS(로컬 ML) + Azure Content Safety 2단계 이미지 검수 |
+| 이미지 콘텐츠 | NSFWJS(로컬 ML) + Azure Content Safety 2단계 이미지 검수 |
+| 텍스트 콘텐츠 | 금칙어 사전 + Azure Content Safety 텍스트 독성 분석 (Hate/Violence/Sexual/SelfHarm) |
 | 오류 추적 | `app_error_logs` 컬렉션 (클라이언트 오류 수집) |
 | 백업 | 유저 데이터 수정 전 자동 백업 (`user_backups`) |
 | 알림 감사 | `push_logs` / `push_feedback` 컬렉션 |
@@ -38,7 +39,7 @@
 - 클라이언트 사이드 게임 상태 직접 Firestore 저장 → 데이터 조작 위험
 - Rate Limiting이 Firebase 기본 수준에만 의존 → Brute-force 가능
 - Admin 권한 이메일 목록이 환경변수에만 관리 → 운영 실수 위험
-- 소셜 기능(reels, 댓글)의 텍스트 콘텐츠 필터링 부재
+- ~~소셜 기능(reels, 댓글)의 텍스트 콘텐츠 필터링 부재~~ → **구현 완료** (금칙어 사전 + Azure ML)
 
 ---
 
@@ -193,25 +194,35 @@ import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 initializeAppCheck(app, { provider: new ReCaptchaV3Provider(SITE_KEY) });
 ```
 
-### 3-3. 텍스트 콘텐츠 필터링 (Cloud Function 추가)
+### 3-3. 텍스트 콘텐츠 필터링 (Cloud Function 추가) — ✅ 구현 완료 2026-04-19
 
-#### 방법 A: 금칙어 사전 방식 (무료)
+#### 방법 A: 금칙어 사전 방식 (무료) — ✅ 구현 완료
 
 ```javascript
-// functions/textFilter.js (신규 파일)
-const BLOCKED_PATTERNS = [/* 금칙어 목록 */];
-function filterText(text) {
-  return BLOCKED_PATTERNS.some(p => text.includes(p));
-}
-// Firestore Trigger로 reels_reactions 생성 시 자동 검수
+// functions/index.js — screenCaption()
+// DEFAULT_SCREENING_KEYWORDS: profanity / hate / spam / nsfw / illegal
+// 심각도별 자동 숨김/삭제 임계값 설정 가능 (어드민 대시보드)
 ```
 
-#### 방법 B: Google Perspective API (무료 쿼터: 1 QPS)
+#### 방법 B: Azure Content Safety 텍스트 분석 (ML 기반) — ✅ 구현 완료
 
+> ⚠️ **Google Perspective API는 2025년 서비스 종료** — Azure Content Safety로 대체 구현
+
+```javascript
+// functions/textScreening.js (신규 파일)
+// 엔드포인트: /text:analyze (기존 AZURE_CS_ENDPOINT + AZURE_CS_KEY 재사용)
+// 카테고리: Hate / Violence / Sexual / SelfHarm
+// 심각도: 0(Safe) / 2(Low) / 4(Medium) / 6(High)
+// 무료 한도: F0 5,000건/월 (이미지와 별도 쿼터)
+// Hate / SelfHarm: 심각 카테고리로 severity 상향 적용
 ```
-엔드포인트: https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze
-독성 점수 0~1 반환 → 0.7 이상 자동 숨김 처리
-```
+
+| 카테고리 | 감지 예시 | 심각도 처리 |
+|----------|-----------|------------|
+| Hate | 혐오표현, 차별 발언 | Low→Medium, Medium→High 상향 |
+| Violence | 폭력 위협, 공격적 표현 | 기본 매핑 |
+| Sexual | 음란 콘텐츠 | 기본 매핑 |
+| SelfHarm | 자해/자살 관련 표현 | Low→Medium, Medium→High 상향 |
 
 ### 3-4. CSP 강화 (firebase.json 수정, app.js 변경 없음)
 
@@ -480,7 +491,7 @@ exports.onSecurityAlert = functions.firestore
 | gitleaks 시크릿 스캔 | **무료** | 🟠 단기 |
 | Cloud Functions 이상 탐지 스케줄러 | **무료** (쿼터 내) | 🟠 단기 |
 | Firestore 기반 Rate Limiter | **무료** | 🟠 단기 |
-| Google Perspective API (텍스트 필터) | **무료** (1 QPS) | 🟡 중기 |
+| Azure Content Safety 텍스트 분석 | **무료** (F0 5,000건/월, 기존 키 재사용) | ✅ 완료 |
 | Firebase Firestore Rules 자동 테스트 | **무료** (로컬 에뮬레이터) | 🟡 중기 |
 | SRI (Subresource Integrity) | **무료** | 🟡 중기 |
 | GCP Secret Manager | **저비용** (~$0.06/시크릿/월) | 🟡 중기 |
@@ -556,7 +567,11 @@ exports.onSecurityAlert = functions.firestore
        detectBruteForce: 매시간 — app_error_logs에서 1h 내 auth/* 오류 10회↑ 집계
        auditAdminAccounts: 매주 월요일 09:00 KST — 90일↑ 미접속 어드민 계정 감사 (중복 방지)
 
-📋 9. Google Perspective API 연동 — 텍스트 콘텐츠 필터링
+✅ 9. Azure Content Safety 텍스트 분석 연동 — 텍스트 콘텐츠 필터링 (구현 완료 2026-04-19)
+       functions/textScreening.js 신규: Azure /text:analyze 호출 (기존 AZURE_CS_KEY 재사용)
+       ※ Google Perspective API는 2025년 서비스 종료로 Azure로 대체
+       executeScreening(): azureTextEnabled 설정 시 캡션 ML 분석 → textFlags 병합
+       어드민 대시보드: Azure 텍스트 분석 토글 / 판정 뷰 / 배치 통계 추가
 
 📋 10. test/firestore-rules.test.js — Rules 자동화 테스트 추가
 
@@ -592,7 +607,8 @@ exports.onSecurityAlert = functions.firestore
 | `functions/rateLimiter.js` | 2 | **신규 파일** ✅ (구현 완료) | **없음** |
 | `.github/workflows/security-scan.yml` | 2 | **신규 파일** ✅ (구현 완료) | **없음** |
 | `app.js` | 2 | App Check 초기화 ✅ (구현 완료) | **최소 (~15줄)** |
-| `functions/securityScheduler.js` | 3 | **신규 파일** | **없음** |
+| `functions/securityScheduler.js` | 3 | **신규 파일** ✅ (구현 완료) | **없음** |
+| `functions/textScreening.js` | 3 | **신규 파일** ✅ (구현 완료) | **없음** |
 | `test/firestore-rules.test.js` | 3 | **신규 파일** | **없음** |
 | `app.html` | 3 | SRI 해시 추가 | **없음** |
 

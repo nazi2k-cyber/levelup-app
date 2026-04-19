@@ -9,7 +9,7 @@ const { getAuth } = require("firebase-admin/auth");
 const { checkRateLimit } = require("./rateLimiter");
 const securityTriggers = require("./securityTriggers");
 const securityScheduler = require("./securityScheduler");
-const perspectiveApi = require("./perspectiveApi");
+const textScreening = require("./textScreening");
 
 initializeApp();
 const db = getFirestore();
@@ -2860,7 +2860,7 @@ async function getScreeningConfig() {
         imageScreeningEnabled: false,
         textScreeningEnabled: true,
         azureEnabled: false,
-        perspectiveEnabled: false,
+        azureTextEnabled: false,
         notifyOnFlag: true
     };
 
@@ -2881,11 +2881,11 @@ async function executeScreening(post, config) {
     const meta = {
         textScreened: false,
         imageScreened: false,
-        nsfwjsVerdict: null,        // "safe" | "flagged" | "ambiguous" | "error" | null
-        nsfwjsScores: null,         // raw NSFWJS scores {porn, sexy, hentai, neutral, drawing}
-        azureVerdict: null,         // "clean" | "flagged" | "error" | null
-        perspectiveVerdict: null,   // "clean" | "flagged" | "error" | "skipped" | null
-        perspectiveScores: null,    // raw Perspective scores {toxicity, severe_toxicity, ...}
+        nsfwjsVerdict: null,      // "safe" | "flagged" | "ambiguous" | "error" | null
+        nsfwjsScores: null,       // raw NSFWJS scores {porn, sexy, hentai, neutral, drawing}
+        azureVerdict: null,       // "clean" | "flagged" | "error" | null
+        azureTextVerdict: null,   // "clean" | "flagged" | "error" | null
+        azureTextScores: null,    // raw Azure text scores {Hate: N, Violence: N, ...}
         errors: [],
     };
 
@@ -2896,28 +2896,34 @@ async function executeScreening(post, config) {
         textFlags = screenCaption(post.caption, keywords.categories);
     }
 
-    // 텍스트 스크리닝 (Perspective API — ML 기반 독성 분석)
-    if (settings.perspectiveEnabled && post.caption && post.caption.trim()) {
-        try {
-            const pScores = await perspectiveApi.screenTextPerspective(post.caption);
-            if (pScores) {
-                meta.perspectiveScores = pScores;
-                const pFlags = perspectiveApi.perspectiveScoresToFlags(pScores);
-                if (pFlags.length > 0) {
-                    meta.perspectiveVerdict = "flagged";
-                    textFlags = textFlags.concat(pFlags);
+    // 텍스트 스크리닝 (Azure Content Safety — ML 기반 독성 분석)
+    if (settings.azureTextEnabled && post.caption && post.caption.trim()) {
+        const azureClient = getAzureClient();
+        if (azureClient) {
+            try {
+                const tScores = await textScreening.screenText(azureClient, post.caption);
+                if (tScores) {
+                    meta.azureTextScores = tScores;
+                    const tFlags = textScreening.scoresToFlags(tScores);
+                    if (tFlags.length > 0) {
+                        meta.azureTextVerdict = "flagged";
+                        textFlags = textFlags.concat(tFlags);
+                    } else {
+                        meta.azureTextVerdict = "clean";
+                    }
+                    meta.textScreened = true;
                 } else {
-                    meta.perspectiveVerdict = "clean";
+                    meta.azureTextVerdict = "error";
+                    meta.errors.push("Azure 텍스트 분석 실패 (쿼터 초과/네트워크 오류)");
                 }
-                meta.textScreened = true;
-            } else {
-                meta.perspectiveVerdict = "error";
-                meta.errors.push("Perspective API 호출 실패 (쿼터 초과/미설정/네트워크 오류)");
+            } catch (e) {
+                meta.azureTextVerdict = "error";
+                meta.errors.push(`Azure 텍스트 분석 예외: ${e.message}`);
+                console.error(`[executeScreening] Azure 텍스트 분석 예외 (${postId}):`, e.message);
             }
-        } catch (e) {
-            meta.perspectiveVerdict = "error";
-            meta.errors.push(`Perspective API 예외: ${e.message}`);
-            console.error(`[executeScreening] Perspective API 예외 (${postId}):`, e.message);
+        } else {
+            meta.azureTextVerdict = "error";
+            meta.errors.push(`Azure 텍스트 분석 비활성: ${getAzureInitError() || "클라이언트 초기화 실패"}`);
         }
     }
 
@@ -2954,8 +2960,8 @@ async function executeScreening(post, config) {
                 nsfwjsVerdict: meta.nsfwjsVerdict || null,
                 nsfwjsScores: meta.nsfwjsScores || null,
                 azureVerdict: meta.azureVerdict || null,
-                perspectiveVerdict: meta.perspectiveVerdict || null,
-                perspectiveScores: meta.perspectiveScores || null,
+                azureTextVerdict: meta.azureTextVerdict || null,
+                azureTextScores: meta.azureTextScores || null,
                 errors: meta.errors.length > 0 ? meta.errors : null,
                 needsReview: needsReview || null,
             },
@@ -3402,16 +3408,16 @@ async function handleBatchScreenPosts(request) {
     let azureCount = 0;
     let azureFlaggedCount = 0;
     let azureErrorCount = 0;
-    // Perspective API 카운트
-    let perspectiveCount = 0;
-    let perspectiveFlaggedCount = 0;
-    let perspectiveErrorCount = 0;
+    // Azure 텍스트 분석 카운트
+    let azureTextCount = 0;
+    let azureTextFlaggedCount = 0;
+    let azureTextErrorCount = 0;
 
     const textEnabled = config.settings.textScreeningEnabled !== false;
     const imageEnabled = !!config.settings.imageScreeningEnabled;
     const azureEnabled = !!config.settings.azureEnabled;
-    const perspectiveEnabled = !!config.settings.perspectiveEnabled;
-    const perspectiveApiReady = perspectiveApi.isEnabled();
+    const azureTextEnabled = !!config.settings.azureTextEnabled;
+    const azureTextClientReady = !!getAzureClient();
 
     // 엔진 구동 상태 사전 점검
     let nsfwjsModelReady = false;
@@ -3490,11 +3496,11 @@ async function handleBatchScreenPosts(request) {
                     else if (m.azureVerdict === "error") azureErrorCount++;
                 }
 
-                // Perspective API 집계
-                if (m.perspectiveVerdict) {
-                    perspectiveCount++;
-                    if (m.perspectiveVerdict === "flagged") perspectiveFlaggedCount++;
-                    else if (m.perspectiveVerdict === "error") perspectiveErrorCount++;
+                // Azure 텍스트 분석 집계
+                if (m.azureTextVerdict) {
+                    azureTextCount++;
+                    if (m.azureTextVerdict === "flagged") azureTextFlaggedCount++;
+                    else if (m.azureTextVerdict === "error") azureTextErrorCount++;
                 }
 
                 // 오류 로그
@@ -3527,13 +3533,13 @@ async function handleBatchScreenPosts(request) {
             textEnabled,
             imageEnabled,
             azureEnabled,
-            perspectiveEnabled,
+            azureTextEnabled,
             // 엔진 구동 상태
             nsfwjsModelReady,
             nsfwjsModelError,
             azureClientReady,
             azureClientError,
-            perspectiveApiReady,
+            azureTextClientReady,
             // 텍스트 상세
             textScreenedCount,
             textFlaggedCount,
@@ -3546,14 +3552,14 @@ async function handleBatchScreenPosts(request) {
             nsfwjsSafeCount,
             nsfwjsAmbiguousCount,
             nsfwjsErrorCount,
-            // Azure 실제 호출 기반 상세
+            // Azure 이미지 2차 호출 상세
             azureCount,
             azureFlaggedCount,
             azureErrorCount,
-            // Perspective API 상세
-            perspectiveCount,
-            perspectiveFlaggedCount,
-            perspectiveErrorCount,
+            // Azure 텍스트 분석 상세
+            azureTextCount,
+            azureTextFlaggedCount,
+            azureTextErrorCount,
         }
     };
 }
@@ -3684,19 +3690,19 @@ async function handleGetScreeningStats(request) {
         }
     }
 
-    // Azure 한도 초과 / Perspective 쿼터 초과 상태 포함
+    // Azure 이미지/텍스트 한도 초과 상태 포함
     let azureRateLimited = null;
-    let perspectiveQuotaExceeded = null;
+    let azureTextRateLimited = null;
     try {
         const settingsDoc = await db.collection("screening_config").doc("settings").get();
         if (settingsDoc.exists) {
             const s = settingsDoc.data();
             if (s._azureRateLimitedAt) azureRateLimited = s._azureRateLimitedAt;
-            if (s._perspectiveQuotaExceededAt) perspectiveQuotaExceeded = s._perspectiveQuotaExceededAt;
+            if (s._azureTextRateLimitedAt) azureTextRateLimited = s._azureTextRateLimitedAt;
         }
     } catch (e) { /* ignore */ }
 
-    return { total, pending, approved, rejected, autoDeleted, autoHidden, clean, byCategory, bySeverity, azureRateLimited, perspectiveQuotaExceeded };
+    return { total, pending, approved, rejected, autoDeleted, autoHidden, clean, byCategory, bySeverity, azureRateLimited, azureTextRateLimited };
 }
 
 // --- 만료 릴스 사진 정리 (매일 04:00 KST) ---

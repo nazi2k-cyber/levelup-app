@@ -152,12 +152,12 @@ async function loadStats(type) {
                     <span class="text-sm" style="margin-left:8px; color:var(--text);">${limitDt} — NSFWJS fallback 운영 중</span>
                 </div>`;
         }
-        if (stats.perspectiveQuotaExceeded) {
-            const pDt = new Date(stats.perspectiveQuotaExceeded).toLocaleString("ko-KR");
+        if (stats.azureTextRateLimited) {
+            const pDt = new Date(stats.azureTextRateLimited).toLocaleString("ko-KR");
             rateLimitAlert += `
                 <div style="background:#ff980020; border:1px solid #ff9800; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
-                    <strong style="color:#ff9800;">Perspective API 쿼터 초과</strong>
-                    <span class="text-sm" style="margin-left:8px; color:var(--text);">${pDt} — 인메모리 10분 냉각 후 자동 재시도</span>
+                    <strong style="color:#ff9800;">Azure 텍스트 F0 한도 초과</strong>
+                    <span class="text-sm" style="margin-left:8px; color:var(--text);">${pDt} — 1시간 냉각 후 자동 재시도</span>
                 </div>`;
         }
 
@@ -247,12 +247,10 @@ function renderCategoryBars(data) {
         spam: "스팸/홍보",
         nsfw: "음란물",
         illegal: "불법정보",
-        perspective_toxicity: "AI:독성",
-        perspective_severe_toxicity: "AI:극심한독성",
-        perspective_identity_attack: "AI:혐오",
-        perspective_insult: "AI:모욕",
-        perspective_profanity: "AI:비속어",
-        perspective_threat: "AI:위협",
+        azure_hate: "AI:혐오표현",
+        azure_violence: "AI:폭력",
+        azure_sexual: "AI:성적콘텐츠",
+        azure_selfharm: "AI:자해",
     };
 
     return entries.map(([cat, count]) => `
@@ -391,18 +389,18 @@ async function batchScreen(forceRescan = false) {
             tlog("Text", "텍스트 스크리닝: 비활성화 상태");
         }
 
-        // Perspective API 상세
-        if (d.perspectiveEnabled) {
-            if (!d.perspectiveApiReady) {
-                twarn("Perspective", "Perspective API 키 미설정 — PERSPECTIVE_API_KEY 환경 변수를 Firebase Functions에 추가하세요");
-            } else if (d.perspectiveCount > 0) {
-                const pMsg = `Perspective AI: ${d.perspectiveCount}건 분석 → ${d.perspectiveFlaggedCount}건 플래그${d.perspectiveErrorCount ? ` (오류 ${d.perspectiveErrorCount})` : ""}`;
-                d.perspectiveFlaggedCount > 0 ? twarn("Perspective", pMsg) : tok("Perspective", pMsg);
+        // Azure 텍스트 분석 상세
+        if (d.azureTextEnabled) {
+            if (!d.azureTextClientReady) {
+                twarn("Azure텍스트", "Azure 클라이언트 초기화 실패 — AZURE_CS_KEY / AZURE_CS_ENDPOINT 확인 필요");
+            } else if (d.azureTextCount > 0) {
+                const tMsg = `Azure 텍스트 AI: ${d.azureTextCount}건 분석 → ${d.azureTextFlaggedCount}건 플래그${d.azureTextErrorCount ? ` (오류 ${d.azureTextErrorCount})` : ""}`;
+                d.azureTextFlaggedCount > 0 ? twarn("Azure텍스트", tMsg) : tok("Azure텍스트", tMsg);
             } else {
-                tok("Perspective", "Perspective AI: 호출 없음 (텍스트 콘텐츠 없음)");
+                tok("Azure텍스트", "Azure 텍스트 AI: 호출 없음 (텍스트 콘텐츠 없음)");
             }
         } else {
-            tlog("Perspective", "Perspective API: 비활성화 상태");
+            tlog("Azure텍스트", "Azure 텍스트 분석: 비활성화 상태");
         }
 
         // 이미지 스크리닝 상세
@@ -469,9 +467,9 @@ async function batchScreen(forceRescan = false) {
         }
         alertMsg += `\n\n── 상세 ──`;
         if (d.textEnabled) alertMsg += `\n텍스트: ${d.textScreenedCount}건 검사 → ${d.textFlaggedCount}건 플래그`;
-        if (d.perspectiveEnabled) {
-            if (!d.perspectiveApiReady) alertMsg += `\nPerspective: API 키 미설정`;
-            else alertMsg += `\nPerspective AI: ${d.perspectiveCount}건 → ${d.perspectiveFlaggedCount}건 플래그${d.perspectiveErrorCount ? ` (오류 ${d.perspectiveErrorCount})` : ""}`;
+        if (d.azureTextEnabled) {
+            if (!d.azureTextClientReady) alertMsg += `\nAzure 텍스트: 클라이언트 초기화 실패`;
+            else alertMsg += `\nAzure 텍스트 AI: ${d.azureTextCount}건 → ${d.azureTextFlaggedCount}건 플래그${d.azureTextErrorCount ? ` (오류 ${d.azureTextErrorCount})` : ""}`;
         }
         if (d.imageEnabled && d.imageScreenedCount > 0) {
             alertMsg += `\nNSFWJS: ${d.nsfwjsCount}건 (안전:${d.nsfwjsSafeCount||0} 애매:${d.nsfwjsAmbiguousCount||0} 플래그:${d.nsfwjsFlaggedCount||0} 오류:${d.nsfwjsErrorCount||0})`;
@@ -741,12 +739,10 @@ function selectResult(postId) {
         spam: "스팸/홍보",
         nsfw: "음란물",
         illegal: "불법정보",
-        perspective_toxicity: "AI:독성",
-        perspective_severe_toxicity: "AI:극심한독성",
-        perspective_identity_attack: "AI:혐오",
-        perspective_insult: "AI:모욕",
-        perspective_profanity: "AI:비속어",
-        perspective_threat: "AI:위협",
+        azure_hate: "AI:혐오표현",
+        azure_violence: "AI:폭력",
+        azure_sexual: "AI:성적콘텐츠",
+        azure_selfharm: "AI:자해",
     };
 
     let textFlagsHtml = '<p class="text-sub text-sm">텍스트 플래그 없음</p>';
@@ -779,33 +775,29 @@ function selectResult(postId) {
         imageFlagsHtml = sourceBadge + '<div class="as-keyword-tags">' + mainFlags + '</div>' + nsfwScoresHtml;
     }
 
-    // Perspective 엔진 데이터 표시
+    // Azure 텍스트 분석 엔진 데이터 표시
     let perspectiveHtml = "";
-    if (r.engineData && r.engineData.perspectiveVerdict) {
-        const pv = r.engineData.perspectiveVerdict;
-        const ps = r.engineData.perspectiveScores;
-        const pvBadge = pv === "flagged"
+    if (r.engineData && r.engineData.azureTextVerdict) {
+        const tv = r.engineData.azureTextVerdict;
+        const ts = r.engineData.azureTextScores;
+        const tvBadge = tv === "flagged"
             ? '<span class="badge badge-fail">플래그</span>'
-            : pv === "clean" ? '<span class="badge badge-ok">정상</span>'
-            : pv === "error" ? '<span class="badge badge-warn">오류</span>' : "";
+            : tv === "clean" ? '<span class="badge badge-ok">정상</span>'
+            : tv === "error" ? '<span class="badge badge-warn">오류</span>' : "";
         let scoresHtml = "";
-        if (ps) {
-            const attrLabels = {
-                toxicity: "독성", severe_toxicity: "극심한독성",
-                identity_attack: "혐오", insult: "모욕",
-                profanity: "비속어", threat: "위협",
-            };
-            scoresHtml = Object.entries(ps)
+        if (ts) {
+            const catLabels = { Hate: "혐오표현", Violence: "폭력", Sexual: "성적콘텐츠", SelfHarm: "자해" };
+            const sevLabels = { 0: "Safe", 2: "Low", 4: "Medium", 6: "High" };
+            const sevColors = { 0: "var(--text-sub)", 2: "#ffc107", 4: "#ff9800", 6: "var(--error)" };
+            scoresHtml = Object.entries(ts)
                 .sort(([, a], [, b]) => b - a)
-                .map(([k, v]) => {
-                    const pct = Math.round(v * 100);
-                    const color = pct >= 70 ? "var(--error)" : pct >= 50 ? "#ff9800" : "var(--text-sub)";
-                    return `<span style="color:${color}; font-size:11px; margin-right:8px;">${attrLabels[k] || k}: ${pct}%</span>`;
-                }).join("");
+                .map(([k, v]) =>
+                    `<span style="color:${sevColors[v] || "var(--text-sub)"}; font-size:11px; margin-right:8px;">${catLabels[k] || k}: ${sevLabels[v] ?? v}</span>`
+                ).join("");
             scoresHtml = `<div style="margin-top:4px;">${scoresHtml}</div>`;
         }
         perspectiveHtml = `<div style="margin-top:12px;">
-            <h3 class="text-sm" style="color:var(--accent); margin-bottom:6px;">Perspective AI 분석 ${pvBadge}</h3>
+            <h3 class="text-sm" style="color:var(--accent); margin-bottom:6px;">Azure 텍스트 AI 분석 ${tvBadge}</h3>
             ${scoresHtml || '<p class="text-sub text-sm">점수 없음</p>'}
         </div>`;
     }
@@ -972,8 +964,8 @@ function renderConfigForm() {
                     <span>Azure 2차 정밀검사 <span class="text-sub">(F0: 5,000건/월 무료, 애매한 결과만 호출)</span></span>
                 </label>
                 <label class="as-toggle-row">
-                    <input type="checkbox" id="cfg-perspective-enabled" ${s.perspectiveEnabled ? "checked" : ""}>
-                    <span>Perspective API 텍스트 독성 분석 <span class="text-sub">(Google ML, 1 QPS 무료 — PERSPECTIVE_API_KEY 필요)</span></span>
+                    <input type="checkbox" id="cfg-azure-text-enabled" ${s.azureTextEnabled ? "checked" : ""}>
+                    <span>Azure 텍스트 독성 분석 <span class="text-sub">(ML 기반, F0: 5,000건/월 무료 — 기존 AZURE_CS_KEY 재사용)</span></span>
                 </label>
                 <label class="as-toggle-row">
                     <input type="checkbox" id="cfg-notify" ${s.notifyOnFlag !== false ? "checked" : ""}>
@@ -1093,7 +1085,7 @@ async function saveSettings() {
         textScreeningEnabled: document.getElementById("cfg-text-enabled").checked,
         imageScreeningEnabled: document.getElementById("cfg-image-enabled").checked,
         azureEnabled: document.getElementById("cfg-azure-enabled").checked,
-        perspectiveEnabled: document.getElementById("cfg-perspective-enabled").checked,
+        azureTextEnabled: document.getElementById("cfg-azure-text-enabled").checked,
         notifyOnFlag: document.getElementById("cfg-notify").checked,
         autoHideThreshold: document.getElementById("cfg-hide-threshold").value,
         autoDeleteThreshold: document.getElementById("cfg-delete-threshold").value,
