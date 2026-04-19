@@ -986,6 +986,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, addDoc, query, where, orderBy, limit, Timestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app-check.js";
 
 // ─── Log Utility ───
 const _logs = [];
@@ -1064,6 +1065,19 @@ if (!firebaseConfig) {
 
 tlog("Init", "Firebase SDK loading...");
 const app = initializeApp(firebaseConfig);
+if (firebaseConfig.appCheckDebugToken) {
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = firebaseConfig.appCheckDebugToken;
+}
+if (firebaseConfig.appCheckSiteKey) {
+    try {
+        initializeAppCheck(app, {
+            provider: new ReCaptchaV3Provider(firebaseConfig.appCheckSiteKey),
+            isTokenAutoRefreshEnabled: true,
+        });
+    } catch (e) {
+        console.warn('[AppCheck] 초기화 스킵:', e.message);
+    }
+}
 const auth = getAuth(app);
 const db = getFirestore(app);
 const functions = getFunctions(app, "asia-northeast3");
@@ -1073,7 +1087,10 @@ tok("Init", "Firebase initialized (project: " + firebaseConfig.projectId + ", re
 async function syncClaimsFromServer(user) {
     try {
         const syncClaims = httpsCallable(functions, "syncClaims");
-        const result = await syncClaims();
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('syncClaims timeout')), 8000)
+        );
+        const result = await Promise.race([syncClaims(), timeoutPromise]);
         if (result.data.updated) {
             tlog("Auth", "Claims updated, refreshing token...");
             await user.getIdToken(true);
