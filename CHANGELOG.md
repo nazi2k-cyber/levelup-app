@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.434] - 2026-04-19
+
+### 변경
+- fix: redirect 상태 sessionStorage 유지 및 network-request-failed redirect fallback 추가
+
 ## [1.0.433] - 2026-04-19
 
 ### 변경
