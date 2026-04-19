@@ -9,6 +9,7 @@ const { getAuth } = require("firebase-admin/auth");
 const { checkRateLimit } = require("./rateLimiter");
 const securityTriggers = require("./securityTriggers");
 const securityScheduler = require("./securityScheduler");
+const perspectiveApi = require("./perspectiveApi");
 
 initializeApp();
 const db = getFirestore();
@@ -2859,6 +2860,7 @@ async function getScreeningConfig() {
         imageScreeningEnabled: false,
         textScreeningEnabled: true,
         azureEnabled: false,
+        perspectiveEnabled: false,
         notifyOnFlag: true
     };
 
@@ -2879,17 +2881,44 @@ async function executeScreening(post, config) {
     const meta = {
         textScreened: false,
         imageScreened: false,
-        nsfwjsVerdict: null,    // "safe" | "flagged" | "ambiguous" | "error" | null
-        nsfwjsScores: null,     // raw NSFWJS scores {porn, sexy, hentai, neutral, drawing}
-        azureVerdict: null,      // "clean" | "flagged" | "error" | null
+        nsfwjsVerdict: null,        // "safe" | "flagged" | "ambiguous" | "error" | null
+        nsfwjsScores: null,         // raw NSFWJS scores {porn, sexy, hentai, neutral, drawing}
+        azureVerdict: null,         // "clean" | "flagged" | "error" | null
+        perspectiveVerdict: null,   // "clean" | "flagged" | "error" | "skipped" | null
+        perspectiveScores: null,    // raw Perspective scores {toxicity, severe_toxicity, ...}
         errors: [],
     };
 
-    // 텍스트 스크리닝
+    // 텍스트 스크리닝 (키워드 사전)
     let textFlags = [];
     if (settings.textScreeningEnabled) {
         meta.textScreened = true;
         textFlags = screenCaption(post.caption, keywords.categories);
+    }
+
+    // 텍스트 스크리닝 (Perspective API — ML 기반 독성 분석)
+    if (settings.perspectiveEnabled && post.caption && post.caption.trim()) {
+        try {
+            const pScores = await perspectiveApi.screenTextPerspective(post.caption);
+            if (pScores) {
+                meta.perspectiveScores = pScores;
+                const pFlags = perspectiveApi.perspectiveScoresToFlags(pScores);
+                if (pFlags.length > 0) {
+                    meta.perspectiveVerdict = "flagged";
+                    textFlags = textFlags.concat(pFlags);
+                } else {
+                    meta.perspectiveVerdict = "clean";
+                }
+                meta.textScreened = true;
+            } else {
+                meta.perspectiveVerdict = "error";
+                meta.errors.push("Perspective API 호출 실패 (쿼터 초과/미설정/네트워크 오류)");
+            }
+        } catch (e) {
+            meta.perspectiveVerdict = "error";
+            meta.errors.push(`Perspective API 예외: ${e.message}`);
+            console.error(`[executeScreening] Perspective API 예외 (${postId}):`, e.message);
+        }
     }
 
     // 이미지 스크리닝 (하이브리드: NSFWJS 1차 → Azure 2차)
@@ -2921,13 +2950,15 @@ async function executeScreening(post, config) {
             overallSeverity: needsReview ? "low" : null,
             textFlags: [],
             imageFlags: null,
-            engineData: meta.imageScreened ? {
-                nsfwjsVerdict: meta.nsfwjsVerdict,
-                nsfwjsScores: meta.nsfwjsScores,
-                azureVerdict: meta.azureVerdict,
+            engineData: {
+                nsfwjsVerdict: meta.nsfwjsVerdict || null,
+                nsfwjsScores: meta.nsfwjsScores || null,
+                azureVerdict: meta.azureVerdict || null,
+                perspectiveVerdict: meta.perspectiveVerdict || null,
+                perspectiveScores: meta.perspectiveScores || null,
                 errors: meta.errors.length > 0 ? meta.errors : null,
                 needsReview: needsReview || null,
-            } : null,
+            },
         };
         await db.collection("screening_results").doc(postId).set(cleanDoc);
         return { status: cleanStatus, _meta: meta };
@@ -2958,12 +2989,14 @@ async function executeScreening(post, config) {
         reviewedBy: null,
         reviewedAt: null,
         // 엔진 진단 데이터
-        engineData: meta.imageScreened ? {
-            nsfwjsVerdict: meta.nsfwjsVerdict,
-            nsfwjsScores: meta.nsfwjsScores,
-            azureVerdict: meta.azureVerdict,
+        engineData: {
+            nsfwjsVerdict: meta.nsfwjsVerdict || null,
+            nsfwjsScores: meta.nsfwjsScores || null,
+            azureVerdict: meta.azureVerdict || null,
+            perspectiveVerdict: meta.perspectiveVerdict || null,
+            perspectiveScores: meta.perspectiveScores || null,
             errors: meta.errors.length > 0 ? meta.errors : null,
-        } : null,
+        },
     };
 
     // Firestore에 저장
@@ -3369,10 +3402,16 @@ async function handleBatchScreenPosts(request) {
     let azureCount = 0;
     let azureFlaggedCount = 0;
     let azureErrorCount = 0;
+    // Perspective API 카운트
+    let perspectiveCount = 0;
+    let perspectiveFlaggedCount = 0;
+    let perspectiveErrorCount = 0;
 
     const textEnabled = config.settings.textScreeningEnabled !== false;
     const imageEnabled = !!config.settings.imageScreeningEnabled;
     const azureEnabled = !!config.settings.azureEnabled;
+    const perspectiveEnabled = !!config.settings.perspectiveEnabled;
+    const perspectiveApiReady = perspectiveApi.isEnabled();
 
     // 엔진 구동 상태 사전 점검
     let nsfwjsModelReady = false;
@@ -3451,6 +3490,13 @@ async function handleBatchScreenPosts(request) {
                     else if (m.azureVerdict === "error") azureErrorCount++;
                 }
 
+                // Perspective API 집계
+                if (m.perspectiveVerdict) {
+                    perspectiveCount++;
+                    if (m.perspectiveVerdict === "flagged") perspectiveFlaggedCount++;
+                    else if (m.perspectiveVerdict === "error") perspectiveErrorCount++;
+                }
+
                 // 오류 로그
                 for (const err of (m.errors || [])) {
                     console.warn(`[batchScreenPosts] ${postId}: ${err}`);
@@ -3481,11 +3527,13 @@ async function handleBatchScreenPosts(request) {
             textEnabled,
             imageEnabled,
             azureEnabled,
+            perspectiveEnabled,
             // 엔진 구동 상태
             nsfwjsModelReady,
             nsfwjsModelError,
             azureClientReady,
             azureClientError,
+            perspectiveApiReady,
             // 텍스트 상세
             textScreenedCount,
             textFlaggedCount,
@@ -3502,6 +3550,10 @@ async function handleBatchScreenPosts(request) {
             azureCount,
             azureFlaggedCount,
             azureErrorCount,
+            // Perspective API 상세
+            perspectiveCount,
+            perspectiveFlaggedCount,
+            perspectiveErrorCount,
         }
     };
 }
@@ -3632,17 +3684,19 @@ async function handleGetScreeningStats(request) {
         }
     }
 
-    // Azure 한도 초과 상태 포함
+    // Azure 한도 초과 / Perspective 쿼터 초과 상태 포함
     let azureRateLimited = null;
+    let perspectiveQuotaExceeded = null;
     try {
         const settingsDoc = await db.collection("screening_config").doc("settings").get();
         if (settingsDoc.exists) {
             const s = settingsDoc.data();
             if (s._azureRateLimitedAt) azureRateLimited = s._azureRateLimitedAt;
+            if (s._perspectiveQuotaExceededAt) perspectiveQuotaExceeded = s._perspectiveQuotaExceededAt;
         }
     } catch (e) { /* ignore */ }
 
-    return { total, pending, approved, rejected, autoDeleted, autoHidden, clean, byCategory, bySeverity, azureRateLimited };
+    return { total, pending, approved, rejected, autoDeleted, autoHidden, clean, byCategory, bySeverity, azureRateLimited, perspectiveQuotaExceeded };
 }
 
 // --- 만료 릴스 사진 정리 (매일 04:00 KST) ---
