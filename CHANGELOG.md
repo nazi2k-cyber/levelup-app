@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.433] - 2026-04-19
+
+### 변경
+- fix: authDomain을 호스팅 도메인(web.app)으로 전환해 모바일 Chrome auth/internal-error 해결
+
 ## [1.0.432] - 2026-04-19
 
 ### 변경
