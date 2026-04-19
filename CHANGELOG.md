@@ -5,36 +5,6 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
-## [1.0.434] - 2026-04-19
-
-### 변경
-- fix: redirect 상태 sessionStorage 유지 및 network-request-failed redirect fallback 추가
-
-## [1.0.433] - 2026-04-19
-
-### 변경
-- fix: popup auth/internal-error 시 redirect fallback으로 자동 전환
-
-## [1.0.432] - 2026-04-19
-
-### 변경
-- fix: auth 로그 상세화 및 getRedirectResult 오류 분리 처리
-
-## [1.0.431] - 2026-04-19
-
-### 변경
-- fix: Firebase Auth 팝업 로그인 실패 수정 (auth/internal-error)
-
-## [1.0.430] - 2026-04-19
-
-### 변경
-- fix(admin): initialize App Check in admin firebase-init.js
-
-## [1.0.429] - 2026-04-19
-
-### 변경
-- feat(admin): Phase 3 item 13 - add Security Report tab (master-only)
-
 ## [1.0.428] - 2026-04-19
 
 ### 변경

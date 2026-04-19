@@ -7,7 +7,6 @@ import {
     query, where, orderBy, limit, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app-check.js";
 
 if (!self.__FIREBASE_CONFIG) {
     const msg = 'firebase-config.js가 로드되지 않았습니다. 배포 설정(FIREBASE_WEB_API_KEY)을 확인하세요.';
@@ -28,22 +27,6 @@ if (!firebaseConfig.apiKey || typeof firebaseConfig.apiKey !== 'string' || fireb
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 console.log('[App] Firebase initialized. Project:', firebaseConfig.projectId, '| apiKey length:', firebaseConfig.apiKey.length);
-
-// App Check — admin 페이지는 항상 웹이므로 네이티브 체크 불필요
-if (firebaseConfig.appCheckDebugToken) {
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = firebaseConfig.appCheckDebugToken;
-}
-if (firebaseConfig.appCheckSiteKey) {
-    try {
-        initializeAppCheck(app, {
-            provider: new ReCaptchaV3Provider(firebaseConfig.appCheckSiteKey),
-            isTokenAutoRefreshEnabled: true,
-        });
-        console.log('[AppCheck] Admin App Check 초기화 완료');
-    } catch (e) {
-        console.warn('[AppCheck] Admin 초기화 스킵:', e.message);
-    }
-}
 
 // Explicitly set persistence to survive page reloads — export promise so auth.js can await it
 const authReady = setPersistence(auth, browserLocalPersistence)

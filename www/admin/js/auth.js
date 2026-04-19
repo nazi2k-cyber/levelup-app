@@ -9,8 +9,6 @@ let _isMaster = false;
 let _isAdminOperator = false;
 let _onAuthCallbacks = [];
 let _redirectError = null;
-// Persisted in sessionStorage so it survives the full-page navigation of signInWithRedirect
-let _redirectAttempted = !!sessionStorage.getItem('_firebaseRedirectPending');
 
 export function getCurrentUser() { return _currentUser; }
 export function isAdmin() { return _isAdmin; }
@@ -71,41 +69,25 @@ export async function doLogin() {
         // 모바일에서 popup 차단 시 redirect로 fallback
         if (isMobileBrowser() && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
             console.log("[Login] 모바일 popup 차단 → redirect fallback");
-            sessionStorage.setItem('_firebaseRedirectPending', '1');
-            _redirectAttempted = true;
             await signInWithRedirect(auth, provider);
             return;
         }
 
-        // Popup 채널 오류 (CSP frame-src 차단, 네트워크 등) → redirect fallback으로 우회
-        // auth/internal-error: popup postMessage 채널 실패 (DOM Event customData)
-        // auth/network-request-failed: popup 내부 네트워크 요청 실패
-        if (e.code === 'auth/popup-blocked' || e.code === 'auth/internal-error' || e.code === 'auth/network-request-failed') {
-            console.warn("[Login] Popup 실패 → redirect fallback:", e.code, e.customData ?? '');
-            window.dispatchEvent(new CustomEvent('admin-auth-diagnostic', {
-                detail: { source: 'doLogin', code: e.code, message: 'Popup 채널 실패 → redirect 방식으로 재시도' }
-            }));
-            sessionStorage.setItem('_firebaseRedirectPending', '1');
-            _redirectAttempted = true;
-            await signInWithRedirect(auth, provider);
-            return;
-        }
-
-        console.error("[Login]", e.code, e.message, e.customData ?? '');
+        console.error("[Login]", e.code, e.message);
 
         const errorMessages = {
+            'auth/popup-blocked': '팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.',
             'auth/popup-closed-by-user': null,
             'auth/cancelled-popup-request': null,
             'auth/unauthorized-domain': `이 도메인(${location.hostname})이 Firebase 승인 도메인에 등록되지 않았습니다.`,
             'auth/network-request-failed': '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.',
+            'auth/internal-error': 'Firebase 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
         };
 
         const userMessage = errorMessages[e.code];
         if (userMessage === null) return; // 사용자 취소 — 무시
 
-        e.userMessage = userMessage || `인증 오류 (${e.code}): ${e.message}`;
-        // customData가 DOM Event일 경우 serverResponse만 추출 (isTrusted 등 raw event 필드 제외)
-        if (e.customData?.serverResponse) e.serverDetail = JSON.stringify(e.customData.serverResponse);
+        e.userMessage = userMessage || e.message;
         throw e;
     }
 }
@@ -135,25 +117,15 @@ async function syncClaimsFromServer(user) {
 
 // Handle redirect result (모바일 redirect fallback 복귀 시)
 getRedirectResult(auth).then(result => {
-    sessionStorage.removeItem('_firebaseRedirectPending');
-    _redirectAttempted = false;
     if (result && result.user) {
         console.log("[Auth redirect] 리다이렉트 로그인 성공:", result.user.email);
     }
 }).catch(e => {
-    sessionStorage.removeItem('_firebaseRedirectPending');
-    console.error("[Auth redirect]", e.code, e.message, e.customData ?? '');
-    // Always surface in log panel for developer diagnostics
-    window.dispatchEvent(new CustomEvent('admin-auth-diagnostic', {
-        detail: { source: 'getRedirectResult', code: e.code, message: e.message }
-    }));
-    // Show user-facing error only when redirect was explicitly attempted this session.
-    // _redirectAttempted survives the page reload via sessionStorage (_firebaseRedirectPending).
-    if (_redirectAttempted && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+    console.error("[Auth redirect]", e.code, e.message);
+    if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
         _redirectError = e.message || '리다이렉트 로그인 중 오류가 발생했습니다.';
         window.dispatchEvent(new CustomEvent('admin-auth-error', { detail: _redirectError }));
     }
-    _redirectAttempted = false;
 });
 
 // Wait for persistence setup, then listen for auth state changes
