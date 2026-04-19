@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.430] - 2026-04-19
+
+### 변경
+- fix: 롤백으로 누락된 admin App Check·CSP·timeout 4건 복원
+
 ## [1.0.429] - 2026-04-19
 
 ### 변경
