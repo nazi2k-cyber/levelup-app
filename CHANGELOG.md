@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.428] - 2026-04-19
+
+### 변경
+- feat(security): Phase 3 - add securityScheduler.js (daily/hourly/weekly diagnostics)
+
 ## [1.0.427] - 2026-04-18
 
 ### 변경
