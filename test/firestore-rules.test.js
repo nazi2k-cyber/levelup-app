@@ -553,11 +553,19 @@ describe('push_feedback 컬렉션', () => {
     );
   });
 
-  it('수정 및 삭제는 모두 불가', async () => {
+  it('기존 문서 수정 불가 (allow update: false)', async () => {
+    // create는 허용되므로 먼저 seed한 뒤 update 시도
+    await seedDoc('push_feedback', 'fb-1', validFeedback);
     const db = authDb('admin-user', { admin: true });
     await assertFails(
-      setDoc(doc(db, 'push_feedback', 'fb-1'), validFeedback)
+      updateDoc(doc(db, 'push_feedback', 'fb-1'), { memo: 'hacked' })
     );
+  });
+
+  it('기존 문서 삭제 불가 (allow delete: false)', async () => {
+    await seedDoc('push_feedback', 'fb-1', validFeedback);
+    const db = authDb('admin-user', { admin: true });
+    await assertFails(deleteDoc(doc(db, 'push_feedback', 'fb-1')));
   });
 });
 
