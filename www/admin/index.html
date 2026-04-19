@@ -89,7 +89,7 @@
 <script type="module">
 import { auth, firebaseConfig } from "./js/firebase-init.js";
 import { onAdminAuth, doLogin, doLogout, isAdmin, isMaster } from "./js/auth.js";
-import { initLogPanel, tlog, tok, terror, timed } from "./js/log-panel.js";
+import { initLogPanel, tlog, tok, twarn, terror, timed } from "./js/log-panel.js";
 import { initTabs } from "./js/tab-nav.js";
 import { initDiagPermissions } from "./js/diag-permissions.js";
 import { initDiagRules } from "./js/diag-rules.js";
@@ -123,19 +123,22 @@ try {
 // Login / Logout buttons
 const loginErrorEl = document.getElementById("login-error");
 
-function showLoginError(msg) {
+function showLoginError(msg, code) {
     loginErrorEl.textContent = msg;
     loginErrorEl.style.display = "";
-    tlog("Auth Error", msg);
+    twarn("Auth Error", code ? `[${code}] ${msg}` : msg);
 }
 
-document.getElementById("btn-login").addEventListener("click", async () => {
+const btnLogin = document.getElementById("btn-login");
+btnLogin.addEventListener("click", async () => {
     loginErrorEl.style.display = "none";
-    try { await doLogin(); } catch (e) { showLoginError(e.userMessage || e.message); }
+    btnLogin.disabled = true;
+    try { await doLogin(); } catch (e) { showLoginError(e.userMessage || e.message, e.code); }
+    finally { btnLogin.disabled = false; }
 });
 
 // 리다이렉트 로그인 에러 표시
-window.addEventListener('admin-auth-error', (e) => { showLoginError(e.detail); });
+window.addEventListener('admin-auth-error', (e) => { showLoginError(e.detail); btnLogin.disabled = false; });
 document.getElementById("btn-logout").addEventListener("click", async () => {
     await doLogout();
 });
