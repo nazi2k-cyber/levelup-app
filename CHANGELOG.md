@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.431] - 2026-04-19
+
+### 변경
+- fix: Firebase Auth 팝업 로그인 실패 수정 (auth/internal-error)
+
 ## [1.0.430] - 2026-04-19
 
 ### 변경
