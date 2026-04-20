@@ -1596,6 +1596,11 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .noti-unread .noti-history-title { color: var(--neon-blue); }
 .noti-unread .noti-history-icon { background: rgba(0, 217, 255, 0.18); }
+.noti-warning { border-left: 3px solid #ff9800; padding-left: 8px; }
+.noti-warning .noti-history-icon { background: rgba(255, 152, 0, 0.15); }
+.noti-warning .noti-history-title { color: #ffa726; }
+[data-theme="light"] .noti-warning { border-left-color: #e65100; }
+[data-theme="light"] .noti-warning .noti-history-title { color: #e65100; }
 .noti-empty {
     text-align: center; padding: 16px 0;
     font-size: 0.75rem; color: var(--text-sub);
