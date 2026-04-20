@@ -1,0 +1,42 @@
+# .gitleaksignore
+# All findings below are Firebase client-side configuration values in historical
+# commits, acknowledged and suppressed. The codebase was migrated to use
+# __FIREBASE_CONFIG (injected at build time) in later commits.
+# Firebase web apiKey is a public client identifier — not a server secret.
+# VAPID keys are public keys by design (used for Web Push subscription).
+
+28e3525ac3f1d8ea4189357683b740c1c2e78f2b:www/app.js:generic-api-key:8542
+4f6ae70293eeb53b461ac6412333d48a8caba17a:sw.js:gcp-api-key:35
+4f6ae70293eeb53b461ac6412333d48a8caba17a:www/firebase-messaging-sw.js:gcp-api-key:11
+87714a7e6f30a539d169b4fc694dd9007925dedb:www/admin/js/firebase-init.js:gcp-api-key:12
+4f6ae70293eeb53b461ac6412333d48a8caba17a:firebase-messaging-sw.js:gcp-api-key:11
+4f6ae70293eeb53b461ac6412333d48a8caba17a:www/app.js:gcp-api-key:12
+87714a7e6f30a539d169b4fc694dd9007925dedb:www/sw.js:gcp-api-key:33
+87714a7e6f30a539d169b4fc694dd9007925dedb:sw.js:gcp-api-key:33
+4f6ae70293eeb53b461ac6412333d48a8caba17a:www/admin/js/firebase-init.js:gcp-api-key:12
+87714a7e6f30a539d169b4fc694dd9007925dedb:www/app.js:gcp-api-key:12
+87714a7e6f30a539d169b4fc694dd9007925dedb:www/firebase-messaging-sw.js:gcp-api-key:9
+4f6ae70293eeb53b461ac6412333d48a8caba17a:www/sw.js:gcp-api-key:35
+4f6ae70293eeb53b461ac6412333d48a8caba17a:app.js:gcp-api-key:12
+87714a7e6f30a539d169b4fc694dd9007925dedb:firebase-messaging-sw.js:gcp-api-key:9
+87714a7e6f30a539d169b4fc694dd9007925dedb:app.js:gcp-api-key:12
+a7a00aaa939f26a3eb6f528782b0571c88defdf5:account-deletion.html:gcp-api-key:120
+a7a00aaa939f26a3eb6f528782b0571c88defdf5:www/account-deletion.html:gcp-api-key:120
+d1a71f26beb29caf2139d1a74200d9bbe4c9441b:www/admin/js/firebase-init.js:gcp-api-key:12
+4d03955564b617169ad44012a19073ef10115894:sw.js:gcp-api-key:31
+4d03955564b617169ad44012a19073ef10115894:www/sw.js:gcp-api-key:31
+9df86320a109b2ad09a5580978c4f2f163970a58:www/app.js:generic-api-key:3986
+ff0781b6f7164ce8f2f7e0396f68ccb572fca3ad:firebase-messaging-sw.js:gcp-api-key:8
+dd1c4b5bb07b407330f633204effa7003395e094:app.js:generic-api-key:3986
+dd1c4b5bb07b407330f633204effa7003395e094:www/app.js:generic-api-key:3986
+ff0781b6f7164ce8f2f7e0396f68ccb572fca3ad:www/firebase-messaging-sw.js:gcp-api-key:8
+4b477a8f9556c5f5ba7680bd70d88420f335051b:push-test.html:gcp-api-key:327
+4b477a8f9556c5f5ba7680bd70d88420f335051b:www/push-test.html:gcp-api-key:327
+25901be9812df6c0462f0eeff0c53583c00d3415:www/app.js:gcp-api-key:7
+e249e65d96c2e7efe4c2377add2a6df551cd3374:app.js:gcp-api-key:7
+d614f2b9fd3461ef6dc6e0a801bc5c39bf492ead:google-services.json:gcp-api-key:18
+e249e65d96c2e7efe4c2377add2a6df551cd3374:google-services.json:gcp-api-key:31
+e249e65d96c2e7efe4c2377add2a6df551cd3374:google-services.json:gcp-api-key:68
+02fd60672b7b0ffd334965ba6e03d5f7ecb98e3c:google-services.json:gcp-api-key:31
+011cfc173fdb57df7ce93a50e6b8b2b421827f46:app.js:gcp-api-key:7
+bde0f015873b700b3f885531e379820abd36a90e:app.js:gcp-api-key:8

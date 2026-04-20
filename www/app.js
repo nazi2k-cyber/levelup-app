@@ -8769,7 +8769,7 @@ async function requestWebPushPermission() {
     }
 
     const token = await getToken(messaging, {
-        vapidKey: 'BGAe3k0DShCc20txNmeXM-61AnHWcm7tDBzOvnQQYKJfhok7xROtvcAQjod4Dyd0V9xBEQyQDjpJr1hnwki7YRs',
+        vapidKey: 'BGAe3k0DShCc20txNmeXM-61AnHWcm7tDBzOvnQQYKJfhok7xROtvcAQjod4Dyd0V9xBEQyQDjpJr1hnwki7YRs', // gitleaks:allow
         serviceWorkerRegistration: swRegistration
     });
 
