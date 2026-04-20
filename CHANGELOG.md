@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.457] - 2026-04-20
+
+### 변경
+- fix: removeAdminClaim — ADMIN_EMAILS 잔존 시 자동복구 경고 반환
+
 ## [1.0.456] - 2026-04-20
 
 ### 변경
