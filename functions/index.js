@@ -616,6 +616,66 @@ async function handleSendAnnouncement(request) {
     return { success: true, messageId: response };
 }
 
+// ─── Admin: 개별 유저 경고/안내 메시지 발송 ───
+
+async function handleSendUserWarning(request) {
+    await assertAdmin(request);
+    const callerEmail = request.auth?.token?.email;
+    const { uid, type } = request.data || {};
+
+    if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
+    if (!["post_deleted", "account_warning"].includes(type)) {
+        throw new HttpsError("invalid-argument", "type은 post_deleted 또는 account_warning이어야 합니다.");
+    }
+
+    const userDoc = await db.collection("users").doc(uid).get();
+    if (!userDoc.exists) throw new HttpsError("not-found", "유저를 찾을 수 없습니다.");
+
+    const userData = userDoc.data();
+    const lang = userData.lang || "ko";
+    const notification = getLocalizedMessage(type, lang);
+
+    await writeUserNotification(uid, { type, title: notification.title, body: notification.body });
+
+    let fcmResult = null;
+    const fcmToken = userData.fcmToken;
+    if (fcmToken && userData.pushEnabled !== false) {
+        try {
+            const message = {
+                token: fcmToken,
+                notification,
+                data: { tab: "status", target: "status", type, link: "levelup://tab/status" },
+                android: { priority: "high", notification: { channelId: "warnings", sound: "default" } }
+            };
+            const response = await messaging.send(message);
+            fcmResult = response;
+            await db.collection("push_logs").add({
+                timestamp: new Date(),
+                type,
+                target: fcmToken.substring(0, 20) + "...",
+                success: true,
+                messageId: String(response),
+                sender: String(callerEmail),
+                uid
+            });
+        } catch (e) {
+            console.warn("[sendUserWarning] FCM send failed:", e.message);
+            await db.collection("push_logs").add({
+                timestamp: new Date(),
+                type,
+                target: fcmToken.substring(0, 20) + "...",
+                success: false,
+                error: String(e.code || e.message),
+                sender: String(callerEmail),
+                uid
+            });
+        }
+    }
+
+    console.log(`[sendUserWarning] Admin ${callerEmail} sent ${type} to uid=${uid}, fcm=${fcmResult ? "ok" : "skipped"}`);
+    return { success: true, notificationStored: true, fcmSent: !!fcmResult };
+}
+
 // ─── Admin: 공지사항 CRUD 핸들러 ───
 
 async function handleCreateAnnouncement(request) {
@@ -1722,6 +1782,8 @@ exports.ping = onCall(pingCallableOpts, async (request) => {
                     return await handleDeleteAccount(request);
                 case "deleteMyAccount":
                     return await handleDeleteMyAccount(request);
+                case "sendUserWarning":
+                    return await handleSendUserWarning(request);
                 case "screeningListPosts":
                     return await handleScreeningListPosts(request);
                 case "screeningDeletePost":
@@ -1849,6 +1911,16 @@ exports.ping = onCall(pingCallableOpts, async (request) => {
 // ─── 다국어 알림 메시지 ───
 
 const MESSAGES = {
+    post_deleted: {
+        ko: { title: "⚠️ 게시물 삭제 안내", body: "커뮤니티 가이드라인을 위반하여 게시물이 삭제되었습니다." },
+        en: { title: "⚠️ Post Removed", body: "Your post was removed for violating community guidelines." },
+        ja: { title: "⚠️ 投稿が削除されました", body: "コミュニティガイドラインに違反したため、投稿が削除されました。" }
+    },
+    account_warning: {
+        ko: { title: "🚨 계정 경고", body: "신고 누적으로 인해 계정이 정지될 수 있습니다. 커뮤니티 가이드라인을 준수해 주세요." },
+        en: { title: "🚨 Account Warning", body: "Your account may be suspended due to multiple reports. Please follow community guidelines." },
+        ja: { title: "🚨 アカウント警告", body: "複数の報告によりアカウントが停止される可能性があります。ガイドラインを遵守してください。" }
+    },
     raid_start: {
         ko: { title: "⚔️ 레이드 출현!", body: "이상 현상이 감지되었습니다. 지금 바로 참여하세요!" },
         en: { title: "⚔️ Raid Alert!", body: "An anomaly has been detected. Join the raid now!" },
@@ -2389,7 +2461,7 @@ async function handleScreeningListPosts(request) {
 async function handleScreeningDeletePost(request) {
     await assertAdmin(request);
 
-    const { ownerUid, timestamp } = request.data || {};
+    const { ownerUid, timestamp, sendNotification } = request.data || {};
     if (!ownerUid || !timestamp) {
         throw new HttpsError("invalid-argument", "ownerUid와 timestamp는 필수입니다.");
     }
@@ -2448,6 +2520,10 @@ async function handleScreeningDeletePost(request) {
 
     const adminEmail = request.auth.token.email || request.auth.uid;
     console.log(`[screeningDeletePost] Admin ${adminEmail} deleted post ${postId} from user ${ownerUid}`);
+
+    if (sendNotification) {
+        await handleSendUserWarning({ ...request, data: { uid: ownerUid, type: "post_deleted" } });
+    }
 
     return { success: true, deletedPostId: postId, remainingPosts: posts.length };
 }

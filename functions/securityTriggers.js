@@ -1,5 +1,6 @@
-const { onDocumentUpdated, onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated, onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 
 let _db;
 function db() {
@@ -70,5 +71,76 @@ exports.onAdminClaimSet = onDocumentCreated(
             detectedAt: FieldValue.serverTimestamp(),
         });
         console.log(`[SecurityTrigger] admin_claim_set logId=${event.params.logId}`);
+    }
+);
+
+const ACCOUNT_WARNING_THRESHOLD = 3;
+
+// 피신고 3회 이상 시 계정 경고 자동 발송
+exports.onPostReportWritten = onDocumentWritten(
+    { ...triggerOpts, document: "post_reports/{postId}" },
+    async (event) => {
+        const after = event.data?.after?.data();
+        const before = event.data?.before?.data();
+        if (!after) return; // 삭제 이벤트는 무시
+
+        const newCount = after.reportCount || 0;
+        const oldCount = before?.reportCount || 0;
+
+        // threshold를 처음 넘었을 때만 발송
+        if (newCount < ACCOUNT_WARNING_THRESHOLD || oldCount >= ACCOUNT_WARNING_THRESHOLD) return;
+
+        const postId = event.params.postId;
+        const parts = postId.split("_");
+        const ownerUid = parts.slice(0, -1).join("_");
+        if (!ownerUid) return;
+
+        try {
+            const userDoc = await db().collection("users").doc(ownerUid).get();
+            if (!userDoc.exists) return;
+            const userData = userDoc.data();
+            const lang = userData.lang || "ko";
+
+            const messages = {
+                post_deleted: null,
+                account_warning: {
+                    ko: { title: "🚨 계정 경고", body: "신고 누적으로 인해 계정이 정지될 수 있습니다. 커뮤니티 가이드라인을 준수해 주세요." },
+                    en: { title: "🚨 Account Warning", body: "Your account may be suspended due to multiple reports. Please follow community guidelines." },
+                    ja: { title: "🚨 アカウント警告", body: "複数の報告によりアカウントが停止される可能性があります。ガイドラインを遵守してください。" }
+                }
+            };
+            const notification = messages.account_warning[lang] || messages.account_warning.ko;
+
+            // 알림 이력 저장
+            const notifRef = db().collection("users").doc(ownerUid).collection("notifications");
+            await notifRef.add({
+                type: "account_warning",
+                title: notification.title,
+                body: notification.body,
+                timestamp: new Date(),
+                read: false
+            });
+            const snap = await notifRef.orderBy("timestamp", "desc").offset(50).get();
+            if (!snap.empty) {
+                const batch = db().batch();
+                snap.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            }
+
+            // FCM 푸시 발송
+            if (userData.fcmToken && userData.pushEnabled !== false) {
+                const msg = {
+                    token: userData.fcmToken,
+                    notification,
+                    data: { tab: "status", target: "status", type: "account_warning", link: "levelup://tab/status" },
+                    android: { priority: "high", notification: { channelId: "warnings", sound: "default" } }
+                };
+                await getMessaging().send(msg);
+            }
+
+            console.log(`[SecurityTrigger] account_warning sent to uid=${ownerUid} (reports=${newCount})`);
+        } catch (e) {
+            console.error("[SecurityTrigger] account_warning failed:", e.message);
+        }
     }
 );

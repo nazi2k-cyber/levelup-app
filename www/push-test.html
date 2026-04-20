@@ -597,6 +597,51 @@ td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: middl
                         </td>
                     </tr>
 
+                    <tr><td colspan="5" class="cond-section-label">User Warning Messages — Event-Triggered</td></tr>
+
+                    <tr id="cond-post-deleted">
+                        <td>
+                            <span class="cond-type-icon">⚠️</span>
+                            <span class="cond-type-label">Post Deletion Notice</span>
+                            <span class="cond-type-sub">sendUserWarning / post_deleted</span>
+                        </td>
+                        <td><span class="cond-schedule">On-delete</span></td>
+                        <td class="cond-condition">
+                            Admin deletes post<br>
+                            <code>sendNotification == true</code>
+                        </td>
+                        <td><span class="cond-target-badge cond-target-individual">Individual Token</span></td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <input type="text" id="warn-uid-delete" placeholder="User UID" style="width:100%; padding:4px 8px; font-size:0.75rem; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text);">
+                                <button class="btn-trigger" onclick="sendUserWarning('post_deleted', this)">Send</button>
+                                <div class="cond-trigger-result" id="cond-result-post-deleted"></div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr id="cond-account-warning">
+                        <td>
+                            <span class="cond-type-icon">🚨</span>
+                            <span class="cond-type-label">Account Warning</span>
+                            <span class="cond-type-sub">sendUserWarning / account_warning</span>
+                        </td>
+                        <td><span class="cond-schedule">Auto (3+ reports)</span></td>
+                        <td class="cond-condition">
+                            <code>reportCount >= 3</code><br>
+                            Auto-triggered via Firestore trigger<br>
+                            or manual send below
+                        </td>
+                        <td><span class="cond-target-badge cond-target-individual">Individual Token</span></td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <input type="text" id="warn-uid-warning" placeholder="User UID" style="width:100%; padding:4px 8px; font-size:0.75rem; border-radius:6px; background:var(--bg-input); border:1px solid var(--border); color:var(--text);">
+                                <button class="btn-trigger" onclick="sendUserWarning('account_warning', this)">Send</button>
+                                <div class="cond-trigger-result" id="cond-result-account-warning"></div>
+                            </div>
+                        </td>
+                    </tr>
+
                     <tr><td colspan="5" class="cond-section-label">Maintenance</td></tr>
 
                     <tr id="cond-cleanup">
@@ -1861,6 +1906,44 @@ window.triggerCondition = async function(type, topic, btnEl) {
     btnEl.disabled = false;
     btnEl.classList.remove("sending");
     btnEl.textContent = "Trigger";
+    loadLogs();
+};
+
+// ─── User Warning Send ───
+
+window.sendUserWarning = async function(type, btnEl) {
+    const inputId = type === "post_deleted" ? "warn-uid-delete" : "warn-uid-warning";
+    const resultId = type === "post_deleted" ? "cond-result-post-deleted" : "cond-result-account-warning";
+    const uid = document.getElementById(inputId)?.value?.trim();
+    const resultEl = document.getElementById(resultId);
+
+    if (!uid) {
+        resultEl.textContent = "UID를 입력하세요.";
+        resultEl.className = "cond-trigger-result fail";
+        return;
+    }
+
+    btnEl.disabled = true;
+    btnEl.textContent = "Sending...";
+    resultEl.textContent = "";
+    resultEl.className = "cond-trigger-result";
+
+    await ensureFreshToken();
+    tlog("UserWarning", `Sending ${type} to uid=${uid}...`);
+    try {
+        const fn = httpsCallable(functions, "ping");
+        const result = await fn({ action: "sendUserWarning", uid, type });
+        tok("UserWarning", `${type} sent to ${uid}: fcm=${result.data.fcmSent}`);
+        resultEl.textContent = "OK" + (result.data.fcmSent ? " (Push+내부)" : " (내부만, FCM 없음)");
+        resultEl.className = "cond-trigger-result ok";
+    } catch (e) {
+        terror("UserWarning", `${type} failed: ${e.message || e}`);
+        resultEl.textContent = "FAIL: " + (e.message || e);
+        resultEl.className = "cond-trigger-result fail";
+    }
+
+    btnEl.disabled = false;
+    btnEl.textContent = "Send";
     loadLogs();
 };
 

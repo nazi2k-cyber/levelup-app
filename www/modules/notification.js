@@ -180,9 +180,12 @@
         return _announcementsCache || [];
     }
 
+    const WARNING_TYPES = new Set(['post_deleted', 'account_warning']);
+
     // --- 타입별 아이콘 ---
     function getTypeIcon(type) {
         const icons = {
+            'post_deleted': '⚠️', 'account_warning': '🚨',
             'raid_start': '⚔️', 'raid_end': '⚔️', 'raid_alert': '⚔️',
             'daily_reminder': '📅', 'quest_reminder': '📜',
             'streak_warning': '🔥', 'streak_broken': '💔',
@@ -235,9 +238,12 @@
 
         let html = '<div class="noti-section-label">🔔 ' + sanitizeText(t('noti_push_history')) + '</div>';
         history.forEach(item => {
+            const isNew = !item.read && (Date.now() - (item.timestamp || 0)) < 86400000;
+            const isWarning = WARNING_TYPES.has(item.type);
             const unreadClass = item.read ? '' : ' noti-unread';
-            const newBadge = item.read ? '' : '<span class="noti-badge-new">' + sanitizeText(t('noti_new_badge')) + '</span>';
-            html += '<div class="noti-history-item' + unreadClass + '">'
+            const warningClass = isWarning ? ' noti-warning' : '';
+            const newBadge = isNew ? '<span class="noti-badge-new">' + sanitizeText(t('noti_new_badge')) + '</span>' : '';
+            html += '<div class="noti-history-item' + unreadClass + warningClass + '">'
                 + '<div class="noti-history-icon">' + getTypeIcon(item.type) + '</div>'
                 + '<div class="noti-history-body">'
                 + '<div class="noti-history-title">' + sanitizeText(item.title || 'LEVEL UP') + newBadge + '</div>'
