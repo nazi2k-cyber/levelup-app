@@ -16,7 +16,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.452';
+const APP_VERSION = '1.0.453';
 
 const app = initializeApp(firebaseConfig);
 
