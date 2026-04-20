@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.451] - 2026-04-20
+
+### 변경
+- docs(security): 관리자 계정 탈취 및 개인정보 유출 방지 방안 추가
+
 ## [1.0.450] - 2026-04-20
 
 ### 변경
