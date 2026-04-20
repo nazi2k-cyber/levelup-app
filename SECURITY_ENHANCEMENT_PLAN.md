@@ -594,7 +594,12 @@ exports.onSecurityAlert = functions.firestore
 🎯 14. 게임 상태 계산 로직을 Cloud Functions으로 이전
         (클라이언트 신뢰 제거 — 가장 근본적 보안 개선)
 
-🎯 15. 분기별 외부 침투 테스트 (무료: OWASP ZAP 자동 스캔)
+✅ 15. 분기별 외부 침투 테스트 (구현 완료 2026-04-20)
+        .github/workflows/zap-scan.yml 신규: zaproxy/action-baseline@v0.14.0 (패시브 스캔)
+        대상: https://levelup-app-53d02.web.app
+        스케줄: 1/4/7/10월 1일 02:00 UTC (분기별) + workflow_dispatch (수동 실행 가능)
+        보고서: GitHub Actions 아티팩트 90일 보관 / 알림 시 Issue 자동 생성
+        .zap/rules.tsv: 오탐 억제 규칙 (Firebase Hosting 캐시 헤더·타임스탬프 예외)
 ```
 
 ---
@@ -614,6 +619,8 @@ exports.onSecurityAlert = functions.firestore
 | `functions/textScreening.js` | 3 | **신규 파일** ✅ (구현 완료) | **없음** |
 | `test/firestore-rules.test.js` | 3 | **신규 파일** | **없음** |
 | `app.html` | 3 | SRI 해시 추가 ✅ (구현 완료) | **없음** |
+| `.github/workflows/zap-scan.yml` | 4 | **신규 파일** ✅ (구현 완료) | **없음** |
+| `.zap/rules.tsv` | 4 | **신규 파일** ✅ (구현 완료) | **없음** |
 
 ---
 

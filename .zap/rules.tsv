@@ -1,0 +1,3 @@
+10015	IGNORE	(Incomplete or No Cache-control Header Set — Firebase Hosting 정적 파일 캐시 정책 예외)
+10096	IGNORE	(Timestamp Disclosure — Firebase 응답 헤더 타임스탬프 예외)
+10027	IGNORE	(Information Disclosure — Suspicious Comments — 개발용 주석 예외)
