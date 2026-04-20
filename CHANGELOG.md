@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.456] - 2026-04-20
+
+### 변경
+- docs: MASTER_EMAILS → ADMIN_MASTER_EMAIL 문서·주석 잔존 참조 정리
+
 ## [1.0.455] - 2026-04-20
 
 ### 변경
