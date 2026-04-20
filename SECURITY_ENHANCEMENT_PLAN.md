@@ -492,7 +492,7 @@ exports.onSecurityAlert = functions.firestore
 | Cloud Functions 이상 탐지 스케줄러 | **무료** (쿼터 내) | 🟠 단기 |
 | Firestore 기반 Rate Limiter | **무료** | 🟠 단기 |
 | Azure Content Safety 텍스트 분석 | **무료** (F0 5,000건/월, 기존 키 재사용) | ✅ 완료 |
-| Firebase Firestore Rules 자동 테스트 | **무료** (로컬 에뮬레이터) | 🟡 중기 |
+| Firebase Firestore Rules 자동 테스트 | **무료** (로컬 에뮬레이터) | ✅ 완료 |
 | SRI (Subresource Integrity) | **무료** | ✅ 완료 |
 | GCP Secret Manager | **저비용** (~$0.06/시크릿/월) | 🟡 중기 |
 | Azure Content Safety (이미지) | **현재 사용 중** (유료) | — 유지 |
@@ -573,7 +573,10 @@ exports.onSecurityAlert = functions.firestore
        executeScreening(): azureTextEnabled 설정 시 캡션 ML 분석 → textFlags 병합
        어드민 대시보드: Azure 텍스트 분석 토글 / 판정 뷰 / 배치 통계 추가
 
-📋 10. test/firestore-rules.test.js — Rules 자동화 테스트 추가
+✅ 10. test/firestore-rules.test.js — Rules 자동화 테스트 추가 (구현 완료 2026-04-20)
+        users/usernames/push_logs/push_feedback/reels_reactions/post_reports/app_config
+        /announcements/app_error_logs/security_alerts/rate_limits/Cloud Functions 전용 컬렉션
+        총 60+ 케이스: 읽기·쓰기·삭제 권한, 필드 유효성, 포인트·레벨 델타, 빈도 제한 검증
 
 📋 11. GCP Secret Manager 이전 — ADMIN_EMAILS, AZURE_CS_KEY
 
@@ -617,7 +620,7 @@ exports.onSecurityAlert = functions.firestore
 | `app.js` | 2 | App Check 초기화 ✅ (구현 완료) | **최소 (~15줄)** |
 | `functions/securityScheduler.js` | 3 | **신규 파일** ✅ (구현 완료) | **없음** |
 | `functions/textScreening.js` | 3 | **신규 파일** ✅ (구현 완료) | **없음** |
-| `test/firestore-rules.test.js` | 3 | **신규 파일** | **없음** |
+| `test/firestore-rules.test.js` | 3 | **신규 파일** ✅ (구현 완료) | **없음** |
 | `app.html` | 3 | SRI 해시 추가 ✅ (구현 완료) | **없음** |
 | `.github/workflows/zap-scan.yml` | 4 | **신규 파일** ✅ (구현 완료) | **없음** |
 | `.zap/rules.tsv` | 4 | **신규 파일** ✅ (구현 완료) | **없음** |
