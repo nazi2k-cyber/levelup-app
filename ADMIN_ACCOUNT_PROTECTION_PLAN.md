@@ -288,8 +288,9 @@ GitHub Actions에서 사용하는 서비스 계정:
 ### 5-3. Admin SDK 관리자 이메일 목록 보호
 
 ```javascript
-// 현재: functions/.env의 ADMIN_EMAILS 평문 저장
-// 개선: Firestore admin_config + GCP Secret Manager 이중 보호
+// 마스터 이메일은 GitHub Secret `ADMIN_MASTER_EMAIL` 로 관리
+// deploy-firebase.yml → functions/.env → process.env.ADMIN_MASTER_EMAIL
+// (기존 MASTER_EMAILS 시크릿에서 ADMIN_MASTER_EMAIL 로 변경 — 명칭 중복 방지)
 
 // firestore.rules — admin_config 접근 제한 (현재 구현 상태 확인)
 match /admin_config/{document} {
@@ -461,6 +462,10 @@ Play Store 표시 수집 항목 (현재):
 🟠 [ ] GitHub main 브랜치 보호 규칙 설정
 🟠 [ ] Firebase Console IAM 권한 감사 및 불필요 계정 제거
 🟠 [ ] 앱 내 admin 계정을 dev@bravecat.studio 로 이전
+      → GitHub Secret `ADMIN_MASTER_EMAIL` 값을 `dev@bravecat.studio` 로 설정 후 Functions 재배포
+      → 신규 계정으로 로그인 시 syncClaims()가 master+admin 자동 부여
+      → Admin 진단 페이지 → Claim 관리 → "Admin/Master 권한 회수" 로 기존 계정(nazi2k@gmail.com) 권한 제거
+      → `removeAdminClaim` Cloud Function 및 UI 구현 완료 (claude/admin-email-secrets-c3lmX)
 🟠 [ ] Play Store 개발자 표시명 → 브랜드명(Bravecat Studios)으로 변경 검토
 🟠 [ ] GCP API 키 HTTP 리퍼러 제한 설정
 ```

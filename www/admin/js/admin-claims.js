@@ -34,6 +34,16 @@ function render() {
         </div>
 
         <div class="card">
+            <h2>Admin / Master 권한 회수</h2>
+            <p class="text-sub text-sm mb-8">사용자의 admin·master 권한을 모두 회수합니다. 자신의 권한은 회수할 수 없습니다. <span class="badge badge-ok">마스터 전용</span></p>
+            <div class="flex-center">
+                <input type="text" id="revoke-admin-uid-input" placeholder="대상 사용자 UID" style="flex:1">
+                <button class="btn btn-outline btn-sm" onclick="window._revokeAdmin()" style="color:#ff5252;border-color:#ff5252">권한 회수</button>
+            </div>
+            <div id="revoke-admin-result" class="mt-8"></div>
+        </div>
+
+        <div class="card">
             <h2>관리자 페이지 운영 권한 관리</h2>
             <p class="text-sub text-sm mb-8">관리자가 아닌 사용자에게 관리자 페이지 운영 권한을 부여/회수합니다. <span class="badge badge-ok">마스터 전용</span></p>
             <div class="flex-center mb-8">
@@ -164,6 +174,23 @@ window._revokeOperator = async function() {
     } catch (e) {
         el.innerHTML = `<span class="text-error">오류: ${esc(e.message)}</span>`;
         terror("Claims", "removeAdminOperator error: " + e.message);
+    }
+};
+
+window._revokeAdmin = async function() {
+    const uid = document.getElementById("revoke-admin-uid-input").value.trim();
+    const el = document.getElementById("revoke-admin-result");
+    if (!uid) { el.innerHTML = '<span class="text-error">UID를 입력하세요.</span>'; return; }
+
+    tlog("Claims", "removeAdminClaim 호출: " + uid);
+    try {
+        const removeAdminClaim = httpsCallable(functions, "removeAdminClaim");
+        await removeAdminClaim({ uid });
+        el.innerHTML = `<span class="text-success">✓ Admin/Master 권한이 회수되었습니다: <code>${esc(uid)}</code></span>`;
+        tok("Claims", "Admin+master claims removed from " + uid);
+    } catch (e) {
+        el.innerHTML = `<span class="text-error">오류: ${esc(e.message)}</span>`;
+        terror("Claims", "removeAdminClaim error: " + e.message);
     }
 };
 

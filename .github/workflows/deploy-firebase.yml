@@ -131,7 +131,7 @@ jobs:
         run: |
           cat > functions/.env <<EOF
           ADMIN_EMAILS=${{ secrets.ADMIN_EMAILS }}
-          MASTER_EMAILS=${{ secrets.MASTER_EMAILS }}
+          ADMIN_MASTER_EMAIL=${{ secrets.ADMIN_MASTER_EMAIL }}
           AZURE_CS_ENDPOINT=${{ secrets.AZURE_CS_ENDPOINT }}
           AZURE_CS_KEY=${{ secrets.AZURE_CS_KEY }}
           ALADIN_TTB_KEY=${{ secrets.ALADIN_TTB_KEY }}

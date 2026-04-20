@@ -98,8 +98,8 @@ const ADMIN_EMAILS = process.env.ADMIN_EMAILS
     ? process.env.ADMIN_EMAILS.split(",").map(e => e.trim()).filter(Boolean)
     : [];
 
-const MASTER_EMAILS = process.env.MASTER_EMAILS
-    ? process.env.MASTER_EMAILS.split(",").map(e => e.trim()).filter(Boolean)
+const MASTER_EMAILS = process.env.ADMIN_MASTER_EMAIL
+    ? process.env.ADMIN_MASTER_EMAIL.split(",").map(e => e.trim()).filter(Boolean)
     : [];
 
 async function assertAdmin(request) {
@@ -212,6 +212,29 @@ exports.setAdminClaim = onCall(callableOpts, async (request) => {
     const existing = user.customClaims || {};
     await getAuth().setCustomUserClaims(uid, { ...existing, admin: true });
     console.log(`[setAdminClaim] admin claim set for uid: ${uid} by master: ${request.auth.token.email}`);
+    return { success: true, uid };
+});
+
+// ─── removeAdminClaim: admin/master 권한 회수 (마스터 계정만 호출 가능) ───
+
+exports.removeAdminClaim = onCall(callableOpts, async (request) => {
+    await assertMaster(request);
+
+    const { uid } = request.data || {};
+    if (!uid || typeof uid !== "string") {
+        throw new HttpsError("invalid-argument", "uid는 필수 문자열입니다.");
+    }
+
+    if (uid === request.auth.uid) {
+        throw new HttpsError("failed-precondition", "자신의 권한은 회수할 수 없습니다.");
+    }
+
+    const user = await getAuth().getUser(uid);
+    const existing = user.customClaims || {};
+    delete existing.admin;
+    delete existing.master;
+    await getAuth().setCustomUserClaims(uid, existing);
+    console.log(`[removeAdminClaim] admin+master claims removed for uid: ${uid} by master: ${request.auth.token.email}`);
     return { success: true, uid };
 });
 
