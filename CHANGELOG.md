@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.452] - 2026-04-20
+
+### 변경
+- refactor: GitHub 유저네임 nazi2k-cyber → bravecat-studio 일괄 변경
+
 ## [1.0.451] - 2026-04-20
 
 ### 변경
