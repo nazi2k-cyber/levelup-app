@@ -122,7 +122,7 @@
         return _serverNotifCache || [];
     }
 
-    /** 서버 이력과 로컬 이력 병합 (중복 제거, 최신순 정렬) */
+    /** 서버 이력과 로친 이력 병합 (중복 제거, 최신순 정렬) */
     function mergeHistories(local, server) {
         // 이력 지우기 시점 이후의 서버 레코드만 포함
         let clearedAt = 0;
@@ -133,7 +133,7 @@
 
         const filtered = server.filter(s => s.timestamp > clearedAt);
 
-        // 서버 레코드 기준으로 로컬과 매칭 (type + timestamp 10초 이내 = 중복)
+        // 서버 레코드 기준으로 로친과 매칭 (type + timestamp 10초 이내 = 중복)
         const merged = [...local];
         for (const s of filtered) {
             const isDuplicate = merged.some(m =>
@@ -187,7 +187,8 @@
             'daily_reminder': '📅', 'quest_reminder': '📜',
             'streak_warning': '🔥', 'streak_broken': '💔',
             'comeback_24h': '👋', 'comeback_72h': '👋', 'comeback_7d': '👋',
-            'announcement': '📢', 'unknown': '🔔'
+            'announcement': '📢', 'unknown': '🔔',
+            'content_deleted': '🚫', 'account_warning': '⚠️'
         };
         return icons[type] || '🔔';
     }
@@ -236,11 +237,14 @@
         let html = '<div class="noti-section-label">🔔 ' + sanitizeText(t('noti_push_history')) + '</div>';
         history.forEach(item => {
             const unreadClass = item.read ? '' : ' noti-unread';
-            const newBadge = item.read ? '' : '<span class="noti-badge-new">' + sanitizeText(t('noti_new_badge')) + '</span>';
+            const isNew = !item.read && (Date.now() - item.timestamp < 24 * 60 * 60 * 1000);
+            const newBadge = isNew ? '<span class="noti-badge-new">' + sanitizeText(t('noti_new_badge')) + '</span>' : '';
+            const isWarning = item.type === 'content_deleted' || item.type === 'account_warning';
+            const warningBadge = isWarning ? '<span class="noti-badge-warning">⚠️</span>' : '';
             html += '<div class="noti-history-item' + unreadClass + '">'
                 + '<div class="noti-history-icon">' + getTypeIcon(item.type) + '</div>'
                 + '<div class="noti-history-body">'
-                + '<div class="noti-history-title">' + sanitizeText(item.title || 'LEVEL UP') + newBadge + '</div>'
+                + '<div class="noti-history-title">' + sanitizeText(item.title || 'LEVEL UP') + newBadge + warningBadge + '</div>'
                 + '<div class="noti-history-text">' + sanitizeText(item.body || '') + '</div>'
                 + '<div class="noti-time">' + formatTime(item.timestamp) + '</div>'
                 + '</div>'
@@ -290,7 +294,7 @@
             annArea.innerHTML = html;
         });
 
-        // 푸시 이력 렌더링: 로컬 먼저 표시 후 서버 병합
+        // 푸시 이력 렌더링: 로친 먼저 표시 후 서버 병합
         const localHistory = getHistory();
         renderHistory(histArea, localHistory, t);
 
