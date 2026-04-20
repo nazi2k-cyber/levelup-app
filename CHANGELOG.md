@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.455] - 2026-04-20
+
+### 변경
+- feat: 마스터 이메일 관리를 ADMIN_MASTER_EMAIL 시크릿으로 통일 (5-3, 6-1)
+
 ## [1.0.454] - 2026-04-20
 
 ### 변경
