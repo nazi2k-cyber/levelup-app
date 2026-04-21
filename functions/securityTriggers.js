@@ -74,9 +74,8 @@ exports.onAdminClaimSet = onDocumentCreated(
     }
 );
 
-const ACCOUNT_WARNING_THRESHOLD = 3;
-
-// 피신고 3회 이상 시 계정 경고 자동 발송
+// 신고 접수 시 totalReportCount 누적 관리
+// 경고 알림은 관리자 삭제 처리(삭제 + 안내 발송) 시에만 발송됨
 exports.onPostReportWritten = onDocumentWritten(
     { ...triggerOpts, document: "post_reports/{postId}" },
     async (event) => {
@@ -98,60 +97,10 @@ exports.onPostReportWritten = onDocumentWritten(
                 await db().collection("users").doc(ownerUid).update({
                     totalReportCount: FieldValue.increment(added)
                 });
+                console.log(`[SecurityTrigger] totalReportCount +${added} for uid=${ownerUid} (total=${newCount})`);
             } catch (e) {
                 console.warn("[SecurityTrigger] totalReportCount increment failed:", e.message);
             }
-        }
-
-        // threshold를 처음 넘었을 때만 경고 발송
-        if (newCount < ACCOUNT_WARNING_THRESHOLD || oldCount >= ACCOUNT_WARNING_THRESHOLD) return;
-
-        try {
-            const userDoc = await db().collection("users").doc(ownerUid).get();
-            if (!userDoc.exists) return;
-            const userData = userDoc.data();
-            const lang = userData.lang || "ko";
-
-            const messages = {
-                post_deleted: null,
-                account_warning: {
-                    ko: { title: "🚨 계정 경고", body: "신고 누적으로 인해 계정이 정지될 수 있습니다. 커뮤니티 가이드라인을 준수해 주세요." },
-                    en: { title: "🚨 Account Warning", body: "Your account may be suspended due to multiple reports. Please follow community guidelines." },
-                    ja: { title: "🚨 アカウント警告", body: "複数の報告によりアカウントが停止される可能性があります。ガイドラインを遵守してください。" }
-                }
-            };
-            const notification = messages.account_warning[lang] || messages.account_warning.ko;
-
-            // 알림 이력 저장
-            const notifRef = db().collection("users").doc(ownerUid).collection("notifications");
-            await notifRef.add({
-                type: "account_warning",
-                title: notification.title,
-                body: notification.body,
-                timestamp: new Date(),
-                read: false
-            });
-            const snap = await notifRef.orderBy("timestamp", "desc").offset(50).get();
-            if (!snap.empty) {
-                const batch = db().batch();
-                snap.docs.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-            }
-
-            // FCM 푸시 발송
-            if (userData.fcmToken && userData.pushEnabled !== false) {
-                const msg = {
-                    token: userData.fcmToken,
-                    notification,
-                    data: { tab: "status", target: "status", type: "account_warning", link: "levelup://tab/status" },
-                    android: { priority: "high", notification: { channelId: "warnings", sound: "default" } }
-                };
-                await getMessaging().send(msg);
-            }
-
-            console.log(`[SecurityTrigger] account_warning sent to uid=${ownerUid} (reports=${newCount})`);
-        } catch (e) {
-            console.error("[SecurityTrigger] account_warning failed:", e.message);
         }
     }
 );
