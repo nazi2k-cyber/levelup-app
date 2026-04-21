@@ -36,7 +36,7 @@
         <button class="back-btn" onclick="history.back()">←</button>
         <span class="legal-title" id="page-title">소비자 약관</span>
     </div>
-    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 17일</div>
+    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 21일</div>
 
     <!-- 한국어 -->
     <div class="content-block active" id="content-ko">
@@ -183,6 +183,20 @@
         <h2>14. 문의</h2>
         <p>본 약관에 대한 문의 사항은 아래로 연락해 주시기 바랍니다.</p>
         <p><span class="brand">BRAVECAT STUDIOS</span><br>이메일: support@bravecat.studio</p>
+    </div>
+
+    <div class="section">
+        <h2>15. 보안 취약점 신고</h2>
+        <p>서비스에서 보안 취약점을 발견하신 경우, 아래 이메일로 신고해 주시기 바랍니다. 악의적 목적이 없는 선의의 보안 연구자 분들의 신고를 환영하며, 접수된 내용은 책임 있게 검토하고 처리합니다.</p>
+        <p>보안 신고 이메일: <a href="mailto:bug@bravecat.studio">bug@bravecat.studio</a></p>
+        <p>신고 시 아래 내용을 포함해 주시면 빠른 검토가 가능합니다:</p>
+        <ul>
+            <li>취약점의 유형 및 발생 위치</li>
+            <li>취약점 재현 방법 (단계별 설명)</li>
+            <li>관련 스크린샷 또는 동영상 (선택)</li>
+            <li>잠재적 영향도 및 심각도 판단</li>
+        </ul>
+        <p>회사는 신고된 취약점을 검토하고 적절한 조치를 취합니다. 신고 내용은 제3자에게 무단 공개되지 않으며, 서비스 보안 개선에 활용됩니다.</p>
     </div>
 
     </div><!-- /content-ko -->
@@ -338,6 +352,20 @@
         <p><span class="brand">BRAVECAT STUDIOS</span><br>Email: support@bravecat.studio</p>
     </div>
 
+    <div class="section">
+        <h2>15. Security Vulnerability Reports</h2>
+        <p>If you discover a security vulnerability in the Service, please report it to the address below. We welcome responsible disclosure from good-faith security researchers and will review all submissions carefully.</p>
+        <p>Security report email: <a href="mailto:bug@bravecat.studio">bug@bravecat.studio</a></p>
+        <p>Including the following information will help us review your report promptly:</p>
+        <ul>
+            <li>Type and location of the vulnerability</li>
+            <li>Steps to reproduce the vulnerability</li>
+            <li>Relevant screenshots or screen recordings (optional)</li>
+            <li>Potential impact and severity assessment</li>
+        </ul>
+        <p>The Company will review reported vulnerabilities and take appropriate action. Report contents will not be disclosed to third parties without consent and will be used solely to improve Service security.</p>
+    </div>
+
     </div><!-- /content-en -->
 
     <!-- 日本語 -->
@@ -491,6 +519,20 @@
         <p><span class="brand">BRAVECAT STUDIOS</span><br>メール: support@bravecat.studio</p>
     </div>
 
+    <div class="section">
+        <h2>15. セキュリティ脆弱性の報告</h2>
+        <p>サービスでセキュリティ上の脆弱性を発見した場合は、以下のアドレスまでご報告ください。善意のセキュリティ研究者による責任ある開示を歓迎し、すべての申告を誠実に審査します。</p>
+        <p>セキュリティ報告用メール: <a href="mailto:bug@bravecat.studio">bug@bravecat.studio</a></p>
+        <p>以下の情報を含めていただくと、迅速に対応できます：</p>
+        <ul>
+            <li>脆弱性の種類と発生箇所</li>
+            <li>脆弱性の再現手順</li>
+            <li>関連するスクリーンショットまたは動画（任意）</li>
+            <li>潜在的な影響度および深刻度の評価</li>
+        </ul>
+        <p>会社は報告された脆弱性を審査し、適切な措置を講じます。報告内容は同意なく第三者に開示されることはなく、サービスのセキュリティ改善にのみ活用されます。</p>
+    </div>
+
     </div><!-- /content-ja -->
 
     <div class="section" style="margin-top: 32px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -499,9 +541,9 @@
     </div>
     <script>
         const TITLES = {
-            ko: { title: '소비자 약관', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 17일' },
-            en: { title: 'Terms of Service', date: 'Effective: March 1, 2025 | Last updated: April 17, 2026' },
-            ja: { title: '利用規約', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月17日' }
+            ko: { title: '소비자 약관', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 21일' },
+            en: { title: 'Terms of Service', date: 'Effective: March 1, 2025 | Last updated: April 21, 2026' },
+            ja: { title: '利用規約', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月21日' }
         };
         function setLang(lang) {
             var t = TITLES[lang] || TITLES.ko;
