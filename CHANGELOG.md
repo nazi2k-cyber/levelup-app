@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.464] - 2026-04-21
+
+### 변경
+- feat: terms 페이지에 보안 취약점 신고 섹션 추가 (섹션 15)
+
 ## [1.0.463] - 2026-04-21
 
 ### 변경
