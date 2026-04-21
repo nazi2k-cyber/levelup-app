@@ -463,7 +463,9 @@ Play Store 표시 수집 항목 (현재):
 ```
 🟢 [x] GitHub 계정명 변경 (nazi2k-cyber → bravecat-studio 완료)
 🟠 [ ] 변경 후 저장소 내 구 계정명 참조 일괄 업데이트
-🟠 [ ] GitHub main 브랜치 보호 규칙 설정
+🟢 [x] GitHub main 브랜치 보호 규칙 설정
+      → `.github/workflows/apply-branch-protection.yml` 생성 완료
+      → GitHub Actions → apply-branch-protection → Run workflow 수동 실행으로 적용
 🟠 [ ] Firebase Console IAM 권한 감사 및 불필요 계정 제거
 🟠 [ ] 앱 내 admin 계정을 dev@bravecat.studio 로 이전
       → GitHub Secret `ADMIN_MASTER_EMAIL` 값을 `dev@bravecat.studio` 로 설정 후 Functions 재배포
