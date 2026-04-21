@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.458] - 2026-04-21
+
+### 변경
+- docs: SSH 키 감사 완료 — Ed25519 키 생성 및 지문 기록
+
 ## [1.0.457] - 2026-04-20
 
 ### 변경
