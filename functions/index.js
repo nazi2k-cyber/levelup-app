@@ -92,6 +92,17 @@ const pingCallableOpts = {
     timeoutSeconds: 120
 };
 
+// 어드민 대시보드 전용 옵션 — enforceAppCheck 제외.
+// 어드민 웹 패널은 App Check(reCAPTCHA v3)가 배포 환경 변수로 선택적 설정되므로
+// 미설정 시 모든 callable 호출이 "Unauthenticated" 로 실패한다.
+// 어드민 함수는 assertAdmin()으로 Firebase Auth 커스텀 클레임을 직접 검사하므로
+// App Check 없이도 충분한 인증·인가 수준을 유지한다.
+const adminCallableOpts = {
+    region: "asia-northeast3",
+    cors: true,
+    invoker: "public",
+};
+
 // ─── Admin / Master claim helper ───
 
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS
@@ -3965,7 +3976,7 @@ exports.detectBruteForce = securityScheduler.detectBruteForce;
 exports.auditAdminAccounts = securityScheduler.auditAdminAccounts;
 
 // ─── 보안 알림 조회 (어드민 대시보드용) ───
-exports.getSecurityAlerts = onCall(callableOpts, async (request) => {
+exports.getSecurityAlerts = onCall(adminCallableOpts, async (request) => {
     await assertAdmin(request);
 
     const { days = 30, type = null, pageSize = 100 } = request.data || {};
