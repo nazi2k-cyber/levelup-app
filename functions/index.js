@@ -257,6 +257,106 @@ exports.removeAdminClaim = onCall(callableOpts, async (request) => {
     };
 });
 
+// ─── registerBackupAdmin: 백업 마스터 계정 등록 (마스터 계정만 호출 가능) ───
+
+exports.registerBackupAdmin = onCall(adminCallableOpts, async (request) => {
+    await assertMaster(request);
+
+    const { uid, note } = request.data || {};
+    if (!uid || typeof uid !== "string") {
+        throw new HttpsError("invalid-argument", "uid는 필수 문자열입니다.");
+    }
+    if (note && typeof note !== "string") {
+        throw new HttpsError("invalid-argument", "note는 문자열이어야 합니다.");
+    }
+    if (note && note.length > 200) {
+        throw new HttpsError("invalid-argument", "note는 200자 이하여야 합니다.");
+    }
+    if (uid === request.auth.uid) {
+        throw new HttpsError("failed-precondition", "자신의 계정을 백업 계정으로 등록할 수 없습니다.");
+    }
+
+    let targetUser;
+    try {
+        targetUser = await getAuth().getUser(uid);
+    } catch (e) {
+        throw new HttpsError("not-found", `UID ${uid}에 해당하는 사용자를 찾을 수 없습니다.`);
+    }
+
+    const existing = targetUser.customClaims || {};
+    await getAuth().setCustomUserClaims(uid, { ...existing, admin: true, master: true });
+
+    const { FieldValue } = require("firebase-admin/firestore");
+    await db.collection("admin_config").doc("backup_admins").set({
+        [uid]: {
+            email: targetUser.email || null,
+            note: note || "",
+            registeredAt: FieldValue.serverTimestamp(),
+            registeredBy: request.auth.token.email || request.auth.uid,
+        }
+    }, { merge: true });
+
+    await db.collection("admin_audit_log").add({
+        action: "registerBackupAdmin",
+        targetUid: uid,
+        targetEmail: targetUser.email || null,
+        claimType: "master+admin",
+        grantedBy: request.auth.token.email || request.auth.uid,
+        note: note || "",
+        createdAt: FieldValue.serverTimestamp(),
+    });
+
+    console.log(`[registerBackupAdmin] uid=${uid} by ${request.auth.token.email}`);
+    return { success: true, uid, email: targetUser.email || null };
+});
+
+// ─── getBackupAdmins: 등록된 백업 마스터 계정 목록 조회 (마스터 계정만 호출 가능) ───
+
+exports.getBackupAdmins = onCall(adminCallableOpts, async (request) => {
+    await assertMaster(request);
+
+    const snap = await db.collection("admin_config").doc("backup_admins").get();
+    if (!snap.exists) return { admins: [] };
+
+    const results = [];
+    for (const [uid, record] of Object.entries(snap.data())) {
+        let currentEmail = record.email;
+        let hasMasterClaim = false;
+        let hasAdminClaim = false;
+        let disabled = false;
+        let authError = null;
+
+        try {
+            const authUser = await getAuth().getUser(uid);
+            currentEmail = authUser.email || record.email;
+            hasMasterClaim = !!(authUser.customClaims?.master);
+            hasAdminClaim = !!(authUser.customClaims?.admin);
+            disabled = authUser.disabled;
+        } catch (e) {
+            authError = e.code === "auth/user-not-found" ? "계정 없음" : e.message;
+        }
+
+        let registeredAt = null;
+        try {
+            registeredAt = record.registeredAt?.toDate?.()?.toISOString() || null;
+        } catch (_) { /* ignore */ }
+
+        results.push({
+            uid,
+            email: currentEmail || null,
+            note: record.note || "",
+            registeredAt,
+            registeredBy: record.registeredBy || null,
+            hasMasterClaim,
+            hasAdminClaim,
+            disabled,
+            authError,
+        });
+    }
+
+    return { admins: results };
+});
+
 // ─── setAdminOperator: 관리자 페이지 운영 권한 부여 (마스터 계정만 호출 가능) ───
 
 exports.setAdminOperator = onCall(callableOpts, async (request) => {

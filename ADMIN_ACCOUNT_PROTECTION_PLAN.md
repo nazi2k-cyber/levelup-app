@@ -323,26 +323,239 @@ match /admin_config/{document} {
 
 ### 6-2. 마스터 계정 침해 대응 절차 (BCP)
 
+#### 인시던트 심각도 분류
+
+| 등급 | 정의 | 예시 | 목표 복구 시간 (RTO) |
+|------|------|------|---------------------|
+| **P0** | 마스터 계정 완전 탈취 / Firestore 대량 삭제 확인 | admin_audit_log에 대량 권한 변경 기록 | 30분 |
+| **P1** | 자격증명 유출 의심, 아직 악용 없음 | 피싱 링크 클릭 후 비정상 로그인 시도 감지 | 2시간 |
+| **P2** | 일반 Admin 계정 탈취 | security_alerts에 admin_claim_set 이상 기록 | 4시간 |
+| **P3** | 의심 활동 탐지, 침해 미확인 | detectAnomalousPoints 알람, 반복 로그인 실패 | 24시간 |
+
+---
+
+#### Step 1 — 격리 (5분 내)
+
 ```
-마스터 계정 침해 의심 시 즉시 실행:
+□ Firebase Console → Authentication → 해당 계정 찾기 → ⋮ → "사용 중지(Disable)"
+□ GCP Console → IAM & Admin → IAM → 해당 계정 행 → 연필 아이콘 → 모든 역할 제거
+□ GitHub → Settings → Developer settings → Personal access tokens → 해당 토큰 Delete
+□ (P0) GitHub → Settings → Security → Sessions → 다른 세션 모두 종료
+```
 
-Step 1 — 격리 (5분 내)
-  Firebase Console → Authentication → 해당 계정 비활성화
-  GCP Console → IAM → 해당 계정 권한 일시 중단
+#### Step 2 — 피해 범위 파악 (30분 내)
 
-Step 2 — 피해 범위 파악 (30분 내)
-  security_alerts 컬렉션 최근 로그 조회
-  admin_audit_log 컬렉션 최근 권한 변경 이력 확인
-  Firestore 콘솔에서 이상 데이터 변경 여부 확인
+**Admin Panel 보안 리포트 탭 사용:**
+```
+Admin Panel → "보안 리포트" 탭 → 기간: 최근 7일 → 타입별 필터 순차 확인
+  - admin_claim_set: 비인가 권한 부여 여부
+  - points_spike / repeat_points_spike: 대량 점수 조작 여부
+  - brute_force: 침해 시도 패턴
+```
 
-Step 3 — 복구
-  백업 마스터 계정으로 재접속 (별도 Google 계정 사전 등록 필요)
-  침해된 계정의 모든 세션 강제 만료
-  API 키 즉시 순환
+**Firestore 콘솔 직접 쿼리:**
+```
+// admin_audit_log — 의심 시각 전후 권한 변경 이력
+Collection: admin_audit_log
+정렬: createdAt DESC, 최대 50건 조회
 
-Step 4 — 사후 조치
-  유저 데이터 백업본(user_backups 컬렉션)으로 복원 여부 판단
-  개인정보보호위원회 신고 (72시간 내 — 개인정보보호법 제34조)
+// security_alerts — 최근 7일 admin_claim_set 이벤트
+Collection: security_alerts
+필터: type == "admin_claim_set"
+필터: detectedAt >= <침해 의심 시각>
+정렬: detectedAt DESC
+
+// user_backups — 이상 백업 생성 여부 (공격자가 데이터 탈취 후 흔적 지우기 위해 백업 생성 가능)
+Collection: user_backups
+필터: createdAt >= <침해 의심 시각>
+```
+
+**GCP 감사 로그 확인:**
+```
+GCP Console → Logging → 로그 탐색기
+리소스: Cloud Functions
+필터:
+  resource.type="cloud_function"
+  protoPayload.methodName="google.cloud.functions.v2.FunctionService.UpdateFunction"
+기간: 침해 의심 시각 전후 24시간
+```
+
+#### Step 3 — 복구 (백업 마스터 계정 사용)
+
+```
+□ 6-3절에 등록된 백업 마스터 계정으로 Firebase 로그인
+  → Admin Panel 접속 → "Claim 관리" 탭에서 master+admin claim 확인
+  → claim 미적용 시 "토큰 강제 갱신" 버튼 클릭
+
+□ 침해 계정 모든 세션 강제 만료
+  Firebase Console → Authentication → 침해 계정 → ⋮ → "세션 취소(Revoke sessions)"
+
+□ 침해 계정 Custom Claims 전체 삭제
+  Admin Panel → "Claim 관리" 탭 → "Admin/Master 권한 회수" → 침해 계정 UID 입력 → 권한 회수
+
+□ API 키 즉시 순환
+  Firebase Console → 프로젝트 설정 → 일반 → 웹 API 키 재생성
+  GCP Console → IAM & Admin → 서비스 계정 → 침해된 키 삭제 → 신규 키 발급
+  → GitHub Repository Secrets 업데이트 (FIREBASE_SERVICE_ACCOUNT)
+  → deploy-firebase.yml 수동 실행으로 Functions 재배포
+```
+
+**env var 폴백 복구 (GitHub 접근 가능한 경우):**
+```
+GitHub → Settings → Secrets → ADMIN_MASTER_EMAIL
+→ 침해 계정 이메일 제거, 백업 계정 이메일로 교체
+→ Functions 재배포 → syncClaims() 자동 실행으로 master+admin claim 복구
+```
+
+#### Step 4 — 공격 유형별 추가 조치
+
+**Credential Stuffing / 계정 탈취:**
+```
+□ 비밀번호 즉시 변경 (Bitwarden으로 20자 이상 새 비밀번호 생성)
+□ Google 계정 → 보안 → 기기 활동 검토 → 모든 모르는 기기 강제 로그아웃
+□ Gmail → 설정 → 다른 세션 모두 로그아웃
+```
+
+**Spear Phishing:**
+```
+□ Google 계정 → 보안 → 최근 보안 활동 → 의심 활동 신고
+□ KISA 인터넷침해대응센터 → 악성 URL 신고 (boho.or.kr)
+□ 피싱 도메인 확인: Google Safe Browsing 리포트
+```
+
+**Supply Chain (GitHub 저장소 침해):**
+```
+□ git log --all --oneline | head -50 → 의심 커밋 확인
+□ git diff <정상 커밋>..<의심 커밋> -- functions/index.js → 악성 코드 확인
+□ 악성 커밋 발견 시: git revert → PR → 신속 배포
+□ GitHub → Settings → Security → Code security → Secret scanning → 경보 전수 확인
+□ GitHub Personal Access Token 전체 재발급
+□ GitHub SSH 키 전체 교체 (Settings → SSH and GPG keys)
+```
+
+#### Step 5 — 데이터 복구 판단
+
+```
+□ Admin Panel → "유저 관리" 탭 → 의심 유저 검색 → "백업 보기"
+  → 이상 데이터 변경 전 백업 확인 → "롤백" 실행
+
+□ 대규모 피해 시: user_backups 컬렉션에서 직전 백업 타임스탬프 확인
+  → handleRollbackUserData Cloud Function으로 일괄 복구
+  (Admin Panel → "유저 관리" → 해당 유저 → 백업 목록 → 롤백 버튼)
+```
+
+#### Step 6 — 법적 신고 의무 확인
+
+| 상황 | 신고 대상 | 기한 | 근거 |
+|------|-----------|------|------|
+| 개인정보 유출 확인 | 개인정보보호위원회 | **72시간 내** | 개인정보보호법 제34조 |
+| 유출 규모 1천 명 이상 | 피해 이용자 개별 통지 | 즉시 | 개인정보보호법 제34조 |
+| 정보통신서비스 침해 | KISA 인터넷침해대응센터 | 즉시 | 정보통신망법 제48조의3 |
+
+**개인정보보호위원회 신고 항목 (privacy.go.kr → 개인정보 유출 신고 / ☎ 182):**
+```
+1. 사고 발생 일시: YYYY-MM-DD HH:MM (KST)
+2. 사고 경위: Firebase 관리자 계정 자격증명 탈취로 인한 무단 접근 의심
+3. 피해 유형: 개인정보 열람/유출 여부 확인 중 (users 컬렉션 접근 기록 분석)
+4. 수집 개인정보 항목: 이메일, 닉네임, 앱 내 활동 데이터 (건강·피트니스 정보 포함)
+5. 즉시 취한 조치: 계정 비활성화, API 키 순환, 백업 계정 복구 완료
+6. 후속 조치 계획: 2FA 강화, 접근 로그 보강, 취약점 패치
+```
+
+**KISA 인터넷침해대응센터 신고 (boho.or.kr → 침해사고 신고 / ☎ 118):**
+```
+침해 유형: 계정 탈취 / 악성코드 감염 중 해당 항목 선택
+피해 시스템: Firebase 기반 모바일 앱 서버 (Google Cloud)
+침해 경위 및 피해 범위 간략 기술
+```
+
+#### Step 7 — 사후 검토 체크리스트
+
+```
+침해 후 72시간 내:
+□ 피해 UID 목록 확정 및 user_backups 대조 완료
+□ 개인정보보호위원회 신고 제출 완료 (해당 시)
+□ KISA 인터넷침해대응센터 신고 완료 (해당 시)
+□ 영향받은 유저 1,000명 이상 시 개별 통지 발송
+
+침해 후 1주 내:
+□ 공격 진입점(entry point) 차단 완료
+□ ADMIN_MASTER_EMAIL 환경변수 교체 및 Functions 재배포
+□ GitHub Personal Access Token 전수 재발급
+□ Admin Panel → listAdminOperators 재실행 → 권한 목록 전수 점검
+□ Firestore security_alerts에서 잔존 이상 패턴 없음 확인
+
+침해 후 1개월 내:
+□ 피해 규모별 보험 청구 여부 결정 (7절 참조)
+□ 재발 방지 대책 문서화 (이 문서 업데이트)
+□ 백업 마스터 계정 분기 점검 실시 (6-3절 절차 준수)
+□ 전체 의존성 재감사: npm audit --audit-level=high
+```
+
+---
+
+### 6-3. 백업 관리자 계정 등록 및 관리
+
+#### 6-3-1. 필요성
+
+마스터 계정 침해 시 복구 경로를 확보하기 위해 별도 Google 계정을 백업 관리자로 등록한다.
+env var 폴백(`ADMIN_MASTER_EMAIL`)만으로는 GitHub 계정도 동시 침해된 경우 Functions 재배포가 불가하므로,
+Firestore `admin_config/backup_admins`에 등록된 백업 계정이 **1차 복구 수단**이 된다.
+
+**복구 우선순위:**
+```
+1순위: admin_config/backup_admins 등록 계정 (master+admin claim 선부여, 즉시 로그인 가능)
+2순위: ADMIN_MASTER_EMAIL env var (Functions 재배포 후 syncClaims 경유)
+3순위: Firebase Console → Authentication 수동 계정 생성 (GCP IAM Owner 권한 필요)
+```
+
+#### 6-3-2. 등록 절차
+
+```
+1. 백업용 Google 계정 생성 (예: dev+backup@bravecat.studio)
+   → 2FA 필수 (TOTP 앱 방식)
+   → 기존 마스터 계정과 물리적으로 분리된 기기/브라우저 프로파일 사용
+
+2. Firebase Auth에 최초 1회 로그인 (UID 생성 목적)
+   → Admin Panel (levelup-app-53d02.web.app/admin/) 접속 시도
+   → Firebase Console → Authentication → 신규 유저 UID 확인
+
+3. 마스터 계정으로 Admin Panel 로그인
+   → "Claim 관리" 탭 → "백업 관리자 계정" 섹션
+   → 백업 계정 UID 입력 + 메모 입력 (예: "2026-Q2, dev+backup@bravecat.studio")
+   → "등록" 버튼 클릭
+
+4. 등록 완료 시 자동 처리:
+   → registerBackupAdmin Cloud Function 호출
+   → master+admin Custom Claim 즉시 부여
+   → admin_config/backup_admins Firestore 문서에 기록
+   → admin_audit_log 기록 → security_alerts 연동
+```
+
+#### 6-3-3. 분기별 검증 절차 (매 3/6/9/12월 말)
+
+```
+□ Admin Panel → "Claim 관리" 탭 → "백업 관리자 계정" → "목록 새로고침"
+□ "계정 상태" 열이 "활성"인지 확인
+□ "Master" 열이 ✓ (claim drift 없음) 인지 확인
+□ 백업 계정으로 실제 로그인 테스트 (분기 1회)
+  → Admin Panel 접속 확인 → 즉시 로그아웃
+□ 이상 발견 시: 해당 UID를 "Admin/Master 권한 회수" 후 재등록
+
+분기 점검 기록:
+  2026-Q2: [ ] 미실시 / [x] 완료 (담당자: _____, 날짜: _____)
+  2026-Q3: [ ] 미실시
+  2026-Q4: [ ] 미실시
+```
+
+#### 6-3-4. 자격증명 보관
+
+```
+□ 백업 계정 비밀번호: Bitwarden 오프라인 Vault 또는 KeePass (마스터 계정 Vault와 분리)
+□ 백업 계정 2FA 복구 코드: 오프라인 암호화 문서 또는 인쇄 후 물리 금고 보관
+□ admin_config/backup_admins Firestore 문서: 마스터 전용 읽기 (firestore.rules 보호)
+□ ADMIN_MASTER_EMAIL Secret: 백업 계정 이메일도 쉼표 구분으로 추가 등록 권장
+  예: "primary@bravecat.studio,backup@bravecat.studio"
 ```
 
 ---
@@ -480,7 +693,10 @@ Play Store 표시 수집 항목 (현재):
 ```
 🟡 [ ] 개인정보보호 배상책임보험 가입 (DB손보 소규모 플랜 우선 견적)
 🟡 [ ] KISA 자가점검 도구로 개인정보 처리 적법성 점검
-🟡 [ ] 침해 대응 절차(BCP) 문서화 및 백업 관리자 계정 등록
+🟢 [x] 침해 대응 절차(BCP) 문서화 및 백업 관리자 계정 등록
+      → BCP P0~P3 심각도 분류, 7단계 대응 절차, 법적 신고 템플릿 추가 완료
+      → Admin Panel "Claim 관리" 탭에 백업 관리자 등록/조회 UI 구현 완료
+      → Firestore admin_config/backup_admins 컬렉션 + registerBackupAdmin/getBackupAdmins Cloud Function 구현 완료
 🟡 [ ] 보안 취약점 신고 이메일(bug@bravecat.studio) 공개 및 정책 페이지 추가
 🟡 [ ] GCP Secret Manager로 ADMIN_EMAILS / AZURE_CS_KEY 이전
 ```

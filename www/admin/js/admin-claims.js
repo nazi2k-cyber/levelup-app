@@ -57,6 +57,21 @@ function render() {
             <button class="btn btn-outline btn-sm mb-8" onclick="window._loadOperators()">목록 새로고침</button>
             <div id="operator-list">목록을 로드하려면 새로고침 버튼을 누르세요.</div>
         </div>
+
+        <div class="card">
+            <h2>백업 관리자 계정 <span class="badge badge-ok">마스터 전용</span></h2>
+            <p class="text-sub text-sm mb-8">침해 사고 발생 시 복구에 사용할 백업 마스터 계정을 등록하고 상태를 확인합니다. 등록된 계정에는 master+admin claim이 즉시 부여됩니다.</p>
+            <div class="flex-center mb-8">
+                <input type="text" id="backup-admin-uid-input" placeholder="백업 관리자 UID" style="flex:1;margin-right:4px">
+                <input type="text" id="backup-admin-note-input" placeholder="메모 (선택, 최대 200자)" style="flex:1;margin-right:4px">
+                <button class="btn btn-primary btn-sm" onclick="window._registerBackupAdmin()">등록</button>
+            </div>
+            <div id="backup-admin-register-result" class="mt-8 mb-8"></div>
+            <hr style="border-color:#2a2a3e;margin:16px 0">
+            <h3 style="font-size:0.95rem;margin-bottom:8px">등록된 백업 관리자</h3>
+            <button class="btn btn-outline btn-sm mb-8" onclick="window._loadBackupAdmins()">목록 새로고침</button>
+            <div id="backup-admin-list">목록을 로드하려면 새로고침 버튼을 누르세요.</div>
+        </div>
         ` : `
         <div class="card">
             <h2>권한 관리</h2>
@@ -229,6 +244,79 @@ window._loadOperators = async function() {
     } catch (e) {
         el.innerHTML = `<span class="text-error">오류: ${esc(e.message)}</span>`;
         terror("Claims", "listAdminOperators error: " + e.message);
+    }
+};
+
+window._registerBackupAdmin = async function() {
+    const uid = document.getElementById("backup-admin-uid-input").value.trim();
+    const note = document.getElementById("backup-admin-note-input").value.trim();
+    const el = document.getElementById("backup-admin-register-result");
+    if (!uid) { el.innerHTML = '<span class="text-error">UID를 입력하세요.</span>'; return; }
+
+    tlog("BackupAdmin", "registerBackupAdmin 호출: " + uid);
+    try {
+        const registerBackupAdmin = httpsCallable(functions, "registerBackupAdmin");
+        const result = await registerBackupAdmin({ uid, note });
+        el.innerHTML = `<span class="text-success">✓ 백업 관리자 등록 완료: <code>${esc(uid)}</code> (${esc(result.data.email || "이메일 없음")})</span>`;
+        tok("BackupAdmin", "Backup admin registered: " + uid);
+        window._loadBackupAdmins();
+    } catch (e) {
+        el.innerHTML = `<span class="text-error">오류: ${esc(e.message)}</span>`;
+        terror("BackupAdmin", "registerBackupAdmin error: " + e.message);
+    }
+};
+
+window._loadBackupAdmins = async function() {
+    const el = document.getElementById("backup-admin-list");
+    if (!el) return;
+    el.innerHTML = '<span class="text-sub">로딩 중...</span>';
+
+    try {
+        const getBackupAdmins = httpsCallable(functions, "getBackupAdmins");
+        const result = await getBackupAdmins({});
+        const admins = result.data.admins || [];
+
+        if (admins.length === 0) {
+            el.innerHTML = '<span class="text-sub">등록된 백업 관리자가 없습니다.</span>';
+            return;
+        }
+
+        let html = `<table style="width:100%;font-size:0.85rem">
+            <thead><tr>
+                <th>UID</th><th>Email</th><th>등록일</th>
+                <th>Master</th><th>Admin</th><th>계정 상태</th><th>메모</th>
+            </tr></thead><tbody>`;
+
+        for (const a of admins) {
+            const masterBadge = a.hasMasterClaim
+                ? '<span class="badge badge-ok">✓</span>'
+                : '<span class="badge badge-fail">✗</span>';
+            const adminBadge = a.hasAdminClaim
+                ? '<span class="badge badge-ok">✓</span>'
+                : '<span class="badge badge-fail">✗</span>';
+            const statusBadge = a.authError
+                ? `<span class="text-error">${esc(a.authError)}</span>`
+                : (a.disabled
+                    ? '<span class="text-error">비활성</span>'
+                    : '<span class="text-success">활성</span>');
+            const regDate = a.registeredAt ? fmtDate(new Date(a.registeredAt)) : '—';
+
+            html += `<tr>
+                <td><code style="font-size:0.75rem">${esc(a.uid.substring(0, 12))}…</code></td>
+                <td>${esc(a.email || "—")}</td>
+                <td style="white-space:nowrap">${regDate}</td>
+                <td style="text-align:center">${masterBadge}</td>
+                <td style="text-align:center">${adminBadge}</td>
+                <td>${statusBadge}</td>
+                <td style="color:#888;font-size:0.8rem">${esc(a.note || "—")}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        el.innerHTML = html;
+        tok("BackupAdmin", `${admins.length}명의 백업 관리자 조회 완료`);
+    } catch (e) {
+        el.innerHTML = `<span class="text-error">오류: ${esc(e.message)}</span>`;
+        terror("BackupAdmin", "getBackupAdmins error: " + e.message);
     }
 };
 

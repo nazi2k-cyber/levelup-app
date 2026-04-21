@@ -305,6 +305,15 @@ service cloud.firestore {
     }
 
     // ──────────────────────────────────────────────
+    // admin_config: 마스터 계정만 읽기 (Cloud Functions Admin SDK에서만 쓰기)
+    // 백업 어드민 계정 목록 등 민감한 관리 설정 보관
+    // ──────────────────────────────────────────────
+    match /admin_config/{docId} {
+      allow read: if request.auth != null && request.auth.token.master == true;
+      allow write: if false;
+    }
+
+    // ──────────────────────────────────────────────
     // rate_limits: Cloud Functions Admin SDK 전용 (Phase 2 rateLimiter.js)
     // 클라이언트는 읽기/쓰기 모두 불가 — 호출 횟수 노출 방지
     // ──────────────────────────────────────────────
