@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.459] - 2026-04-21
+
+### 변경
+- fix: allow admin bypass in branch protection (enforce_admins: false)
+- security: add branch protection setup workflow and update checklist
+
 ## [1.0.458] - 2026-04-21
 
 ### 변경
