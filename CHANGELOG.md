@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.468] - 2026-04-21
+
+### 변경
+- fix: 관리자 페이지 UI 콜백에서도 권한 없는 사용자 차단
+
 ## [1.0.467] - 2026-04-21
 
 ### 변경
