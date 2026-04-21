@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.467] - 2026-04-21
+
+### 변경
+- feat: 관리자 페이지 권한 없으면 로그인 차단
+
 ## [1.0.466] - 2026-04-21
 
 ### 변경
