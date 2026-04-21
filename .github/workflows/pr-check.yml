@@ -139,6 +139,16 @@ jobs:
           fi
           echo "✅ .env 파일 없음"
 
+      - name: 키스토어 파일 git 추적 감지
+        run: |
+          TRACKED=$(git ls-files '*.keystore' '*.jks' 2>/dev/null || true)
+          if [ -n "$TRACKED" ]; then
+            echo "::error::키스토어/JKS 파일이 git에 추적되고 있습니다. 즉시 제거하고 .gitignore에 추가해주세요:"
+            echo "$TRACKED"
+            exit 1
+          fi
+          echo "✅ 키스토어 파일 git 추적 없음"
+
   # 4. Android 빌드 검증 (선택적 - 빌드 깨짐 방지)
   build-check:
     name: 빌드 검증

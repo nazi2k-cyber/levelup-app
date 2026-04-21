@@ -6,3 +6,6 @@ www/firebase-config.js
 google-services.json
 backups/
 debug.keystore
+*.keystore
+*.jks
+release.keystore

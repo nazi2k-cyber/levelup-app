@@ -222,23 +222,22 @@ GitHub → 저장소 → Settings → Branches → Add rule
    → 이메일: 앱 상태 변경 / 정책 위반 / 결제 이상 알림 활성화
    → dev@bravecat.studio 로 변경 후 설정
 
-4. APK/AAB 서명 키 보안
-   → debug.keystore (저장소 루트에 존재 확인됨) 즉시 .gitignore 추가 검토
-   → 프로덕션 keystore는 Google Play App Signing 위임 권장 (키 분실/탈취 대비)
+4. APK/AAB 서명 키 보안 ✅
+   → debug.keystore: GitHub Secret(DEBUG_KEYSTORE_BASE64)으로 이전 완료, .gitignore 적용, git 추적 제거 완료
+   → 릴리즈 keystore: RELEASE_KEYSTORE_BASE64 등 GitHub Secrets로 관리 중
+   → .gitignore: *.keystore, *.jks 패턴 추가 완료 (모든 키스토어 파일 차단)
+   → PR 검증: pr-check.yml에 키스토어 git 추적 자동 감지 스텝 추가 완료
+   → 프로덕션 keystore는 Google Play App Signing 위임 권장 (수동 조치 필요)
 ```
 
-**⚠️ 긴급: debug.keystore 파일 점검**
-```bash
-# 현재 저장소 루트에 debug.keystore 파일 존재
-# 이 파일이 공개 저장소에 포함되어 있는지 즉시 확인 필요
-git log --all --full-history -- debug.keystore
-git ls-files debug.keystore
+**✅ 완료: debug.keystore 보안 조치 (2026-04-21)**
 ```
-
-```
-만약 공개 저장소에 커밋된 경우:
-→ git filter-branch 또는 BFG Repo Cleaner로 히스토리에서 제거
-→ 해당 키스토어로 서명된 인증서 즉시 교체 검토
+조치 내역:
+→ debug.keystore git 추적 제거 완료 (커밋 476bf9d)
+→ .gitignore에 debug.keystore, *.keystore, *.jks, release.keystore 등록 완료
+→ GitHub Secret DEBUG_KEYSTORE_BASE64로 키스토어 이전 완료
+→ build.yml, deploy-rollback.yml에서 Secret을 통해 런타임 복원
+→ pr-check.yml에 키스토어 파일 git 추적 자동 감지 스텝 추가 완료
 ```
 
 ### 4-2. 앱 업데이트 2인 승인 체계
