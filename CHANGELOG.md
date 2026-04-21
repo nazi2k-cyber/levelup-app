@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.465] - 2026-04-21
+
+### 변경
+- docs: docs/terms 이메일 주소 전체 mailto 하이퍼링크 적용
+
 ## [1.0.464] - 2026-04-21
 
 ### 변경
