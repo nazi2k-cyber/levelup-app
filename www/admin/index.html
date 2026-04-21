@@ -150,6 +150,13 @@ onAdminAuth((user, admin, master, operator) => {
     const adminBadge = document.getElementById("admin-badge");
 
     if (user) {
+        // Block if no admin/master/operator permission
+        if (!admin && !master) {
+            doLogout();
+            showLoginError('관리자 권한이 없습니다. 접근이 차단되었습니다.');
+            return;
+        }
+
         loginSec.classList.add("hidden");
         adminSec.classList.remove("hidden");
         userInfo.textContent = user.email || user.uid;
