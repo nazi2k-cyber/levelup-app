@@ -55,7 +55,6 @@ function render() {
                 <div id="rpt-detail-content"></div>
                 <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
                     <button class="btn btn-danger btn-sm" id="btn-rpt-delete-post">포스트 강제 삭제</button>
-                    <button class="btn btn-danger btn-sm" id="btn-rpt-delete-notify" style="background:#ff9800;">삭제 + 안내 발송</button>
                     <button class="btn btn-outline btn-sm" id="btn-rpt-dismiss">신고 기각</button>
                 </div>
                 <div id="rpt-action-result" style="margin-top:8px;"></div>
@@ -65,8 +64,7 @@ function render() {
 
     document.getElementById("btn-load-reports").addEventListener("click", loadReports);
     document.getElementById("btn-close-rpt-detail").addEventListener("click", closeDetail);
-    document.getElementById("btn-rpt-delete-post").addEventListener("click", () => deleteReportedPost(false));
-    document.getElementById("btn-rpt-delete-notify").addEventListener("click", () => deleteReportedPost(true));
+    document.getElementById("btn-rpt-delete-post").addEventListener("click", () => deleteReportedPost(true));
     document.getElementById("btn-rpt-dismiss").addEventListener("click", dismissReport);
 }
 
@@ -234,12 +232,9 @@ async function deleteReportedPost(sendNotification = false) {
     const ownerUid = parts.slice(0, -1).join("_");
     const timestamp = parseInt(parts[parts.length - 1], 10);
 
-    const confirmMsg = sendNotification
-        ? `${_selectedReport.ownerName || "—"}의 포스트를 강제 삭제하고\n삭제 안내 메시지를 해당 유저에게 발송하시겠습니까?\n\n이 작업은 복구할 수 없습니다.`
-        : `${_selectedReport.ownerName || "—"}의 포스트를 강제 삭제하시겠습니까?\n\n이 작업은 복구할 수 없습니다.`;
-    if (!confirm(confirmMsg)) return;
+    if (!confirm(`${_selectedReport.ownerName || "—"}의 포스트를 강제 삭제하고\n삭제 안내 메시지를 해당 유저에게 발송하시겠습니까?\n\n이 작업은 복구할 수 없습니다.`)) return;
 
-    tlog("Reports", `신고 포스트 삭제 중: ${_selectedReport.postId} (알림=${sendNotification})`);
+    tlog("Reports", `신고 포스트 삭제 중: ${_selectedReport.postId}`);
     resultEl.innerHTML = '<p class="text-sub text-sm">삭제 중...</p>';
 
     try {
@@ -248,8 +243,7 @@ async function deleteReportedPost(sendNotification = false) {
         try { await callAdmin("screeningDismissReport", { postId: _selectedReport.postId }); } catch(e) { /* ok */ }
 
         tok("Reports", `포스트 삭제 완료: ${_selectedReport.postId}`);
-        const notifyMsg = sendNotification ? " (삭제 안내 발송 완료)" : "";
-        resultEl.innerHTML = `<p class="text-success text-sm">포스트 삭제 완료!${notifyMsg}</p>`;
+        resultEl.innerHTML = `<p class="text-success text-sm">포스트 삭제 완료! (삭제 안내 발송 완료)</p>`;
 
         _reports = _reports.filter(r => r.postId !== _selectedReport.postId);
         document.getElementById("rpt-count").textContent = `총 ${_reports.length}개`;
