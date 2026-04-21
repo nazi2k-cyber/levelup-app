@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.466] - 2026-04-21
+
+### 변경
+- feat: BCP 문서화 및 백업 관리자 계정 등록 시스템 구현
+
 ## [1.0.465] - 2026-04-21
 
 ### 변경
