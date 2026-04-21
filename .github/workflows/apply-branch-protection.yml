@@ -85,7 +85,7 @@ jobs:
                 "build-check"
               ]
             },
-            "enforce_admins": true,
+            "enforce_admins": false,
             "required_pull_request_reviews": {
               "dismiss_stale_reviews": true,
               "require_code_owner_reviews": true,
@@ -145,3 +145,4 @@ jobs:
           echo "  - force push: 차단"
           echo "  - 브랜치 삭제: 차단"
           echo "  - 필수 status check: validate, firestore-rules, secret-scan, build-check"
+          echo "  - Admin bypass: 허용 (긴급 시 Settings에서 우회 가능)"
