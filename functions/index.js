@@ -938,7 +938,8 @@ async function handleAdminListUsers(request) {
             displayName: String(displayName),
             email,
             level: data.level || 1,
-            disabled: false
+            disabled: false,
+            totalReportCount: data.totalReportCount || 0
         });
     }
 

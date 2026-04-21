@@ -216,6 +216,8 @@
         const modal = document.getElementById('notification-modal');
         if (modal) {
             modal.classList.remove('d-none');
+            _serverNotifCache = null;
+            _lastServerFetchTime = 0;
             render();
         }
     }

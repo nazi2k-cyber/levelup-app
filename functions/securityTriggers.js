@@ -87,13 +87,24 @@ exports.onPostReportWritten = onDocumentWritten(
         const newCount = after.reportCount || 0;
         const oldCount = before?.reportCount || 0;
 
-        // threshold를 처음 넘었을 때만 발송
-        if (newCount < ACCOUNT_WARNING_THRESHOLD || oldCount >= ACCOUNT_WARNING_THRESHOLD) return;
-
         const postId = event.params.postId;
-        const parts = postId.split("_");
-        const ownerUid = parts.slice(0, -1).join("_");
+        const ownerUid = postId.split("_").slice(0, -1).join("_");
         if (!ownerUid) return;
+
+        // 신고 누적 이력 관리 — 기각/삭제 시에도 감소하지 않음
+        const added = newCount - oldCount;
+        if (added > 0) {
+            try {
+                await db().collection("users").doc(ownerUid).update({
+                    totalReportCount: FieldValue.increment(added)
+                });
+            } catch (e) {
+                console.warn("[SecurityTrigger] totalReportCount increment failed:", e.message);
+            }
+        }
+
+        // threshold를 처음 넘었을 때만 경고 발송
+        if (newCount < ACCOUNT_WARNING_THRESHOLD || oldCount >= ACCOUNT_WARNING_THRESHOLD) return;
 
         try {
             const userDoc = await db().collection("users").doc(ownerUid).get();

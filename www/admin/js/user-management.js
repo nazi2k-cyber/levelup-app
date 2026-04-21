@@ -106,6 +106,7 @@ async function loadUsers() {
                 <option value="name">이름순</option>
                 <option value="level-desc">레벨 내림차순</option>
                 <option value="report-desc">신고 내림차순</option>
+                <option value="total-report-desc">신고 누적 내림차순</option>
             </select>
         </div>`;
         html += '<div id="um-table-wrap">';
@@ -126,7 +127,7 @@ async function loadUsers() {
                 );
             }
             if (reportedOnly) {
-                filtered = filtered.filter(u => (u.reportCount || 0) > 0);
+                filtered = filtered.filter(u => (u.reportCount || 0) > 0 || (u.totalReportCount || 0) > 0);
             }
             // 정렬
             filtered = [...filtered];
@@ -134,6 +135,8 @@ async function loadUsers() {
                 filtered.sort((a, b) => (b.level || 0) - (a.level || 0));
             } else if (sortBy === "report-desc") {
                 filtered.sort((a, b) => (b.reportCount || 0) - (a.reportCount || 0));
+            } else if (sortBy === "total-report-desc") {
+                filtered.sort((a, b) => (b.totalReportCount || 0) - (a.totalReportCount || 0));
             } else {
                 filtered.sort((a, b) => a.displayName.localeCompare(b.displayName));
             }
@@ -154,7 +157,7 @@ async function loadUsers() {
 
 function renderUserTable(users) {
     let html = `<table>
-        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>신고</th><th>상태</th><th>UID</th></tr></thead>
+        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>신고</th><th>신고 누적</th><th>상태</th><th>UID</th></tr></thead>
         <tbody>`;
     for (const u of users) {
         const statusBadge = u.disabled
@@ -164,11 +167,18 @@ function renderUserTable(users) {
         const reportBadge = rc > 0
             ? (rc >= 3 ? `<span class="badge badge-fail">${rc}건</span>` : `<span class="badge badge-warn">${rc}건</span>`)
             : '<span class="text-sub">—</span>';
-        html += `<tr class="um-row${rc > 0 ? ' ps-reported' : ''}" data-uid="${u.uid}" style="cursor:pointer;">
+        const trc = u.totalReportCount || 0;
+        const totalBadge = trc >= 3
+            ? `<span class="badge badge-fail">${trc}건</span>`
+            : trc > 0
+                ? `<span class="badge badge-warn">${trc}건</span>`
+                : '<span class="text-sub">0건</span>';
+        html += `<tr class="um-row${rc > 0 || trc > 0 ? ' ps-reported' : ''}" data-uid="${u.uid}" style="cursor:pointer;">
             <td>${escHtml(u.displayName)}</td>
             <td class="text-sub">${escHtml(u.email || "—")}</td>
             <td>Lv.${u.level}</td>
             <td>${reportBadge}</td>
+            <td>${totalBadge}</td>
             <td>${statusBadge}</td>
             <td class="text-sub text-sm">${u.uid.substring(0, 12)}...</td>
         </tr>`;
@@ -192,12 +202,15 @@ function selectUser(uid) {
     document.getElementById("um-detail-title").textContent = `${user.displayName} 상세`;
     const rc = user.reportCount || 0;
     const rcColor = rc >= 3 ? 'text-error' : rc > 0 ? 'text-warning' : 'text-success';
+    const trc = user.totalReportCount || 0;
+    const trcColor = trc >= 3 ? 'text-error' : trc > 0 ? 'text-warning' : 'text-sub';
     document.getElementById("um-detail-info").innerHTML = `
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(user.displayName)}</div><div class="stat-label">이름</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(user.email || "—")}</div><div class="stat-label">이메일</div></div>
             <div class="stat-card"><div class="stat-value">Lv.${user.level}</div><div class="stat-label">레벨</div></div>
-            <div class="stat-card"><div class="stat-value text-sm ${rcColor}">${rc}건</div><div class="stat-label">신고 누적</div></div>
+            <div class="stat-card"><div class="stat-value text-sm ${rcColor}">${rc}건</div><div class="stat-label">현재 신고</div></div>
+            <div class="stat-card"><div class="stat-value text-sm ${trcColor}">${trc}건</div><div class="stat-label">신고 누적 (전체)</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${user.disabled ? '<span class="text-error">중지됨</span>' : '<span class="text-success">활성</span>'}</div><div class="stat-label">상태</div></div>
         </div>
         <p class="text-sub text-sm">UID: ${uid}</p>
