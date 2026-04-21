@@ -157,10 +157,14 @@ grep -r "nazi2k-cyber" . --include="*.json" --include="*.yml" --include="*.md"
    GitHub → Settings → Password and authentication → Two-factor authentication
    → TOTP 앱(Google Authenticator/Authy) 또는 하드웨어 키
 
-2. SSH 키 감사
+2. SSH 키 감사 ✅ (2026-04-21 Ed25519 키 생성 완료)
    GitHub → Settings → SSH and GPG keys
    → 사용하지 않는 키 즉시 삭제
-   → 신규 Ed25519 키 생성 (RSA 4096 이상 권장)
+   → 신규 Ed25519 키 생성 완료
+     키 이름  : bravecat-studio-dev-ed25519-20260421
+     지문     : SHA256:iW48BezA2OLO9pOCXr/G/twxYu2WixX3ituExxmTAiM
+     공개키   : ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBfG2LHC0ofJxeVrQyqA3fulN9d1zuXUCAaCBF15oB9R dev@bravecat.studio
+     등록 방법: GitHub → Settings → SSH and GPG keys → New SSH key → 위 공개키 붙여넣기
 
 3. Personal Access Token 점검
    GitHub → Settings → Developer settings → Personal access tokens
