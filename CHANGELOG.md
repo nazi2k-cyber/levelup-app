@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.474] - 2026-04-22
+
+### 변경
+- fix(신고관리): 신고누적 0회 버그 수정, 처리이력 영구보존, 세션간 처리완료 상태 유지
+
 ## [1.0.473] - 2026-04-22
 
 ### 변경
