@@ -1,16 +1,15 @@
 // --- Firebase SDK 초기화 ---
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, sendPasswordResetEmail, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, orderBy, limit, updateDoc, arrayUnion, arrayRemove, enableNetwork, disableNetwork } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
-import { getStorage, ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
-import { getRemoteConfig } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-remote-config.js";
-import { getAnalytics, logEvent as fbLogEvent } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app-check.js";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, sendEmailVerification, sendPasswordResetEmail, getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { doc, setDoc, getDoc, deleteDoc, collection, getDocs, query, where, orderBy, limit, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+import { ref, uploadBytesResumable, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+import { logEvent as fbLogEvent } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js";
 import { NetworkMonitor } from './modules/network-monitor.js';
-import { ConversionTracker, initRemoteConfig, getExperimentVariant, init as initConversionTracker } from './modules/conversion-tracker.js';
-import { PerformanceMonitor } from './modules/performance-monitor.js';
+import { ConversionTracker, initRemoteConfig, getExperimentVariant } from './modules/conversion-tracker.js';
+import { bootstrapCoreServices, attachFirestoreNetworkResilience } from './modules/core/bootstrap.js';
+import { getInitialAppState, getWeekStartDate } from './modules/core/app-state.js';
+import { loadNavOrder, initNavDragReorder, wasNavDragJustEnded } from './modules/core/nav-ui.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -18,230 +17,31 @@ if (!self.__FIREBASE_CONFIG) {
 const firebaseConfig = self.__FIREBASE_CONFIG;
 const APP_VERSION = '1.0.483';
 
-const app = initializeApp(firebaseConfig);
+const {
+    app,
+    auth,
+    db,
+    storage,
+    functions,
+    analytics,
+    remoteConfig,
+    messaging,
+    isNativePlatform,
+} = bootstrapCoreServices(firebaseConfig);
 
-// --- Firebase App Check (Phase 2) ---
-// 개발 환경용 디버그 토큰은 firebase-config.js(gitignored)의 appCheckDebugToken 필드에서 주입
-if (firebaseConfig.appCheckDebugToken) {
-    self.FIREBASE_APPCHECK_DEBUG_TOKEN = firebaseConfig.appCheckDebugToken;
-}
-// 네이티브 앱은 Play Integrity로 App Check를 처리하므로 웹 SDK 초기화 생략
-const _isNativeForAppCheck = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-if (!_isNativeForAppCheck && firebaseConfig.appCheckSiteKey) {
-    try {
-        initializeAppCheck(app, {
-            provider: new ReCaptchaV3Provider(firebaseConfig.appCheckSiteKey),
-            isTokenAutoRefreshEnabled: true,
-        });
-    } catch (e) {
-        console.warn('[AppCheck] 초기화 스킵:', e.message);
-    }
-}
-
-NetworkMonitor.init(firebaseConfig.apiKey);
-const auth = getAuth(app);
-const isNativePlatform = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-const db = initializeFirestore(app, {
-    ...(isNativePlatform
-        ? { experimentalForceLongPolling: true }
-        : { experimentalAutoDetectLongPolling: true }),
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-});
-const storage = getStorage(app);
-const functions = getFunctions(app, "asia-northeast3");
-
-// --- Firebase Analytics ---
-let analytics = null;
-try {
-    analytics = getAnalytics(app);
-} catch (e) {
-    console.warn('[Analytics] 초기화 스킵:', e.message);
-}
-
-// --- Firebase Remote Config (A/B 테스트 인프라) ---
-let remoteConfig = null;
-try {
-    remoteConfig = getRemoteConfig(app);
-    remoteConfig.settings.minimumFetchIntervalMillis = 3600000; // 1시간
-    remoteConfig.defaultConfig = {
-        onboarding_variant: 'compact',    // 'legacy' (5단계) | 'compact' (3단계)
-        login_layout: 'social_first',     // 'social_first' | 'email_first'
-    };
-} catch (e) {
-    console.warn('[RemoteConfig] 초기화 스킵:', e.message);
-}
-
-initConversionTracker({ analytics, remoteConfig, auth, db });
-if (analytics) PerformanceMonitor.init(analytics);
-
-// --- Firestore 네트워크 복원력 ---
-// 오프라인→온라인 전환 시 Firestore 네트워크 재연결 (WebChannel 오류 복구)
-window.addEventListener('online', () => {
-    console.log('[Firestore] 네트워크 복구 감지 — enableNetwork 호출');
-    enableNetwork(db).catch(e => console.warn('[Firestore] enableNetwork 실패:', e.message));
-});
-window.addEventListener('offline', () => {
-    console.log('[Firestore] 오프라인 전환 감지 — disableNetwork 호출');
-    disableNetwork(db).catch(e => console.warn('[Firestore] disableNetwork 실패:', e.message));
-});
-
-// Firebase Cloud Messaging 초기화 (웹 환경에서만)
-let messaging = null;
-try {
-    if (!isNativePlatform) {
-        messaging = getMessaging(app);
-    }
-} catch (e) {
-    console.warn('[FCM] Messaging 초기화 스킵:', e.message);
-}
+attachFirestoreNetworkResilience(db);
 
 const googleProvider = new GoogleAuthProvider();
+
 
 // Google Fit: 네이티브 앱 플러그인(Health Connect / Google Fit SDK)만 사용
 // REST API 폴백 제거됨 — 모든 건강 데이터는 네이티브 SDK를 통해 조회
 
 // --- 상태 관리 객체 ---
-function getWeekStartDate() {
-    const today = new Date();
-    const day = today.getDay();
-    const start = new Date(today);
-    start.setDate(today.getDate() - day);
-    return `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`;
-}
-
 let AppState = getInitialAppState();
-
-function getInitialAppState() {
-    return {
-        isLoginMode: true,
-        currentLang: (function(){ try { return localStorage.getItem('lang') || 'ko'; } catch(e) { return 'ko'; } })(),
-        user: {
-            name: "신규 헌터",
-            level: 1,
-            points: 50,
-            stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
-            pendingStats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
-            titleHistory: [ { level: 1, title: { ko: "신규 각성자", en: "New Awakened", ja: "新規覚醒者" } } ],
-            photoURL: null, 
-            friends: [],
-            syncEnabled: false,
-            gpsEnabled: false,
-            pushEnabled: false,
-            fcmToken: null,
-            stepData: { date: "", rewardedSteps: 0, totalSteps: 0 },
-            instaId: "",
-            linkedinId: "",
-            streak: { currentStreak: 0, lastActiveDate: null, multiplier: 1.0, activeDates: [] },
-            nameLastChanged: null,
-            rareTitle: { unlocked: [] },
-            cameraEnabled: false,
-            privateAccount: false,
-            big5: null
-        },
-        quest: {
-            currentDayOfWeek: new Date().getDay(),
-            completedState: Array.from({length: 7}, () => Array(12).fill(false)),
-            weekStart: getWeekStartDate()
-        },
-        social: { mode: 'global', sortCriteria: 'total', users: [], savingsCurrency: '' },
-        dungeon: { lastGeneratedDate: null, slot: 0, stationIdx: 0, maxParticipants: 5, globalParticipants: 0, globalProgress: 0, isJoined: false, hasContributed: false, targetStat: 'str', isCleared: false, bossMaxHP: 5, bossDamageDealt: 0, raidParticipants: [] },
-        diyQuests: { definitions: [], completedToday: {}, lastResetDate: null },
-        questHistory: {},
-        ddays: [],
-        ddayCaption: '',
-        library: { books: [] },
-        movies: { items: [], rewardedIds: [] },
-    };
-}
 
 // --- 앱 초기 로드 ---
 let _initializedUid = null;
-
-// --- 탭 순서 관리 ---
-const DEFAULT_NAV_ORDER = ['status', 'quests', 'dungeon', 'diary', 'reels', 'social', 'settings'];
-
-function loadNavOrder() {
-    const saved = localStorage.getItem('navTabOrder');
-    if (!saved) return;
-    try {
-        const order = JSON.parse(saved);
-        const nav = document.querySelector('nav');
-        if (!nav) return;
-        order.forEach(tabId => {
-            const item = nav.querySelector(`[data-tab="${tabId}"]`);
-            if (item) nav.appendChild(item);
-        });
-    } catch(e) {}
-}
-
-function saveNavOrder() {
-    const order = Array.from(document.querySelectorAll('.nav-item')).map(el => el.dataset.tab);
-    localStorage.setItem('navTabOrder', JSON.stringify(order));
-}
-
-let _navDragJustEnded = false;
-
-function initNavDragReorder() {
-    const nav = document.querySelector('nav');
-    let dragItem = null;
-    let longPressTimer = null;
-    let isDragging = false;
-    let wasMoved = false;
-
-    function onTouchStart(e) {
-        const item = e.currentTarget;
-        longPressTimer = setTimeout(() => {
-            isDragging = true;
-            wasMoved = false;
-            dragItem = item;
-            item.classList.add('nav-dragging');
-            nav.classList.add('nav-reorder-mode');
-            if (navigator.vibrate) navigator.vibrate(50);
-        }, 500);
-    }
-
-    function onTouchMove(e) {
-        if (!isDragging || !dragItem) return;
-        e.preventDefault();
-        wasMoved = true;
-        const touch = e.touches[0];
-        const navRect = nav.getBoundingClientRect();
-        const touchX = touch.clientX - navRect.left;
-        const items = Array.from(nav.querySelectorAll('.nav-item'));
-        const itemWidth = navRect.width / items.length;
-        const targetIndex = Math.max(0, Math.min(items.length - 1, Math.floor(touchX / itemWidth)));
-        const currentIndex = items.indexOf(dragItem);
-        if (targetIndex !== currentIndex) {
-            if (targetIndex > currentIndex) {
-                nav.insertBefore(dragItem, items[targetIndex].nextSibling);
-            } else {
-                nav.insertBefore(dragItem, items[targetIndex]);
-            }
-        }
-    }
-
-    function onTouchEnd() {
-        clearTimeout(longPressTimer);
-        if (isDragging && dragItem) {
-            dragItem.classList.remove('nav-dragging');
-            nav.classList.remove('nav-reorder-mode');
-            if (wasMoved) {
-                saveNavOrder();
-                _navDragJustEnded = true;
-                setTimeout(() => { _navDragJustEnded = false; }, 300);
-            }
-        }
-        isDragging = false;
-        dragItem = null;
-    }
-
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('touchstart', onTouchStart, { passive: true });
-        item.addEventListener('touchmove', onTouchMove, { passive: false });
-        item.addEventListener('touchend', onTouchEnd);
-        item.addEventListener('touchcancel', onTouchEnd);
-    });
-}
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
 const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
@@ -1173,7 +973,7 @@ function bindEvents() {
     });
 
     document.querySelectorAll('.nav-item').forEach(el => {
-        el.addEventListener('click', () => { if (!_navDragJustEnded) switchTab(el.dataset.tab, el); });
+        el.addEventListener('click', () => { if (!wasNavDragJustEnded()) switchTab(el.dataset.tab, el); });
     });
     initNavDragReorder();
     initStatusCardReorder();
