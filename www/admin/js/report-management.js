@@ -89,6 +89,7 @@ async function loadReports() {
     try {
         const result = await callAdmin("screeningListReports");
         _reports = result.reports || [];
+        _processedPostIds = new Set(_reports.filter(r => r.processed).map(r => r.postId));
         tok("Reports", `${_reports.length}개 신고 조회 완료`);
         countEl.textContent = `총 ${_reports.length}개`;
 
@@ -269,8 +270,6 @@ async function deleteReportedPost(sendNotification = false) {
 
     try {
         await callAdmin("screeningDeletePost", { ownerUid, timestamp, sendNotification });
-        // 신고 데이터도 삭제
-        try { await callAdmin("screeningDismissReport", { postId: _selectedReport.postId }); } catch(e) { /* ok */ }
 
         tok("Reports", `포스트 삭제 완료: ${_selectedReport.postId}`);
         resultEl.innerHTML = `<p class="text-success text-sm">포스트 삭제 완료! (삭제 안내 발송 완료)</p>`;

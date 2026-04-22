@@ -962,6 +962,7 @@ async function handleAdminListUsers(request) {
         const reportCountByUid = {};
         for (const rdoc of reportsSnap.docs) {
             const rdata = rdoc.data();
+            if (rdata.processed) continue; // exclude already-processed reports
             const pid = rdata.postId || rdoc.id;
             const rparts = pid.split("_");
             const rOwnerUid = rparts.slice(0, -1).join("_");
@@ -2681,10 +2682,23 @@ async function handleScreeningDeletePost(request) {
     const adminEmail = request.auth.token.email || request.auth.uid;
     console.log(`[screeningDeletePost] Admin ${adminEmail} deleted post ${postId} from user ${ownerUid}`);
 
+    // Increment user's total deletion count (ensures count starts from 1)
+    const prevTotal = data.totalReportCount || 0;
+    const newTotal = prevTotal + 1;
+    await userRef.update({ totalReportCount: newTotal });
+
     if (sendNotification) {
-        const reportCount = data.totalReportCount || 0;
-        await handleSendUserWarning({ ...request, data: { uid: ownerUid, type: "post_deleted", reportCount } });
+        await handleSendUserWarning({ ...request, data: { uid: ownerUid, type: "post_deleted", reportCount: newTotal } });
     }
+
+    // Mark the post_reports doc as processed so history is preserved across sessions
+    try {
+        const postReportRef = db.collection("post_reports").doc(postId);
+        const postReportDoc = await postReportRef.get();
+        if (postReportDoc.exists) {
+            await postReportRef.update({ processed: true, processedAt: Date.now(), processedAction: "deleted" });
+        }
+    } catch (e) { /* report doc may not exist */ }
 
     return { success: true, deletedPostId: postId, remainingPosts: posts.length };
 }
@@ -2733,6 +2747,8 @@ async function handleScreeningListReports(request) {
             reporters: data.reporters || [],
             reportCount: data.reportCount || 0,
             lastReportedAt: data.lastReportedAt || 0,
+            processed: data.processed || false,
+            processedAction: data.processedAction || null,
         });
     }
 
@@ -2750,7 +2766,11 @@ async function handleScreeningDismissReport(request) {
         throw new HttpsError("invalid-argument", "postId는 필수입니다.");
     }
 
-    await db.collection("post_reports").doc(postId).delete();
+    // Mark as processed instead of deleting to preserve history
+    await db.collection("post_reports").doc(postId).set(
+        { processed: true, processedAt: Date.now(), processedAction: "dismissed" },
+        { merge: true }
+    );
 
     const adminEmail = request.auth.token.email || request.auth.uid;
     console.log(`[screeningDismissReport] Admin ${adminEmail} dismissed report for ${postId}`);
