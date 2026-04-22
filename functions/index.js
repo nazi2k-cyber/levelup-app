@@ -2721,6 +2721,7 @@ async function handleScreeningListReports(request) {
         let caption = "";
         let photo = "";
         let ownerName = "";
+        let ownerEmail = "";
 
         try {
             const userDoc = await db.collection("users").doc(ownerUid).get();
@@ -2739,12 +2740,30 @@ async function handleScreeningListReports(request) {
             }
         } catch (e) { /* skip */ }
 
+        try {
+            const authUser = await getAuth().getUser(ownerUid);
+            ownerEmail = authUser.email || "";
+        } catch (_) { /* skip */ }
+
+        const reportersRaw = data.reporters || [];
+        const reporters = await Promise.all(reportersRaw.map(async rep => {
+            let email = "";
+            if (rep.uid) {
+                try {
+                    const authUser = await getAuth().getUser(rep.uid);
+                    email = authUser.email || "";
+                } catch (_) { /* skip */ }
+            }
+            return { ...rep, email };
+        }));
+
         reports.push({
             postId: postId,
             ownerName: ownerName,
+            ownerEmail: ownerEmail,
             caption: caption,
             photo: photo,
-            reporters: data.reporters || [],
+            reporters: reporters,
             reportCount: data.reportCount || 0,
             lastReportedAt: data.lastReportedAt || 0,
             processed: data.processed || false,
