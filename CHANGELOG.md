@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.477] - 2026-04-22
+
+### 변경
+- feat: 일괄 백업 세션 관리 및 전체 롤백 기능 추가
+
 ## [1.0.476] - 2026-04-22
 
 ### 변경
