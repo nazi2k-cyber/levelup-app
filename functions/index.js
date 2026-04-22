@@ -1137,11 +1137,11 @@ async function handleGetBackupSchedulerConfig(request) {
     const snap = await db.collection("admin_config").doc("backup_scheduler").get();
     const DEFAULT = { enabled: false, lastRun: null, lastCount: 0 };
     if (!snap.exists) {
-        return { config: { daily: { ...DEFAULT }, monthly: { ...DEFAULT }, quarterly: { ...DEFAULT }, yearly: { ...DEFAULT } } };
+        return { config: { daily: { ...DEFAULT }, weekly: { ...DEFAULT }, monthly: { ...DEFAULT }, quarterly: { ...DEFAULT }, yearly: { ...DEFAULT } } };
     }
     const data = snap.data();
     const config = {};
-    for (const p of ["daily", "monthly", "quarterly", "yearly"]) {
+    for (const p of ["daily", "weekly", "monthly", "quarterly", "yearly"]) {
         config[p] = {
             enabled: data[p]?.enabled || false,
             lastRun: data[p]?.lastRun?.toDate?.()?.toISOString() || null,
@@ -1160,7 +1160,7 @@ async function handleUpdateBackupSchedulerConfig(request) {
     const snap = await db.collection("admin_config").doc("backup_scheduler").get();
     const current = snap.exists ? snap.data() : {};
     const update = { updatedAt: FieldValue.serverTimestamp(), updatedBy: request.auth.token.email || request.auth.uid };
-    for (const p of ["daily", "monthly", "quarterly", "yearly"]) {
+    for (const p of ["daily", "weekly", "monthly", "quarterly", "yearly"]) {
         if (config[p] !== undefined) {
             update[p] = { ...(current[p] || {}), enabled: !!config[p].enabled };
         }
@@ -4342,6 +4342,7 @@ exports.auditAdminAccounts = securityScheduler.auditAdminAccounts;
 
 // ─── 백업 스케줄러 ───
 exports.scheduledBackupDaily     = backupScheduler.scheduledBackupDaily;
+exports.scheduledBackupWeekly    = backupScheduler.scheduledBackupWeekly;
 exports.scheduledBackupMonthly   = backupScheduler.scheduledBackupMonthly;
 exports.scheduledBackupQuarterly = backupScheduler.scheduledBackupQuarterly;
 exports.scheduledBackupYearly    = backupScheduler.scheduledBackupYearly;

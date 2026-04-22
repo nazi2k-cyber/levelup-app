@@ -2,7 +2,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 
 const scheduleOpts = { region: "asia-northeast3", timeZone: "Asia/Seoul" };
-const PERIOD_LABELS = { daily: "일별", monthly: "월별", quarterly: "분기별", yearly: "연도별" };
+const PERIOD_LABELS = { daily: "일별", weekly: "주별", monthly: "월별", quarterly: "분기별", yearly: "연도별" };
 
 function makeSessionId() {
     return `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -66,6 +66,11 @@ async function runScheduledBackup(period) {
 exports.scheduledBackupDaily = onSchedule(
     { ...scheduleOpts, schedule: "0 2 * * *" },
     () => runScheduledBackup("daily")
+);
+
+exports.scheduledBackupWeekly = onSchedule(
+    { ...scheduleOpts, schedule: "0 4 * * 0" },
+    () => runScheduledBackup("weekly")
 );
 
 exports.scheduledBackupMonthly = onSchedule(

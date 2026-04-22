@@ -533,6 +533,7 @@ async function batchBackupAllUsers() {
 
 const SCHEDULER_PERIOD_LABELS = {
     daily:     "일별 (매일 02:00 KST)",
+    weekly:    "주별 (매주 일요일 04:00 KST)",
     monthly:   "월별 (매월 1일 03:00 KST)",
     quarterly: "분기별 (분기 시작일 03:00 KST)",
     yearly:    "연도별 (1월 1일 03:00 KST)"
