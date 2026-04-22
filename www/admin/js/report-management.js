@@ -152,6 +152,7 @@ function renderReportTable(reports) {
         <thead><tr>
             <th>사진</th>
             <th>작성자</th>
+            <th>작성자 이메일</th>
             <th>캡션</th>
             <th>신고 사유</th>
             <th>신고 횟수</th>
@@ -182,6 +183,7 @@ function renderReportTable(reports) {
         html += `<tr class="rpt-row" data-post-id="${escHtml(r.postId)}" style="cursor:pointer;${processedStyle}">
             <td>${thumbHtml}</td>
             <td>${escHtml(r.ownerName || "—")}${processedBadge}</td>
+            <td class="text-sub text-sm">${escHtml(r.ownerEmail || "—")}</td>
             <td class="text-sm">${captionPreview || '<span class="text-sub">—</span>'}</td>
             <td class="text-sm">${latestReason}</td>
             <td>${countBadge}</td>
@@ -214,6 +216,7 @@ function selectReport(postId) {
         const dt = rep.timestamp ? new Date(rep.timestamp).toLocaleString("ko-KR") : "—";
         return `<div style="padding:6px 0; border-bottom:1px solid var(--border);">
             <span class="text-sm" style="font-weight:600;">${escHtml(rep.name)}</span>
+            ${rep.email ? `<span class="text-sub text-sm" style="margin-left:6px;">${escHtml(rep.email)}</span>` : ''}
             <span class="text-sub text-sm" style="margin-left:8px;">${dt}</span>
             ${rep.reason ? `<div class="text-sm" style="margin-top:4px; color:var(--warning);"><span style="background:rgba(255,193,7,0.12); padding:2px 8px; border-radius:4px;">📋 ${escHtml(rep.reason)}</span></div>` : ''}
         </div>`;
@@ -223,6 +226,7 @@ function selectReport(postId) {
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-value text-sm">${_selectedReport.reportCount || 0}</div><div class="stat-label">신고 횟수</div></div>
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(_selectedReport.ownerName || "—")}</div><div class="stat-label">작성자</div></div>
+            ${_selectedReport.ownerEmail ? `<div class="stat-card"><div class="stat-value text-sm" style="font-size:0.75rem;">${escHtml(_selectedReport.ownerEmail)}</div><div class="stat-label">작성자 이메일</div></div>` : ''}
         </div>
         <p class="text-sub text-sm">Post ID: ${escHtml(_selectedReport.postId)}</p>
         ${_selectedReport.photo ? `<div style="margin-top:12px;">
