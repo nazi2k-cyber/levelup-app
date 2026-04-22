@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.480] - 2026-04-22
+
+### 변경
+- feat: Firebase 오류 메시지 유저 친화적 팝업으로 개선
+
 ## [1.0.479] - 2026-04-22
 
 ### 변경
