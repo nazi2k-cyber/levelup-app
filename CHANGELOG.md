@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.484] - 2026-04-22
+
+### 변경
+- refactor: implement phase1 core shell module split
+
 ## [1.0.483] - 2026-04-22
 
 ### 변경
