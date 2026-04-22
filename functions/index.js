@@ -9,6 +9,7 @@ const { getAuth } = require("firebase-admin/auth");
 const { checkRateLimit } = require("./rateLimiter");
 const securityTriggers = require("./securityTriggers");
 const securityScheduler = require("./securityScheduler");
+const backupScheduler = require("./backupScheduler");
 const textScreening = require("./textScreening");
 
 initializeApp();
@@ -1130,6 +1131,78 @@ async function handleRollbackUserData(request) {
     return { success: true };
 }
 
+// 백업 스케쥴러 설정 조회
+async function handleGetBackupSchedulerConfig(request) {
+    await assertAdmin(request);
+    const snap = await db.collection("admin_config").doc("backup_scheduler").get();
+    const DEFAULT = { enabled: false, lastRun: null, lastCount: 0 };
+    if (!snap.exists) {
+        return { config: { daily: { ...DEFAULT }, monthly: { ...DEFAULT }, quarterly: { ...DEFAULT }, yearly: { ...DEFAULT } } };
+    }
+    const data = snap.data();
+    const config = {};
+    for (const p of ["daily", "monthly", "quarterly", "yearly"]) {
+        config[p] = {
+            enabled: data[p]?.enabled || false,
+            lastRun: data[p]?.lastRun?.toDate?.()?.toISOString() || null,
+            lastCount: data[p]?.lastCount || 0
+        };
+    }
+    return { config };
+}
+
+// 백업 스케쥴러 설정 저장
+async function handleUpdateBackupSchedulerConfig(request) {
+    await assertAdmin(request);
+    const { config } = request.data || {};
+    if (!config || typeof config !== "object") throw new HttpsError("invalid-argument", "config는 필수입니다.");
+    const { FieldValue } = require("firebase-admin/firestore");
+    const snap = await db.collection("admin_config").doc("backup_scheduler").get();
+    const current = snap.exists ? snap.data() : {};
+    const update = { updatedAt: FieldValue.serverTimestamp(), updatedBy: request.auth.token.email || request.auth.uid };
+    for (const p of ["daily", "monthly", "quarterly", "yearly"]) {
+        if (config[p] !== undefined) {
+            update[p] = { ...(current[p] || {}), enabled: !!config[p].enabled };
+        }
+    }
+    await db.collection("admin_config").doc("backup_scheduler").set(update, { merge: true });
+    console.log(`[updateBackupSchedulerConfig] ${request.auth.token.email}`);
+    return { success: true };
+}
+
+// 전체 유저 수동 일괄 백업
+async function handleBatchBackupAllUsers(request) {
+    await assertAdmin(request);
+    const { memo } = request.data || {};
+    const usersSnap = await db.collection("users").get();
+    let batch = db.batch();
+    let batchCount = 0;
+    let count = 0;
+    const memoStr = String(memo || "수동 일괄 백업");
+    const now = new Date();
+
+    for (const userDoc of usersSnap.docs) {
+        const ref = db.collection("user_backups").doc();
+        batch.set(ref, {
+            uid: userDoc.id,
+            data: userDoc.data(),
+            memo: memoStr,
+            createdAt: now,
+            createdBy: request.auth.token.email || request.auth.uid
+        });
+        batchCount++;
+        count++;
+        if (batchCount === 400) {
+            await batch.commit();
+            batch = db.batch();
+            batchCount = 0;
+        }
+    }
+    if (batchCount > 0) await batch.commit();
+    console.log(`[batchBackupAllUsers] ${count}명 by ${request.auth.token.email}`);
+    return { success: true, count };
+}
+
 // 비밀번호 재설정 링크 생성
 async function handleResetPassword(request) {
     await assertAdmin(request);
@@ -1922,6 +1995,12 @@ exports.ping = onCall(pingCallableOpts, async (request) => {
                     return await handleResetUserData(request);
                 case "rollbackUserData":
                     return await handleRollbackUserData(request);
+                case "getBackupSchedulerConfig":
+                    return await handleGetBackupSchedulerConfig(request);
+                case "updateBackupSchedulerConfig":
+                    return await handleUpdateBackupSchedulerConfig(request);
+                case "batchBackupAllUsers":
+                    return await handleBatchBackupAllUsers(request);
                 case "resetPassword":
                     return await handleResetPassword(request);
                 case "disableAccount":
@@ -4132,6 +4211,12 @@ exports.onAdminClaimSet = securityTriggers.onAdminClaimSet;
 exports.detectAnomalousPoints = securityScheduler.detectAnomalousPoints;
 exports.detectBruteForce = securityScheduler.detectBruteForce;
 exports.auditAdminAccounts = securityScheduler.auditAdminAccounts;
+
+// ─── 백업 스케줄러 ───
+exports.scheduledBackupDaily     = backupScheduler.scheduledBackupDaily;
+exports.scheduledBackupMonthly   = backupScheduler.scheduledBackupMonthly;
+exports.scheduledBackupQuarterly = backupScheduler.scheduledBackupQuarterly;
+exports.scheduledBackupYearly    = backupScheduler.scheduledBackupYearly;
 
 // ─── 보안 알림 조회 (어드민 대시보드용) ───
 exports.getSecurityAlerts = onCall(adminCallableOpts, async (request) => {

@@ -61,6 +61,29 @@ function render() {
             </div>
         </div>
 
+        <!-- 데이터 일괄 백업 -->
+        <div class="card">
+            <h2>데이터 일괄 백업</h2>
+            <p class="text-sub text-sm mb-8">전체 유저 데이터를 즉시 백업하거나, 자동 백업 주기를 설정합니다.</p>
+
+            <div style="border-bottom:1px solid var(--border); padding-bottom:16px; margin-bottom:16px;">
+                <h3 class="text-sm" style="margin-bottom:8px; font-weight:600;">수동 일괄 백업</h3>
+                <button class="btn btn-outline btn-sm" id="btn-batch-backup">전체 유저 즉시 백업</button>
+                <div id="batch-backup-result" style="margin-top:8px;"></div>
+            </div>
+
+            <div>
+                <h3 class="text-sm" style="margin-bottom:8px; font-weight:600;">자동 백업 스케쥴러</h3>
+                <div id="backup-scheduler-panel">
+                    <p class="text-sub text-sm">스케쥴러 상태를 불러오려면 아래 버튼을 누르세요.</p>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-sm" id="btn-load-scheduler">스케쥴러 상태 조회</button>
+                    <button class="btn btn-outline btn-sm" id="btn-save-scheduler" style="display:none;">설정 저장</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 전체 초기화 -->
         <div class="card">
             <h2>전체 유저 데이터 초기화</h2>
@@ -79,6 +102,9 @@ function render() {
     document.getElementById("btn-toggle-disable").addEventListener("click", toggleDisable);
     document.getElementById("btn-delete-account").addEventListener("click", deleteAccount);
     document.getElementById("btn-reset-all").addEventListener("click", resetAllUsers);
+    document.getElementById("btn-batch-backup").addEventListener("click", batchBackupAllUsers);
+    document.getElementById("btn-load-scheduler").addEventListener("click", loadSchedulerConfig);
+    document.getElementById("btn-save-scheduler").addEventListener("click", saveSchedulerConfig);
 }
 
 async function loadUsers() {
@@ -406,6 +432,77 @@ async function deleteAccount() {
     } catch (e) {
         terror("UserMgmt", "계정 삭제 실패: " + e.message);
         alert("계정 삭제 실패: " + e.message);
+    }
+}
+
+async function batchBackupAllUsers() {
+    const memo = prompt("백업 메모 (선택사항):", "수동 일괄 백업");
+    if (memo === null) return;
+    const resultEl = document.getElementById("batch-backup-result");
+    resultEl.innerHTML = '<p class="text-sub text-sm">백업 진행 중...</p>';
+    tlog("UserMgmt", "전체 유저 일괄 백업 시작...");
+    try {
+        const result = await callAdmin("batchBackupAllUsers", { memo });
+        tok("UserMgmt", `일괄 백업 완료: ${result.count}명`);
+        resultEl.innerHTML = `<p class="text-success text-sm">✓ ${result.count}명 백업 완료</p>`;
+    } catch (e) {
+        terror("UserMgmt", "일괄 백업 실패: " + e.message);
+        resultEl.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
+    }
+}
+
+const SCHEDULER_PERIOD_LABELS = {
+    daily:     "일별 (매일 02:00 KST)",
+    monthly:   "월별 (매월 1일 03:00 KST)",
+    quarterly: "분기별 (분기 시작일 03:00 KST)",
+    yearly:    "연도별 (1월 1일 03:00 KST)"
+};
+
+async function loadSchedulerConfig() {
+    const panel = document.getElementById("backup-scheduler-panel");
+    panel.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
+    tlog("UserMgmt", "스케쥴러 설정 로딩...");
+    try {
+        const result = await callAdmin("getBackupSchedulerConfig");
+        const cfg = result.config;
+        let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        for (const [period, label] of Object.entries(SCHEDULER_PERIOD_LABELS)) {
+            const info = cfg[period] || { enabled: false, lastRun: null, lastCount: 0 };
+            const lastRunStr = info.lastRun ? new Date(info.lastRun).toLocaleString("ko-KR") : "없음";
+            const lastCountStr = info.lastCount ? `, ${info.lastCount}명` : "";
+            html += `<label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex-wrap:wrap;">
+                <input type="checkbox" class="scheduler-toggle" data-period="${period}" ${info.enabled ? "checked" : ""}>
+                <span class="text-sm">${label}</span>
+                <span class="text-sub text-sm">(최근 실행: ${escHtml(lastRunStr)}${lastCountStr})</span>
+            </label>`;
+        }
+        html += '</div>';
+        panel.innerHTML = html;
+        document.getElementById("btn-save-scheduler").style.display = "";
+        tok("UserMgmt", "스케쥴러 설정 로드 완료");
+    } catch (e) {
+        terror("UserMgmt", "스케쥴러 설정 로드 실패: " + e.message);
+        panel.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
+    }
+}
+
+async function saveSchedulerConfig() {
+    const toggles = document.querySelectorAll(".scheduler-toggle");
+    if (toggles.length === 0) {
+        alert("먼저 스케쥴러 상태를 조회해주세요.");
+        return;
+    }
+    const config = {};
+    toggles.forEach(t => { config[t.dataset.period] = { enabled: t.checked }; });
+    tlog("UserMgmt", "스케쥴러 설정 저장 중...");
+    try {
+        await callAdmin("updateBackupSchedulerConfig", { config });
+        tok("UserMgmt", "스케쥴러 설정 저장 완료");
+        alert("스케쥴러 설정이 저장되었습니다.");
+        loadSchedulerConfig();
+    } catch (e) {
+        terror("UserMgmt", "스케쥴러 설정 저장 실패: " + e.message);
+        alert("저장 실패: " + e.message);
     }
 }
 
