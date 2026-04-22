@@ -5,6 +5,14 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.470] - 2026-04-21
+
+### 변경
+- fix: prevent MESSAGES mutation and verify translation flow in handleSendUserWarning
+- fix: update post_deleted notification body text per spec
+- refactor: remove auto account_warning at 3 reports — warnings now admin-only
+- feat: include accumulated report count and account deletion warning in post_deleted notification
+
 ## [1.0.469] - 2026-04-21
 
 ### 변경
