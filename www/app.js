@@ -4583,6 +4583,61 @@ function validatePassword(pw) {
     return pw.length >= 8 && /[A-Z]/.test(pw) && (pw.match(/[^A-Za-z0-9]/g) || []).length >= 2;
 }
 
+function getFirebaseErrorMessage(error, lang) {
+    const t = i18n[lang || AppState.currentLang || 'ko'] || i18n.ko;
+    let code = error.code || '';
+    if (!code && error.message) {
+        const m = error.message.match(/\(([a-z\/-]+)\)/);
+        if (m) code = m[1];
+    }
+    const codeMap = {
+        'auth/user-disabled': 'fb_err_user_disabled',
+        'auth/user-not-found': 'fb_err_user_not_found',
+        'auth/wrong-password': 'fb_err_wrong_password',
+        'auth/invalid-credential': 'fb_err_invalid_credential',
+        'auth/email-already-in-use': 'fb_err_email_in_use',
+        'auth/weak-password': 'fb_err_weak_password',
+        'auth/network-request-failed': 'fb_err_network',
+        'auth/too-many-requests': 'fb_err_too_many_requests',
+        'auth/popup-blocked': 'fb_err_popup_blocked',
+        'auth/account-exists-with-different-credential': 'fb_err_account_exists',
+        'auth/requires-recent-login': 'fb_err_requires_recent_login',
+        'auth/unauthorized-domain': 'fb_err_unauthorized_domain',
+        'auth/internal-error': 'fb_err_internal',
+        'auth/invalid-email': 'fb_err_invalid_email',
+        'auth/operation-not-allowed': 'fb_err_operation_not_allowed',
+        'auth/expired-action-code': 'fb_err_expired_action_code',
+        'auth/invalid-action-code': 'fb_err_invalid_action_code',
+        'auth/user-token-expired': 'fb_err_user_token_expired',
+    };
+    const key = codeMap[code];
+    if (key && t[key]) return t[key];
+    return t.fb_err_unknown || '오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+}
+
+function showErrorModal(title, message) {
+    const existing = document.getElementById('_fb-error-modal');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = '_fb-error-modal';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `<div style="background:var(--panel-bg,#1a1a2e);border:1px solid #ff4757;padding:24px 20px;border-radius:12px;width:85%;max-width:380px;display:flex;flex-direction:column;gap:14px;box-shadow:0 0 24px rgba(255,71,87,0.25);">
+        <div style="font-size:1.05rem;font-weight:bold;color:#ff4757;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,71,87,0.25);padding-bottom:10px;">
+            &#9888; ${title}
+        </div>
+        <div style="color:var(--text-main,#dde);font-size:0.92rem;line-height:1.6;word-break:keep-all;">
+            ${message}
+        </div>
+        <button id="_fb-error-ok" style="align-self:flex-end;background:rgba(255,71,87,0.12);border:1px solid #ff4757;color:#ff4757;padding:8px 28px;border-radius:6px;cursor:pointer;font-size:0.9rem;font-weight:bold;transition:background 0.15s;">OK</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    const close = () => overlay.remove();
+    overlay.querySelector('#_fb-error-ok').addEventListener('click', close);
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+    const escHandler = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
+    document.addEventListener('keydown', escHandler);
+}
+
 function validateEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -4612,7 +4667,7 @@ async function simulateLogin() {
             await signInWithEmailAndPassword(auth, email, pw);
             ConversionTracker.loginComplete('email');
         }
-    } catch (e) { alert((i18n[AppState.currentLang]?.auth_error || "인증 오류: ") + e.message); }
+    } catch (e) { const _t = i18n[AppState.currentLang] || i18n.ko; showErrorModal(_t.err_modal_auth || "인증 오류", getFirebaseErrorMessage(e, AppState.currentLang)); }
     finally { const t = i18n[AppState.currentLang] || {}; btn.innerText = AppState.isLoginMode ? (t.btn_login_submit || "시스템 접속") : (t.btn_signup_submit || "회원가입"); btn.disabled = false; }
 }
 
@@ -4633,7 +4688,7 @@ async function handleForgotPassword() {
         alert(i18n[lang]?.forgot_pw_sent || "비밀번호 재설정 메일이 발송되었습니다. 받은편지함을 확인해주세요.");
     } catch (e) {
         AppLogger.error('[Auth] 비밀번호 재설정 실패: ' + e.message);
-        alert(i18n[lang]?.forgot_pw_error || "비밀번호 재설정 메일 발송에 실패했습니다: " + e.message);
+        showErrorModal((i18n[lang] || i18n.ko).err_modal_pw_reset || "비밀번호 재설정 오류", getFirebaseErrorMessage(e, lang));
     }
 }
 
@@ -4704,7 +4759,7 @@ async function simulateGoogleLogin() {
                     '3. GOOGLE_SERVICES_JSON 시크릿 업데이트\n' +
                     '4. GitHub Actions에서 APK 재빌드 후 재설치';
             }
-            alert((i18n[AppState.currentLang]?.google_login_fail || "Google 로그인 실패:\n") + errMsg);
+            showErrorModal((i18n[AppState.currentLang] || i18n.ko).err_modal_google || "Google 로그인 오류", getFirebaseErrorMessage(e, AppState.currentLang));
         }
     } else {
         // ── 웹 브라우저: 기존 Popup 방식 유지 ──
@@ -4713,7 +4768,7 @@ async function simulateGoogleLogin() {
             ConversionTracker.loginComplete('google');
         } catch (e) {
             console.error("웹 구글 로그인 실패:", e);
-            alert((i18n[AppState.currentLang]?.google_login_fail || "Google 로그인 실패:\n") + e.message);
+            showErrorModal((i18n[AppState.currentLang] || i18n.ko).err_modal_google || "Google 로그인 오류", getFirebaseErrorMessage(e, AppState.currentLang));
         }
     }
 }
@@ -4783,7 +4838,7 @@ async function deleteMyAccount() {
         }
     } catch (e) {
         AppLogger.error('[Auth] 계정 삭제 실패: ' + e.message);
-        alert((t.del_fail || "계정 삭제에 실패했습니다.") + "\n" + e.message);
+        showErrorModal(t.err_modal_delete || "계정 삭제 오류", getFirebaseErrorMessage(e, AppState.currentLang));
         const btnDelete = document.getElementById('btn-delete-account');
         if (btnDelete) {
             btnDelete.disabled = false;
@@ -4852,7 +4907,7 @@ async function resendVerificationEmail() {
         await fbSignOut(auth);
         alert(i18n[lang]?.verify_resent || "인증 메일이 재발송되었습니다.");
     } catch (e) {
-        alert((i18n[AppState.currentLang]?.general_error || "오류: ") + e.message);
+        showErrorModal((i18n[AppState.currentLang] || i18n.ko).err_modal_verify || "이메일 인증 오류", getFirebaseErrorMessage(e, AppState.currentLang));
     } finally {
         btn.disabled = false;
     }
