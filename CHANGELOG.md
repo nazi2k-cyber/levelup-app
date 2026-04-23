@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.521] - 2026-04-23
+
+### 변경
+- fix: 네이티브 광고 어댑터 메서드 반환값 undefined 시 TypeError 수정
+
 ## [1.0.520] - 2026-04-23
 
 ### 변경
