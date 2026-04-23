@@ -51,6 +51,7 @@
     let _nativeAdUnavailableLogged = false;
     let _nativeAdMissingCount = 0;
     let _nativeAdLoadFailureCount = 0;
+    let _nativeAdUsingBannerFallback = false;
 
     // 모달 오버레이 시 광고 일시 숨김 플래그
     let _adsHiddenForModal = false;

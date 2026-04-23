@@ -5,6 +5,21 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.518] - 2026-04-23
+
+### 변경
+- Retry native adapter detection before disabling native ads
+
+## [1.0.517] - 2026-04-23
+
+### 변경
+- Stop banner fallback when native adapter is unavailable
+
+## [1.0.516] - 2026-04-23
+
+### 변경
+- Fix native ad reload visibility and fallback state handling
+
 ## [1.0.515] - 2026-04-23
 
 ### 변경
