@@ -75,6 +75,7 @@ path = Path(sys.argv[1])
 text = path.read_text()
 
 imports = [
+    'import android.os.Bundle;',
     'import com.levelup.reboot.plugins.AppSettingsPlugin;',
     'import com.levelup.reboot.plugins.ClipboardPlugin;',
     'import com.levelup.reboot.plugins.FCMPlugin;',
@@ -101,12 +102,22 @@ for imp in imports:
         )
 
 # onCreate 블록 보강
-if 'public void onCreate(Bundle savedInstanceState)' in text:
+oncreate_sig = 'public void onCreate(Bundle savedInstanceState)'
+if oncreate_sig in text:
     for line in registers:
         if line not in text:
             marker = '        super.onCreate(savedInstanceState);\n'
             if marker in text:
                 text = text.replace(marker, marker + line + '\n', 1)
+else:
+    class_close = text.rfind('}')
+    if class_close != -1:
+        method_body = '\n\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n'
+        method_body += '\n'.join(registers) + '\n'
+        method_body += '    }\n'
+        text = text[:class_close] + method_body + text[class_close:]
+    else:
+        raise RuntimeError('MainActivity.java class closing brace not found')
 
 path.write_text(text)
 print('MainActivity plugin registration ensured')
