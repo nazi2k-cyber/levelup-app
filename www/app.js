@@ -16,6 +16,7 @@ import { createQuestStatsModule } from './modules/domains/quest-stats.js';
 import { createAuthProfileModule } from './modules/domains/auth-profile.js';
 import { createPlannerDomainModule } from './modules/domains/planner.js';
 import { createPermissionService, PERMISSION_TYPES } from './modules/device/permission-service.js';
+import { createPushService } from './modules/device/push-service.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -50,6 +51,13 @@ const googleProvider = new GoogleAuthProvider();
 // --- 상태 관리 객체 ---
 let AppState = getInitialAppState();
 let permissionService = null;
+const pushService = createPushService({
+    getAppState: () => AppState,
+    saveUserData: () => saveUserData(),
+    getCurrentLang: () => AppState.currentLang,
+    i18n,
+    AppLogger,
+});
 
 function getPermissionService() {
     if (!permissionService) {
@@ -746,6 +754,7 @@ const onboardingDomain = createOnboardingModule({
     changeLanguage,
     showPermissionPrompts,
     ConversionTracker,
+    consumePendingPermissionPrompt: () => pushService.consumePendingPermissionPrompt(),
 });
 const ONBOARDING_STORAGE_KEY = onboardingDomain.getStorageKey();
 
@@ -777,6 +786,7 @@ const authProfileDomain = createAuthProfileModule({
     initPushNotifications,
     processPendingNotification,
     showPermissionPrompts,
+    markPermissionPromptPending: () => pushService.markPermissionPromptPending(),
     onboardingStorageKey: ONBOARDING_STORAGE_KEY,
     showOnboardingGuide,
     drawRadarChartForUser,
@@ -5920,14 +5930,10 @@ async function showPermissionPrompts() {
             if (status.receive !== 'granted') {
                 const token = await requestNativePushPermission();
                 if (token) {
-                    AppState.user.pushEnabled = true;
-                    AppState.user.fcmToken = token;
-                    document.getElementById('push-toggle').checked = true;
+                    const pushToggle = document.getElementById('push-toggle');
                     const statusDiv = document.getElementById('push-status');
-                    statusDiv.style.display = 'flex';
-                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].push_on || '푸시 알림 활성화됨'}</span>`;
+                    pushService.applyPushEnabled({ token, pushToggle, statusDiv });
                     await setupNativePushListeners();
-                    saveUserData();
                 }
             }
         } catch (e) {
@@ -6553,11 +6559,9 @@ async function initPushNotifications() {
     const pushToggle = document.getElementById('push-toggle');
     if (!pushToggle) return;
 
-    // 저장된 상태 복원
-    pushToggle.checked = AppState.user.pushEnabled;
-
     const statusDiv = document.getElementById('push-status');
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    pushService.syncToggleElement(pushToggle);
 
     // 이미 활성화된 상태라면 토큰 갱신 및 메시지 리스너 설정
     if (AppState.user.pushEnabled) {
@@ -6582,10 +6586,7 @@ async function initPushNotifications() {
                 }
             } else {
                 // 토큰 획득 실패 — 푸시 비활성화
-                AppState.user.pushEnabled = false;
-                AppState.user.fcmToken = null;
-                pushToggle.checked = false;
-                saveUserData();
+                pushService.applyPushDisabled(pushToggle, statusDiv);
                 if (window.AppLogger) AppLogger.warn('[FCM] 시작 시 토큰 획득 실패, 푸시 비활성화');
             }
         } catch (e) {
@@ -6593,8 +6594,7 @@ async function initPushNotifications() {
         }
 
         // 레거시 토픽 → 언어별 토픽 마이그레이션 (1회 실행)
-        const migrated = localStorage.getItem('push_topic_v2');
-        if (!migrated && isNative) {
+        if (isNative && pushService.shouldMigrateNativeTopics()) {
             const cap = window.Capacitor;
             if (cap && cap.Plugins && cap.Plugins.FCMPlugin) {
                 try { await cap.Plugins.FCMPlugin.unsubscribeTopic({ topic: 'raid_alerts' }); } catch(e) {}
@@ -6602,35 +6602,24 @@ async function initPushNotifications() {
                 await subscribeNativeTopics();
                 if (window.AppLogger) AppLogger.info('[FCM] 레거시 토픽 → 언어별 토픽 마이그레이션 완료');
             }
-            try { localStorage.setItem('push_topic_v2', '1'); } catch(e) {}
-        }
-
-        if (statusDiv) {
-            statusDiv.style.display = 'flex';
-            const lang = i18n[AppState.currentLang];
-            if (AppState.user.pushEnabled) {
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
-            } else {
-                statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
-            }
+            pushService.markNativeTopicsMigrated();
         }
     }
+    pushService.renderPushStatus(statusDiv);
 }
 
 /** 푸시 알림 토글 핸들러 */
 async function togglePushNotificationsInternal() {
     const pushToggle = document.getElementById('push-toggle');
+    if (!pushToggle) return;
     const isChecked = pushToggle.checked;
     const statusDiv = document.getElementById('push-status');
     const lang = i18n[AppState.currentLang];
-    statusDiv.style.display = 'flex';
+    if (statusDiv) statusDiv.style.display = 'flex';
 
     if (!isChecked) {
         // 푸시 알림 비활성화
-        AppState.user.pushEnabled = false;
-        AppState.user.fcmToken = null;
-        saveUserData();
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.push_off || '푸시 알림 중지됨'}</span>`;
+        pushService.applyPushDisabled(pushToggle, statusDiv);
         if (window.AppLogger) AppLogger.info('[FCM] 푸시 알림 비활성화');
 
         // 네이티브: 토픽 구독 해제 및 OS 권한 해제 안내
@@ -6646,7 +6635,7 @@ async function togglePushNotificationsInternal() {
     }
 
     // 푸시 알림 활성화 시도
-    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.push_requesting || '알림 권한 요청 중...'}</span>`;
+    pushService.setRequestingStatus(statusDiv);
 
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
@@ -6661,16 +6650,13 @@ async function togglePushNotificationsInternal() {
 
         if (!token) {
             pushToggle.checked = false;
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_denied || '알림 권한이 거부되었습니다.'}</span>`;
+            pushService.setDeniedStatus(statusDiv);
             return;
         }
 
-        AppState.user.pushEnabled = true;
-        AppState.user.fcmToken = token;
-        saveUserData();
+        pushService.applyPushEnabled({ token, pushToggle, statusDiv });
 
         if (window.AppLogger) AppLogger.info('[FCM] 토큰 등록 완료: ' + token.substring(0, 20) + '...');
-        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.push_on || '푸시 알림 활성화됨'}</span>`;
 
         // 메시지 리스너 설정
         if (isNative) {
@@ -6681,7 +6667,7 @@ async function togglePushNotificationsInternal() {
     } catch (e) {
         if (window.AppLogger) AppLogger.error('[FCM] 푸시 알림 설정 실패: ' + (e.message || JSON.stringify(e)));
         pushToggle.checked = false;
-        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.push_err || '푸시 알림 설정 실패'}</span>`;
+        pushService.setErrorStatus(statusDiv);
     }
 }
 

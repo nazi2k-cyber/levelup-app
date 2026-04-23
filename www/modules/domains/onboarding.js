@@ -1,4 +1,4 @@
-export function createOnboardingModule({ AppState, changeLanguage, showPermissionPrompts, ConversionTracker }) {
+export function createOnboardingModule({ AppState, changeLanguage, showPermissionPrompts, ConversionTracker, consumePendingPermissionPrompt }) {
     const ONBOARDING_STORAGE_KEY = 'levelup_onboarding_seen';
     const ONBOARDING_TOTAL_SLIDES = 7;
     let currentSlide = 0;
@@ -45,7 +45,10 @@ export function createOnboardingModule({ AppState, changeLanguage, showPermissio
         const guide = document.getElementById('onboarding-guide');
         if (guide) guide.classList.add('d-none');
         localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
-        if (window._pendingPermissionPrompts) {
+        const shouldShowPermissionPrompts = typeof consumePendingPermissionPrompt === 'function'
+            ? consumePendingPermissionPrompt()
+            : !!window._pendingPermissionPrompts;
+        if (shouldShowPermissionPrompts) {
             window._pendingPermissionPrompts = false;
             setTimeout(() => showPermissionPrompts(), 300);
         }
