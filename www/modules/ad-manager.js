@@ -67,8 +67,7 @@
     function _i18n() { return window.i18n; }
     function _getNativeAdAdapter() {
         const plugins = window?.Capacitor?.Plugins || {};
-        const nativePlugin = plugins.NativeAd
-            || (window?.Capacitor?.registerPlugin ? window.Capacitor.registerPlugin('NativeAd') : null);
+        const nativePlugin = plugins.NativeAd;
         if (nativePlugin && typeof nativePlugin.loadAd === 'function') {
             return {
                 provider: 'NativeAd',
@@ -773,7 +772,11 @@
     // --- 네이티브 광고 ---
     async function loadNativeAd(tabId) {
         if (!_isNative()) return;
-        if (_nativeAdDisabled) return;
+        if (_nativeAdDisabled) {
+            const placeholder = document.getElementById('native-ad-placeholder-' + tabId);
+            if (placeholder) placeholder.style.display = 'none';
+            return;
+        }
 
         const tabSection = document.getElementById(tabId);
         if (!tabSection || !tabSection.classList.contains('active')) return;
