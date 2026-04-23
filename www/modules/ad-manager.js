@@ -47,6 +47,10 @@
     let _nativeAdScrollRAF = null;
     let _nativeAdObserver = null;
     let _nativeAdActiveTab = null;
+    let _nativeAdDisabled = false;
+    let _nativeAdUnavailableLogged = false;
+    let _nativeAdMissingCount = 0;
+    let _nativeAdUsingBannerFallback = false;
 
     // 모달 오버레이 시 광고 일시 숨김 플래그
     let _adsHiddenForModal = false;
@@ -60,6 +64,19 @@
     function _AppState() { return window.AppState; }
     function _auth() { return window._auth; }
     function _i18n() { return window.i18n; }
+    function _getNativeAdPlugin() {
+        return window?.Capacitor?.Plugins?.NativeAd || null;
+    }
+    function _handleMissingNativeAdPlugin() {
+        _nativeAdMissingCount += 1;
+        if (_nativeAdMissingCount >= 3) _nativeAdDisabled = true;
+        if (_nativeAdUnavailableLogged) return;
+        _nativeAdUnavailableLogged = true;
+        const pluginKeys = Object.keys(window?.Capacitor?.Plugins || {}).join(', ');
+        if (window.AppLogger) {
+            AppLogger.warn('[NativeAd] 플러그인 사용 불가 — NativeAd 미등록. available=' + (pluginKeys || '(none)'));
+        }
+    }
 
     // --- GDPR/동의 ---
     async function resetConsent() {
@@ -714,6 +731,7 @@
     // --- 네이티브 광고 ---
     async function loadNativeAd(tabId) {
         if (!_isNative()) return;
+        if (_nativeAdDisabled) return;
 
         const tabSection = document.getElementById(tabId);
         if (!tabSection || !tabSection.classList.contains('active')) return;
@@ -729,11 +747,18 @@
         if (!document.getElementById(tabId)?.classList.contains('active')) return;
 
         try {
-            const { NativeAd } = window.Capacitor.Plugins;
+            const NativeAd = _getNativeAdPlugin();
             if (!NativeAd) {
-                if (window.AppLogger) AppLogger.warn('[NativeAd] 플러그인 사용 불가');
+                _handleMissingNativeAdPlugin();
                 placeholder.style.display = 'none';
+                // NativeAd 플러그인이 없는 빌드에서는 배너로 폴백해 광고 공백을 최소화
+                _nativeAdUsingBannerFallback = true;
+                await showBanner().catch(() => {});
                 return;
+            }
+            if (_nativeAdUsingBannerFallback) {
+                _nativeAdUsingBannerFallback = false;
+                await hideBanner().catch(() => {});
             }
 
             await NativeAd.destroyAd().catch(() => {});
@@ -776,7 +801,7 @@
         if (!document.getElementById(tabId)?.classList.contains('active')) return;
 
         try {
-            const { NativeAd } = window.Capacitor.Plugins;
+            const NativeAd = _getNativeAdPlugin();
             if (!NativeAd) return;
 
             const rect = placeholder.getBoundingClientRect();
@@ -818,7 +843,7 @@
             const entry = entries[0];
             if (!_nativeAdLoaded) return;
 
-            const { NativeAd } = window.Capacitor.Plugins;
+            const NativeAd = _getNativeAdPlugin();
             if (!NativeAd) return;
 
             if (entry.isIntersecting) {
@@ -849,7 +874,7 @@
                 const rect = placeholder.getBoundingClientRect();
                 const clipTop = clipRef ? clipRef.getBoundingClientRect().bottom : 0;
                 const clipBottom = navRef ? navRef.getBoundingClientRect().top : 0;
-                const { NativeAd } = window.Capacitor.Plugins;
+                const NativeAd = _getNativeAdPlugin();
                 if (NativeAd) {
                     NativeAd.updatePosition({ y: rect.top, clipTop, clipBottom }).catch(() => {});
                 }
@@ -884,10 +909,15 @@
         _nativeAdVisible = false;
         _nativeAdActiveTab = null;
 
+        if (_nativeAdUsingBannerFallback) {
+            _nativeAdUsingBannerFallback = false;
+            await hideBanner().catch(() => {});
+        }
+
         if (!_isNative()) return;
 
         try {
-            const { NativeAd } = window.Capacitor.Plugins;
+            const NativeAd = _getNativeAdPlugin();
             if (NativeAd) {
                 await NativeAd.destroyAd();
             }
@@ -904,7 +934,7 @@
         // 네이티브 광고 숨김
         if (_nativeAdActiveTab) {
             try {
-                const { NativeAd } = window.Capacitor.Plugins;
+                const NativeAd = _getNativeAdPlugin();
                 if (NativeAd) await NativeAd.hideAd().catch(() => {});
             } catch (e) { /* 무시 */ }
         }
@@ -925,7 +955,7 @@
         // 네이티브 광고 복원
         if (_nativeAdActiveTab && _nativeAdLoaded) {
             try {
-                const { NativeAd } = window.Capacitor.Plugins;
+                const NativeAd = _getNativeAdPlugin();
                 if (NativeAd) {
                     await NativeAd.resumeAd().catch(() => {});
                     _nativeAdVisible = true;
