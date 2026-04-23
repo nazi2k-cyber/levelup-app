@@ -784,6 +784,8 @@
         const placeholderId = 'native-ad-placeholder-' + tabId;
         const placeholder = document.getElementById(placeholderId);
         if (!placeholder) return;
+        // 이전 로드 실패 시 display:none 처리된 슬롯을 재시도 시 다시 활성화
+        placeholder.style.display = '';
 
         if (!document.getElementById(tabId)?.classList.contains('active')) return;
 
@@ -794,14 +796,7 @@
                 _nativeAdLoaded = false;
                 _nativeAdActiveTab = null;
                 placeholder.style.display = 'none';
-                // NativeAd 플러그인이 없는 빌드에서는 배너로 폴백해 광고 공백을 최소화
-                _nativeAdUsingBannerFallback = true;
-                await showBanner().catch(() => {});
                 return;
-            }
-            if (_nativeAdUsingBannerFallback) {
-                _nativeAdUsingBannerFallback = false;
-                await hideBanner().catch(() => {});
             }
 
             await nativeAd.destroy?.().catch(() => {});
@@ -957,11 +952,6 @@
         _nativeAdLoaded = false;
         _nativeAdVisible = false;
         _nativeAdActiveTab = null;
-
-        if (_nativeAdUsingBannerFallback) {
-            _nativeAdUsingBannerFallback = false;
-            await hideBanner().catch(() => {});
-        }
 
         if (!_isNative()) return;
 
