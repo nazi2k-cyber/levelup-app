@@ -47,6 +47,9 @@
     let _nativeAdScrollRAF = null;
     let _nativeAdObserver = null;
     let _nativeAdActiveTab = null;
+    let _nativeAdDisabled = false;
+    let _nativeAdUnavailableLogged = false;
+    let _nativeAdMissingCount = 0;
 
     // 모달 오버레이 시 광고 일시 숨김 플래그
     let _adsHiddenForModal = false;
@@ -60,6 +63,52 @@
     function _AppState() { return window.AppState; }
     function _auth() { return window._auth; }
     function _i18n() { return window.i18n; }
+    function _getNativeAdAdapter() {
+        const plugins = window?.Capacitor?.Plugins || {};
+
+        const nativePlugin = plugins.NativeAd;
+        if (nativePlugin && typeof nativePlugin.loadAd === 'function') {
+            return {
+                provider: 'NativeAd',
+                load: (options) => nativePlugin.loadAd(options),
+                show: (options) => nativePlugin.showAd?.(options),
+                hide: () => nativePlugin.hideAd?.(),
+                resume: () => nativePlugin.resumeAd?.(),
+                destroy: () => nativePlugin.destroyAd?.(),
+                updatePosition: (options) => nativePlugin.updatePosition?.(options),
+            };
+        }
+
+        // 일부 빌드에서는 Native Advanced API가 AdMob 플러그인 내부에 포함될 수 있음
+        const adMob = plugins.AdMob;
+        if (adMob) {
+            const loadFn = adMob.loadNativeAd || adMob.prepareNativeAd || adMob.prepareNativeAdvancedAd;
+            const showFn = adMob.showNativeAd || adMob.showNativeAdvancedAd;
+            if (typeof loadFn === 'function' && typeof showFn === 'function') {
+                return {
+                    provider: 'AdMob(native)',
+                    load: (options) => loadFn.call(adMob, options),
+                    show: (options) => showFn.call(adMob, options),
+                    hide: () => (adMob.hideNativeAd || adMob.hideNativeAdvancedAd)?.call(adMob),
+                    resume: () => (adMob.resumeNativeAd || adMob.resumeNativeAdvancedAd)?.call(adMob),
+                    destroy: () => (adMob.destroyNativeAd || adMob.destroyNativeAdvancedAd)?.call(adMob),
+                    updatePosition: (options) => (adMob.updateNativeAdPosition || adMob.updateNativeAdvancedPosition)?.call(adMob, options),
+                };
+            }
+        }
+        return null;
+    }
+    function _handleMissingNativeAdPlugin() {
+        _nativeAdMissingCount += 1;
+        if (_nativeAdMissingCount >= 3) _nativeAdDisabled = true;
+        if (_nativeAdUnavailableLogged) return;
+        _nativeAdUnavailableLogged = true;
+        const pluginKeys = Object.keys(window?.Capacitor?.Plugins || {}).join(', ');
+        const adMobKeys = Object.keys(window?.Capacitor?.Plugins?.AdMob || {}).join(', ');
+        if (window.AppLogger) {
+            AppLogger.warn('[NativeAd] Native Advanced API 사용 불가. plugins=' + (pluginKeys || '(none)') + ', AdMobMethods=' + (adMobKeys || '(none)'));
+        }
+    }
 
     // --- GDPR/동의 ---
     async function resetConsent() {
@@ -714,6 +763,7 @@
     // --- 네이티브 광고 ---
     async function loadNativeAd(tabId) {
         if (!_isNative()) return;
+        if (_nativeAdDisabled) return;
 
         const tabSection = document.getElementById(tabId);
         if (!tabSection || !tabSection.classList.contains('active')) return;
@@ -729,16 +779,16 @@
         if (!document.getElementById(tabId)?.classList.contains('active')) return;
 
         try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (!NativeAd) {
-                if (window.AppLogger) AppLogger.warn('[NativeAd] 플러그인 사용 불가');
+            const nativeAd = _getNativeAdAdapter();
+            if (!nativeAd) {
+                _handleMissingNativeAdPlugin();
                 placeholder.style.display = 'none';
                 return;
             }
 
-            await NativeAd.destroyAd().catch(() => {});
+            await nativeAd.destroy?.().catch(() => {});
 
-            const result = await NativeAd.loadAd({
+            const result = await nativeAd.load({
                 adId: NATIVE_AD_UNIT_ID,
                 isTesting: false,
                 npa: !canShowPersonalizedAds(),
@@ -746,7 +796,7 @@
 
             if (result && result.loaded) {
                 if (!document.getElementById(tabId)?.classList.contains('active')) {
-                    NativeAd.destroyAd().catch(() => {});
+                    nativeAd.destroy?.().catch(() => {});
                     _nativeAdLoaded = false;
                     _nativeAdActiveTab = null;
                     return;
@@ -754,7 +804,7 @@
 
                 _nativeAdLoaded = true;
                 _nativeAdActiveTab = tabId;
-                if (window.AppLogger) AppLogger.info(`[NativeAd] ${tabId}탭 네이티브 광고 로드 완료`);
+                if (window.AppLogger) AppLogger.info(`[NativeAd] ${tabId}탭 네이티브 광고 로드 완료 (${nativeAd.provider})`);
 
                 positionNativeAd(tabId);
                 setupNativeAdScrollSync(tabId);
@@ -776,8 +826,8 @@
         if (!document.getElementById(tabId)?.classList.contains('active')) return;
 
         try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (!NativeAd) return;
+            const nativeAd = _getNativeAdAdapter();
+            if (!nativeAd) return;
 
             const rect = placeholder.getBoundingClientRect();
 
@@ -792,7 +842,7 @@
             let clipBottom = 0;
             const navEl = document.querySelector('nav');
             if (navEl) clipBottom = navEl.getBoundingClientRect().top;
-            await NativeAd.showAd({
+            await nativeAd.show?.({
                 x: rect.left,
                 y: rect.top,
                 width: rect.width,
@@ -818,17 +868,17 @@
             const entry = entries[0];
             if (!_nativeAdLoaded) return;
 
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (!NativeAd) return;
+            const nativeAd = _getNativeAdAdapter();
+            if (!nativeAd) return;
 
             if (entry.isIntersecting) {
                 if (!_nativeAdVisible && !_adsHiddenForModal) {
-                    NativeAd.resumeAd().catch(() => {});
+                    nativeAd.resume?.().catch(() => {});
                     _nativeAdVisible = true;
                 }
             } else {
                 if (_nativeAdVisible) {
-                    NativeAd.hideAd().catch(() => {});
+                    nativeAd.hide?.().catch(() => {});
                     _nativeAdVisible = false;
                 }
             }
@@ -849,9 +899,9 @@
                 const rect = placeholder.getBoundingClientRect();
                 const clipTop = clipRef ? clipRef.getBoundingClientRect().bottom : 0;
                 const clipBottom = navRef ? navRef.getBoundingClientRect().top : 0;
-                const { NativeAd } = window.Capacitor.Plugins;
-                if (NativeAd) {
-                    NativeAd.updatePosition({ y: rect.top, clipTop, clipBottom }).catch(() => {});
+                const nativeAd = _getNativeAdAdapter();
+                if (nativeAd) {
+                    nativeAd.updatePosition?.({ y: rect.top, clipTop, clipBottom }).catch(() => {});
                 }
             });
         }
@@ -887,9 +937,9 @@
         if (!_isNative()) return;
 
         try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) {
-                await NativeAd.destroyAd();
+            const nativeAd = _getNativeAdAdapter();
+            if (nativeAd) {
+                await nativeAd.destroy?.();
             }
         } catch (e) {
             // 무시 — 이미 파괴되었을 수 있음
@@ -904,8 +954,8 @@
         // 네이티브 광고 숨김
         if (_nativeAdActiveTab) {
             try {
-                const { NativeAd } = window.Capacitor.Plugins;
-                if (NativeAd) await NativeAd.hideAd().catch(() => {});
+                const nativeAd = _getNativeAdAdapter();
+                if (nativeAd) await nativeAd.hide?.().catch(() => {});
             } catch (e) { /* 무시 */ }
         }
 
@@ -925,9 +975,9 @@
         // 네이티브 광고 복원
         if (_nativeAdActiveTab && _nativeAdLoaded) {
             try {
-                const { NativeAd } = window.Capacitor.Plugins;
-                if (NativeAd) {
-                    await NativeAd.resumeAd().catch(() => {});
+                const nativeAd = _getNativeAdAdapter();
+                if (nativeAd) {
+                    await nativeAd.resume?.().catch(() => {});
                     _nativeAdVisible = true;
                     positionNativeAd(_nativeAdActiveTab);
                 }
