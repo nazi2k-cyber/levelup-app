@@ -25,6 +25,7 @@ export function createAuthProfileModule(deps) {
         initPushNotifications,
         processPendingNotification,
         showPermissionPrompts,
+        markPermissionPromptPending,
         onboardingStorageKey,
         showOnboardingGuide,
         drawRadarChartForUser,
@@ -147,7 +148,11 @@ export function createAuthProfileModule(deps) {
             processPendingNotification();
 
             if (!localStorage.getItem(onboardingStorageKey)) {
-                window._pendingPermissionPrompts = true;
+                if (typeof markPermissionPromptPending === 'function') {
+                    markPermissionPromptPending();
+                } else {
+                    window._pendingPermissionPrompts = true;
+                }
             } else {
                 showPermissionPrompts();
             }
