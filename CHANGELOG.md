@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.494] - 2026-04-23
+
+### 변경
+- fix: downgrade noisy native auth console error in logger
+
 ## [1.0.493] - 2026-04-23
 
 ### 변경
