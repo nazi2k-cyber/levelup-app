@@ -6,6 +6,10 @@
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const PLAY_STORE_URL = 'market://details?id=com.levelup.reboot';
     const OVERLAY_ID = 'ratingModal';
+    const INSTALL_TS_KEY = 'levelup_install_ts';
+    const SESSION_COUNT_KEY = 'levelup_session_count';
+    const MIN_SESSIONS_BEFORE_PROMPT = 4;
+    const MIN_INSTALL_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
     function _lang() {
         return window.AppState?.currentLang || 'ko';
@@ -15,8 +19,29 @@
         return window.i18n?.[_lang()]?.[key] || window.i18n?.['ko']?.[key] || '';
     }
 
+    function ensureInstallTimestamp() {
+        let installTs = parseInt(localStorage.getItem(INSTALL_TS_KEY) || '0', 10);
+        if (!installTs) {
+            installTs = Date.now();
+            localStorage.setItem(INSTALL_TS_KEY, String(installTs));
+        }
+        return installTs;
+    }
+
+    function trackSession() {
+        const currentCount = parseInt(localStorage.getItem(SESSION_COUNT_KEY) || '0', 10);
+        localStorage.setItem(SESSION_COUNT_KEY, String(currentCount + 1));
+    }
+
     function shouldShow() {
         if (localStorage.getItem(DONE_KEY) === '1') return false;
+
+        const installTs = ensureInstallTimestamp();
+        const installAgeMs = Date.now() - installTs;
+        if (installAgeMs < MIN_INSTALL_AGE_MS) return false;
+
+        const sessionCount = parseInt(localStorage.getItem(SESSION_COUNT_KEY) || '0', 10);
+        if (sessionCount < MIN_SESSIONS_BEFORE_PROMPT) return false;
 
         const askedTs = parseInt(localStorage.getItem(ASKED_TS_KEY) || '0', 10);
         if (askedTs && (Date.now() - askedTs) < SEVEN_DAYS_MS) return false;
@@ -66,6 +91,8 @@
     }
 
     function initCheck() {
+        ensureInstallTimestamp();
+        trackSession();
         setTimeout(show, 2000);
     }
 

@@ -3364,11 +3364,15 @@ async function logout() {
     const _theme = localStorage.getItem('theme');
     const _ratingDone = localStorage.getItem('levelup_rating_done');
     const _ratingAskedTs = localStorage.getItem('levelup_rating_asked_ts');
+    const _ratingInstallTs = localStorage.getItem('levelup_install_ts');
+    const _ratingSessionCount = localStorage.getItem('levelup_session_count');
     localStorage.clear();
     if (_loginLogVisible !== null) localStorage.setItem('loginLogVisible', _loginLogVisible);
     if (_theme !== null) localStorage.setItem('theme', _theme);
     if (_ratingDone !== null) localStorage.setItem('levelup_rating_done', _ratingDone);
     if (_ratingAskedTs !== null) localStorage.setItem('levelup_rating_asked_ts', _ratingAskedTs);
+    if (_ratingInstallTs !== null) localStorage.setItem('levelup_install_ts', _ratingInstallTs);
+    if (_ratingSessionCount !== null) localStorage.setItem('levelup_session_count', _ratingSessionCount);
     window.location.reload();
 }
 
