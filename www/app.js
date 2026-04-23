@@ -37,7 +37,7 @@ attachFirestoreNetworkResilience(db);
 const googleProvider = new GoogleAuthProvider();
 
 
-// Google Fit: 네이티브 앱 플러그인(Health Connect / Google Fit SDK)만 사용
+// 피트니스: Health Connect 네이티브 플러그인만 사용
 // REST API 폴백 제거됨 — 모든 건강 데이터는 네이티브 SDK를 통해 조회
 
 // --- 상태 관리 객체 ---
@@ -3064,7 +3064,7 @@ function refreshSettingsStatusMessages() {
     // 카메라 상태
     updateCameraToggleUI();
 
-    // Google Fit 동기화 상태
+    // 피트니스 동기화 상태
     const syncStatus = document.getElementById('sync-status');
     if (syncStatus && syncStatus.style.display !== 'none') {
         if (AppState.user.syncEnabled) {
@@ -6488,18 +6488,12 @@ async function showPermissionPrompts() {
     if (!AppState.user.syncEnabled && !AppState.isEmailUser) {
         try {
             let fitnessGranted = false;
-            const { HealthConnect, GoogleFit } = cap.Plugins || {};
+            const HealthConnect = cap.Plugins?.HealthConnect;
 
             if (HealthConnect) {
                 const availability = await HealthConnect.isAvailable();
                 if (availability.available) {
-                    fitnessGranted = await requestFitnessScope(true);
-                }
-            }
-            if (!fitnessGranted && GoogleFit) {
-                const availability = await GoogleFit.isAvailable();
-                if (availability.available && !availability.hasPermissions) {
-                    fitnessGranted = await requestFitnessScope(true);
+                    fitnessGranted = await requestFitnessScope();
                 }
             }
 
@@ -6637,16 +6631,16 @@ async function toggleHealthSync() {
             return;
         }
 
-        // 이메일 로그인 사용자는 구글 피트니스 동기화 사용 불가
+        // 이메일 로그인 사용자는 피트니스 동기화 사용 불가
         if (AppState.isEmailUser) {
             toggle.checked = false;
             const lang = i18n[AppState.currentLang];
             statusDiv.style.display = 'flex';
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.fitness_email_disabled || '이메일 로그인 사용자는 구글 피트니스 동기화를 사용할 수 없습니다.'}</span>`;
+            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.fitness_email_disabled || '이메일 로그인 사용자는 피트니스 동기화를 사용할 수 없습니다.'}</span>`;
             return;
         }
 
-        // 네이티브 건강 데이터 권한 요청 (Health Connect / Google Fit SDK)
+        // 네이티브 건강 데이터 권한 요청 (Health Connect)
         statusDiv.style.display = 'flex';
         statusDiv.innerHTML = `<span style="color:var(--text-sub);">건강 데이터 권한 요청 중...</span>`;
 
@@ -6755,41 +6749,25 @@ function updateCameraToggleUI() {
     }
 }
 
-// 네이티브 건강 데이터 권한 요청 (Health Connect → Google Fit SDK 순서)
-// skipGoogleSignIn: true일 경우 Google 계정 로그인이 필요한 상황에서 팝업 없이 건너뜀 (자동 프롬프트용)
-async function requestFitnessScope(skipGoogleSignIn = false) {
+// 네이티브 건강 데이터 권한 요청 (Health Connect 전용)
+async function requestFitnessScope() {
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
     if (!isNative) return false;
 
     try {
         // 1단계: Health Connect 권한 시도
-        const { HealthConnect } = window.Capacitor.Plugins;
+        const HealthConnect = window.Capacitor?.Plugins?.HealthConnect;
         if (HealthConnect) {
             const availability = await HealthConnect.isAvailable();
             if (availability.available) {
-                await HealthConnect.requestPermissions();
-                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료');
-                return true;
+                const perm = await HealthConnect.requestPermissions();
+                const granted = !!(perm && (perm.granted || perm.settingsOpened));
+                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료: ' + JSON.stringify(perm || {}));
+                return granted;
             }
         }
 
-        // 2단계: Google Fit SDK 권한 시도 (Health Connect 미지원 기기)
-        const { GoogleFit } = window.Capacitor.Plugins;
-        if (GoogleFit) {
-            // 네이티브 Google 계정이 없고 자동 프롬프트인 경우 Google Sign-In 팝업 방지
-            if (skipGoogleSignIn) {
-                const gfStatus = await GoogleFit.isAvailable();
-                if (gfStatus.needsSignIn) {
-                    if (window.AppLogger) AppLogger.info('[GoogleFit] Google Sign-In 필요 → 자동 프롬프트에서 건너뜀');
-                    return false;
-                }
-            }
-            await GoogleFit.requestPermissions();
-            if (window.AppLogger) AppLogger.info('[GoogleFit] 네이티브 권한 요청 완료');
-            return true;
-        }
-
-        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 건강 데이터 플러그인을 찾을 수 없음');
+        if (window.AppLogger) AppLogger.warn('[Fitness] Health Connect 플러그인을 찾을 수 없음');
         return false;
     } catch (e) {
         const errCode = String(e.code || (e.error && e.error.code) || '');
@@ -6808,17 +6786,16 @@ async function tryHealthConnectSteps() {
     if (!isNative) return null;
 
     try {
-        const { HealthConnect } = window.Capacitor.Plugins;
+        const HealthConnect = window.Capacitor?.Plugins?.HealthConnect;
         if (!HealthConnect) return null;
 
         // Health Connect SDK 사용 가능 여부 확인
         const availability = await HealthConnect.isAvailable();
-        if (!availability.available) {
-            if (window.AppLogger) AppLogger.info('[HealthConnect] SDK not available, falling back to Google Fit SDK');
-            return null;
+        if (!availability.available && window.AppLogger) {
+            AppLogger.info('[HealthConnect] SDK not available on this device, using sensor fallback');
         }
 
-        // 걸음 수 조회
+        // 걸음 수 조회 (플러그인 내부에서 센서 폴백 처리)
         const result = await HealthConnect.getTodaySteps();
         if (result.fallbackToRest) {
             if (window.AppLogger) AppLogger.info('[HealthConnect] Fallback: ' + (result.error || 'unknown'));
@@ -6829,41 +6806,6 @@ async function tryHealthConnectSteps() {
         return result.steps;
     } catch (e) {
         if (window.AppLogger) AppLogger.warn('[HealthConnect] Error: ' + (e.message || JSON.stringify(e)));
-        return null;
-    }
-}
-
-/**
- * Google Fit 네이티브 SDK를 통한 걸음 수 조회 시도
- * Health Connect가 사용 불가한 기기에서 Google Fit SDK (History API) 사용
- * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
- */
-async function tryGoogleFitNativeSteps() {
-    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-    if (!isNative) return null;
-
-    try {
-        const { GoogleFit } = window.Capacitor.Plugins;
-        if (!GoogleFit) return null;
-
-        // Google Fit SDK 사용 가능 여부 확인
-        const availability = await GoogleFit.isAvailable();
-        if (!availability.available || !availability.hasPermissions) {
-            if (window.AppLogger) AppLogger.info('[GoogleFit] SDK not available or no permissions, skipping');
-            return null;
-        }
-
-        // 걸음 수 조회
-        const result = await GoogleFit.getTodaySteps();
-        if (result.fallbackToRest) {
-            if (window.AppLogger) AppLogger.info('[GoogleFit] Fallback: ' + (result.error || 'unknown'));
-            return null;
-        }
-
-        if (window.AppLogger) AppLogger.info(`[GoogleFit] Native steps: ${result.steps} (source: ${result.source})`);
-        return result.steps;
-    } catch (e) {
-        if (window.AppLogger) AppLogger.warn('[GoogleFit] Native error: ' + (e.message || JSON.stringify(e)));
         return null;
     }
 }
@@ -6887,23 +6829,14 @@ async function syncHealthData(showMsg = false) {
     let totalStepsToday = 0;
     let dataSource = 'none';
 
-    // 1단계: Health Connect (네이티브 Android 14+) 시도
+    // 1단계: Health Connect (네이티브) 시도
     const nativeSteps = await tryHealthConnectSteps();
     if (nativeSteps !== null) {
         totalStepsToday = nativeSteps;
         dataSource = 'health_connect';
     }
 
-    // 2단계: Google Fit 네이티브 SDK 시도 (Health Connect 실패 시)
-    if (dataSource === 'none') {
-        const fitNativeSteps = await tryGoogleFitNativeSteps();
-        if (fitNativeSteps !== null) {
-            totalStepsToday = fitNativeSteps;
-            dataSource = 'google_fit_native';
-        }
-    }
-
-    // 네이티브 SDK에서 데이터를 가져오지 못한 경우
+    // Health Connect에서 데이터를 가져오지 못한 경우
     if (dataSource === 'none') {
         if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
         if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
@@ -6930,7 +6863,7 @@ async function syncHealthData(showMsg = false) {
         AppState.user.stepData.rewardedSteps += (rewardChunks * 1000);
 
         if (showMsg) {
-            const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+            const sourceLabel = 'Health Connect';
             const _l = i18n[AppState.currentLang] || {};
             const _syncMsg = (_l.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
             const _rewMsg = (_l.sync_reward_msg || '추가 보상: +{points}P, STR +{str}').replace('{points}', earnedPoints).replace('{str}', earnedStr);
@@ -6943,7 +6876,7 @@ async function syncHealthData(showMsg = false) {
             if(totalStepsToday === 0) {
                 statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${i18n[AppState.currentLang]?.sync_no_steps || '걸음 수 기록이 없습니다. (0보)'}</span>`;
             } else {
-                const sourceLabel = dataSource === 'health_connect' ? 'Health Connect' : 'Google Fit';
+                const sourceLabel = 'Health Connect';
                 const _l2 = i18n[AppState.currentLang] || {};
                 const _syncMsg2 = (_l2.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
                 const _nextMsg = (_l2.sync_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', 1000 - unrewardedSteps);
@@ -6985,16 +6918,13 @@ function updateStepCountUI() {
             const listEl = document.getElementById('step-req-list');
             if (titleEl) titleEl.textContent = lang.step_req_title || '걸음수 연동 필수 조건';
             if (listEl) {
-                const googleFitUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.fitness';
                 const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
-                const req1Text = lang.step_req_1 || 'Google Fit 또는 Health Connect 앱 설치 필요';
-                const req1Html = req1Text
-                    .replace('Google Fit', `<a href="${googleFitUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Google Fit</a>`)
-                    .replace('Health Connect', `<a href="${healthConnectUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
+                const req1Text = lang.step_req_1 || 'Health Connect 앱 설치 필요';
+                const req1Html = req1Text.replace('Health Connect', `<a href="${healthConnectUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
                 const items = [
                     { icon: '📲', html: req1Html },
                     { icon: '⚙️', html: (() => {
-                        const req2Text = lang.step_req_2 || '내 정보 → 구글 피트니스 앱 동기화 활성화';
+                        const req2Text = lang.step_req_2 || '내 정보 → 피트니스 동기화(Health Connect) 활성화';
                         const myInfoLabels = ['내 정보', 'My Info', 'マイ情報'];
                         let result = req2Text;
                         for (const label of myInfoLabels) {
@@ -7005,7 +6935,7 @@ function updateStepCountUI() {
                         }
                         return result;
                     })() },
-                    { icon: '🔑', html: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용' },
+                    { icon: '🔑', html: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용 (Health Connect 연동용)' },
                     { icon: '🎁', html: lang.step_req_reward || '1,000보마다 +10P & STR +0.5 보상' }
                 ];
                 listEl.innerHTML = items.map(r =>
@@ -7120,19 +7050,11 @@ async function syncToggleWithOSPermissions() {
     if (cap.Plugins) {
         try {
             let hasPermission = false;
-            const { HealthConnect, GoogleFit } = cap.Plugins;
+            const HealthConnect = cap.Plugins?.HealthConnect;
 
             if (HealthConnect) {
                 const availability = await HealthConnect.isAvailable();
-                if (availability.available && availability.hasPermissions) {
-                    hasPermission = true;
-                }
-            }
-            if (!hasPermission && GoogleFit) {
-                const availability = await GoogleFit.isAvailable();
-                if (availability.available && availability.hasPermissions) {
-                    hasPermission = true;
-                }
+                hasPermission = !!(availability.available && (availability.hasActivityRecognition || availability.hasPermissions));
             }
 
             if (AppState.user.syncEnabled && !hasPermission) {
