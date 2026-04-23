@@ -321,6 +321,13 @@ jobs:
               '        registerPlugin(NativeAdPlugin.class);',
           ]
 
+          # Ensure android.os.Bundle is imported (needed for onCreate signature)
+          if 'import android.os.Bundle;' not in text:
+              text = text.replace(
+                  'import com.getcapacitor.BridgeActivity;\n',
+                  'import android.os.Bundle;\nimport com.getcapacitor.BridgeActivity;\n'
+              )
+
           for imp in imports:
               if imp not in text:
                   text = text.replace(
@@ -329,11 +336,26 @@ jobs:
                   )
 
           if 'public void onCreate(Bundle savedInstanceState)' in text:
+              # onCreate already exists — insert registerPlugin calls after super.onCreate()
               for line in registers:
                   if line not in text:
                       marker = '        super.onCreate(savedInstanceState);\n'
                       if marker in text:
                           text = text.replace(marker, marker + line + '\n', 1)
+          else:
+              # Capacitor 6 default MainActivity has no onCreate — inject the full method
+              missing = [line for line in registers if line not in text]
+              if missing:
+                  oncreate = (
+                      '\n'
+                      '    @Override\n'
+                      '    public void onCreate(Bundle savedInstanceState) {\n'
+                      '        super.onCreate(savedInstanceState);\n'
+                      + '\n'.join(missing) + '\n'
+                      '    }\n'
+                  )
+                  last_brace = text.rfind('}')
+                  text = text[:last_brace] + oncreate + text[last_brace:]
 
           path.write_text(text)
           print('MainActivity plugin registration ensured')
