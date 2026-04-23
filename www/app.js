@@ -3400,23 +3400,13 @@ function showPhotoSourceSheet(inputId) {
         + '</div>';
     document.body.appendChild(overlay);
 
-    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
-    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
-        try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) NativeAd.hideAd();
-        } catch (e) { /* 무시 */ }
-    }
+    // ★ 광고 숨김 (팝업 위에 겹치지 않도록) — AdManager 연동부로 위임
+    hideAdsForModal();
 
     function close() {
         overlay.remove();
-        // ★ 네이티브 광고 복원
-        if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
-            try {
-                const { NativeAd } = window.Capacitor.Plugins;
-                if (NativeAd) NativeAd.resumeAd();
-            } catch (e) { /* 무시 */ }
-        }
+        // ★ 광고 복원 — AdManager 연동부로 위임
+        resumeAdsFromModal();
     }
     overlay.addEventListener('click', close);
     document.getElementById('photo-src-cancel').addEventListener('click', close);
@@ -3431,6 +3421,16 @@ function showPhotoSourceSheet(inputId) {
         input.removeAttribute('capture');
         input.click();
     });
+}
+
+function hideAdsForModal() {
+    if (!isNativePlatform || !window.AdManager || typeof window.AdManager.hideForModal !== 'function') return;
+    window.AdManager.hideForModal().catch(() => {});
+}
+
+function resumeAdsFromModal() {
+    if (!isNativePlatform || !window.AdManager || typeof window.AdManager.resumeFromModal !== 'function') return;
+    window.AdManager.resumeFromModal().catch(() => {});
 }
 
 async function loadProfileImage(event) {
@@ -3903,13 +3903,8 @@ function closeInfoModal() {
     m.classList.add('d-none');
     m.classList.remove('d-flex');
 
-    // ★ 네이티브 광고 복원
-    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
-        try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) NativeAd.resumeAd();
-        } catch (e) { /* 무시 */ }
-    }
+    // ★ 광고 복원 — AdManager 연동부로 위임
+    resumeAdsFromModal();
 }
 
 function closeTitleModal() { 
@@ -4382,13 +4377,8 @@ function openDungeonInfoModal() {
     m.classList.remove('d-none');
     m.classList.add('d-flex');
 
-    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
-    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
-        try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) NativeAd.hideAd();
-        } catch (e) { /* 무시 */ }
-    }
+    // ★ 광고 숨김 (팝업 위에 겹치지 않도록) — AdManager 연동부로 위임
+    hideAdsForModal();
 }
 
 // --- ★ 플래너 가이드 모달 ★ ---
@@ -4448,13 +4438,8 @@ function openPlannerInfoModal() {
     m.classList.remove('d-none');
     m.classList.add('d-flex');
 
-    // ★ 네이티브 광고 숨김 (팝업 위에 겹치지 않도록)
-    if (isNativePlatform && window.AdManager && window.AdManager.nativeAdActiveTab) {
-        try {
-            const { NativeAd } = window.Capacitor.Plugins;
-            if (NativeAd) NativeAd.hideAd();
-        } catch (e) { /* 무시 */ }
-    }
+    // ★ 광고 숨김 (팝업 위에 겹치지 않도록) — AdManager 연동부로 위임
+    hideAdsForModal();
 }
 
 // --- ★ 설정 가이드 모달 (푸시/GPS/피트니스) ★ ---
