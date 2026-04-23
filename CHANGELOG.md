@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.495] - 2026-04-23
+
+### 변경
+- feat: include build version in app logs
+
 ## [1.0.494] - 2026-04-23
 
 ### 변경
