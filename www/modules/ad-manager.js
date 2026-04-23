@@ -51,6 +51,7 @@
     let _nativeAdUnavailableLogged = false;
     let _nativeAdMissingCount = 0;
     let _nativeAdLoadFailureCount = 0;
+    let _nativeAdUsingBannerFallback = false;
 
     // 모달 오버레이 시 광고 일시 숨김 플래그
     let _adsHiddenForModal = false;
@@ -784,6 +785,8 @@
         const placeholderId = 'native-ad-placeholder-' + tabId;
         const placeholder = document.getElementById(placeholderId);
         if (!placeholder) return;
+        // 이전 로드 실패 시 display:none 처리된 슬롯을 재시도 시 다시 활성화
+        placeholder.style.display = '';
 
         if (!document.getElementById(tabId)?.classList.contains('active')) return;
 
