@@ -296,35 +296,49 @@ jobs:
       - name: 커스텀 플러그인 등록 주입 (MainActivity.java)
         run: |
           MAIN_ACTIVITY="android/app/src/main/java/com/levelup/reboot/MainActivity.java"
+          python3 - "$MAIN_ACTIVITY" <<'PYEOF'
+          import sys
+          from pathlib import Path
 
-          # Capacitor는 빈 클래스를 생성하므로 import + onCreate 포함 전체 파일 교체
-          if ! grep -q "registerPlugin(AppSettingsPlugin" "$MAIN_ACTIVITY"; then
-            {
-              echo 'package com.levelup.reboot;'
-              echo 'import com.getcapacitor.BridgeActivity;'
-              echo 'import com.levelup.reboot.plugins.AppSettingsPlugin;'
-              echo 'import com.levelup.reboot.plugins.ClipboardPlugin;'
-              echo 'import com.levelup.reboot.plugins.GoogleFitPlugin;'
-              echo 'import com.levelup.reboot.plugins.HealthConnectPlugin;'
-              echo 'import com.levelup.reboot.plugins.FCMPlugin;'
-              echo 'import com.levelup.reboot.plugins.NativeAdPlugin;'
-              echo 'public class MainActivity extends BridgeActivity {'
-              echo '    @Override'
-              echo '    public void onCreate(android.os.Bundle savedInstanceState) {'
-              echo '        registerPlugin(AppSettingsPlugin.class);'
-              echo '        registerPlugin(ClipboardPlugin.class);'
-              echo '        registerPlugin(GoogleFitPlugin.class);'
-              echo '        registerPlugin(HealthConnectPlugin.class);'
-              echo '        registerPlugin(FCMPlugin.class);'
-              echo '        registerPlugin(NativeAdPlugin.class);'
-              echo '        super.onCreate(savedInstanceState);'
-              echo '    }'
-              echo '}'
-            } > "$MAIN_ACTIVITY"
-            echo "✅ 플러그인 등록 (AppSettings, Clipboard, GoogleFit, HealthConnect, FCM, NativeAd) 주입 완료"
-          else
-            echo "ℹ️ 플러그인 등록이 이미 존재합니다"
-          fi
+          path = Path(sys.argv[1])
+          text = path.read_text()
+
+          imports = [
+              'import com.levelup.reboot.plugins.AppSettingsPlugin;',
+              'import com.levelup.reboot.plugins.ClipboardPlugin;',
+              'import com.levelup.reboot.plugins.FCMPlugin;',
+              'import com.levelup.reboot.plugins.GoogleFitPlugin;',
+              'import com.levelup.reboot.plugins.HealthConnectPlugin;',
+              'import com.levelup.reboot.plugins.NativeAdPlugin;',
+          ]
+
+          registers = [
+              '        registerPlugin(AppSettingsPlugin.class);',
+              '        registerPlugin(ClipboardPlugin.class);',
+              '        registerPlugin(FCMPlugin.class);',
+              '        registerPlugin(GoogleFitPlugin.class);',
+              '        registerPlugin(HealthConnectPlugin.class);',
+              '        registerPlugin(NativeAdPlugin.class);',
+          ]
+
+          for imp in imports:
+              if imp not in text:
+                  text = text.replace(
+                      'import com.getcapacitor.BridgeActivity;\n',
+                      f'import com.getcapacitor.BridgeActivity;\n{imp}\n'
+                  )
+
+          if 'public void onCreate(Bundle savedInstanceState)' in text:
+              for line in registers:
+                  if line not in text:
+                      marker = '        super.onCreate(savedInstanceState);\n'
+                      if marker in text:
+                          text = text.replace(marker, marker + line + '\n', 1)
+
+          path.write_text(text)
+          print('MainActivity plugin registration ensured')
+          PYEOF
+          echo "✅ 플러그인 등록 보강 완료 (AppSettings, Clipboard, FCM, GoogleFit, HealthConnect, NativeAd)"
 
           echo ""
           echo "📋 최종 MainActivity.java:"

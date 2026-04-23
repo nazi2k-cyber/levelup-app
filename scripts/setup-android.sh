@@ -50,6 +50,72 @@ log_info "cap sync android 실행 중..."
 npx cap sync android
 log_ok "cap sync 완료"
 
+
+# ── 2.5 커스텀 네이티브 플러그인 동기화 ──
+log_info "커스텀 네이티브 플러그인 동기화 중..."
+
+PLUGIN_SRC_DIR="$PROJECT_ROOT/native-plugins"
+PLUGIN_DST_DIR="$PROJECT_ROOT/android/app/src/main/java/com/levelup/reboot/plugins"
+MAIN_ACTIVITY="$PROJECT_ROOT/android/app/src/main/java/com/levelup/reboot/MainActivity.java"
+
+if [ -d "$PLUGIN_SRC_DIR" ]; then
+    mkdir -p "$PLUGIN_DST_DIR"
+    cp -f "$PLUGIN_SRC_DIR"/*.java "$PLUGIN_DST_DIR"/
+    log_ok "커스텀 플러그인 Java 파일 복사 완료"
+else
+    log_warn "native-plugins/ 디렉토리를 찾지 못했습니다. 플러그인 복사를 건너뜁니다."
+fi
+
+if [ -f "$MAIN_ACTIVITY" ]; then
+    python3 - "$MAIN_ACTIVITY" <<'PYEOF'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+text = path.read_text()
+
+imports = [
+    'import com.levelup.reboot.plugins.AppSettingsPlugin;',
+    'import com.levelup.reboot.plugins.ClipboardPlugin;',
+    'import com.levelup.reboot.plugins.FCMPlugin;',
+    'import com.levelup.reboot.plugins.GoogleFitPlugin;',
+    'import com.levelup.reboot.plugins.HealthConnectPlugin;',
+    'import com.levelup.reboot.plugins.NativeAdPlugin;',
+]
+
+registers = [
+    '        registerPlugin(AppSettingsPlugin.class);',
+    '        registerPlugin(ClipboardPlugin.class);',
+    '        registerPlugin(FCMPlugin.class);',
+    '        registerPlugin(GoogleFitPlugin.class);',
+    '        registerPlugin(HealthConnectPlugin.class);',
+    '        registerPlugin(NativeAdPlugin.class);',
+]
+
+# import 보강
+for imp in imports:
+    if imp not in text:
+        text = text.replace(
+            'import com.getcapacitor.BridgeActivity;\n',
+            f'import com.getcapacitor.BridgeActivity;\n{imp}\n'
+        )
+
+# onCreate 블록 보강
+if 'public void onCreate(Bundle savedInstanceState)' in text:
+    for line in registers:
+        if line not in text:
+            marker = '        super.onCreate(savedInstanceState);\n'
+            if marker in text:
+                text = text.replace(marker, marker + line + '\n', 1)
+
+path.write_text(text)
+print('MainActivity plugin registration ensured')
+PYEOF
+    log_ok "MainActivity 플러그인 등록 확인 완료"
+else
+    log_warn "MainActivity.java 파일을 찾지 못했습니다: $MAIN_ACTIVITY"
+fi
+
 # ── 3. variables.gradle 패치 (targetSdkVersion = 35) ──
 VARIABLES_GRADLE="$PROJECT_ROOT/android/variables.gradle"
 
