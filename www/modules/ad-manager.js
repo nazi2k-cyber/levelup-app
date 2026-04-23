@@ -50,6 +50,7 @@
     let _nativeAdDisabled = false;
     let _nativeAdUnavailableLogged = false;
     let _nativeAdMissingCount = 0;
+    let _nativeAdLoadFailureCount = 0;
 
     // 모달 오버레이 시 광고 일시 숨김 플래그
     let _adsHiddenForModal = false;
@@ -100,7 +101,8 @@
     }
     function _handleMissingNativeAdPlugin() {
         _nativeAdMissingCount += 1;
-        if (_nativeAdMissingCount >= 3) _nativeAdDisabled = true;
+        // Native Advanced API가 아예 없는 빌드는 재시도해도 성공하지 않으므로 즉시 비활성화
+        _nativeAdDisabled = true;
         if (_nativeAdUnavailableLogged) return;
         _nativeAdUnavailableLogged = true;
         const pluginKeys = Object.keys(window?.Capacitor?.Plugins || {}).join(', ');
@@ -108,6 +110,13 @@
         if (window.AppLogger) {
             AppLogger.warn('[NativeAd] Native Advanced API 사용 불가. plugins=' + (pluginKeys || '(none)') + ', AdMobMethods=' + (adMobKeys || '(none)'));
         }
+    }
+    function _registerNativeAdFailure(reason, error) {
+        _nativeAdLoadFailureCount += 1;
+        if (_nativeAdLoadFailureCount >= 3) _nativeAdDisabled = true;
+        const errorText = error?.message || error?.errorMessage || (typeof error === 'string' ? error : '');
+        const suffix = errorText ? `: ${errorText}` : '';
+        if (window.AppLogger) AppLogger.warn(`[NativeAd] ${reason}${suffix}`);
     }
 
     // --- GDPR/동의 ---
@@ -782,6 +791,8 @@
             const nativeAd = _getNativeAdAdapter();
             if (!nativeAd) {
                 _handleMissingNativeAdPlugin();
+                _nativeAdLoaded = false;
+                _nativeAdActiveTab = null;
                 placeholder.style.display = 'none';
                 // NativeAd 플러그인이 없는 빌드에서는 배너로 폴백해 광고 공백을 최소화
                 _nativeAdUsingBannerFallback = true;
@@ -815,10 +826,16 @@
 
                 positionNativeAd(tabId);
                 setupNativeAdScrollSync(tabId);
+                _nativeAdLoadFailureCount = 0;
+                return;
             }
+            _nativeAdLoaded = false;
+            _nativeAdActiveTab = null;
+            placeholder.style.display = 'none';
+            _registerNativeAdFailure('로드 실패(loaded=false)', result);
         } catch (e) {
             console.warn('[NativeAd] 로드 실패:', e);
-            if (window.AppLogger) AppLogger.warn('[NativeAd] 로드 실패: ' + (e.message || ''));
+            _registerNativeAdFailure('로드 실패', e);
             _nativeAdLoaded = false;
             _nativeAdActiveTab = null;
             placeholder.style.display = 'none';
