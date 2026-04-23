@@ -14,6 +14,7 @@ import { createOnboardingModule } from './modules/domains/onboarding.js';
 import { createStreakRareTitleModule } from './modules/domains/streak-rare-title.js';
 import { createQuestStatsModule } from './modules/domains/quest-stats.js';
 import { createAuthProfileModule } from './modules/domains/auth-profile.js';
+import { createPlannerDomainModule } from './modules/domains/planner.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -5112,6 +5113,9 @@ let plannerWeekOffset = 0; // 주간 캘린더 주 오프셋 (0 = 현재 주, -1
 let monthlyCalendarYear = new Date().getFullYear();
 let monthlyCalendarMonth = new Date().getMonth();
 let _monthlyCalendarUnlocked = false; // 오늘 보상형 광고 시청 완료 여부
+let plannerPhotoData = null; // base64 or URL
+let _plannerPhotoBase64 = null; // canvas export용 base64 원본 보존 (URL 교체 후에도 유지)
+let _plannerPhotoCompressing = false;
 // plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯)
 let plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
 
@@ -5132,203 +5136,70 @@ function getAllDiaryEntries() {
     } catch { return {}; }
 }
 
+const plannerDomain = createPlannerDomainModule({
+    AppState,
+    i18n,
+    isNativePlatform,
+    getTodayStr,
+    getDiaryEntry,
+    getAllDiaryEntries,
+    getDiarySelectedDate: () => diarySelectedDate,
+    setDiarySelectedDate: (v) => { diarySelectedDate = v; },
+    getPlannerWeekOffset: () => plannerWeekOffset,
+    setPlannerWeekOffset: (v) => { plannerWeekOffset = v; },
+    getMonthlyCalendarYear: () => monthlyCalendarYear,
+    setMonthlyCalendarYear: (v) => { monthlyCalendarYear = v; },
+    getMonthlyCalendarMonth: () => monthlyCalendarMonth,
+    setMonthlyCalendarMonth: (v) => { monthlyCalendarMonth = v; },
+    getMonthlyCalendarUnlocked: () => _monthlyCalendarUnlocked,
+    setMonthlyCalendarUnlocked: (v) => { _monthlyCalendarUnlocked = v; },
+    selectPlannerDate: (dateStr) => window.selectPlannerDate(dateStr),
+    loadPlannerForDate,
+    updateApplyTodayButton,
+    getPlannerPhotoData: () => plannerPhotoData,
+    setPlannerPhotoData: (v) => { plannerPhotoData = v; },
+    getPlannerPhotoBase64: () => _plannerPhotoBase64,
+    setPlannerPhotoBase64: (v) => { _plannerPhotoBase64 = v; },
+    getPlannerPhotoCompressing: () => _plannerPhotoCompressing,
+    setPlannerPhotoCompressing: (v) => { _plannerPhotoCompressing = v; },
+});
+plannerDomain.bindWindowHandlers();
+window.PlannerDomain = plannerDomain;
+
 // 주간 플래너 캘린더 렌더링 (이전/다음 주 네비게이션 지원)
 function renderPlannerCalendar() {
-    const container = document.getElementById('planner-calendar-grid');
-    if (!container) return;
-
-    const today = new Date();
-    const todayStr = dateToStr(today);
-    const currentDay = today.getDay();
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - currentDay + (plannerWeekOffset * 7));
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const monthEl = document.getElementById('planner-cal-month');
-    if (monthEl) monthEl.innerText = `${startOfWeek.getFullYear()} ${monthNames[startOfWeek.getMonth()]}`;
-
-    const dayNames = {
-        ko: ["일","월","화","수","목","금","토"],
-        en: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],
-        ja: ["日","月","火","水","木","金","土"]
-    };
-
-    const allEntries = getAllDiaryEntries();
-
-    container.innerHTML = Array.from({length: 7}, (_, i) => {
-        const iterDate = new Date(startOfWeek);
-        iterDate.setDate(startOfWeek.getDate() + i);
-        const dateStr = dateToStr(iterDate);
-        const isToday = dateStr === todayStr;
-        const isSelected = dateStr === diarySelectedDate;
-        const entry = allEntries[dateStr];
-        const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
-
-        return `
-            <div class="cal-day ${isToday ? 'today' : ''} ${isSelected ? 'planner-selected' : ''}"
-                 onclick="window.selectPlannerDate('${dateStr}')" style="cursor:pointer;">
-                <div class="cal-name">${dayNames[AppState.currentLang][i]}</div>
-                <div class="cal-date">${iterDate.getDate()}</div>
-                <div class="cal-score">${hasEntry ? '✓' : '·'}</div>
-            </div>
-        `;
-    }).join('');
+    return plannerDomain.renderPlannerCalendar();
 }
 
 // 주간 캘린더 이전/다음 주 이동
 window.changePlannerWeek = function(delta) {
-    plannerWeekOffset += delta;
-    renderPlannerCalendar();
+    return plannerDomain.changePlannerWeek(delta);
 };
 
 // --- ★ 월간 캘린더 기능 ★ ---
 
 // 월간 캘린더 렌더링
 function renderMonthlyCalendar(year, month) {
-    const container = document.getElementById('monthly-calendar-grid');
-    if (!container) return;
-
-    const lang = AppState.currentLang;
-    const today = new Date();
-    const todayStr = dateToStr(today);
-
-    const monthNames = {
-        ko: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
-        en: ["January","February","March","April","May","June","July","August","September","October","November","December"],
-        ja: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"]
-    };
-    const dayNames = {
-        ko: ["일","월","화","수","목","금","토"],
-        en: ["S","M","T","W","T","F","S"],
-        ja: ["日","月","火","水","木","金","土"]
-    };
-
-    const titleEl = document.getElementById('monthly-cal-title');
-    if (titleEl) titleEl.innerText = `${year} ${(monthNames[lang] || monthNames.en)[month]}`;
-
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const allEntries = getAllDiaryEntries();
-
-    // 요일 헤더
-    let headerHTML = '<div class="monthly-cal-header">';
-    (dayNames[lang] || dayNames.en).forEach(d => { headerHTML += `<span>${d}</span>`; });
-    headerHTML += '</div>';
-
-    // 날짜 그리드
-    let gridHTML = '<div class="monthly-cal-grid">';
-    for (let i = 0; i < firstDay; i++) gridHTML += '<div class="monthly-cal-day empty"></div>';
-
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const isToday = dateStr === todayStr;
-        const isSelected = dateStr === diarySelectedDate;
-        const entry = allEntries[dateStr];
-        const hasEntry = entry && (entry.blocks ? Object.keys(entry.blocks).length > 0 : entry.text);
-        const classes = ['monthly-cal-day'];
-        if (isToday) classes.push('today');
-        if (isSelected) classes.push('selected');
-        if (hasEntry) classes.push('has-entry');
-
-        gridHTML += `<div class="${classes.join(' ')}" onclick="window.selectMonthlyDate('${dateStr}')">${d}</div>`;
-    }
-    gridHTML += '</div>';
-
-    container.innerHTML = headerHTML + gridHTML;
+    return plannerDomain.renderMonthlyCalendar(year, month);
 }
 
-// 월간 캘린더에서 날짜 선택 → 월간 유지, 해당 날짜 데이터 로드
 window.selectMonthlyDate = function(dateStr) {
-    // 선택 날짜가 속한 주로 weekOffset 계산 (주간 복귀 시 사용)
-    const selected = new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    const todayStart = new Date(today);
-    todayStart.setDate(today.getDate() - today.getDay());
-    todayStart.setHours(0,0,0,0);
-    const selectedStart = new Date(selected);
-    selectedStart.setDate(selected.getDate() - selected.getDay());
-    selectedStart.setHours(0,0,0,0);
-    const diffDays = Math.round((selectedStart - todayStart) / (1000 * 60 * 60 * 24));
-    plannerWeekOffset = Math.round(diffDays / 7);
-
-    // 날짜 선택 및 데이터 로드 (월간 캘린더 유지)
-    window.selectPlannerDate(dateStr);
-
-    // 월간 캘린더 선택 상태 갱신
-    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
+    return plannerDomain.selectMonthlyDate(dateStr);
 };
 
-// 이전/다음 월 이동
 window.changeMonthlyCalendar = function(delta) {
     monthlyCalendarMonth += delta;
     if (monthlyCalendarMonth > 11) { monthlyCalendarMonth = 0; monthlyCalendarYear++; }
     if (monthlyCalendarMonth < 0) { monthlyCalendarMonth = 11; monthlyCalendarYear--; }
-    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
+    return renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
 };
 
-// 월간 캘린더 열기 (보상형 광고 게이트)
 window.openMonthlyCalendar = async function() {
-    const lang = AppState.currentLang;
-    const todayStr = getTodayStr();
-
-    // 오늘 이미 광고 시청했는지 확인
-    const adDate = localStorage.getItem('monthly_cal_ad_date');
-    if (adDate === todayStr || _monthlyCalendarUnlocked) {
-        _showMonthlyCalendar();
-        return;
-    }
-
-    // 웹(비네이티브) 환경에서는 광고 없이 바로 진입
-    if (!isNativePlatform) {
-        _monthlyCalendarUnlocked = true;
-        localStorage.setItem('monthly_cal_ad_date', todayStr);
-        _showMonthlyCalendar();
-        return;
-    }
-
-    // 보상형 광고 표시 (AdManager 모듈 경유)
-    if (!window.AdManager) {
-        alert(i18n[lang].monthly_cal_ad_fail);
-        return;
-    }
-
-    const adShown = await window.AdManager.showRewarded({
-        context: 'monthlyCalendar',
-        onSuccess: function() {
-            _monthlyCalendarUnlocked = true;
-            localStorage.setItem('monthly_cal_ad_date', todayStr);
-            _showMonthlyCalendar();
-            if (window.AppLogger) AppLogger.info('[MonthlyCalendar] 보상형 광고 시청 완료 → 월간 캘린더 해제');
-        },
-        onFail: function() {
-            alert(i18n[lang].monthly_cal_ad_fail);
-        }
-    });
-    if (!adShown) {
-        alert(i18n[lang].monthly_cal_ad_fail);
-    }
+    return plannerDomain.openMonthlyCalendar ? plannerDomain.openMonthlyCalendar() : undefined;
 };
 
-// 월간 캘린더 실제 표시
-function _showMonthlyCalendar() {
-    const now = new Date();
-    monthlyCalendarYear = now.getFullYear();
-    monthlyCalendarMonth = now.getMonth();
-    renderMonthlyCalendar(monthlyCalendarYear, monthlyCalendarMonth);
-
-    const weeklyCard = document.getElementById('weekly-calendar-card');
-    const monthlyCard = document.getElementById('monthly-calendar-card');
-    if (weeklyCard) weeklyCard.classList.add('d-none');
-    if (monthlyCard) monthlyCard.classList.remove('d-none');
-}
-
-// 월간 캘린더 닫기 → 주간 복귀
 function closeMonthlyCalendar() {
-    const weeklyCard = document.getElementById('weekly-calendar-card');
-    const monthlyCard = document.getElementById('monthly-calendar-card');
-    if (weeklyCard) weeklyCard.classList.remove('d-none');
-    if (monthlyCard) monthlyCard.classList.add('d-none');
-    renderPlannerCalendar();
+    return plannerDomain.closeMonthlyCalendar();
 }
 window.closeMonthlyCalendar = closeMonthlyCalendar;
 
@@ -5768,61 +5639,13 @@ function loadPlannerForDate(dateStr) {
     // 사진 복원
     if (saved && saved.photo) {
         plannerPhotoData = saved.photo;
-        // base64 원본 보존 (URL이면 null → loadImageSafe 폴백)
         _plannerPhotoBase64 = window.isBase64Image(saved.photo) ? saved.photo : null;
-        const preview = document.getElementById('planner-photo-preview');
-        const placeholder = document.getElementById('planner-photo-placeholder');
-        const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) {
-            if (saved.photo && saved.photo.startsWith('http')) {
-                preview.onerror = function() {
-                    this.onerror = null;
-                    window._retryFirebaseImg(this, saved.photo);
-                };
-            }
-            preview.src = saved.photo;
-            preview.classList.remove('d-none');
-        }
-        if (placeholder) placeholder.classList.add('d-none');
-        if (removeBtn) removeBtn.classList.remove('d-none');
-
-        // URL 사진 → base64 캐시 (canvas export용, 백그라운드)
-        if (!window.isBase64Image(saved.photo) && saved.photo.startsWith('http')) {
-            fetch(saved.photo).then(r => r.blob()).then(blob => {
-                const reader = new FileReader();
-                reader.onloadend = () => { _plannerPhotoBase64 = reader.result; };
-                reader.readAsDataURL(blob);
-            }).catch(() => { /* 캐시 실패 무시 — sharePlannerAsImage에서 loadImageSafe 폴백 */ });
-        }
-
-        // 기존 base64 사진 → Storage 자동 마이그레이션 (백그라운드)
-        if (window.isBase64Image(saved.photo) && auth.currentUser) {
-            const migDateStr = diarySelectedDate;
-            window.uploadImageToStorage(
-                `planner_photos/${auth.currentUser.uid}/${migDateStr}.jpg`, saved.photo
-            ).then(url => {
-                try {
-                    const diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}');
-                    if (diaries[migDateStr]) {
-                        diaries[migDateStr].photo = url;
-                        localStorage.setItem('diary_entries', JSON.stringify(diaries));
-                        plannerPhotoData = url;
-                        AppLogger.info('[Planner] base64→Storage 마이그레이션 완료: ' + migDateStr);
-                    }
-                } catch (e) { /* 마이그레이션 실패 무시 — 다음 저장 시 재시도 */ }
-            }).catch(() => { /* 백그라운드 마이그레이션 실패 무시 */ });
-        }
+        plannerDomain.applyPlannerPhotoUI(saved.photo);
+        plannerDomain.syncPlannerPhotoFromSaved(saved.photo);
     } else {
         plannerPhotoData = null;
         _plannerPhotoBase64 = null;
-        const preview = document.getElementById('planner-photo-preview');
-        const placeholder = document.getElementById('planner-photo-placeholder');
-        const removeBtn = document.getElementById('planner-photo-remove');
-        if (preview) { preview.classList.add('d-none'); preview.removeAttribute('src'); }
-        if (placeholder) placeholder.classList.remove('d-none');
-        if (removeBtn) removeBtn.classList.add('d-none');
-        const fileInput = document.getElementById('plannerPhotoUpload');
-        if (fileInput) fileInput.value = '';
+        plannerDomain.applyPlannerPhotoUI(null);
     }
 
     // 태스크 목록 렌더링 (이 안에서 updateTimeboxDropdownOptions도 호출됨)
@@ -5980,98 +5803,16 @@ async function savePlannerEntry() {
 }
 
 // --- ★ 플래너 사진 기능 (타임테이블 사진 필수) ★ ---
-let plannerPhotoData = null; // base64 or URL
-let _plannerPhotoBase64 = null; // canvas export용 base64 원본 보존 (URL 교체 후에도 유지)
-
-let _plannerPhotoCompressing = false;
 function loadPlannerPhoto(e) {
-    const file = e.target.files[0];
-    if (!file || _plannerPhotoCompressing) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        const img = new Image();
-        img.onload = async function() {
-            _plannerPhotoCompressing = true;
-            try {
-                const canvas = document.createElement('canvas');
-                const maxSize = 480;
-                let w = img.width, h = img.height;
-                if (w > maxSize || h > maxSize) {
-                    if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-                    else { w = Math.round(w * maxSize / h); h = maxSize; }
-                }
-                canvas.width = w; canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                // 적응형 압축: 1.2MB 이하 보장 (2MB 규칙에 안전 마진 + 모바일 업로드 속도 고려)
-                const { dataURL } = await window.compressToTargetSize(canvas, 1200 * 1024, 0.7, 0.2);
-                plannerPhotoData = dataURL;
-                _plannerPhotoBase64 = dataURL; // canvas export용 base64 보존
-                const preview = document.getElementById('planner-photo-preview');
-                const placeholder = document.getElementById('planner-photo-placeholder');
-                const removeBtn = document.getElementById('planner-photo-remove');
-                preview.src = plannerPhotoData;
-                preview.classList.remove('d-none');
-                placeholder.classList.add('d-none');
-                removeBtn.classList.remove('d-none');
-            } finally {
-                _plannerPhotoCompressing = false;
-            }
-        };
-        img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+    return plannerDomain.loadPlannerPhoto(e);
 }
 
 window.removePlannerPhoto = function() {
-    plannerPhotoData = null;
-    _plannerPhotoBase64 = null;
-    const preview = document.getElementById('planner-photo-preview');
-    const placeholder = document.getElementById('planner-photo-placeholder');
-    const removeBtn = document.getElementById('planner-photo-remove');
-    preview.classList.add('d-none');
-    preview.removeAttribute('src');
-    placeholder.classList.remove('d-none');
-    removeBtn.classList.add('d-none');
-    document.getElementById('plannerPhotoUpload').value = '';
+    return plannerDomain.removePlannerPhoto ? plannerDomain.removePlannerPhoto() : plannerDomain.applyPlannerPhotoUI(null);
 };
 
-// 캡션 글자 수 카운터 (한글 140자 / 영문 280자 제한)
-// 한글(2바이트 문자)은 2로, 영문/숫자(1바이트)는 1로 계산하여 최대 280 기준
-function getCaptionByteLength(str) {
-    let len = 0;
-    for (let i = 0; i < str.length; i++) {
-        len += str.charCodeAt(i) > 127 ? 2 : 1;
-    }
-    return len;
-}
-
 window.updateCaptionCounter = function() {
-    const textarea = document.getElementById('planner-caption');
-    const counter = document.getElementById('planner-caption-counter');
-    if (!textarea || !counter) return;
-
-    let text = textarea.value;
-    const byteLen = getCaptionByteLength(text);
-    const maxBytes = 280;
-
-    // 초과 시 잘라내기
-    if (byteLen > maxBytes) {
-        let trimmed = '';
-        let currentLen = 0;
-        for (let i = 0; i < text.length; i++) {
-            const charLen = text.charCodeAt(i) > 127 ? 2 : 1;
-            if (currentLen + charLen > maxBytes) break;
-            trimmed += text[i];
-            currentLen += charLen;
-        }
-        textarea.value = trimmed;
-        text = trimmed;
-    }
-
-    const used = getCaptionByteLength(text);
-    const koEquiv = Math.ceil(used / 2);
-    counter.innerText = `${koEquiv} / 140`;
-    counter.style.color = used >= maxBytes * 0.9 ? 'var(--neon-red)' : 'var(--text-sub)';
+    return plannerDomain.updateCaptionCounter ? plannerDomain.updateCaptionCounter() : undefined;
 };
 
 // --- ★ 릴스 기능 ★ ---
