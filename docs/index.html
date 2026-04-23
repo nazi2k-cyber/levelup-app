@@ -27,9 +27,19 @@
                 <span class="nav-logo-sub">: REBOOT</span>
             </div>
             <div class="nav-links">
-                <a href="#features">기능</a>
-                <a href="#stats">스탯</a>
-                <a href="#download">다운로드</a>
+                <a href="#features" data-i18n="nav_features">기능</a>
+                <a href="#stats" data-i18n="nav_stats">스탯</a>
+                <a href="#download" data-i18n="nav_download">다운로드</a>
+            </div>
+            <div class="nav-controls">
+                <button class="lang-toggle" id="lang-toggle" aria-label="언어 선택" title="언어 선택">
+                    <span class="lang-toggle-icon">🌐</span>
+                </button>
+                <div class="lang-menu" id="lang-menu" aria-hidden="true">
+                    <button data-lang="ko">한국어</button>
+                    <button data-lang="en">English</button>
+                    <button data-lang="ja">日本語</button>
+                </div>
             </div>
             <button class="nav-mobile-toggle" aria-label="메뉴 열기">
                 <span></span><span></span><span></span>
@@ -46,12 +56,12 @@
         </div>
         <div class="hero-content">
             <div class="hero-text">
-                <div class="hero-badge">BRAVECAT STUDIOS</div>
-                <h1 class="hero-title">
+                <div class="hero-badge" data-i18n="hero_badge">BRAVECAT STUDIOS</div>
+                <h1 class="hero-title" data-i18n-html="hero_title">
                     현실을 게임처럼,<br>
                     <span class="hero-highlight">당신의 삶을 레벨업</span>하세요
                 </h1>
-                <p class="hero-desc">
+                <p class="hero-desc" data-i18n-html="hero_desc">
                     RPG 게임의 성장 시스템을 현실 생활에 접목한 자기계발 앱.<br>
                     매일 퀘스트를 완료하고, 스탯을 올리고, 던전에 도전하며<br>
                     실제 자신을 성장시켜보세요.
@@ -59,7 +69,7 @@
                 <div class="hero-actions">
                     <a href="https://play.google.com/store/apps/details?id=com.levelup.reboot" class="btn-primary-hero" target="_blank" rel="noopener">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.302 2.302a1 1 0 0 1 0 1.38l-2.302 2.302L15.396 13l2.302-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302L5.864 2.658z"/></svg>
-                        <span>Google Play에서 다운로드</span>
+                        <span data-i18n="hero_download_btn">Google Play에서 다운로드</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </a>
                 </div>
@@ -88,8 +98,8 @@
         <div class="section-inner">
             <div class="section-header">
                 <span class="section-badge">CORE FEATURES</span>
-                <h2 class="section-title">게임처럼 재미있게, 현실에서 진짜로 성장하세요</h2>
-                <p class="section-desc">6가지 핵심 시스템으로 당신의 일상을 RPG 모험으로 바꿉니다</p>
+                <h2 class="section-title" data-i18n="features_title">게임처럼 재미있게, 현실에서 진짜로 성장하세요</h2>
+                <p class="section-desc" data-i18n="features_desc">6가지 핵심 시스템으로 당신의 일상을 RPG 모험으로 바꿉니다</p>
             </div>
         </div>
     </section>
@@ -111,13 +121,13 @@
                 </div>
                 <div class="showcase-text">
                     <span class="showcase-badge showcase-badge--gold">WEEKLY QUESTS</span>
-                    <h2 class="showcase-title">매일 갱신되는 주간 퀘스트</h2>
-                    <p class="showcase-desc">요일별 맞춤 퀘스트가 매일 갱신됩니다. 운동, 공부, 식습관, 재정 등 12가지 카테고리의 퀘스트를 완료하고 성장하세요.</p>
+                    <h2 class="showcase-title" data-i18n="feature1_title">매일 갱신되는 주간 퀘스트</h2>
+                    <p class="showcase-desc" data-i18n="feature1_desc">요일별 맞춤 퀘스트가 매일 갱신됩니다. 운동, 공부, 식습관, 재정 등 12가지 카테고리의 퀘스트를 완료하고 성장하세요.</p>
                     <ul class="showcase-list">
-                        <li>DIY 퀘스트로 나만의 목표를 직접 설정</li>
-                        <li>퀘스트 완료 시 포인트 & 스탯 즉시 반영</li>
-                        <li>주간 도전과제 달성으로 추가 보상 획득</li>
-                        <li>일일 보너스 룰렛으로 포인트 잭팟</li>
+                        <li data-i18n="feature1_li1">DIY 퀘스트로 나만의 목표를 직접 설정</li>
+                        <li data-i18n="feature1_li2">퀘스트 완료 시 포인트 & 스탯 즉시 반영</li>
+                        <li data-i18n="feature1_li3">주간 도전과제 달성으로 추가 보상 획득</li>
+                        <li data-i18n="feature1_li4">일일 보너스 룰렛으로 포인트 잭팟</li>
                     </ul>
                 </div>
             </div>
@@ -130,13 +140,13 @@
             <div class="showcase-content">
                 <div class="showcase-text">
                     <span class="showcase-badge showcase-badge--green">LIFE TRACKER</span>
-                    <h2 class="showcase-title">라이프 스테이터스 & 성장 트래커</h2>
-                    <p class="showcase-desc">인생 진행률, 독서·영화 기록, 러닝 페이스까지. 나의 삶을 수치로 시각화하고 꾸준한 성장을 추적하세요.</p>
+                    <h2 class="showcase-title" data-i18n="feature2_title">라이프 스테이터스 & 성장 트래커</h2>
+                    <p class="showcase-desc" data-i18n="feature2_desc">인생 진행률, 독서·영화 기록, 러닝 페이스까지. 나의 삶을 수치로 시각화하고 꾸준한 성장을 추적하세요.</p>
                     <ul class="showcase-list">
-                        <li>인생 진행률 & 남은 시간 시각화</li>
-                        <li>BIG5 성격검사 &mdash; 나를 더 깊이 이해하기</li>
-                        <li>내 서재 & 내 영화 &mdash; 독서·영화 기록 관리</li>
-                        <li>러닝 계산기로 월간·연간 마일리지 추적</li>
+                        <li data-i18n="feature2_li1">인생 진행률 & 남은 시간 시각화</li>
+                        <li data-i18n-html="feature2_li2">BIG5 성격검사 &mdash; 나를 더 깊이 이해하기</li>
+                        <li data-i18n-html="feature2_li3">내 서재 & 내 영화 &mdash; 독서·영화 기록 관리</li>
+                        <li data-i18n="feature2_li4">러닝 계산기로 월간·연간 마일리지 추적</li>
                     </ul>
                 </div>
                 <div class="showcase-phones showcase-phones--double">
@@ -165,13 +175,13 @@
                 </div>
                 <div class="showcase-text">
                     <span class="showcase-badge showcase-badge--red">DUNGEON RAID</span>
-                    <h2 class="showcase-title">글로벌 & 로컬 던전 레이드</h2>
-                    <p class="showcase-desc">전 세계 헌터들과 함께 주간 던전을 공략하세요. GPS 기반 로컬 레이드로 실제 위치에서 보스와 맞서세요.</p>
+                    <h2 class="showcase-title" data-i18n-html="feature3_title">글로벌 & 로컬 던전 레이드</h2>
+                    <p class="showcase-desc" data-i18n="feature3_desc">전 세계 헌터들과 함께 주간 던전을 공략하세요. GPS 기반 로컬 레이드로 실제 위치에서 보스와 맞서세요.</p>
                     <ul class="showcase-list">
-                        <li>개인 기여도가 글로벌 진행도에 실시간 반영</li>
-                        <li>GPS 기반 로컬 레이드 &mdash; 실제 위치에서 보스 공략</li>
-                        <li>주말 보스 러시 이벤트로 2배 보상</li>
-                        <li>던전 클리어 시 특별 보상 획득</li>
+                        <li data-i18n="feature3_li1">개인 기여도가 글로벌 진행도에 실시간 반영</li>
+                        <li data-i18n-html="feature3_li2">GPS 기반 로컬 레이드 &mdash; 실제 위치에서 보스 공략</li>
+                        <li data-i18n="feature3_li3">주말 보스 러시 이벤트로 2배 보상</li>
+                        <li data-i18n="feature3_li4">던전 클리어 시 특별 보상 획득</li>
                     </ul>
                 </div>
             </div>
@@ -184,13 +194,13 @@
             <div class="showcase-content">
                 <div class="showcase-text">
                     <span class="showcase-badge showcase-badge--purple">PLANNER & DAY1</span>
-                    <h2 class="showcase-title">일일 플래너 & Day1 포스팅</h2>
-                    <p class="showcase-desc">우선순위 태스크와 시간표로 하루를 계획하고, 사진과 함께 Day1 피드에 공유하세요. 당신의 하루가 콘텐츠가 됩니다.</p>
+                    <h2 class="showcase-title" data-i18n-html="feature4_title">일일 플래너 & Day1 포스팅</h2>
+                    <p class="showcase-desc" data-i18n="feature4_desc">우선순위 태스크와 시간표로 하루를 계획하고, 사진과 함께 Day1 피드에 공유하세요. 당신의 하루가 콘텐츠가 됩니다.</p>
                     <ul class="showcase-list">
-                        <li>우선순위 태스크 & 시간표로 하루 계획</li>
-                        <li>사진 첨부 후 Day1 피드에 포스팅</li>
-                        <li>플래너 이미지 저장 & 링크 공유</li>
-                        <li>주간 플래너로 일주일을 한눈에</li>
+                        <li data-i18n-html="feature4_li1">우선순위 태스크 & 시간표로 하루 계획</li>
+                        <li data-i18n="feature4_li2">사진 첨부 후 Day1 피드에 포스팅</li>
+                        <li data-i18n-html="feature4_li3">플래너 이미지 저장 & 링크 공유</li>
+                        <li data-i18n="feature4_li4">주간 플래너로 일주일을 한눈에</li>
                     </ul>
                 </div>
                 <div class="showcase-phones showcase-phones--triple">
@@ -219,12 +229,12 @@
                 </div>
                 <div class="showcase-text">
                     <span class="showcase-badge showcase-badge--gold">SOCIAL RANKING</span>
-                    <h2 class="showcase-title">소셜 랭킹 & 친구 시스템</h2>
-                    <p class="showcase-desc">글로벌 및 친구 랭킹으로 건전한 경쟁을 즐기세요. 함께 성장하는 재미가 동기부여의 핵심입니다.</p>
+                    <h2 class="showcase-title" data-i18n-html="feature5_title">소셜 랭킹 & 친구 시스템</h2>
+                    <p class="showcase-desc" data-i18n="feature5_desc">글로벌 및 친구 랭킹으로 건전한 경쟁을 즐기세요. 함께 성장하는 재미가 동기부여의 핵심입니다.</p>
                     <ul class="showcase-list">
-                        <li>스탯별 글로벌 랭킹 & 친구 랭킹</li>
-                        <li>친구 추가로 스탯 비교 & 응원</li>
-                        <li>주간 1위 헌터 명예의 전당 등재</li>
+                        <li data-i18n-html="feature5_li1">스탯별 글로벌 랭킹 & 친구 랭킹</li>
+                        <li data-i18n-html="feature5_li2">친구 추가로 스탯 비교 & 응원</li>
+                        <li data-i18n="feature5_li3">주간 1위 헌터 명예의 전당 등재</li>
                     </ul>
                 </div>
             </div>
@@ -237,15 +247,15 @@
             <div class="showcase-content">
                 <div class="showcase-text">
                     <span class="showcase-badge">SMART TOOLS</span>
-                    <h2 class="showcase-title">스마트 도구 모음</h2>
-                    <p class="showcase-desc">내 서재, 내 영화, 1RM 계산기, 명상 타이머, D-Day 카운터, 뽀모도로까지. 자기계발에 필요한 도구를 한 앱에서 모두 사용하세요. 한국어 · English · 日本語 다국어 지원. 라이트 · 다크 테마 지원.</p>
+                    <h2 class="showcase-title" data-i18n="feature6_title">스마트 도구 모음</h2>
+                    <p class="showcase-desc" data-i18n="feature6_desc">내 서재, 내 영화, 1RM 계산기, 명상 타이머, D-Day 카운터, 뽀모도로까지. 자기계발에 필요한 도구를 한 앱에서 모두 사용하세요. 한국어 · English · 日本語 다국어 지원. 라이트 · 다크 테마 지원.</p>
                     <ul class="showcase-list">
-                        <li>내 서재 &mdash; 독서 기록 &amp; 나만의 책 컬렉션 관리</li>
-                        <li>1RM 운동 계산기 &mdash; 3대 운동 기록 관리</li>
-                        <li>명상 타이머 &mdash; 싱잉볼 사운드와 함께 집중</li>
-                        <li>D-Day 카운터 &mdash; 중요 목표일 추적</li>
-                        <li>뽀모도로 타이머 &mdash; 25분 집중 세션으로 생산성 향상</li>
-                        <li>라이트 / 다크 테마 &mdash; 눈에 편한 테마를 자유롭게 변경</li>
+                        <li data-i18n-html="feature6_li1">내 서재 &mdash; 독서 기록 &amp; 나만의 책 컬렉션 관리</li>
+                        <li data-i18n-html="feature6_li2">1RM 운동 계산기 &mdash; 3대 운동 기록 관리</li>
+                        <li data-i18n-html="feature6_li3">명상 타이머 &mdash; 싱잉볼 사운드와 함께 집중</li>
+                        <li data-i18n-html="feature6_li4">D-Day 카운터 &mdash; 중요 목표일 추적</li>
+                        <li data-i18n-html="feature6_li5">뽀모도로 타이머 &mdash; 25분 집중 세션으로 생산성 향상</li>
+                        <li data-i18n-html="feature6_li6">라이트 / 다크 테마 &mdash; 눈에 편한 테마를 자유롭게 변경</li>
                     </ul>
                 </div>
                 <div class="showcase-phones showcase-phones--triple">
@@ -268,8 +278,8 @@
         <div class="section-inner">
             <div class="section-header">
                 <span class="section-badge">STAT SYSTEM</span>
-                <h2 class="section-title">6가지 스탯으로 성장하세요</h2>
-                <p class="section-desc">현실의 모든 노력이 수치로 보입니다</p>
+                <h2 class="section-title" data-i18n="stats_title">6가지 스탯으로 성장하세요</h2>
+                <p class="section-desc" data-i18n="stats_desc">현실의 모든 노력이 수치로 보입니다</p>
             </div>
             <div class="stats-grid">
                 <div class="stat-card stat-str">
@@ -317,7 +327,7 @@
         <div class="section-inner">
             <div class="section-header">
                 <span class="section-badge">WHO IS IT FOR</span>
-                <h2 class="section-title">이런 분께 추천합니다</h2>
+                <h2 class="section-title" data-i18n="recommend_title">이런 분께 추천합니다</h2>
             </div>
             <div class="recommend-grid">
                 <div class="recommend-card">
@@ -345,8 +355,8 @@
         <div class="section-inner">
             <div class="download-content">
                 <img src="play_store_512.png" alt="LEVEL UP: REBOOT" class="download-icon">
-                <h2 class="download-title">지금 바로 각성하세요</h2>
-                <p class="download-desc">현실 속 최강 헌터가 되어보세요!</p>
+                <h2 class="download-title" data-i18n="download_title">지금 바로 각성하세요</h2>
+                <p class="download-desc" data-i18n="download_desc">현실 속 최강 헌터가 되어보세요!</p>
                 <div class="download-buttons">
                     <a href="https://play.google.com/store/apps/details?id=com.levelup.reboot" class="btn-download" target="_blank" rel="noopener">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.302 2.302a1 1 0 0 1 0 1.38l-2.302 2.302L15.396 13l2.302-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302L5.864 2.658z"/></svg>
@@ -369,10 +379,10 @@
                     <span class="footer-studio">BRAVECAT STUDIOS</span>
                 </div>
                 <div class="footer-links">
-                    <a href="terms/privacy.html">개인정보 처리방침</a>
-                    <a href="terms/terms.html">이용약관</a>
-                    <a href="terms/usage-policy.html">이용 정책</a>
-                    <a href="terms/account-deletion.html">계정 삭제</a>
+                    <a href="terms/privacy.html" data-i18n="footer_privacy">개인정보 처리방침</a>
+                    <a href="terms/terms.html" data-i18n="footer_terms">이용약관</a>
+                    <a href="terms/usage-policy.html" data-i18n="footer_policy">이용 정책</a>
+                    <a href="terms/account-deletion.html" data-i18n="footer_delete">계정 삭제</a>
                 </div>
                 <div class="footer-copy">&copy; 2026 BRAVECAT STUDIOS. All rights reserved.</div>
             </div>
@@ -382,6 +392,211 @@
     <!-- Scroll animations -->
     <script>
     (function() {
+        var i18n = {
+            ko: {
+                title: 'LEVEL UP: REBOOT - 현실을 게임처럼 레벨업하세요',
+                description: 'RPG 게임의 성장 시스템을 현실 생활에 접목한 자기계발 앱. 매일 퀘스트를 완료하고, 스탯을 올리고, 던전에 도전하세요.',
+                nav_features: '기능',
+                nav_stats: '스탯',
+                nav_download: '다운로드',
+                hero_badge: 'BRAVECAT STUDIOS',
+                hero_title: '현실을 게임처럼,<br><span class="hero-highlight">당신의 삶을 레벨업</span>하세요',
+                hero_desc: 'RPG 게임의 성장 시스템을 현실 생활에 접목한 자기계발 앱.<br>매일 퀘스트를 완료하고, 스탯을 올리고, 던전에 도전하며<br>실제 자신을 성장시켜보세요.',
+                hero_download_btn: 'Google Play에서 다운로드',
+                features_title: '게임처럼 재미있게, 현실에서 진짜로 성장하세요',
+                features_desc: '6가지 핵심 시스템으로 당신의 일상을 RPG 모험으로 바꿉니다',
+                feature1_title: '매일 갱신되는 주간 퀘스트',
+                feature1_desc: '요일별 맞춤 퀘스트가 매일 갱신됩니다. 운동, 공부, 식습관, 재정 등 12가지 카테고리의 퀘스트를 완료하고 성장하세요.',
+                feature1_li1: 'DIY 퀘스트로 나만의 목표를 직접 설정',
+                feature1_li2: '퀘스트 완료 시 포인트 & 스탯 즉시 반영',
+                feature1_li3: '주간 도전과제 달성으로 추가 보상 획득',
+                feature1_li4: '일일 보너스 룰렛으로 포인트 잭팟',
+                feature2_title: '라이프 스테이터스 & 성장 트래커',
+                feature2_desc: '인생 진행률, 독서·영화 기록, 러닝 페이스까지. 나의 삶을 수치로 시각화하고 꾸준한 성장을 추적하세요.',
+                feature2_li1: '인생 진행률 & 남은 시간 시각화',
+                feature2_li2: 'BIG5 성격검사 &mdash; 나를 더 깊이 이해하기',
+                feature2_li3: '내 서재 & 내 영화 &mdash; 독서·영화 기록 관리',
+                feature2_li4: '러닝 계산기로 월간·연간 마일리지 추적',
+                feature3_title: '글로벌 & 로컬 던전 레이드',
+                feature3_desc: '전 세계 헌터들과 함께 주간 던전을 공략하세요. GPS 기반 로컬 레이드로 실제 위치에서 보스와 맞서세요.',
+                feature3_li1: '개인 기여도가 글로벌 진행도에 실시간 반영',
+                feature3_li2: 'GPS 기반 로컬 레이드 &mdash; 실제 위치에서 보스 공략',
+                feature3_li3: '주말 보스 러시 이벤트로 2배 보상',
+                feature3_li4: '던전 클리어 시 특별 보상 획득',
+                feature4_title: '일일 플래너 & Day1 포스팅',
+                feature4_desc: '우선순위 태스크와 시간표로 하루를 계획하고, 사진과 함께 Day1 피드에 공유하세요. 당신의 하루가 콘텐츠가 됩니다.',
+                feature4_li1: '우선순위 태스크 & 시간표로 하루 계획',
+                feature4_li2: '사진 첨부 후 Day1 피드에 포스팅',
+                feature4_li3: '플래너 이미지 저장 & 링크 공유',
+                feature4_li4: '주간 플래너로 일주일을 한눈에',
+                feature5_title: '소셜 랭킹 & 친구 시스템',
+                feature5_desc: '글로벌 및 친구 랭킹으로 건전한 경쟁을 즐기세요. 함께 성장하는 재미가 동기부여의 핵심입니다.',
+                feature5_li1: '스탯별 글로벌 랭킹 & 친구 랭킹',
+                feature5_li2: '친구 추가로 스탯 비교 & 응원',
+                feature5_li3: '주간 1위 헌터 명예의 전당 등재',
+                feature6_title: '스마트 도구 모음',
+                feature6_desc: '내 서재, 내 영화, 1RM 계산기, 명상 타이머, D-Day 카운터, 뽀모도로까지. 자기계발에 필요한 도구를 한 앱에서 모두 사용하세요. 한국어 · English · 日本語 다국어 지원. 라이트 · 다크 테마 지원.',
+                feature6_li1: '내 서재 &mdash; 독서 기록 &amp; 나만의 책 컬렉션 관리',
+                feature6_li2: '1RM 운동 계산기 &mdash; 3대 운동 기록 관리',
+                feature6_li3: '명상 타이머 &mdash; 싱잉볼 사운드와 함께 집중',
+                feature6_li4: 'D-Day 카운터 &mdash; 중요 목표일 추적',
+                feature6_li5: '뽀모도로 타이머 &mdash; 25분 집중 세션으로 생산성 향상',
+                feature6_li6: '라이트 / 다크 테마 &mdash; 눈에 편한 테마를 자유롭게 변경',
+                stats_title: '6가지 스탯으로 성장하세요',
+                stats_desc: '현실의 모든 노력이 수치로 보입니다',
+                recommend_title: '이런 분께 추천합니다',
+                download_title: '지금 바로 각성하세요',
+                download_desc: '현실 속 최강 헌터가 되어보세요!',
+                footer_privacy: '개인정보 처리방침',
+                footer_terms: '이용약관',
+                footer_policy: '이용 정책',
+                footer_delete: '계정 삭제'
+            },
+            en: {
+                title: 'LEVEL UP: REBOOT - Level up your life like a game',
+                description: 'A self-improvement app that brings RPG progression to real life. Complete daily quests, grow your stats, and challenge dungeons.',
+                nav_features: 'Features',
+                nav_stats: 'Stats',
+                nav_download: 'Download',
+                hero_badge: 'BRAVECAT STUDIOS',
+                hero_title: 'Like a game in real life,<br><span class="hero-highlight">level up your life</span>',
+                hero_desc: 'A self-improvement app that applies RPG progression systems to daily life.<br>Complete quests, raise stats, and challenge dungeons<br>to become stronger in the real world.',
+                hero_download_btn: 'Download on Google Play',
+                features_title: 'Have fun like a game, and grow for real in life',
+                features_desc: 'Six core systems transform your daily routine into an RPG adventure',
+                feature1_title: 'Weekly quests refreshed every day',
+                feature1_desc: 'Daily quests tailored by weekday are renewed each day. Complete quests across 12 categories like fitness, study, diet, and finance to grow.',
+                feature1_li1: 'Set your own goals with DIY quests',
+                feature1_li2: 'Earn points and stats instantly on completion',
+                feature1_li3: 'Get bonus rewards by clearing weekly challenges',
+                feature1_li4: 'Hit point jackpots with the daily bonus roulette',
+                feature2_title: 'Life Status & growth tracker',
+                feature2_desc: 'From life progress and book/movie logs to running pace, visualize your life with numbers and track consistent growth.',
+                feature2_li1: 'Visualize life progress & remaining time',
+                feature2_li2: 'BIG5 personality test &mdash; understand yourself deeper',
+                feature2_li3: 'My Library & My Movies &mdash; manage reading and movie logs',
+                feature2_li4: 'Track monthly and yearly mileage with the running calculator',
+                feature3_title: 'Global & local dungeon raids',
+                feature3_desc: 'Raid weekly dungeons with hunters worldwide. Challenge bosses at real locations with GPS-based local raids.',
+                feature3_li1: 'Your contribution updates global progress in real time',
+                feature3_li2: 'GPS-based local raids &mdash; defeat bosses at real-world locations',
+                feature3_li3: 'Double rewards during weekend boss rush events',
+                feature3_li4: 'Earn special rewards when clearing dungeons',
+                feature4_title: 'Daily planner & Day1 posting',
+                feature4_desc: 'Plan your day with priority tasks and timetables, then share it on the Day1 feed with photos. Your day becomes content.',
+                feature4_li1: 'Plan your day with priority tasks and schedules',
+                feature4_li2: 'Post to Day1 feed with attached photos',
+                feature4_li3: 'Save planner images and share links',
+                feature4_li4: 'See your whole week at a glance with the weekly planner',
+                feature5_title: 'Social ranking & friend system',
+                feature5_desc: 'Enjoy healthy competition through global and friend rankings. Growing together is the core motivation.',
+                feature5_li1: 'Global and friend rankings by stat',
+                feature5_li2: 'Add friends to compare stats and cheer each other on',
+                feature5_li3: 'Weekly #1 hunters are added to the hall of fame',
+                feature6_title: 'Smart tool collection',
+                feature6_desc: 'From My Library, My Movies, 1RM calculator, meditation timer, D-Day counter, and Pomodoro, use every self-improvement tool in one app. Supports Korean · English · Japanese and light/dark themes.',
+                feature6_li1: 'My Library &mdash; track reading and manage your own book collection',
+                feature6_li2: '1RM calculator &mdash; record major lift performance',
+                feature6_li3: 'Meditation timer &mdash; focus with singing bowl sounds',
+                feature6_li4: 'D-Day counter &mdash; track important goal dates',
+                feature6_li5: 'Pomodoro timer &mdash; boost productivity with 25-minute focus sessions',
+                feature6_li6: 'Light / dark theme &mdash; freely switch eye-friendly themes',
+                stats_title: 'Grow with 6 core stats',
+                stats_desc: 'Every real-world effort becomes visible in numbers',
+                recommend_title: 'Recommended for',
+                download_title: 'Awaken now',
+                download_desc: 'Become the strongest hunter in real life!',
+                footer_privacy: 'Privacy Policy',
+                footer_terms: 'Terms of Service',
+                footer_policy: 'Usage Policy',
+                footer_delete: 'Account Deletion'
+            },
+            ja: {
+                title: 'LEVEL UP: REBOOT - 現実をゲームのようにレベルアップ',
+                description: 'RPGの成長システムを現実生活に取り入れた自己成長アプリ。毎日のクエストをこなし、ステータスを上げ、ダンジョンに挑戦しましょう。',
+                nav_features: '機能',
+                nav_stats: 'ステータス',
+                nav_download: 'ダウンロード',
+                hero_badge: 'BRAVECAT STUDIOS',
+                hero_title: '現実をゲームのように、<br><span class="hero-highlight">あなたの人生をレベルアップ</span>',
+                hero_desc: 'RPGの成長システムを日常生活に取り入れた自己成長アプリ。<br>毎日クエストを達成し、ステータスを上げ、ダンジョンに挑戦して<br>現実の自分を成長させましょう。',
+                hero_download_btn: 'Google Playでダウンロード',
+                features_title: 'ゲームのように楽しく、現実で本当に成長する',
+                features_desc: '6つのコアシステムで毎日をRPGの冒険に変えます',
+                feature1_title: '毎日更新される週間クエスト',
+                feature1_desc: '曜日別のクエストが毎日更新されます。運動・勉強・食習慣・財務など12カテゴリのクエストを達成して成長しましょう。',
+                feature1_li1: 'DIYクエストで自分だけの目標を設定',
+                feature1_li2: '達成時にポイントとステータスを即時反映',
+                feature1_li3: '週間チャレンジ達成で追加報酬を獲得',
+                feature1_li4: 'デイリーボーナスルーレットでポイント獲得チャンス',
+                feature2_title: 'ライフステータス＆成長トラッカー',
+                feature2_desc: '人生進行率、読書・映画記録、ランニングペースまで。数値で可視化して継続的な成長を追跡できます。',
+                feature2_li1: '人生進行率と残り時間を可視化',
+                feature2_li2: 'BIG5性格検査 &mdash; 自分をより深く理解',
+                feature2_li3: 'マイライブラリ＆マイムービー &mdash; 記録を管理',
+                feature2_li4: 'ランニング計算機で月間・年間マイレージを追跡',
+                feature3_title: 'グローバル＆ローカルダンジョンレイド',
+                feature3_desc: '世界中のハンターと週間ダンジョンを攻略。GPSベースのローカルレイドで実際の位置でボスに挑めます。',
+                feature3_li1: '個人の貢献度がグローバル進行度にリアルタイム反映',
+                feature3_li2: 'GPSベースのローカルレイド &mdash; 現実の場所でボス攻略',
+                feature3_li3: '週末ボスラッシュイベントで報酬2倍',
+                feature3_li4: 'ダンジョンクリアで特別報酬を獲得',
+                feature4_title: 'デイリープランナー＆Day1投稿',
+                feature4_desc: '優先タスクと時間割で一日を計画し、写真付きでDay1フィードに共有。あなたの一日がコンテンツになります。',
+                feature4_li1: '優先タスクと時間割で一日を計画',
+                feature4_li2: '写真を添付してDay1フィードに投稿',
+                feature4_li3: 'プランナー画像を保存しリンク共有',
+                feature4_li4: '週間プランナーで1週間を一目で確認',
+                feature5_title: 'ソーシャルランキング＆フレンド機能',
+                feature5_desc: 'グローバルとフレンドランキングで健全な競争を楽しめます。一緒に成長する楽しさがモチベーションです。',
+                feature5_li1: 'ステータス別のグローバル＆フレンドランキング',
+                feature5_li2: '友達追加でステータス比較＆応援',
+                feature5_li3: '週間1位ハンターは名誉の殿堂に掲載',
+                feature6_title: 'スマートツールコレクション',
+                feature6_desc: 'マイライブラリ、マイムービー、1RM計算機、瞑想タイマー、D-Dayカウンター、ポモドーロまで。自己成長に必要なツールを1つのアプリで使えます。韓国語・English・日本語対応。ライト／ダークテーマ対応。',
+                feature6_li1: 'マイライブラリ &mdash; 読書記録と自分の本コレクション管理',
+                feature6_li2: '1RM計算機 &mdash; 主要筋トレ記録を管理',
+                feature6_li3: '瞑想タイマー &mdash; シンギングボウル音で集中',
+                feature6_li4: 'D-Dayカウンター &mdash; 重要な目標日を追跡',
+                feature6_li5: 'ポモドーロタイマー &mdash; 25分集中で生産性向上',
+                feature6_li6: 'ライト／ダークテーマ &mdash; 目に優しいテーマを自由に切替',
+                stats_title: '6つのステータスで成長しよう',
+                stats_desc: '現実での努力が数値として見える',
+                recommend_title: 'こんな方におすすめ',
+                download_title: '今すぐ覚醒しよう',
+                download_desc: '現実世界で最強ハンターになろう！',
+                footer_privacy: 'プライバシーポリシー',
+                footer_terms: '利用規約',
+                footer_policy: '利用ポリシー',
+                footer_delete: 'アカウント削除'
+            }
+        };
+
+        function setLanguage(lang) {
+            var dict = i18n[lang] || i18n.ko;
+            document.documentElement.lang = lang;
+            document.title = dict.title;
+            var descriptionMeta = document.querySelector('meta[name="description"]');
+            if (descriptionMeta) descriptionMeta.setAttribute('content', dict.description);
+
+            document.querySelectorAll('[data-i18n]').forEach(function(el) {
+                var key = el.getAttribute('data-i18n');
+                if (dict[key]) el.textContent = dict[key];
+            });
+            document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+                var key = el.getAttribute('data-i18n-html');
+                if (dict[key]) el.innerHTML = dict[key];
+            });
+            localStorage.setItem('landingLang', lang);
+
+            var menu = document.getElementById('lang-menu');
+            if (menu) {
+                menu.querySelectorAll('button').forEach(function(btn) {
+                    btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+                });
+            }
+        }
+
         var observer = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
                 if (entry.isIntersecting) {
@@ -410,6 +625,30 @@
                     });
                 });
             }
+
+            var langToggle = document.getElementById('lang-toggle');
+            var langMenu = document.getElementById('lang-menu');
+            if (langToggle && langMenu) {
+                langToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    langMenu.classList.toggle('open');
+                    langMenu.setAttribute('aria-hidden', langMenu.classList.contains('open') ? 'false' : 'true');
+                });
+                langMenu.querySelectorAll('button').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        setLanguage(btn.getAttribute('data-lang'));
+                        langMenu.classList.remove('open');
+                        langMenu.setAttribute('aria-hidden', 'true');
+                    });
+                });
+                document.addEventListener('click', function() {
+                    langMenu.classList.remove('open');
+                    langMenu.setAttribute('aria-hidden', 'true');
+                });
+            }
+
+            var browserLang = (localStorage.getItem('landingLang') || navigator.language || 'ko').substring(0, 2);
+            setLanguage(['ko', 'en', 'ja'].indexOf(browserLang) !== -1 ? browserLang : 'ko');
         });
 
         // Smooth scroll for nav links
