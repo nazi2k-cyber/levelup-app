@@ -240,9 +240,11 @@
                 return line;
             });
 
+            const buildVersion = window.__APP_VERSION__ ? ('v' + window.__APP_VERSION__) : 'unknown';
             const header = [
                 '=== LEVEL UP: REBOOT - 앱 오류 로그 ===',
                 '생성 시각: ' + new Date().toLocaleString('ko-KR'),
+                '빌드 버전: ' + buildVersion,
                 '총 ' + logs.length + '개 항목',
                 '================================================',
                 ''
