@@ -35,8 +35,11 @@ export function createHealthService(deps = {}) {
         const appState = typeof getAppState === 'function' ? getAppState() : null;
         const lang = getLangPack();
         const isEmailUser = !!appState?.isEmailUser;
-        const supportsHealth = !!capabilities?.supportsHealth?.();
-        const isSupported = supportsHealth && !isEmailUser;
+        const healthSupport = capabilities?.getHealthSupportInfo?.() || {
+            supported: !!capabilities?.supportsHealth?.(),
+            reason: 'unknown',
+        };
+        const isSupported = !!healthSupport.supported && !isEmailUser;
         const settingRow = syncToggle?.closest?.('.setting-row');
 
         if (settingRow) settingRow.style.opacity = isSupported ? '' : '0.5';
@@ -45,8 +48,20 @@ export function createHealthService(deps = {}) {
             if (appState?.user) appState.user.syncEnabled = false;
             const msg = isEmailUser
                 ? (lang.fitness_email_disabled || '이메일 로그인 사용자는 피트니스 동기화를 사용할 수 없습니다.')
-                : (lang.fitness_unsupported || '건강 데이터 동기화는 지원되지 않는 환경입니다.');
+                : (
+                    healthSupport.reason === 'non_native_platform'
+                        ? (lang.fitness_unsupported_web || '웹 환경에서는 피트니스 동기화를 사용할 수 없습니다. Android 앱에서 실행해주세요.')
+                        : (healthSupport.reason === 'health_plugin_missing'
+                            ? (lang.fitness_unsupported_plugin || '건강 연동 모듈이 포함되지 않은 빌드입니다. 앱을 최신 버전으로 업데이트해주세요.')
+                            : (lang.fitness_unsupported || '건강 데이터 동기화는 지원되지 않는 환경입니다.'))
+                );
             setStatus(statusDiv, `<span style="color:var(--text-sub);">${msg}</span>`);
+            AppLogger?.info?.('[HealthSync] unavailable: ' + JSON.stringify({
+                isEmailUser,
+                supportReason: healthSupport.reason,
+                hasHealthConnect: !!healthSupport.hasHealthConnect,
+                hasGoogleFit: !!healthSupport.hasGoogleFit,
+            }));
             return false;
         }
 

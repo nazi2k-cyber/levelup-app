@@ -22,8 +22,40 @@ export function createPlatformCapabilities(capacitor = window.Capacitor) {
     }
 
     function supportsHealth() {
+        const info = getHealthSupportInfo();
+        return !!info.supported;
+    }
+
+    function getHealthSupportInfo() {
+        const native = isNativePlatform();
         const plugins = getPlugins();
-        return !!(isNativePlatform() && plugins && (plugins.HealthConnect || plugins.GoogleFit));
+        const hasHealthConnect = !!(plugins && plugins.HealthConnect);
+        const hasGoogleFit = !!(plugins && plugins.GoogleFit);
+
+        if (!native) {
+            return {
+                supported: false,
+                reason: 'non_native_platform',
+                hasHealthConnect,
+                hasGoogleFit,
+            };
+        }
+
+        if (!hasHealthConnect && !hasGoogleFit) {
+            return {
+                supported: false,
+                reason: 'health_plugin_missing',
+                hasHealthConnect,
+                hasGoogleFit,
+            };
+        }
+
+        return {
+            supported: true,
+            reason: 'supported',
+            hasHealthConnect,
+            hasGoogleFit,
+        };
     }
 
     function getGeolocationPlugin() {
@@ -35,6 +67,7 @@ export function createPlatformCapabilities(capacitor = window.Capacitor) {
         isNativePlatform,
         isWebPlatform,
         supportsHealth,
+        getHealthSupportInfo,
         supportsPush,
         supportsGps,
         getGeolocationPlugin,

@@ -226,6 +226,8 @@ const i18n = {
         sync_no_steps: "걸음 수 기록이 없습니다. (0보)", sync_next_reward: "다음 보상까지 {n}보 남음",
         fitness_needs_google_signin: "피트니스 동기화를 사용하려면 Google 계정 로그인이 필요합니다.\n계속하시겠습니까?",
         fitness_email_disabled: "이메일 로그인 사용자는 피트니스 동기화를 사용할 수 없습니다. Google 계정으로 로그인해주세요.",
+        fitness_unsupported_web: "웹 환경에서는 피트니스 동기화를 사용할 수 없습니다. Android 앱에서 실행해주세요.",
+        fitness_unsupported_plugin: "건강 연동 모듈이 포함되지 않은 빌드입니다. 앱을 최신 버전으로 업데이트해주세요.",
         login_terms_html: '계속하면 BRAVECAT의 <a href="terms/terms.html" target="_blank">소비자 약관</a> 및 <a href="terms/usage-policy.html" target="_blank">이용 정책</a>에 동의하고, <a href="terms/privacy.html" target="_blank">개인정보 처리방침</a>을 확인하는 것으로 간주됩니다.',
         // 온보딩 가이드
         ob_title_1: "나만의 캐릭터 성장", ob_desc_1: "6가지 스탯을 키우고 레벨업하며<br>최고의 나를 만들어보세요",
@@ -945,6 +947,8 @@ const i18n = {
         sync_no_steps: "No step data recorded. (0 steps)", sync_next_reward: "{n} steps to next reward",
         fitness_needs_google_signin: "Fitness sync requires signing in with a Google account.\nWould you like to continue?",
         fitness_email_disabled: "Fitness sync is not available for email login users. Please sign in with a Google account.",
+        fitness_unsupported_web: "Fitness sync is unavailable on web. Please run the Android app.",
+        fitness_unsupported_plugin: "This build does not include the health integration module. Please update to the latest app version.",
         login_terms_html: 'By continuing, you agree to BRAVECAT\'s <a href="terms/terms.html" target="_blank">Terms of Service</a> and <a href="terms/usage-policy.html" target="_blank">Usage Policy</a>, and acknowledge the <a href="terms/privacy.html" target="_blank">Privacy Policy</a>.',
         // Onboarding Guide
         ob_title_1: "Build Your Character", ob_desc_1: "Grow 6 stats and level up<br>to become the best version of yourself",
@@ -1664,6 +1668,8 @@ const i18n = {
         sync_no_steps: "歩数記録がありません。(0歩)", sync_next_reward: "次の報酬まで {n}歩",
         fitness_needs_google_signin: "フィットネス同期を利用するには、Googleアカウントでのログインが必要です。\n続行しますか？",
         fitness_email_disabled: "メールログインユーザーはフィットネス同期を利用できません。Googleアカウントでログインしてください。",
+        fitness_unsupported_web: "Web環境ではフィットネス同期を利用できません。Androidアプリで実行してください。",
+        fitness_unsupported_plugin: "このビルドには健康連携モジュールが含まれていません。最新バージョンに更新してください。",
         login_terms_html: '続行すると、BRAVECATの<a href="terms/terms.html" target="_blank">利用規約</a>および<a href="terms/usage-policy.html" target="_blank">利用ポリシー</a>に同意し、<a href="terms/privacy.html" target="_blank">プライバシーポリシー</a>を確認したものとみなされます。',
         // オンボーディングガイド
         ob_title_1: "キャラクター育成", ob_desc_1: "6つのステータスを成長させレベルアップ<br>最高の自分を目指しましょう",
