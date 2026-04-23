@@ -89,6 +89,20 @@
         }
     }
 
+    // ── 알려진 비치명 콘솔 오류 필터 ────────────────────────
+    function classifyConsoleError(args) {
+        if (!Array.isArray(args) || args.length === 0) return { ignore: false };
+        // Firebase Auth 로그인 전 상태에서 간헐적으로 발생하는 노이즈성 메시지
+        // 예: console.error({ message: "User not logged in." })
+        if (args.length === 1 && args[0] && typeof args[0] === 'object') {
+            var message = String(args[0].message || '');
+            if (message === 'User not logged in.') {
+                return { ignore: false, level: 'INFO', prefix: '[ConsoleNoise]' };
+            }
+        }
+        return { ignore: false };
+    }
+
     // ── console 메서드 인터셉트 ────────────────────────────
     function interceptConsole() {
         const _error = console.error.bind(console);
@@ -96,12 +110,16 @@
 
         console.error = function (...args) {
             _error(...args);
+            const classified = classifyConsoleError(args);
+            if (classified.ignore) return;
             const msg = args.map(a => {
                 if (a instanceof Error) return a.message;
                 return typeof a === 'object' ? safeStringify(a) : String(a);
             }).join(' ');
             const stack = args.find(a => a instanceof Error)?.stack || '';
-            addEntry('ERROR', msg, stack);
+            const level = classified.level || 'ERROR';
+            const prefixedMsg = classified.prefix ? (classified.prefix + ' ' + msg) : msg;
+            addEntry(level, prefixedMsg, stack);
         };
 
         console.warn = function (...args) {
