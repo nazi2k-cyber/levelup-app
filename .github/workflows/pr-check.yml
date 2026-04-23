@@ -168,6 +168,17 @@ jobs:
       - name: npm 패키지 설치
         run: npm ci
 
+      - name: Java 17 셋업 (Android setup 스크립트 요구사항)
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Android 프로젝트 설정 스크립트 검증
+        run: bash scripts/setup-android.sh
+        env:
+          CI: true
+
       - name: JavaScript 기본 구문 검증
         run: |
           echo "📋 JavaScript 구문 검증..."
