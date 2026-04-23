@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.507] - 2026-04-23
+
+### 변경
+- refactor: delegate modal ad hide/resume to AdManager bridge
+
 ## [1.0.506] - 2026-04-23
 
 ### 변경
