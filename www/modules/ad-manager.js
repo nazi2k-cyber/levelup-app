@@ -109,8 +109,22 @@
         const pluginKeys = Object.keys(window?.Capacitor?.Plugins || {}).join(', ');
         const adMobKeys = Object.keys(window?.Capacitor?.Plugins?.AdMob || {}).join(', ');
         if (window.AppLogger) {
-            AppLogger.warn('[NativeAd] Native Advanced API 사용 불가. miss=' + _nativeAdMissingCount + ', plugins=' + (pluginKeys || '(none)') + ', AdMobMethods=' + (adMobKeys || '(none)'));
+            AppLogger.info('[NativeAd] Native Advanced API 미지원 런타임 감지 → 배너 폴백 사용. miss=' + _nativeAdMissingCount + ', plugins=' + (pluginKeys || '(none)') + ', AdMobMethods=' + (adMobKeys || '(none)'));
         }
+    }
+    async function _activateNativeAdFallback(tabId, reason) {
+        _nativeAdLoaded = false;
+        _nativeAdVisible = false;
+        _nativeAdActiveTab = null;
+        _nativeAdDisabled = true;
+        _nativeAdUsingBannerFallback = true;
+
+        const placeholderId = 'native-ad-placeholder-' + tabId;
+        const placeholder = document.getElementById(placeholderId);
+        if (placeholder) placeholder.style.display = 'none';
+
+        if (window.AppLogger) AppLogger.info('[NativeAd] ' + reason + ' → 배너 폴백 활성화');
+        await showBanner().catch(() => {});
     }
     function _registerNativeAdFailure(reason, error) {
         _nativeAdLoadFailureCount += 1;
@@ -773,7 +787,12 @@
     // --- 네이티브 광고 ---
     async function loadNativeAd(tabId) {
         if (!_isNative()) return;
-        if (_nativeAdDisabled) return;
+        if (_nativeAdDisabled) {
+            if (!_nativeAdUsingBannerFallback) {
+                await _activateNativeAdFallback(tabId, '네이티브 광고 비활성 상태');
+            }
+            return;
+        }
 
         const tabSection = document.getElementById(tabId);
         if (!tabSection || !tabSection.classList.contains('active')) return;
@@ -794,17 +813,7 @@
             const nativeAd = _getNativeAdAdapter();
             if (!nativeAd) {
                 _handleMissingNativeAdPlugin();
-                _nativeAdLoaded = false;
-                _nativeAdActiveTab = null;
-                if (_nativeAdDisabled) {
-                    placeholder.style.display = 'none';
-                } else {
-                    setTimeout(() => {
-                        if (document.getElementById(tabId)?.classList.contains('active')) {
-                            loadNativeAd(tabId).catch(() => {});
-                        }
-                    }, 1200);
-                }
+                await _activateNativeAdFallback(tabId, 'NativeAd 플러그인 미탑재');
                 return;
             }
 
@@ -828,6 +837,7 @@
                 _nativeAdActiveTab = tabId;
                 _nativeAdMissingCount = 0;
                 _nativeAdDisabled = false;
+                _nativeAdUsingBannerFallback = false;
                 if (window.AppLogger) AppLogger.info(`[NativeAd] ${tabId}탭 네이티브 광고 로드 완료 (${nativeAd.provider})`);
 
                 positionNativeAd(tabId);
