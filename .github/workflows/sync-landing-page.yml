@@ -14,6 +14,8 @@ jobs:
     # [skip-sync] 태그가 있는 커밋(이 워크플로가 생성한 커밋)은 건너뜀 → 무한루프 방지
     if: "!contains(github.event.head_commit.message, '[skip-sync]')"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: 소스코드 체크아웃
