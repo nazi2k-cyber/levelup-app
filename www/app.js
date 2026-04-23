@@ -17,6 +17,8 @@ import { createAuthProfileModule } from './modules/domains/auth-profile.js';
 import { createPlannerDomainModule } from './modules/domains/planner.js';
 import { createPermissionService, PERMISSION_TYPES } from './modules/device/permission-service.js';
 import { createPushService } from './modules/device/push-service.js';
+import { createPlatformCapabilities } from './modules/device/platform-capabilities.js';
+import { createLocationService } from './modules/device/location-service.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -51,12 +53,23 @@ const googleProvider = new GoogleAuthProvider();
 // --- 상태 관리 객체 ---
 let AppState = getInitialAppState();
 let permissionService = null;
+const platformCapabilities = createPlatformCapabilities(window.Capacitor);
 const pushService = createPushService({
     getAppState: () => AppState,
     saveUserData: () => saveUserData(),
     getCurrentLang: () => AppState.currentLang,
     i18n,
     AppLogger,
+});
+const locationService = createLocationService({
+    capabilities: platformCapabilities,
+    getAppState: () => AppState,
+    saveUserData: () => saveUserData(),
+    getCurrentLang: () => AppState.currentLang,
+    i18n,
+    AppLogger,
+    confirm: (message) => confirm(message),
+    openAppSettings: () => bridgeOpenAppSettings(),
 });
 
 function getPermissionService() {
@@ -5916,7 +5929,7 @@ function openAppSettingsInternal() {
 
 // --- 로그인 시 앱 토글 off + OS 권한 미승인 항목만 순차 요청 ---
 async function showPermissionPrompts() {
-    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+    const isNative = platformCapabilities.isNativePlatform();
     if (!isNative) return;
 
     const cap = window.Capacitor;
@@ -5942,25 +5955,10 @@ async function showPermissionPrompts() {
     }
 
     // 2) GPS 위치 — 앱 토글 off + OS 미승인일 때만 요청
-    if (!AppState.user.gpsEnabled && cap.Plugins && cap.Plugins.Geolocation) {
-        try {
-            const { Geolocation } = cap.Plugins;
-            const status = await Geolocation.checkPermissions();
-            if (status.location !== 'granted') {
-                const permResult = await Geolocation.requestPermissions();
-                if (permResult.location !== 'denied') {
-                    AppState.user.gpsEnabled = true;
-                    document.getElementById('gps-toggle').checked = true;
-                    const statusDiv = document.getElementById('gps-status');
-                    statusDiv.style.display = 'flex';
-                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${i18n[AppState.currentLang].gps_on || '위치 권한 활성화됨'}</span>`;
-                    saveUserData();
-                }
-            }
-        } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[PermPrompt] GPS check/request error: ' + (e.message || JSON.stringify(e)));
-        }
-    }
+    await locationService.promptGpsPermissionIfNeeded({
+        gpsToggle: document.getElementById('gps-toggle'),
+        statusDiv: document.getElementById('gps-status'),
+    });
 
     // 3) 건강 데이터 — 앱 토글 off일 때만 요청 (이메일 로그인 사용자는 스킵)
     if (!AppState.user.syncEnabled && !AppState.isEmailUser) {
@@ -5997,87 +5995,15 @@ async function showPermissionPrompts() {
 
 async function toggleGPS() {
     const gpsToggle = document.getElementById('gps-toggle');
-    const isChecked = gpsToggle.checked;
     const statusDiv = document.getElementById('gps-status');
-    const lang = i18n[AppState.currentLang];
-    statusDiv.style.display = 'flex';
+    const isChecked = !!gpsToggle?.checked;
 
     if (!isChecked) {
-        AppState.user.gpsEnabled = false;
-        saveUserData();
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.gps_off || '위치 탐색 중지됨'}</span>`;
-
-        // 네이티브 앱: OS 권한 해제 안내
-        const isNativeOff = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-        if (isNativeOff) {
-            const msg = lang.gps_revoke_confirm || '위치 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
-            if (confirm(msg)) {
-                bridgeOpenAppSettings();
-            }
-        }
+        locationService.disableGps({ gpsToggle, statusDiv, showOsSettingsGuide: true });
         return;
     }
 
-    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-
-    // 네이티브 Capacitor Geolocation 플러그인만 사용 (앱 전용)
-    if (!isNative || !window.Capacitor.Plugins || !window.Capacitor.Plugins.Geolocation) {
-        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_no_support || '위치 서비스를 지원하지 않는 환경입니다. 앱에서 이용해주세요.'}</span>`;
-        gpsToggle.checked = false;
-        if (window.AppLogger) AppLogger.warn('[GPS] Native Geolocation plugin not available');
-        return;
-    }
-
-    const { Geolocation } = window.Capacitor.Plugins;
-    statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${lang.gps_searching || '위치 탐색 중...'}</span>`;
-
-    try {
-        // 1단계: 네이티브 권한 요청
-        const permResult = await Geolocation.requestPermissions();
-        if (window.AppLogger) AppLogger.info('[GPS] Native permission result: ' + JSON.stringify(permResult));
-
-        if (permResult.location === 'denied') {
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
-            gpsToggle.checked = false;
-            const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
-            if (confirm(confirmMsg)) {
-                bridgeOpenAppSettings();
-            }
-            return;
-        }
-
-        // 2단계: 네이티브 위치 획득
-        const position = await Geolocation.getCurrentPosition({
-            enableHighAccuracy: false,
-            timeout: 10000,
-            maximumAge: 300000
-        });
-
-        if (window.AppLogger) AppLogger.info(`[GPS] Native location: lat=${position.coords.latitude}, lng=${position.coords.longitude}`);
-        AppState.user.gpsEnabled = true;
-        saveUserData();
-        statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
-    } catch (e) {
-        if (window.AppLogger) AppLogger.error('[GPS] Native geolocation error: ' + (e.message || JSON.stringify(e)));
-
-        if (e.message && (e.message.includes('denied') || e.message.includes('permission'))) {
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.gps_denied || '위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.'}</span>`;
-            gpsToggle.checked = false;
-            const confirmMsg = lang.gps_denied_confirm || '위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?';
-            if (confirm(confirmMsg)) {
-                bridgeOpenAppSettings();
-            }
-            return;
-        }
-
-        // 기타 에러 (타임아웃, GPS 신호 없음 등)
-        let errMsg = lang.gps_err || '위치 정보 오류';
-        if (e.message && e.message.includes('timeout')) {
-            errMsg = lang.gps_timeout || '위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.';
-        }
-        statusDiv.innerHTML = `<span style="color:var(--neon-red);">${errMsg}</span>`;
-        gpsToggle.checked = false;
-    }
+    await locationService.enableGps({ gpsToggle, statusDiv });
 }
 
 async function toggleHealthSync() {
@@ -6475,41 +6401,10 @@ async function syncToggleWithOSPermissions() {
     }
 
     // 2) GPS 위치: OS 상태와 앱 토글 양방향 동기화
-    if (cap.Plugins && cap.Plugins.Geolocation) {
-        try {
-            const { Geolocation } = cap.Plugins;
-            const status = await Geolocation.checkPermissions();
-            const osGranted = status.location === 'granted';
-
-            if (AppState.user.gpsEnabled && !osGranted) {
-                // OS 거부 → 앱 토글 off
-                AppState.user.gpsEnabled = false;
-                const gpsToggle = document.getElementById('gps-toggle');
-                if (gpsToggle) gpsToggle.checked = false;
-                const statusDiv = document.getElementById('gps-status');
-                if (statusDiv) {
-                    statusDiv.style.display = 'flex';
-                    statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.gps_off_by_os || 'OS 설정에서 위치 권한이 해제되어 비활성화됨'}</span>`;
-                }
-                changed = true;
-                if (window.AppLogger) AppLogger.info('[SyncPerm] GPS disabled: OS permission not granted');
-            } else if (!AppState.user.gpsEnabled && osGranted) {
-                // OS 허용 → 앱 토글 on
-                AppState.user.gpsEnabled = true;
-                const gpsToggle = document.getElementById('gps-toggle');
-                if (gpsToggle) gpsToggle.checked = true;
-                const statusDiv = document.getElementById('gps-status');
-                if (statusDiv) {
-                    statusDiv.style.display = 'flex';
-                    statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${lang.gps_on || '위치 권한 활성화됨'}</span>`;
-                }
-                changed = true;
-                if (window.AppLogger) AppLogger.info('[SyncPerm] GPS enabled: OS permission granted');
-            }
-        } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[SyncPerm] GPS check error: ' + (e.message || JSON.stringify(e)));
-        }
-    }
+    changed = (await locationService.syncWithOsPermissions({
+        gpsToggle: document.getElementById('gps-toggle'),
+        statusDiv: document.getElementById('gps-status'),
+    })) || changed;
 
     // 3) 건강 데이터: OS 상태와 앱 토글 양방향 동기화
     if (cap.Plugins) {
