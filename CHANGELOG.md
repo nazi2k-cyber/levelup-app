@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.522] - 2026-04-23
+
+### 변경
+- fix: 네이티브 광고 비활성 시 탭별 플레이스홀더 숨김 처리 + dead code 제거
+
 ## [1.0.521] - 2026-04-23
 
 ### 변경
