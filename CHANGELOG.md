@@ -8,6 +8,11 @@
 ## [1.0.524] - 2026-04-23
 
 ### 변경
+- fix(android): inject plugin onCreate into default MainActivity
+
+## [1.0.524] - 2026-04-23
+
+### 변경
 - fix: setup-android 스크립트가 onCreate 미존재 MainActivity에도 NativeAd 포함 커스텀 플러그인 등록 메서드 자동 생성
 
 ## [1.0.523] - 2026-04-23
