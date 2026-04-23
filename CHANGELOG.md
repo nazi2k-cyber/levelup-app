@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.497] - 2026-04-23
+
+### 변경
+- feat(landing): add language toggle in top-right with i18n support
+
 ## [1.0.496] - 2026-04-23
 
 ### 변경
