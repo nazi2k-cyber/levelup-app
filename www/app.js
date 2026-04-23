@@ -19,6 +19,7 @@ import { createPermissionService, PERMISSION_TYPES } from './modules/device/perm
 import { createPushService } from './modules/device/push-service.js';
 import { createPlatformCapabilities } from './modules/device/platform-capabilities.js';
 import { createLocationService } from './modules/device/location-service.js';
+import { createHealthService } from './modules/device/health-service.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -70,6 +71,20 @@ const locationService = createLocationService({
     AppLogger,
     confirm: (message) => confirm(message),
     openAppSettings: () => bridgeOpenAppSettings(),
+});
+const healthService = createHealthService({
+    capabilities: platformCapabilities,
+    getAppState: () => AppState,
+    saveUserData: () => saveUserData(),
+    getCurrentLang: () => AppState.currentLang,
+    i18n,
+    AppLogger,
+    confirm: (message) => confirm(message),
+    openAppSettings: () => bridgeOpenAppSettings(),
+    checkStepRareTitles: () => checkStepRareTitles(),
+    updateStepCountUI: () => updateStepCountUI(),
+    updatePointUI: () => updatePointUI(),
+    drawRadarChart: () => drawRadarChart(),
 });
 
 function getPermissionService() {
@@ -905,6 +920,10 @@ function bindEvents() {
     document.getElementById('push-toggle').addEventListener('change', bridgeTogglePushNotifications);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
+    healthService.applyAvailabilityUI({
+        syncToggle: document.getElementById('sync-toggle'),
+        statusDiv: document.getElementById('sync-status'),
+    });
     document.getElementById('camera-toggle').addEventListener('change', toggleCamera);
     document.getElementById('privacy-toggle').addEventListener('change', togglePrivateAccount);
     document.getElementById('btn-settings-camera-guide').addEventListener('click', function() {
@@ -1567,15 +1586,10 @@ async function loadUserDataFromDB(user) {
                 } catch(e) {}
             }
             const syncToggleEl = document.getElementById('sync-toggle');
-            syncToggleEl.checked = AppState.user.syncEnabled;
-            if (AppState.isEmailUser) {
-                syncToggleEl.disabled = true;
-                syncToggleEl.checked = false;
-                syncToggleEl.closest('.setting-row').style.opacity = '0.5';
-            } else {
-                syncToggleEl.disabled = false;
-                syncToggleEl.closest('.setting-row').style.opacity = '';
-            }
+            healthService.applyAvailabilityUI({
+                syncToggle: syncToggleEl,
+                statusDiv: document.getElementById('sync-status'),
+            });
             document.getElementById('gps-toggle').checked = AppState.user.gpsEnabled;
             document.getElementById('privacy-toggle').checked = AppState.user.privateAccount;
             const privacyWarningEl = document.getElementById('private-account-warning');
@@ -5963,25 +5977,17 @@ async function showPermissionPrompts() {
     // 3) 건강 데이터 — 앱 토글 off일 때만 요청 (이메일 로그인 사용자는 스킵)
     if (!AppState.user.syncEnabled && !AppState.isEmailUser) {
         try {
-            let fitnessGranted = false;
-            const HealthConnect = cap.Plugins?.HealthConnect;
-
-            if (HealthConnect) {
-                const availability = await HealthConnect.isAvailable();
-                if (availability.available) {
-                    fitnessGranted = await requestFitnessScope();
-                }
-            }
-
-            if (fitnessGranted) {
-                AppState.user.syncEnabled = true;
-                document.getElementById('sync-toggle').checked = true;
+            const result = await healthService.enableHealthSync({
+                syncToggle: document.getElementById('sync-toggle'),
+                statusDiv: document.getElementById('sync-status'),
+                showMsg: false,
+            });
+            if (result.ok) {
                 updateStepCountUI(); // 권한 승인 즉시 상태창 UI 반영
-                saveUserData();
-                syncHealthData(true).then(() => {
+                healthService.syncHealthData({ showMsg: true }).then(() => {
                     // 권한 직후 SDK 초기화 지연으로 데이터 조회 실패 시 재시도
                     if (!AppState.user.stepData || AppState.user.stepData.totalSteps === 0) {
-                        setTimeout(() => syncHealthData(true), 2000);
+                        setTimeout(() => healthService.syncHealthData({ showMsg: true }), 2000);
                     }
                 });
             }
@@ -6009,56 +6015,14 @@ async function toggleGPS() {
 async function toggleHealthSync() {
     const toggle = document.getElementById('sync-toggle');
     const statusDiv = document.getElementById('sync-status');
-    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
     if (toggle.checked) {
-        // 네이티브 앱 환경 확인
-        if (!isNative) {
-            toggle.checked = false;
-            statusDiv.style.display = 'flex';
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 동기화는 앱에서만 사용 가능합니다.</span>`;
-            return;
+        const result = await healthService.enableHealthSync({ syncToggle: toggle, statusDiv, showMsg: true });
+        if (result.ok) {
+            healthService.syncHealthData({ showMsg: true });
         }
-
-        // 이메일 로그인 사용자는 피트니스 동기화 사용 불가
-        if (AppState.isEmailUser) {
-            toggle.checked = false;
-            const lang = i18n[AppState.currentLang];
-            statusDiv.style.display = 'flex';
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">${lang.fitness_email_disabled || '이메일 로그인 사용자는 피트니스 동기화를 사용할 수 없습니다.'}</span>`;
-            return;
-        }
-
-        // 네이티브 건강 데이터 권한 요청 (Health Connect)
-        statusDiv.style.display = 'flex';
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">건강 데이터 권한 요청 중...</span>`;
-
-        const granted = await requestFitnessScope();
-        if (!granted) {
-            toggle.checked = false;
-            statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터 권한이 필요합니다.</span>`;
-            return;
-        }
-
-        AppState.user.syncEnabled = true;
-        saveUserData();
-        syncHealthData(true);
     } else {
-        AppState.user.syncEnabled = false;
-        saveUserData();
-        updateStepCountUI();
-        statusDiv.style.display = 'flex';
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">${i18n[AppState.currentLang].sync_off || '동기화 해제됨'}</span>`;
-
-        // 네이티브 앱: OS 권한 해제 안내
-        const isNativeOff = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-        if (isNativeOff) {
-            const lang = i18n[AppState.currentLang];
-            const msg = lang.sync_revoke_confirm || '건강 데이터 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?';
-            if (confirm(msg)) {
-                bridgeOpenAppSettings();
-            }
-        }
+        healthService.disableHealthSync({ syncToggle: toggle, statusDiv, showOsSettingsGuide: true });
     }
 }
 
@@ -6140,30 +6104,7 @@ function updateCameraToggleUIInternal() {
 
 // 네이티브 건강 데이터 권한 요청 (Health Connect 전용)
 async function requestFitnessScope() {
-    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-    if (!isNative) return false;
-
-    try {
-        // 1단계: Health Connect 권한 시도
-        const HealthConnect = window.Capacitor?.Plugins?.HealthConnect;
-        if (HealthConnect) {
-            const availability = await HealthConnect.isAvailable();
-            if (availability.available) {
-                const perm = await HealthConnect.requestPermissions();
-                const granted = !!(perm && (perm.granted || perm.settingsOpened));
-                if (window.AppLogger) AppLogger.info('[HealthConnect] 권한 요청 완료: ' + JSON.stringify(perm || {}));
-                return granted;
-            }
-        }
-
-        if (window.AppLogger) AppLogger.warn('[Fitness] Health Connect 플러그인을 찾을 수 없음');
-        return false;
-    } catch (e) {
-        const errCode = String(e.code || (e.error && e.error.code) || '');
-        if (errCode === '12501') return false; // 사용자 취소
-        AppLogger.error('건강 데이터 권한 요청 실패: ' + (e.message || JSON.stringify(e)));
-        return false;
-    }
+    return healthService.requestFitnessScope();
 }
 
 /**
@@ -6171,112 +6112,11 @@ async function requestFitnessScope() {
  * @returns {number|null} 걸음 수 또는 null (사용 불가 시)
  */
 async function tryHealthConnectSteps() {
-    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-    if (!isNative) return null;
-
-    try {
-        const HealthConnect = window.Capacitor?.Plugins?.HealthConnect;
-        if (!HealthConnect) return null;
-
-        // Health Connect SDK 사용 가능 여부 확인
-        // 중요: SDK unavailable이어도 여기서 return 하지 않는다.
-        // 플러그인 getTodaySteps() 내부의 센서 폴백(TYPE_STEP_COUNTER)을 계속 사용해야 함.
-        const availability = await HealthConnect.isAvailable();
-        if (!availability.available && window.AppLogger) {
-            AppLogger.info('[HealthConnect] SDK not available on this device, using sensor fallback');
-        }
-
-        // 걸음 수 조회 (플러그인 내부에서 센서 폴백 처리)
-        const result = await HealthConnect.getTodaySteps();
-        if (result.fallbackToRest) {
-            if (window.AppLogger) AppLogger.info('[HealthConnect] Fallback: ' + (result.error || 'unknown'));
-            return null;
-        }
-
-        if (window.AppLogger) AppLogger.info(`[HealthConnect] Native steps: ${result.steps} (source: ${result.source})`);
-        return result.steps;
-    } catch (e) {
-        if (window.AppLogger) AppLogger.warn('[HealthConnect] Error: ' + (e.message || JSON.stringify(e)));
-        return null;
-    }
+    return healthService.tryHealthConnectSteps();
 }
 
 async function syncHealthData(showMsg = false) {
-    if (!AppState.user.syncEnabled) return;
-
-    const statusDiv = document.getElementById('sync-status');
-    if(showMsg) {
-        statusDiv.style.display = 'flex';
-        statusDiv.innerHTML = `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`;
-    }
-
-    const now = new Date();
-    const todayStr = now.toDateString();
-
-    if (!AppState.user.stepData || AppState.user.stepData.date !== todayStr) {
-        AppState.user.stepData = { date: todayStr, rewardedSteps: 0, totalSteps: 0 };
-    }
-
-    let totalStepsToday = 0;
-    let dataSource = 'none';
-
-    // 1단계: Health Connect (네이티브) 시도
-    const nativeSteps = await tryHealthConnectSteps();
-    if (nativeSteps !== null) {
-        totalStepsToday = nativeSteps;
-        dataSource = 'health_connect';
-    }
-
-    // Health Connect에서 데이터를 가져오지 못한 경우
-    if (dataSource === 'none') {
-        if (showMsg) statusDiv.innerHTML = `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`;
-        if (window.AppLogger) AppLogger.warn('[Fitness] 네이티브 SDK에서 걸음 수 데이터 조회 실패');
-        updateStepCountUI(); // syncEnabled 상태를 UI에 즉시 반영
-        return;
-    }
-
-    // 실제 총 걸음수 저장
-    AppState.user.stepData.totalSteps = totalStepsToday;
-
-    // 걸음수 기반 희귀 호칭 체크
-    checkStepRareTitles();
-
-    // 보상 계산
-    const unrewardedSteps = totalStepsToday - AppState.user.stepData.rewardedSteps;
-
-    if (unrewardedSteps >= 1000) {
-        const rewardChunks = Math.floor(unrewardedSteps / 1000);
-        const earnedPoints = rewardChunks * 10;
-        const earnedStr = rewardChunks * 0.5;
-
-        AppState.user.points += earnedPoints;
-        AppState.user.pendingStats.str += earnedStr;
-        AppState.user.stepData.rewardedSteps += (rewardChunks * 1000);
-
-        if (showMsg) {
-            const sourceLabel = 'Health Connect';
-            const _l = i18n[AppState.currentLang] || {};
-            const _syncMsg = (_l.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
-            const _rewMsg = (_l.sync_reward_msg || '추가 보상: +{points}P, STR +{str}').replace('{points}', earnedPoints).replace('{str}', earnedStr);
-            statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${_syncMsg}<br>${_rewMsg}</span>`;
-        }
-        updatePointUI();
-        drawRadarChart();
-    } else {
-        if (showMsg) {
-            if(totalStepsToday === 0) {
-                statusDiv.innerHTML = `<span style="color:var(--neon-gold);">${i18n[AppState.currentLang]?.sync_no_steps || '걸음 수 기록이 없습니다. (0보)'}</span>`;
-            } else {
-                const sourceLabel = 'Health Connect';
-                const _l2 = i18n[AppState.currentLang] || {};
-                const _syncMsg2 = (_l2.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보').replace('{source}', sourceLabel).replace('{steps}', totalStepsToday.toLocaleString());
-                const _nextMsg = (_l2.sync_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', 1000 - unrewardedSteps);
-                statusDiv.innerHTML = `<span style="color:var(--neon-blue);">${_syncMsg2}<br>(${_nextMsg})</span>`;
-            }
-        }
-    }
-    saveUserData();
-    updateStepCountUI();
+    return healthService.syncHealthData({ showMsg });
 }
 
 // --- 걸음수 상태창 UI 업데이트 ---
@@ -6407,41 +6247,12 @@ async function syncToggleWithOSPermissions() {
     })) || changed;
 
     // 3) 건강 데이터: OS 상태와 앱 토글 양방향 동기화
-    if (cap.Plugins) {
-        try {
-            let hasPermission = false;
-            const HealthConnect = cap.Plugins?.HealthConnect;
-
-            if (HealthConnect) {
-                const availability = await HealthConnect.isAvailable();
-                hasPermission = !!(availability.available && (availability.hasActivityRecognition || availability.hasPermissions));
-            }
-
-            if (AppState.user.syncEnabled && !hasPermission) {
-                // OS 해제 → 앱 토글 off
-                AppState.user.syncEnabled = false;
-                const syncToggle = document.getElementById('sync-toggle');
-                if (syncToggle) syncToggle.checked = false;
-                const statusDiv = document.getElementById('sync-status');
-                if (statusDiv) {
-                    statusDiv.style.display = 'flex';
-                    statusDiv.innerHTML = `<span style="color:var(--text-sub);">${lang.sync_off_by_os || 'OS 설정에서 건강 데이터 권한이 해제되어 비활성화됨'}</span>`;
-                }
-                changed = true;
-                if (window.AppLogger) AppLogger.info('[SyncPerm] Fitness disabled: OS permission not granted');
-            } else if (!AppState.user.syncEnabled && hasPermission) {
-                // OS 허용 → 앱 토글 on + 데이터 동기화
-                AppState.user.syncEnabled = true;
-                const syncToggle = document.getElementById('sync-toggle');
-                if (syncToggle) syncToggle.checked = true;
-                updateStepCountUI(); // 상태창 UI 즉시 반영
-                syncHealthData(true);
-                changed = true;
-                if (window.AppLogger) AppLogger.info('[SyncPerm] Fitness enabled: OS permission granted');
-            }
-        } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[SyncPerm] Fitness check error: ' + (e.message || JSON.stringify(e)));
-        }
+    changed = (await healthService.syncWithOsPermissions({
+        syncToggle: document.getElementById('sync-toggle'),
+        statusDiv: document.getElementById('sync-status'),
+    })) || changed;
+    if (changed && AppState.user.syncEnabled) {
+        healthService.syncHealthData({ showMsg: true });
     }
 
     if (changed) {
