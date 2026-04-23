@@ -6522,21 +6522,6 @@ async function showPermissionPrompts() {
         }
     }
 
-    // 4) 카메라 — ISBN 바코드 스캔용
-    if (!AppState.user.cameraEnabled) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            stream.getTracks().forEach(track => track.stop());
-            AppState.user.cameraEnabled = true;
-            saveUserData();
-            updateCameraToggleUI();
-            if (window.AppLogger) AppLogger.info('[PermPrompt] Camera permission granted');
-        } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[PermPrompt] Camera permission denied or unavailable: ' + (e.message || e));
-            updateCameraToggleUI();
-        }
-    }
-
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 확인/요청 완료');
 }
 
