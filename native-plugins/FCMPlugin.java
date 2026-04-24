@@ -1,8 +1,12 @@
 package com.levelup.reboot.plugins;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -29,6 +33,60 @@ import com.google.firebase.messaging.FirebaseMessaging;
 public class FCMPlugin extends Plugin {
 
     private static final String TAG = "FCMPlugin";
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 2301;
+    private PluginCall savedPermissionCall = null;
+
+    /**
+     * Android 13+(API 33+)에서 POST_NOTIFICATIONS 런타임 권한을 요청합니다.
+     * 이하 버전은 알림이 자동 허용되므로 즉시 granted를 반환합니다.
+     * 반환: { status: "granted" | "denied" }
+     */
+    @PluginMethod()
+    public void requestPermission(PluginCall call) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            // Android 12 이하: 알림 권한 불필요, 자동 허용
+            JSObject result = new JSObject();
+            result.put("status", "granted");
+            call.resolve(result);
+            return;
+        }
+
+        boolean alreadyGranted = ContextCompat.checkSelfPermission(
+            getContext(), Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED;
+
+        if (alreadyGranted) {
+            JSObject result = new JSObject();
+            result.put("status", "granted");
+            call.resolve(result);
+            return;
+        }
+
+        call.setKeepAlive(true);
+        savedPermissionCall = call;
+        pluginRequestPermissions(
+            new String[]{Manifest.permission.POST_NOTIFICATIONS},
+            NOTIFICATION_PERMISSION_REQUEST_CODE
+        );
+    }
+
+    @Override
+    protected void handleRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.handleRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE && savedPermissionCall != null) {
+            PluginCall call = savedPermissionCall;
+            savedPermissionCall = null;
+
+            boolean granted = grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            Log.d(TAG, "POST_NOTIFICATIONS 권한 결과: " + granted);
+
+            JSObject result = new JSObject();
+            result.put("status", granted ? "granted" : "denied");
+            call.resolve(result);
+        }
+    }
 
     /**
      * FCM 등록 토큰을 가져옵니다.
