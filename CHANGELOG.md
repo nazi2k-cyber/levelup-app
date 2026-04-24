@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.556] - 2026-04-24
+
+### 변경
+- fix: 퀘스트 추이 차트 y축 실제 개수 표시 및 레이블 추가
+
 ## [1.0.555] - 2026-04-24
 
 ### 변경
