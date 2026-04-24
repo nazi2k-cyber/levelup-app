@@ -185,7 +185,7 @@ jobs:
         if: steps.skip_check.outputs.skip == 'false' && steps.bootstrap.outputs.bootstrapped == 'false' && steps.check_pr.outputs.exists == 'false' && env.no_changes != 'true'
         continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           BRANCH_NAME="auto-version/v${NEW_VERSION}"
@@ -208,7 +208,7 @@ jobs:
           - \`www/app.js\`
 
           > 이 PR은 자동 생성되었습니다. 상태 체크 통과 후 자동 머지됩니다." 2>&1) || {
-            echo "::error title=PR 자동 생성 실패::다음 중 하나를 설정하세요: (1) 리포지토리 Settings > Actions > General > 'Allow GitHub Actions to create and approve pull requests' 활성화, 또는 (2) Settings > Secrets > Actions 에서 PAT_TOKEN 시크릿 추가 (repo + workflow 권한 필요). 브랜치 '${BRANCH_NAME}'는 push 완료: https://github.com/${{ github.repository }}/compare/main...${BRANCH_NAME}"
+            echo "::error title=PR 자동 생성 실패::GITHUB_TOKEN 권한 오류. 워크플로 YAML의 permissions 블록(pull-requests: write)을 확인하세요. 브랜치 '${BRANCH_NAME}'는 push 완료: https://github.com/${{ github.repository }}/compare/main...${BRANCH_NAME}"
             exit 1
           }
 
