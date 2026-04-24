@@ -12,11 +12,7 @@ export function createQuestStatsModule(deps) {
         weekOffset: 0,
         monthlyUnlocked: false,
         selectedDate: null,
-<<<<<<< codex-cba7d2
-        chartRange: 'weekly',
-=======
         chartRange: 'monthly',
->>>>>>> main
     };
 
     function syncSingleSelectionFromMulti() {
@@ -289,11 +285,7 @@ export function createQuestStatsModule(deps) {
             for (let d = 1; d <= days; d++) labels.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
         }
 
-<<<<<<< codex-cba7d2
-        if (rangeLabel) rangeLabel.textContent = state.chartRange === 'weekly' ? '주간' : '월간';
-=======
         if (rangeLabel) rangeLabel.textContent = state.chartRange === 'weekly' ? '최근 7일' : '이번 달';
->>>>>>> main
         const series = getChartSeries(history, labels);
         const padding = { top: 16, right: 8, bottom: 24, left: 26 };
         const W = 320, H = 180;
@@ -362,7 +354,7 @@ export function createQuestStatsModule(deps) {
             const adShown = await window.AdManager.showRewarded({ context: 'qstatsMonthly', onSuccess: () => { state.monthlyUnlocked = true; localStorage.setItem('qstats_monthly_ad_date', todayStr); showMonthly(); }, onFail: () => alert(i18n[AppState.currentLang].monthly_cal_ad_fail) });
             if (!adShown) alert(i18n[AppState.currentLang].monthly_cal_ad_fail);
         };
-        window.closeQstatsMonthly = () => { state.chartRange = 'weekly'; const w = document.getElementById('qstats-weekly-card'); const m = document.getElementById('qstats-monthly-card'); if (w) w.classList.remove('d-none'); if (m) m.classList.add('d-none'); render(); };
+        window.closeQstatsMonthly = () => { const w = document.getElementById('qstats-weekly-card'); const m = document.getElementById('qstats-monthly-card'); if (w) w.classList.remove('d-none'); if (m) m.classList.add('d-none'); renderQstatsCalendar(); };
         window.selectQstatsDate = (dateStr) => { state.selectedDate = (state.selectedDate === dateStr) ? null : dateStr; render(); };
         window.toggleQstatsDailyDropdown = () => document.getElementById('qstats-daily-dropdown-menu')?.classList.toggle('d-none');
         window.toggleQstatsDailyQuest = (dow, idx) => { toggleMultiSelection(state.selectedDailyKeys, `${dow}:${idx}`); state.selectedDate = null; state.selectedDiyIds = []; render(); };
@@ -371,13 +363,10 @@ export function createQuestStatsModule(deps) {
         window.toggleQstatsDiyDropdown = () => document.getElementById('qstats-diy-dropdown-menu')?.classList.toggle('d-none');
         window.toggleQstatsDiyQuest = (questId) => { toggleMultiSelection(state.selectedDiyIds, questId); state.selectedDate = null; state.selectedDailyKeys = []; render(); };
         window.clearQstatsDiySelection = () => { state.selectedDiyIds = []; state.selectedDate = null; render(); };
-<<<<<<< codex-cba7d2
-=======
         window.setQstatsChartRange = (range) => { state.chartRange = range === 'weekly' ? 'weekly' : 'monthly'; render(); };
->>>>>>> main
     }
 
-    function showMonthly() { state.chartRange = 'monthly'; const w = document.getElementById('qstats-weekly-card'); const m = document.getElementById('qstats-monthly-card'); if (w) w.classList.add('d-none'); if (m) m.classList.remove('d-none'); render(); }
+    function showMonthly() { const w = document.getElementById('qstats-weekly-card'); const m = document.getElementById('qstats-monthly-card'); if (w) w.classList.add('d-none'); if (m) m.classList.remove('d-none'); render(); }
 
     function handlePrevMonth() { state.month.setMonth(state.month.getMonth() - 1); state.selectedDate = null; render(); }
     function handleNextMonth() { state.month.setMonth(state.month.getMonth() + 1); state.selectedDate = null; render(); }
