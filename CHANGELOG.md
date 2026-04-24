@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.558] - 2026-04-24
+
+### 변경
+- docs: auto-version-loop-analysis에 2차 재발 패치 내용 추가
+
 ## [1.0.557] - 2026-04-24
 
 ### 변경
