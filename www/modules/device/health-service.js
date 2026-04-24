@@ -194,14 +194,6 @@ export function createHealthService(deps = {}) {
                 AppLogger?.info?.('[HealthSync] Google Fit unavailable or lower than sensor; using Health Connect sensor steps (Samsung Health only 환경 포함)');
             }
 
-            if (appearsSensorOnly) {
-                const gfSteps = await tryGoogleFitSteps();
-                if (Number.isFinite(gfSteps) && gfSteps > hcSteps) {
-                    AppLogger?.info?.(`[HealthSync] using GoogleFit steps ${gfSteps} over sensor ${hcSteps}`);
-                    return gfSteps;
-                }
-            }
-
             AppLogger?.info?.(`[HealthConnect] Native steps: ${hcSteps} (source: ${result.source})`);
             return { steps: hcSteps, source: result.source || 'health_connect_sensor' };
         } catch (e) {
