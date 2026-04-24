@@ -3463,6 +3463,7 @@ async function deleteMyAccount() {
 
 function toggleAuthMode() {
     AppState.isLoginMode = !AppState.isLoginMode;
+    const t = i18n[AppState.currentLang] || i18n.ko || {};
     const btnSubmit = document.getElementById('btn-login-submit');
     const toggleText = document.getElementById('auth-toggle-btn');
     const pwField = document.getElementById('login-pw');
@@ -3483,8 +3484,12 @@ function toggleAuthMode() {
             pwHint.classList.remove('d-none');
         }
     }
-    btnSubmit.innerText = AppState.isLoginMode ? "시스템 접속" : "플레이어 등록";
-    toggleText.innerText = AppState.isLoginMode ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인";
+    btnSubmit.innerText = AppState.isLoginMode
+        ? (t.btn_login_submit || "시스템 접속")
+        : (t.btn_signup_submit || "회원가입");
+    toggleText.innerText = AppState.isLoginMode
+        ? (t.auth_toggle_signup || "계정이 없으신가요? 회원가입")
+        : (t.auth_toggle_login || "이미 계정이 있으신가요? 로그인");
 }
 
 // --- 이메일 인증 안내 화면 ---
