@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ResolveInfo;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -22,6 +23,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -39,6 +41,7 @@ public class HealthConnectPlugin extends Plugin {
     private static final String TAG = "HealthConnect";
     private static final String HC_PACKAGE = "com.google.android.apps.healthdata";
     private static final String HC_PACKAGE_SYSTEM = "com.android.healthconnect.controller";
+    private static final String HC_PACKAGE_SAMSUNG = "com.samsung.android.healthconnect";
 
     private static final String PREFS = "levelup_health";
     private static final String KEY_BASELINE_DATE = "step_baseline_date";
@@ -73,7 +76,7 @@ public class HealthConnectPlugin extends Plugin {
 
     private boolean isHCInstalled() {
         String[] packages = (Build.VERSION.SDK_INT >= 34)
-                ? new String[]{HC_PACKAGE_SYSTEM, HC_PACKAGE}
+                ? new String[]{HC_PACKAGE_SYSTEM, HC_PACKAGE, HC_PACKAGE_SAMSUNG}
                 : new String[]{HC_PACKAGE};
         logDebug("Checking Health Connect package candidates (sdk=" + Build.VERSION.SDK_INT + "): " + String.join(", ", packages));
         for (String pkg : packages) {
@@ -85,7 +88,37 @@ public class HealthConnectPlugin extends Plugin {
                 logDebug("Health Connect package missing: " + pkg + ", reason=" + e.getMessage());
             }
         }
-        logWarn("Health Connect package not found on device");
+        boolean resolvable = canResolveHealthConnectSettingsIntent();
+        if (resolvable) {
+            logInfo("Health Connect package name check failed, but settings intent is resolvable");
+            return true;
+        }
+
+        logWarn("Health Connect package not found on device and settings intent unresolved");
+        return false;
+    }
+
+    private boolean canResolveHealthConnectSettingsIntent() {
+        String[] actions = new String[]{
+                "androidx.health.ACTION_HEALTH_CONNECT_SETTINGS",
+                "android.health.connect.action.HEALTH_HOME_SETTINGS",
+                "android.health.connect.action.HEALTH_CONNECT_SETTINGS",
+                "android.settings.HEALTH_CONNECT_SETTINGS"
+        };
+
+        PackageManager pm = getContext().getPackageManager();
+        for (String action : actions) {
+            try {
+                Intent intent = new Intent(action);
+                List<ResolveInfo> matches = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                if (matches != null && !matches.isEmpty()) {
+                    logDebug("Resolvable Health Connect settings action found: " + action + " (" + matches.size() + ")");
+                    return true;
+                }
+            } catch (Exception e) {
+                logDebug("Health Connect settings action resolve failed: " + action + ", reason=" + e.getMessage());
+            }
+        }
         return false;
     }
 
@@ -93,6 +126,7 @@ public class HealthConnectPlugin extends Plugin {
         String[] actions = new String[]{
                 "androidx.health.ACTION_HEALTH_CONNECT_SETTINGS",
                 "android.health.connect.action.HEALTH_HOME_SETTINGS",
+                "android.health.connect.action.HEALTH_CONNECT_SETTINGS",
                 "android.settings.HEALTH_CONNECT_SETTINGS"
         };
         for (String action : actions) {
