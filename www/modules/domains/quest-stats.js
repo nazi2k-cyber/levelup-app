@@ -219,16 +219,11 @@ export function createQuestStatsModule(deps) {
                     const rec = history[k];
                     if (!rec && k !== todayStr) return null;
                     if (k === todayStr) {
-                        const diyCount = AppState.diyQuests.definitions.length;
                         const regularDone = (AppState.quest.completedState[AppState.quest.currentDayOfWeek] || []).filter(v => v).length;
                         const diyDone = Object.values(AppState.diyQuests.completedToday || {}).filter(v => v).length;
-                        const done = state.diyOnly ? diyDone : (regularDone + diyDone);
-                        const total = state.diyOnly ? diyCount : (12 + diyCount);
-                        return total > 0 ? Math.round(done / total * 100) : 0;
+                        return state.diyOnly ? diyDone : (regularDone + diyDone);
                     }
-                    const done = state.diyOnly ? (rec.d || 0) : ((rec.r || 0) + (rec.d || 0));
-                    const total = state.diyOnly ? (rec.dt != null ? rec.dt : (rec.t - 12)) : rec.t;
-                    return total > 0 ? Math.round(done / total * 100) : 0;
+                    return state.diyOnly ? (rec.d || 0) : ((rec.r || 0) + (rec.d || 0));
                 })
             });
         }
@@ -245,7 +240,7 @@ export function createQuestStatsModule(deps) {
                     const dow = new Date(k + 'T00:00:00').getDay();
                     if (dow !== item.dow) return null;
                     const { done, total } = getDailyQuestDoneTotal(item.dow, item.idx, history[k], isToday);
-                    return total > 0 ? (done ? 100 : 0) : null;
+                    return total > 0 ? (done ? 1 : 0) : null;
                 })
             });
         });
@@ -257,7 +252,7 @@ export function createQuestStatsModule(deps) {
                 values: labels.map((k) => {
                     const isToday = k === todayStr;
                     const { done, total } = getDiyQuestDoneTotal(item.id, history[k], isToday);
-                    return total > 0 ? (done ? 100 : 0) : null;
+                    return total > 0 ? (done ? 1 : 0) : null;
                 })
             });
         });
@@ -288,19 +283,33 @@ export function createQuestStatsModule(deps) {
 
         if (rangeLabel) rangeLabel.textContent = state.chartRange === 'weekly' ? '최근 7일' : '이번 달';
         const series = getChartSeries(history, labels);
+
+        const diyCount = AppState.diyQuests.definitions.length;
+        const hasSpecificSelection = state.selectedDailyKeys.length > 0 || state.selectedDiyIds.length > 0;
+        let maxY;
+        if (hasSpecificSelection) {
+            maxY = 1;
+        } else if (state.diyOnly) {
+            maxY = Math.max(diyCount, 1);
+        } else {
+            maxY = Math.max(12 + diyCount, 1);
+        }
+
         const padding = { top: 16, right: 8, bottom: 24, left: 26 };
         const W = 320, H = 180;
         const chartW = W - padding.left - padding.right;
         const chartH = H - padding.top - padding.bottom;
 
         const toX = (idx) => padding.left + (labels.length === 1 ? 0 : (idx / (labels.length - 1)) * chartW);
-        const toY = (v) => padding.top + chartH - (v / 100) * chartH;
+        const toY = (v) => padding.top + chartH - (v / maxY) * chartH;
 
         let svgContent = '';
-        for (let pct = 0; pct <= 100; pct += 25) {
-            const y = toY(pct);
+        const gridVals = [...new Set([0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * maxY)))];
+        gridVals.forEach((val) => {
+            const y = toY(val);
             svgContent += `<line x1="${padding.left}" y1="${y}" x2="${W - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="0.6"/>`;
-        }
+            svgContent += `<text x="${padding.left - 4}" y="${y + 3}" text-anchor="end" fill="rgba(255,255,255,0.5)" font-size="8">${val}</text>`;
+        });
 
         series.forEach((s) => {
             let path = '';
