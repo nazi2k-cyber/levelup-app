@@ -181,7 +181,9 @@ jobs:
 
       # 8. PR 생성 및 자동 머지
       - name: PR 생성 및 자동 머지
+        id: create_pr
         if: steps.skip_check.outputs.skip == 'false' && steps.bootstrap.outputs.bootstrapped == 'false' && steps.check_pr.outputs.exists == 'false' && env.no_changes != 'true'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
@@ -206,12 +208,12 @@ jobs:
           - \`www/app.js\`
 
           > 이 PR은 자동 생성되었습니다. 상태 체크 통과 후 자동 머지됩니다." 2>&1) || {
-            echo "::warning::PR 생성 실패. 리포지토리 설정에서 'Allow GitHub Actions to create and approve pull requests'를 활성화하거나 PAT_TOKEN 시크릿을 설정하세요."
-            echo "::warning::브랜치 '${BRANCH_NAME}'가 push되었습니다. 수동으로 PR을 생성할 수 있습니다: https://github.com/${{ github.repository }}/compare/main...${BRANCH_NAME}"
-            exit 0
+            echo "::error title=PR 자동 생성 실패::다음 중 하나를 설정하세요: (1) 리포지토리 Settings > Actions > General > 'Allow GitHub Actions to create and approve pull requests' 활성화, 또는 (2) Settings > Secrets > Actions 에서 PAT_TOKEN 시크릿 추가 (repo + workflow 권한 필요). 브랜치 '${BRANCH_NAME}'는 push 완료: https://github.com/${{ github.repository }}/compare/main...${BRANCH_NAME}"
+            exit 1
           }
 
           echo "✅ PR 생성: ${PR_URL}"
+          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
 
           # 자동 머지 활성화 (상태 체크 통과 후 자동으로 머지)
           gh pr merge "${BRANCH_NAME}" --auto --squash --delete-branch \
@@ -258,6 +260,12 @@ jobs:
             echo "| 태그 | ✅ \`v${NEW_VERSION}\` |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| 태그 | ⚠️ 생성 실패 (리포지토리 규칙 제한) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ steps.create_pr.outcome }}" == "success" ]; then
+            PR_URL="${{ steps.create_pr.outputs.pr_url }}"
+            echo "| PR | ✅ [자동 생성됨](${PR_URL}) |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.create_pr.outcome }}" == "failure" ]; then
+            echo "| PR | ❌ 생성 실패 — PAT_TOKEN 시크릿 설정 또는 'Allow GitHub Actions to create and approve pull requests' 활성화 필요 |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 업데이트된 파일" >> $GITHUB_STEP_SUMMARY
