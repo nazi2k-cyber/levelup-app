@@ -23,6 +23,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +47,7 @@ public class HealthConnectPlugin extends Plugin {
     private static final String PREFS = "levelup_health";
     private static final String KEY_BASELINE_DATE = "step_baseline_date";
     private static final String KEY_BASELINE_VALUE = "step_baseline_value";
+    private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
 
     private static final int ACTIVITY_RECOGNITION_REQUEST_CODE = 2201;
     private PluginCall savedPermissionCall = null;
@@ -313,7 +315,7 @@ public class HealthConnectPlugin extends Plugin {
                 }
 
                 float current = totalSinceBoot.get();
-                String today = LocalDate.now().toString();
+                String today = LocalDate.now(KST_ZONE).toString();
 
                 SharedPreferences prefs = getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
                 String baselineDate = prefs.getString(KEY_BASELINE_DATE, "");

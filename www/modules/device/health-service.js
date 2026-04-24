@@ -19,6 +19,22 @@ export function createHealthService(deps = {}) {
         return i18n[lang] || i18n.ko || {};
     }
 
+    function getTodayKSTKey() {
+        try {
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Seoul',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            });
+            return formatter.format(new Date());
+        } catch (_) {
+            const now = new Date();
+            const utcMs = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+            return new Date(utcMs + (9 * 60 * 60 * 1000)).toISOString().slice(0, 10);
+        }
+    }
+
     function setStatus(statusDiv, html) {
         if (!statusDiv) return;
         statusDiv.style.display = 'flex';
@@ -125,6 +141,13 @@ export function createHealthService(deps = {}) {
         }
     }
 
+    function formatSourceLabel(source) {
+        if (source === 'google_fit_native') return 'Google Fit';
+        if (source === 'health_connect_sensor') return 'Health Connect (Sensor)';
+        if (source) return source;
+        return 'Health Connect';
+    }
+
     async function tryHealthConnectSteps() {
         if (!capabilities?.supportsHealth?.()) return null;
 
@@ -145,7 +168,11 @@ export function createHealthService(deps = {}) {
             AppLogger?.info?.('[HealthConnect] getTodaySteps raw result: ' + JSON.stringify(result || {}));
             if (result.fallbackToRest) {
                 AppLogger?.info?.('[HealthConnect] Fallback: ' + (result.error || 'unknown'));
-                return await tryGoogleFitSteps();
+                const gfSteps = await tryGoogleFitSteps();
+                if (Number.isFinite(gfSteps)) {
+                    return { steps: gfSteps, source: 'google_fit_native' };
+                }
+                return null;
             }
 
             const hcSteps = Number.isFinite(result?.steps) ? result.steps : null;
@@ -154,12 +181,21 @@ export function createHealthService(deps = {}) {
                 const gfSteps = await tryGoogleFitSteps();
                 if (Number.isFinite(gfSteps) && gfSteps > 0) {
                     AppLogger?.info?.(`[HealthSync] using GoogleFit steps ${gfSteps} instead of sensor-only ${hcSteps ?? 'null'}`);
-                    return gfSteps;
+                    return { steps: gfSteps, source: 'google_fit_native' };
                 }
             }
 
+            if (appearsSensorOnly) {
+                const gfSteps = await tryGoogleFitSteps();
+                if (Number.isFinite(gfSteps) && gfSteps > hcSteps) {
+                    AppLogger?.info?.(`[HealthSync] using GoogleFit steps ${gfSteps} over sensor ${hcSteps}`);
+                    return { steps: gfSteps, source: 'google_fit_native' };
+                }
+                AppLogger?.info?.('[HealthSync] Google Fit unavailable or lower than sensor; using Health Connect sensor steps (Samsung Health only 환경 포함)');
+            }
+
             AppLogger?.info?.(`[HealthConnect] Native steps: ${hcSteps} (source: ${result.source})`);
-            return hcSteps;
+            return { steps: hcSteps, source: result.source || 'health_connect_sensor' };
         } catch (e) {
             AppLogger?.warn?.('[health.sync.failed] step-read: ' + JSON.stringify({
                 message: e?.message || '',
@@ -255,12 +291,14 @@ export function createHealthService(deps = {}) {
             setStatus(statusDiv, `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`);
         }
 
-        const todayStr = new Date().toDateString();
+        const todayStr = getTodayKSTKey();
         if (!appState.user.stepData || appState.user.stepData.date !== todayStr) {
             appState.user.stepData = { date: todayStr, rewardedSteps: 0, totalSteps: 0 };
         }
 
-        const totalStepsToday = await tryHealthConnectSteps();
+        const stepSnapshot = await tryHealthConnectSteps();
+        const totalStepsToday = Number.isFinite(stepSnapshot?.steps) ? stepSnapshot.steps : null;
+        const sourceLabel = formatSourceLabel(stepSnapshot?.source);
         if (totalStepsToday === null) {
             if (showMsg) setStatus(statusDiv, `<span style="color:var(--neon-red);">건강 데이터를 가져올 수 없습니다. 앱 권한을 확인해주세요.</span>`);
             AppLogger?.warn?.('[health.sync.failed] no-step-data');
@@ -282,7 +320,6 @@ export function createHealthService(deps = {}) {
             appState.user.stepData.rewardedSteps += (rewardChunks * 1000);
 
             if (showMsg) {
-                const sourceLabel = 'Health Connect';
                 const syncMsg = (lang.sync_complete_msg || '동기화 완료 ({source})')
                     .replace('{source}', sourceLabel)
                     .replace('{steps}', totalStepsToday.toLocaleString());
@@ -294,7 +331,6 @@ export function createHealthService(deps = {}) {
             if (totalStepsToday === 0) {
                 setStatus(statusDiv, `<span style="color:var(--neon-gold);">${lang.sync_no_steps || '걸음 수 기록이 없습니다. (0보)'}</span>`);
             } else {
-                const sourceLabel = 'Health Connect';
                 const syncMsg = (lang.sync_complete_msg || '동기화 완료 ({source})')
                     .replace('{source}', sourceLabel)
                     .replace('{steps}', totalStepsToday.toLocaleString());
