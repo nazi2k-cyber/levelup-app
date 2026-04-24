@@ -194,7 +194,7 @@ jobs:
           PR_URL=$(gh pr create \
             --base main \
             --head "${BRANCH_NAME}" \
-            --title "chore: v${NEW_VERSION} 자동 버전 업데이트" \
+            --title "chore: v${NEW_VERSION} 자동 버전 업데이트 [auto-version]" \
             --body "## 자동 버전 업데이트
 
           버전 \`v${NEW_VERSION}\` 으로 자동 업데이트합니다.
