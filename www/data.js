@@ -20,7 +20,7 @@ const i18n = {
         step_req_title: "걸음수 연동 필수 조건",
         step_req_1: "Health Connect 앱 설치 필요",
         step_req_2: "내 정보 → 피트니스 동기화(Health Connect) 활성화",
-        step_req_3: "Google 계정 로그인 및 활동 권한 허용 (Health Connect 연동용)",
+        step_req_3: "Google 계정 로그인 및 활동 권한 허용",
         step_req_reward: "1,000보마다 +10P & STR +0.5 보상",
         btn_myinfo: "&#9881; 내 정보", btn_back: "&#8592; 돌아가기",
         set_title: "System Settings", set_lang: "언어 (Language)", set_theme: "라이트 모드", set_push: "푸시 알림 수신", set_gps: "앱 실행 시 현위치 탐색", set_sync: "피트니스 동기화 (Health Connect)", set_logout: "로그아웃",

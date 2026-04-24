@@ -6228,7 +6228,7 @@ function updateStepCountUI() {
                         }
                         return result;
                     })() },
-                    { icon: '🔑', html: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용 (Health Connect 연동용)' },
+                    { icon: '🔑', html: lang.step_req_3 || 'Google 계정 로그인 및 활동 권한 허용' },
                     { icon: '🎁', html: lang.step_req_reward || '1,000보마다 +10P & STR +0.5 보상' }
                 ];
                 listEl.innerHTML = items.map(r =>
