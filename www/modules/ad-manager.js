@@ -20,6 +20,7 @@
     const REELS_NATIVE_AD_POSITION = 3;
     const AD_SESSION_COUNT_KEY = 'levelup_session_count';
     const MIN_SESSIONS_BEFORE_ADS = 3;
+    const NEW_USER_AD_GATE_WINDOW_MS = 24 * 60 * 60 * 1000; // 1일차만 광고 지연 적용
 
     // --- 내부 상태 ---
     let _admobInitialized = false;
@@ -71,14 +72,32 @@
     function _getAdSessionCount() {
         return parseInt(localStorage.getItem(AD_SESSION_COUNT_KEY) || '0', 10);
     }
+    function _getAccountCreatedAtMs() {
+        const currentUser = _auth()?.currentUser;
+        const creationTime = currentUser?.metadata?.creationTime;
+        if (!creationTime) return 0;
+        const createdAtMs = new Date(creationTime).getTime();
+        return Number.isFinite(createdAtMs) ? createdAtMs : 0;
+    }
+    function _isFirstDayUser() {
+        const createdAtMs = _getAccountCreatedAtMs();
+        if (!createdAtMs) {
+            // 가입일 확인이 불가능하면 우회/오탐 방지를 위해 광고 지연을 적용하지 않음
+            return false;
+        }
+        return (Date.now() - createdAtMs) < NEW_USER_AD_GATE_WINDOW_MS;
+    }
     function isAdExposureAllowed() {
+        if (!_isFirstDayUser()) return true;
         return _getAdSessionCount() >= MIN_SESSIONS_BEFORE_ADS;
     }
     function _logAdGateBlocked(context) {
         if (_adGateLoggedContexts.has(context)) return;
         _adGateLoggedContexts.add(context);
         if (window.AppLogger) {
-            AppLogger.info(`[AdGate] ${context} 광고 지연: session=${_getAdSessionCount()}/${MIN_SESSIONS_BEFORE_ADS}`);
+            AppLogger.info(
+                `[AdGate] ${context} 광고 지연(신규 1일차): session=${_getAdSessionCount()}/${MIN_SESSIONS_BEFORE_ADS}`
+            );
         }
     }
 
