@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.540] - 2026-04-24
+
+### 변경
+- fix: FCMPlugin 경로에서 Android 13+ 알림 권한 팝업 미표시 문제 수정
+
 ## [1.0.539] - 2026-04-24
 
 ### 변경
