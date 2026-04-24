@@ -87,8 +87,15 @@ export function createHealthService(deps = {}) {
                 permissionPayload: perm || {},
             }));
 
+            // Health Connect 권한이 확보되면 Google Fit 인증 팝업은 생략한다.
+            // (이메일 로그인 사용자에게 계정 선택 팝업이 반복 노출되는 현상 방지)
+            if (hcGranted) {
+                AppLogger?.info?.('[HealthSync] skip GoogleFit permission request: Health Connect permission already granted');
+                return true;
+            }
+
             const GoogleFit = capabilities?.getCapacitor?.()?.Plugins?.GoogleFit;
-            if (!GoogleFit) return hcGranted;
+            if (!GoogleFit) return false;
 
             try {
                 const gfPerm = await GoogleFit.requestPermissions();
@@ -97,13 +104,13 @@ export function createHealthService(deps = {}) {
                     granted: gfGranted,
                     permissionPayload: gfPerm || {},
                 }));
-                return hcGranted || gfGranted;
+                return gfGranted;
             } catch (gfErr) {
                 AppLogger?.warn?.('[GoogleFit] requestPermissions failed: ' + JSON.stringify({
                     message: gfErr?.message || '',
                     code: gfErr?.code || gfErr?.error?.code || '',
                 }));
-                return hcGranted;
+                return false;
             }
         } catch (e) {
             const errCode = String(e?.code || e?.error?.code || '');
