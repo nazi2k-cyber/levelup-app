@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.554] - 2026-04-24
+
+### 변경
+- fix: auto-version 머지 커밋 시 AAB 빌드 스킵 문제 수정
+
 ## [1.0.553] - 2026-04-24
 
 ### 변경
