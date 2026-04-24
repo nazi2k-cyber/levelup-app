@@ -25,7 +25,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.538';
+const APP_VERSION = '1.0.541';
 window.__APP_VERSION__ = APP_VERSION;
 if (window.AppLogger) {
     AppLogger.info('[AppStart] 빌드 버전: v' + APP_VERSION);
@@ -6491,7 +6491,19 @@ async function requestNativePushPermission() {
     }
 
     // 방법 2: 커스텀 FCMPlugin (네이티브 브릿지)
+    // Android 13+에서 POST_NOTIFICATIONS 권한을 먼저 요청해야 OS 팝업이 표시됨
     if (cap.Plugins && cap.Plugins.FCMPlugin) {
+        if (typeof cap.Plugins.FCMPlugin.requestPermission === 'function') {
+            try {
+                const permResult = await cap.Plugins.FCMPlugin.requestPermission();
+                if (!permResult || permResult.status !== 'granted') {
+                    if (window.AppLogger) AppLogger.warn('[FCM] FCMPlugin 알림 권한 거부: ' + JSON.stringify(permResult));
+                    return null;
+                }
+            } catch (e) {
+                if (window.AppLogger) AppLogger.warn('[FCM] FCMPlugin requestPermission 오류: ' + (e.message || e));
+            }
+        }
         const result = await cap.Plugins.FCMPlugin.getToken();
         return result.token || null;
     }
