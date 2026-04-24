@@ -1,7 +1,7 @@
 # 플레이스토어 등록 체크리스트
 ## LEVEL UP: REBOOT (com.levelup.reboot)
 
-> **마지막 업데이트**: 2026-04-09
+> **마지막 업데이트**: 2026-04-24
 > **전체 준비도**: 약 85% — 개발 자산 준비 완료, Play Console 설정 작업 남음
 
 ---
@@ -113,6 +113,65 @@ keytool -list -v \
 
 ### 할 일
 - [ ] Play Console에서 한국어/영어 등록정보 입력 (텍스트 복사-붙여넣기)
+
+### Play Console 맞춤 스토어 등록정보용 추천 검색 키워드 (국가별)
+
+> 위치: Play Console → 맞춤 스토어 등록정보 → 타겟층 → **검색 키워드 선택**
+>  
+> 아래 키워드에서 타겟층별로 3~5개를 우선 선택하세요.
+
+| 우선순위 | 추천 키워드 | 의도/매칭 기능 |
+|---|---|---|
+| 1 | 자기계발 | 레벨업·습관 개선 중심 앱 포지셔닝 |
+| 2 | 습관 만들기 | 데일리 퀘스트/루틴 지속 기능 |
+| 3 | 동기부여 | 보상, 칭호, 도전과제 기반 동기 강화 |
+| 4 | 루틴 관리 | 퀘스트 체크·진행률 관리 |
+| 5 | 목표 달성 | 미션형 목표 관리 UX와 일치 |
+| 6 | 생산성 | 포모도로, D-Day, 집중 도구 |
+| 7 | 운동 기록 | 피트니스/신체활동 연동 기능 |
+| 8 | 걷기 챌린지 | 걸음 수·로컬 레이드 활용 시나리오 |
+| 9 | 명상 타이머 | 마음챙김 기능 유입 키워드 |
+| 10 | RPG 자기관리 | 게임화(게이미피케이션) 차별점 강조 |
+
+#### 타겟층별 빠른 선택 조합
+- **자기관리 초보층**: 자기계발 / 습관 만들기 / 루틴 관리 / 목표 달성
+- **생산성 중심층**: 생산성 / 루틴 관리 / 목표 달성 / 동기부여
+- **운동·활동층**: 운동 기록 / 걷기 챌린지 / 자기계발 / 동기부여
+- **게임화 선호층**: RPG 자기관리 / 자기계발 / 습관 만들기 / 목표 달성
+
+### 미국(US) 타겟 추천 검색 키워드 (영어)
+
+> 파일: `store-listing/en-US/search_keywords_recommended.txt`
+
+| Priority | Recommended keyword | Intent |
+|---|---|---|
+| 1 | self improvement | Core positioning for growth-focused users |
+| 2 | habit tracker | Daily quest/routine continuation behavior |
+| 3 | productivity | Pomodoro + focus utilities |
+| 4 | goal tracker | Mission-style goal management |
+| 5 | motivation | Reward/title/challenge reinforcement |
+| 6 | fitness tracker | Activity and health use-cases |
+| 7 | step challenge | Walking and local raid loop |
+| 8 | mindfulness timer | Meditation timer discovery |
+| 9 | routine planner | Structured daily planning intent |
+| 10 | gamified productivity | RPG-style differentiation |
+
+### 일본(JP) 타겟 추천 검색 키워드 (일본어)
+
+> 파일: `store-listing/ja-JP/search_keywords_recommended.txt`
+
+| 優先度 | 推奨キーワード | 意図 |
+|---|---|---|
+| 1 | 自己成長 | 自己改善・習慣化ユーザーに訴求 |
+| 2 | 習慣化 | デイリークエスト継続ニーズ |
+| 3 | モチベーション | 報酬・称号・チャレンジとの適合 |
+| 4 | 目標管理 | ミッション型の進捗管理意図 |
+| 5 | 生産性 | 集中・時間管理機能との一致 |
+| 6 | フィットネス記録 | 活動量・運動トラッキング訴求 |
+| 7 | ウォーキングチャレンジ | 歩数連動機能の探索意図 |
+| 8 | 瞑想タイマー | マインドフルネス流入キーワード |
+| 9 | ルーティン管理 | 日課管理ニーズとの一致 |
+| 10 | ゲーミフィケーション | RPG型自己管理の差別化 |
 
 ---
 
