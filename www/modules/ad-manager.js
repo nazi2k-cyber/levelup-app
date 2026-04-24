@@ -19,7 +19,9 @@
     const NATIVE_AD_POSITION = 5;
     const REELS_NATIVE_AD_POSITION = 3;
     const AD_SESSION_COUNT_KEY = 'levelup_session_count';
+    const INSTALL_TS_KEY = 'levelup_install_ts';
     const MIN_SESSIONS_BEFORE_ADS = 3;
+    const NEW_USER_AD_GATE_WINDOW_MS = 24 * 60 * 60 * 1000; // 1일차만 광고 지연 적용
 
     // --- 내부 상태 ---
     let _admobInitialized = false;
@@ -71,14 +73,25 @@
     function _getAdSessionCount() {
         return parseInt(localStorage.getItem(AD_SESSION_COUNT_KEY) || '0', 10);
     }
+    function _isFirstDayUser() {
+        const installTs = parseInt(localStorage.getItem(INSTALL_TS_KEY) || '0', 10);
+        if (!installTs || Number.isNaN(installTs)) {
+            // 설치 시각 정보가 없으면 기존 유저로 간주하여 광고 지연을 적용하지 않음
+            return false;
+        }
+        return (Date.now() - installTs) < NEW_USER_AD_GATE_WINDOW_MS;
+    }
     function isAdExposureAllowed() {
+        if (!_isFirstDayUser()) return true;
         return _getAdSessionCount() >= MIN_SESSIONS_BEFORE_ADS;
     }
     function _logAdGateBlocked(context) {
         if (_adGateLoggedContexts.has(context)) return;
         _adGateLoggedContexts.add(context);
         if (window.AppLogger) {
-            AppLogger.info(`[AdGate] ${context} 광고 지연: session=${_getAdSessionCount()}/${MIN_SESSIONS_BEFORE_ADS}`);
+            AppLogger.info(
+                `[AdGate] ${context} 광고 지연(신규 1일차): session=${_getAdSessionCount()}/${MIN_SESSIONS_BEFORE_ADS}`
+            );
         }
     }
 
