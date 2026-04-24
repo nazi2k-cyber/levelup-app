@@ -1,7 +1,7 @@
 # 자동 버전 관리 무한 루프 버그 분석
 
-> 작성일: 2026-04-03
-> 상태: 수정 완료
+> 최초 작성: 2026-04-03 | 최종 업데이트: 2026-04-24
+> 상태: 수정 완료 (2차 재발 패치 포함)
 
 ## 요약
 
@@ -108,3 +108,70 @@ squash 머지 시 actor가 PR 생성자 또는 리포 소유자로 귀속되어 
 - `.github/workflows/pr-check.yml` — PR 검증 (수정 불필요)
 - `sync-www.sh` — 루트 ↔ www 양방향 동기화 스크립트
 - `scripts/version-bump.sh` — 버전 파일 동기화 스크립트
+
+---
+
+## 2차 재발 (2026-04-24) — PR 제목 마커 누락
+
+### 증상
+
+v1.0.555 생성 직후, 코드 변경 없이 v1.0.556 자동 버전 업데이트 PR(#1378)이 즉시 생성됨.
+해당 PR을 머지하면 동일한 현상이 반복되는 무한 루프 재발.
+
+### 원인
+
+1차 수정(2026-04-03)에서 브랜치 커밋 메시지와 `--squash-merge-commit-title`에
+`[auto-version]` 마커를 추가했지만, **PR 제목 자체에는 마커를 추가하지 않았다.**
+
+```
+브랜치 커밋 메시지: "chore: v1.0.555 자동 버전 업데이트 [auto-version]"  ✅
+--squash-merge-commit-title: "chore: v1.0.555 자동 버전 업데이트 [auto-version]"  ✅ (auto-merge 전용)
+PR 제목:            "chore: v1.0.555 자동 버전 업데이트"                   ❌ 마커 없음
+```
+
+GitHub의 squash 머지 동작:
+
+| 머지 방식 | squash 커밋 제목 결정 기준 |
+|-----------|--------------------------|
+| GitHub Actions auto-merge | `--squash-merge-commit-title` 값 사용 → `[auto-version]` 포함 ✅ |
+| 사람이 GitHub UI에서 직접 머지 | **PR 제목**을 기본값으로 사용 → `[auto-version]` 없음 ❌ |
+
+사람이 직접 머지하면 main의 squash 커밋 제목이 `"chore: v1.0.555 자동 버전 업데이트"`가 되어
+`skip_check`(line 32)가 감지에 실패하고 워크플로우가 재실행된다.
+
+재실행된 워크플로우는:
+1. `VERSION` 파일 읽기 → `1.0.555`
+2. 태그 기반 last tag = 이전 버전 (squash 커밋은 태그 조상이 아님)
+3. patch +1 → `1.0.556` 계산
+4. 기존 PR 없음 → v1.0.556 PR 생성 → 루프
+
+### 수정 내용
+
+**`auto-version.yml` line 197**: PR 제목에 `[auto-version]` 마커 추가
+
+```diff
+- --title "chore: v${NEW_VERSION} 자동 버전 업데이트" \
++ --title "chore: v${NEW_VERSION} 자동 버전 업데이트 [auto-version]" \
+```
+
+PR 제목이 squash 커밋 제목의 기본값이 되므로, 수동 머지·자동 머지 모두
+main 커밋에 `[auto-version]`이 포함되어 `skip_check`가 확실하게 동작한다.
+
+### 부수 효과 (의도된 개선)
+
+`release-aab.yml`은 main 커밋에 `[auto-version]`이 포함될 때 AAB 빌드를 트리거한다.
+수정 전에는 수동 머지 시 이 마커가 없어 AAB 빌드가 누락되었으나, 수정 후 정상 트리거된다.
+
+### 차단 검증
+
+```
+수동 squash 머지 완료
+    ↓
+main 커밋 제목: "chore: v1.0.555 자동 버전 업데이트 [auto-version]"
+    ↓
+auto-version.yml 트리거
+    ↓
+skip_check: [auto-version] 감지 → skip=true → 워크플로우 종료
+    ↓
+v1.0.556 PR 생성 없음 ✅
+```
