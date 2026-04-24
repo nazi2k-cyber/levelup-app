@@ -1,19 +1,40 @@
 export function createQuestStatsModule(deps) {
-    const { AppState, i18n, weeklyQuestData, isNativePlatform, getTodayStr, renderQuestStatsFallback } = deps;
+    const { AppState, i18n, weeklyQuestData, isNativePlatform, getTodayStr } = deps;
 
     const state = {
         month: new Date(),
-        year: new Date().getFullYear(),
         diyOnly: false,
         selectedDiyId: null,
         selectedDailyDow: null,
         selectedDailyIdx: null,
+        selectedDailyKeys: [],
+        selectedDiyIds: [],
         weekOffset: 0,
         monthlyUnlocked: false,
         selectedDate: null,
+        chartRange: 'monthly',
     };
 
-    function renderQstatsCalendar() { /* same */
+    function syncSingleSelectionFromMulti() {
+        if (state.selectedDailyKeys.length > 0) {
+            const [dowStr, idxStr] = state.selectedDailyKeys[0].split(':');
+            state.selectedDailyDow = Number(dowStr);
+            state.selectedDailyIdx = Number(idxStr);
+            state.selectedDiyId = null;
+            return;
+        }
+        if (state.selectedDiyIds.length > 0) {
+            state.selectedDiyId = state.selectedDiyIds[0];
+            state.selectedDailyDow = null;
+            state.selectedDailyIdx = null;
+            return;
+        }
+        state.selectedDailyDow = null;
+        state.selectedDailyIdx = null;
+        state.selectedDiyId = null;
+    }
+
+    function renderQstatsCalendar() {
         const container = document.getElementById('qstats-calendar-grid');
         if (!container) return;
         const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -55,27 +76,37 @@ export function createQuestStatsModule(deps) {
         return { done: rec.dc[questId] === true ? 1 : 0, total: 1 };
     }
 
+    function toggleMultiSelection(list, value) {
+        const idx = list.indexOf(value);
+        if (idx >= 0) list.splice(idx, 1);
+        else list.push(value);
+    }
+
     function renderQstatsDailyDropdown() {
         const btn = document.getElementById('qstats-daily-dropdown-btn');
         const menu = document.getElementById('qstats-daily-dropdown-menu');
         if (!btn || !menu) return;
         const lang = AppState.currentLang;
-        const refDow = state.selectedDailyDow !== null ? state.selectedDailyDow : state.selectedDate ? new Date(state.selectedDate + 'T00:00:00').getDay() : new Date().getDay();
+        const refDow = state.selectedDate ? new Date(state.selectedDate + 'T00:00:00').getDay() : new Date().getDay();
         const quests = weeklyQuestData[refDow] || [];
-        const isSelected = state.selectedDailyDow !== null;
-        const selectedQ = isSelected ? weeklyQuestData[state.selectedDailyDow]?.[state.selectedDailyIdx] : null;
-        const rawLabel = selectedQ ? (selectedQ.title[lang] || selectedQ.title.ko) : '데일리';
-        const btnLabel = rawLabel.length > 9 ? rawLabel.slice(0, 9) + '…' : rawLabel;
-        btn.innerHTML = `${btnLabel} <span style="font-size:0.6em;">▾</span>`;
-        btn.style.color = isSelected ? 'var(--neon-cyan)' : '';
-        btn.style.borderColor = isSelected ? 'var(--neon-cyan)' : '';
+        const selectedCount = state.selectedDailyKeys.length;
+        const baseLabel = { ko: '데일리', en: 'Daily', ja: 'デイリー' };
+        const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
+        btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
+        btn.style.color = selectedCount > 0 ? 'var(--neon-cyan)' : '';
+        btn.style.borderColor = selectedCount > 0 ? 'var(--neon-cyan)' : '';
+
         const dayNames = { ko:["일","월","화","수","목","금","토"], en:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja:["日","月","火","水","木","金","土"] };
-        const allLabel = { ko: '전체 보기', en: 'All Daily', ja: '全て' };
+        const allLabel = { ko: '전체 보기', en: 'Clear', ja: 'クリア' };
         const dowName = (dayNames[lang] || dayNames.en)[refDow];
         menu.innerHTML = [
-            `<div class="qstats-diy-dd-item${!isSelected ? ' active' : ''}" onclick="window.selectQstatsDailyQuest(null, null)">${allLabel[lang] || allLabel.en}</div>`,
-            `<div style="padding:4px 12px; font-size:0.62rem; color:var(--text-sub); border-bottom:1px solid rgba(255,255,255,0.06);">${dowName}요일 퀘스트</div>`,
-            ...quests.map((q, i) => `<div class="qstats-diy-dd-item${state.selectedDailyDow === refDow && state.selectedDailyIdx === i ? ' active' : ''}" onclick="window.selectQstatsDailyQuest(${refDow}, ${i})"><span class="quest-stat-tag" style="font-size:0.55rem; padding:1px 4px; margin-right:4px;">${q.stat}</span>${q.title[lang] || q.title.ko}</div>`)
+            `<div class="qstats-diy-dd-item" onclick="window.clearQstatsDailySelection()">${allLabel[lang] || allLabel.en}</div>`,
+            `<div style="padding:4px 12px; font-size:0.62rem; color:var(--text-sub); border-bottom:1px solid rgba(255,255,255,0.06);">${dowName}요일 퀘스트 (멀티 선택)</div>`,
+            ...quests.map((q, i) => {
+                const key = `${refDow}:${i}`;
+                const active = state.selectedDailyKeys.includes(key) ? ' active' : '';
+                return `<div class="qstats-diy-dd-item${active}" onclick="window.toggleQstatsDailyQuest(${refDow}, ${i})"><span style="margin-right:6px;">${active ? '☑' : '☐'}</span><span class="quest-stat-tag" style="font-size:0.55rem; padding:1px 4px; margin-right:4px;">${q.stat}</span>${q.title[lang] || q.title.ko}</div>`;
+            })
         ].join('');
     }
 
@@ -86,15 +117,22 @@ export function createQuestStatsModule(deps) {
         const menu = document.getElementById('qstats-diy-dropdown-menu');
         if (!wrap || !btn || !menu) return;
         wrap.style.display = defs.length > 0 ? 'block' : 'none';
-        const selected = defs.find((q) => q.id === state.selectedDiyId);
-        const rawLabel = selected ? selected.title : 'DIY';
-        const btnLabel = rawLabel.length > 9 ? rawLabel.slice(0, 9) + '…' : rawLabel;
-        btn.innerHTML = `${btnLabel} <span style="font-size:0.6em;">▾</span>`;
-        btn.style.color = state.selectedDiyId ? 'var(--neon-gold)' : '';
-        btn.style.borderColor = 'var(--neon-gold)';
+        const selectedCount = state.selectedDiyIds.length;
         const lang = AppState.currentLang;
-        const allLabel = { ko: '전체 보기', en: 'All DIY', ja: '全て' };
-        menu.innerHTML = [`<div class="qstats-diy-dd-item${!state.selectedDiyId ? ' active' : ''}" onclick="window.selectQstatsDiyQuest(null)">${allLabel[lang] || allLabel.en}</div>`, ...defs.map((q) => `<div class="qstats-diy-dd-item${state.selectedDiyId === q.id ? ' active' : ''}" onclick="window.selectQstatsDiyQuest('${q.id}')"><span class="quest-stat-tag" style="font-size:0.55rem; padding:1px 4px; margin-right:4px;">${q.stat}</span>${q.title}</div>`)].join('');
+        const baseLabel = { ko: 'DIY', en: 'DIY', ja: 'DIY' };
+        const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
+        btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
+        btn.style.color = selectedCount > 0 ? 'var(--neon-gold)' : '';
+        btn.style.borderColor = 'var(--neon-gold)';
+
+        const allLabel = { ko: '전체 보기', en: 'Clear', ja: 'クリア' };
+        menu.innerHTML = [
+            `<div class="qstats-diy-dd-item" onclick="window.clearQstatsDiySelection()">${allLabel[lang] || allLabel.en}</div>`,
+            ...defs.map((q) => {
+                const active = state.selectedDiyIds.includes(q.id) ? ' active' : '';
+                return `<div class="qstats-diy-dd-item${active}" onclick="window.toggleQstatsDiyQuest('${q.id}')"><span style="margin-right:6px;">${active ? '☑' : '☐'}</span><span class="quest-stat-tag" style="font-size:0.55rem; padding:1px 4px; margin-right:4px;">${q.stat}</span>${q.title}</div>`;
+            })
+        ].join('');
     }
 
     function renderMonthlySummary(year, month, history) {
@@ -160,35 +198,150 @@ export function createQuestStatsModule(deps) {
         container.innerHTML = headerHTML + gridHTML + legendHTML;
     }
 
-    function renderMonthlyDailyProgress() { /* keep lightweight */ const container = document.getElementById('qstats-daily-progress'); if (!container) return; container.innerHTML = container.innerHTML; }
+    function getChartSeries(history, labels) {
+        const todayStr = getTodayStr();
+        const series = [];
+        const selectedDaily = state.selectedDailyKeys.map((key) => {
+            const [dow, idx] = key.split(':').map(Number);
+            const q = weeklyQuestData[dow]?.[idx];
+            return q ? { key, dow, idx, name: q.title[AppState.currentLang] || q.title.ko, color: '#00d9ff' } : null;
+        }).filter(Boolean);
+        const selectedDiy = state.selectedDiyIds.map((id) => {
+            const q = AppState.diyQuests.definitions.find((x) => x.id === id);
+            return q ? { id, name: q.title, color: '#ffcb2f' } : null;
+        }).filter(Boolean);
 
-    function renderAnnualChart(year, history) {
-        const svg = document.getElementById('qstats-annual-chart'); if (!svg) return;
-        const lang = AppState.currentLang; const monthNames = i18n[lang]?.month_names_short || ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-        const padding = { top: 20, right: 10, bottom: 30, left: 30 }; const W = 320, H = 180; const chartW = W - padding.left - padding.right; const chartH = H - padding.top - padding.bottom; const barGap = chartW / 12; const barW = barGap * 0.6;
-        let svgContent = '';
-        for (let pct = 0; pct <= 100; pct += 25) { const y = padding.top + chartH - (pct / 100 * chartH); svgContent += `<line x1="${padding.left}" y1="${y}" x2="${W - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`; }
-        for (let m = 0; m < 12; m++) {
-            const prefix = `${year}-${String(m + 1).padStart(2, '0')}`; const keys = Object.keys(history).filter((k) => k.startsWith(prefix));
-            const avgRate = keys.length ? Math.min(100, Math.round(keys.reduce((a, k) => { const rec = history[k]; const done = state.diyOnly ? (rec.d || 0) : (rec.r + rec.d); const total = state.diyOnly ? (rec.dt != null ? rec.dt : (rec.t - 12)) : rec.t; return a + (done / Math.max(total, 1)) * 100; }, 0) / keys.length)) : 0;
-            const x = padding.left + m * barGap + (barGap - barW) / 2; const barH = (avgRate / 100) * chartH; const y = padding.top + chartH - barH;
-            if (barH > 0) svgContent += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="2" fill="rgba(0,217,255,0.6)"/>`;
-            svgContent += `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="7">${monthNames[m]}</text>`;
+        if (selectedDaily.length === 0 && selectedDiy.length === 0) {
+            series.push({
+                name: state.diyOnly ? 'DIY' : 'ALL',
+                color: '#00d9ff',
+                values: labels.map((k) => {
+                    const rec = history[k];
+                    if (!rec && k !== todayStr) return null;
+                    if (k === todayStr) {
+                        const diyCount = AppState.diyQuests.definitions.length;
+                        const regularDone = (AppState.quest.completedState[AppState.quest.currentDayOfWeek] || []).filter(v => v).length;
+                        const diyDone = Object.values(AppState.diyQuests.completedToday || {}).filter(v => v).length;
+                        const done = state.diyOnly ? diyDone : (regularDone + diyDone);
+                        const total = state.diyOnly ? diyCount : (12 + diyCount);
+                        return total > 0 ? Math.round(done / total * 100) : 0;
+                    }
+                    const done = state.diyOnly ? (rec.d || 0) : ((rec.r || 0) + (rec.d || 0));
+                    const total = state.diyOnly ? (rec.dt != null ? rec.dt : (rec.t - 12)) : rec.t;
+                    return total > 0 ? Math.round(done / total * 100) : 0;
+                })
+            });
         }
+
+        selectedDaily.forEach((item, idxColor) => {
+            const palette = ['#00d9ff', '#5ae8ff', '#83f0ff', '#b4f6ff'];
+            series.push({
+                name: item.name,
+                color: palette[idxColor % palette.length],
+                values: labels.map((k) => {
+                    const isToday = k === todayStr;
+                    const dow = new Date(k + 'T00:00:00').getDay();
+                    if (dow !== item.dow) return null;
+                    const { done, total } = getDailyQuestDoneTotal(item.dow, item.idx, history[k], isToday);
+                    return total > 0 ? (done ? 100 : 0) : null;
+                })
+            });
+        });
+
+        selectedDiy.forEach((item, idxColor) => {
+            const palette = ['#ffcb2f', '#ffd867', '#ffe499', '#fff0c2'];
+            series.push({
+                name: item.name,
+                color: palette[idxColor % palette.length],
+                values: labels.map((k) => {
+                    const isToday = k === todayStr;
+                    const { done, total } = getDiyQuestDoneTotal(item.id, history[k], isToday);
+                    return total > 0 ? (done ? 100 : 0) : null;
+                })
+            });
+        });
+
+        return series;
+    }
+
+    function renderTrendChart(history) {
+        const svg = document.getElementById('qstats-annual-chart');
+        const legend = document.getElementById('qstats-chart-legend');
+        const rangeLabel = document.getElementById('qstats-chart-range-label');
+        if (!svg) return;
+
+        const now = new Date();
+        const labels = [];
+        if (state.chartRange === 'weekly') {
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(now);
+                d.setDate(now.getDate() - i);
+                labels.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+            }
+        } else {
+            const y = state.month.getFullYear();
+            const m = state.month.getMonth();
+            const days = new Date(y, m + 1, 0).getDate();
+            for (let d = 1; d <= days; d++) labels.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+        }
+
+        if (rangeLabel) rangeLabel.textContent = state.chartRange === 'weekly' ? '최근 7일' : '이번 달';
+        const series = getChartSeries(history, labels);
+        const padding = { top: 16, right: 8, bottom: 24, left: 26 };
+        const W = 320, H = 180;
+        const chartW = W - padding.left - padding.right;
+        const chartH = H - padding.top - padding.bottom;
+
+        const toX = (idx) => padding.left + (labels.length === 1 ? 0 : (idx / (labels.length - 1)) * chartW);
+        const toY = (v) => padding.top + chartH - (v / 100) * chartH;
+
+        let svgContent = '';
+        for (let pct = 0; pct <= 100; pct += 25) {
+            const y = toY(pct);
+            svgContent += `<line x1="${padding.left}" y1="${y}" x2="${W - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="0.6"/>`;
+        }
+
+        series.forEach((s) => {
+            let path = '';
+            s.values.forEach((v, idx) => {
+                if (v == null) return;
+                const cmd = path ? 'L' : 'M';
+                path += `${cmd}${toX(idx)} ${toY(v)} `;
+            });
+            if (path) svgContent += `<path d="${path.trim()}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+            s.values.forEach((v, idx) => {
+                if (v == null) return;
+                svgContent += `<circle cx="${toX(idx)}" cy="${toY(v)}" r="2" fill="${s.color}"/>`;
+            });
+        });
+
+        const tickIndexes = state.chartRange === 'weekly'
+            ? labels.map((_, i) => i)
+            : [0, Math.floor((labels.length - 1) / 2), labels.length - 1];
+
+        tickIndexes.forEach((idx) => {
+            const d = new Date(labels[idx] + 'T00:00:00');
+            const txt = state.chartRange === 'weekly' ? `${d.getMonth() + 1}/${d.getDate()}` : `${d.getDate()}일`;
+            svgContent += `<text x="${toX(idx)}" y="${H - 8}" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="8">${txt}</text>`;
+        });
+
         svg.innerHTML = svgContent;
+        if (legend) {
+            legend.innerHTML = series.map((s) => `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;"></span>${s.name}</span>`).join('');
+        }
     }
 
     function render() {
         const history = AppState.questHistory || {};
+        syncSingleSelectionFromMulti();
         const emptyEl = document.getElementById('qstats-empty-state');
         if (emptyEl) emptyEl.classList.toggle('d-none', Object.keys(history).length > 0);
         renderQstatsCalendar(); renderQstatsDailyDropdown(); renderQstatsDiyDropdown();
         const y = state.month.getFullYear(); const m = state.month.getMonth();
-        renderMonthlySummary(y, m, history); renderMonthlyHeatmap(y, m, history); renderMonthlyDailyProgress(y, m, history); renderAnnualChart(state.year, history);
+        renderMonthlySummary(y, m, history); renderMonthlyHeatmap(y, m, history); renderTrendChart(history);
         const lang = AppState.currentLang;
         const monthNames = i18n[lang]?.month_names_short || ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
         const monthLabel = document.getElementById('qstats-month-label'); if (monthLabel) monthLabel.textContent = `${y} ${monthNames[m]}`;
-        const yearLabel = document.getElementById('qstats-year-label'); if (yearLabel) yearLabel.textContent = `${state.year}`;
     }
 
     function bindWindowHandlers() {
@@ -204,18 +357,20 @@ export function createQuestStatsModule(deps) {
         window.closeQstatsMonthly = () => { const w = document.getElementById('qstats-weekly-card'); const m = document.getElementById('qstats-monthly-card'); if (w) w.classList.remove('d-none'); if (m) m.classList.add('d-none'); renderQstatsCalendar(); };
         window.selectQstatsDate = (dateStr) => { state.selectedDate = (state.selectedDate === dateStr) ? null : dateStr; render(); };
         window.toggleQstatsDailyDropdown = () => document.getElementById('qstats-daily-dropdown-menu')?.classList.toggle('d-none');
-        window.selectQstatsDailyQuest = (dow, idx) => { state.selectedDailyDow = dow; state.selectedDailyIdx = idx; state.selectedDiyId = null; state.selectedDate = null; document.getElementById('qstats-daily-dropdown-menu')?.classList.add('d-none'); render(); };
+        window.toggleQstatsDailyQuest = (dow, idx) => { toggleMultiSelection(state.selectedDailyKeys, `${dow}:${idx}`); state.selectedDate = null; state.selectedDiyIds = []; render(); };
+        window.clearQstatsDailySelection = () => { state.selectedDailyKeys = []; state.selectedDate = null; render(); };
+
         window.toggleQstatsDiyDropdown = () => document.getElementById('qstats-diy-dropdown-menu')?.classList.toggle('d-none');
-        window.selectQstatsDiyQuest = (questId) => { state.selectedDiyId = questId; state.selectedDailyDow = null; state.selectedDailyIdx = null; state.selectedDate = null; document.getElementById('qstats-diy-dropdown-menu')?.classList.add('d-none'); render(); };
+        window.toggleQstatsDiyQuest = (questId) => { toggleMultiSelection(state.selectedDiyIds, questId); state.selectedDate = null; state.selectedDailyKeys = []; render(); };
+        window.clearQstatsDiySelection = () => { state.selectedDiyIds = []; state.selectedDate = null; render(); };
+        window.setQstatsChartRange = (range) => { state.chartRange = range === 'weekly' ? 'weekly' : 'monthly'; render(); };
     }
 
     function showMonthly() { const w = document.getElementById('qstats-weekly-card'); const m = document.getElementById('qstats-monthly-card'); if (w) w.classList.add('d-none'); if (m) m.classList.remove('d-none'); render(); }
 
     function handlePrevMonth() { state.month.setMonth(state.month.getMonth() - 1); state.selectedDate = null; render(); }
     function handleNextMonth() { state.month.setMonth(state.month.getMonth() + 1); state.selectedDate = null; render(); }
-    function handlePrevYear() { state.year -= 1; render(); }
-    function handleNextYear() { state.year += 1; render(); }
     function handleDiyFilterChange(e) { state.diyOnly = e.target.checked; render(); }
 
-    return { init: bindWindowHandlers, bindWindowHandlers, render, handlePrevMonth, handleNextMonth, handlePrevYear, handleNextYear, handleDiyFilterChange, renderQstatsCalendar };
+    return { init: bindWindowHandlers, bindWindowHandlers, render, handlePrevMonth, handleNextMonth, handleDiyFilterChange, renderQstatsCalendar };
 }

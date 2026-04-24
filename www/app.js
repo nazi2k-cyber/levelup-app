@@ -1028,11 +1028,9 @@ function bindEvents() {
             if (tab === 'stats') renderQuestStats();
         });
     });
-    // 퀘스트 통계 월/연 네비게이션
+    // 퀘스트 통계 월 네비게이션
     document.getElementById('btn-qstats-prev-month').addEventListener('click', questStatsDomain.handlePrevMonth);
     document.getElementById('btn-qstats-next-month').addEventListener('click', questStatsDomain.handleNextMonth);
-    document.getElementById('btn-qstats-prev-year').addEventListener('click', questStatsDomain.handlePrevYear);
-    document.getElementById('btn-qstats-next-year').addEventListener('click', questStatsDomain.handleNextYear);
     // DIY 전용 통계 필터
     document.getElementById('qstats-diy-filter')?.addEventListener('change', questStatsDomain.handleDiyFilterChange);
     // 드롭다운 외부 클릭 시 닫기

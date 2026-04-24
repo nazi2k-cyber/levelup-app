@@ -777,17 +777,18 @@
                         <div id="qstats-daily-progress"></div>
                     </div>
 
-                    <!-- Annual stats card -->
+                    <!-- Trend stats card -->
                     <div class="system-card" style="padding:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);" data-i18n="qstats_annual_title">연간 퀘스트 통계</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px; flex-wrap:wrap;">
+                            <h3 style="margin:0; font-size:0.95rem; color:var(--neon-gold);">퀘스트 추이 차트 (꺾은선)</h3>
                             <div style="display:flex; align-items:center; gap:6px;">
-                                <button class="btn-info-sm" id="btn-qstats-prev-year">◀</button>
-                                <span id="qstats-year-label" style="font-size:0.8rem; color:var(--neon-gold);"></span>
-                                <button class="btn-info-sm" id="btn-qstats-next-year">▶</button>
+                                <button class="btn-info-sm" onclick="window.setQstatsChartRange('weekly')">주간</button>
+                                <button class="btn-info-sm" onclick="window.setQstatsChartRange('monthly')">월간</button>
+                                <span id="qstats-chart-range-label" style="font-size:0.78rem; color:var(--text-sub);"></span>
                             </div>
                         </div>
                         <svg id="qstats-annual-chart" viewBox="0 0 320 180" style="width:100%;"></svg>
+                        <div id="qstats-chart-legend" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:0.72rem; color:var(--text-sub);"></div>
                     </div>
 
                     <!-- Empty state -->
