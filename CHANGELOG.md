@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.557] - 2026-04-24
+
+### 변경
+- fix: PR 제목에 [auto-version] 마커 추가로 무한 버전 업데이트 루프 방지
+
 ## [1.0.556] - 2026-04-24
 
 ### 변경
