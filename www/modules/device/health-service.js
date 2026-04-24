@@ -85,12 +85,30 @@ export function createHealthService(deps = {}) {
                 return false;
             }
             const perm = await HealthConnect.requestPermissions();
-            const granted = !!(perm && (perm.granted || perm.settingsOpened));
+            const hcGranted = !!(perm && (perm.granted || perm.settingsOpened));
             AppLogger?.info?.('[HealthConnect] requestPermissions result: ' + JSON.stringify({
-                granted,
+                granted: hcGranted,
                 permissionPayload: perm || {},
             }));
-            return granted;
+
+            const GoogleFit = capabilities?.getCapacitor?.()?.Plugins?.GoogleFit;
+            if (!GoogleFit) return hcGranted;
+
+            try {
+                const gfPerm = await GoogleFit.requestPermissions();
+                const gfGranted = !!(gfPerm && gfPerm.granted);
+                AppLogger?.info?.('[GoogleFit] requestPermissions result: ' + JSON.stringify({
+                    granted: gfGranted,
+                    permissionPayload: gfPerm || {},
+                }));
+                return hcGranted || gfGranted;
+            } catch (gfErr) {
+                AppLogger?.warn?.('[GoogleFit] requestPermissions failed: ' + JSON.stringify({
+                    message: gfErr?.message || '',
+                    code: gfErr?.code || gfErr?.error?.code || '',
+                }));
+                return hcGranted;
+            }
         } catch (e) {
             const errCode = String(e?.code || e?.error?.code || '');
             if (errCode === '12501') return false;
@@ -124,12 +142,52 @@ export function createHealthService(deps = {}) {
             AppLogger?.info?.('[HealthConnect] getTodaySteps raw result: ' + JSON.stringify(result || {}));
             if (result.fallbackToRest) {
                 AppLogger?.info?.('[HealthConnect] Fallback: ' + (result.error || 'unknown'));
-                return null;
+                return await tryGoogleFitSteps();
             }
-            AppLogger?.info?.(`[HealthConnect] Native steps: ${result.steps} (source: ${result.source})`);
-            return result.steps;
+
+            const hcSteps = Number.isFinite(result?.steps) ? result.steps : null;
+            const appearsSensorOnly = String(result?.source || '').includes('sensor');
+            if ((hcSteps === null || hcSteps <= 0) && appearsSensorOnly) {
+                const gfSteps = await tryGoogleFitSteps();
+                if (Number.isFinite(gfSteps) && gfSteps > 0) {
+                    AppLogger?.info?.(`[HealthSync] using GoogleFit steps ${gfSteps} instead of sensor-only ${hcSteps ?? 'null'}`);
+                    return gfSteps;
+                }
+            }
+
+            AppLogger?.info?.(`[HealthConnect] Native steps: ${hcSteps} (source: ${result.source})`);
+            return hcSteps;
         } catch (e) {
             AppLogger?.warn?.('[health.sync.failed] step-read: ' + JSON.stringify({
+                message: e?.message || '',
+                code: e?.code || e?.error?.code || '',
+                stack: e?.stack || '',
+                raw: e,
+            }));
+            return null;
+        }
+    }
+
+
+
+    async function tryGoogleFitSteps() {
+        if (!capabilities?.supportsHealth?.()) return null;
+
+        try {
+            const GoogleFit = capabilities?.getCapacitor?.()?.Plugins?.GoogleFit;
+            if (!GoogleFit) {
+                AppLogger?.info?.('[GoogleFit] getTodaySteps skipped: plugin unavailable');
+                return null;
+            }
+
+            const availability = await GoogleFit.isAvailable();
+            AppLogger?.info?.('[GoogleFit] availability: ' + JSON.stringify(availability || {}));
+            const result = await GoogleFit.getTodaySteps();
+            AppLogger?.info?.('[GoogleFit] getTodaySteps raw result: ' + JSON.stringify(result || {}));
+            if (!result || result.fallbackToRest) return null;
+            return Number.isFinite(result.steps) ? result.steps : null;
+        } catch (e) {
+            AppLogger?.warn?.('[GoogleFit] step-read failed: ' + JSON.stringify({
                 message: e?.message || '',
                 code: e?.code || e?.error?.code || '',
                 stack: e?.stack || '',
@@ -221,7 +279,7 @@ export function createHealthService(deps = {}) {
             appState.user.stepData.rewardedSteps += (rewardChunks * 1000);
 
             if (showMsg) {
-                const sourceLabel = 'Health Connect';
+                const sourceLabel = 'Health Connect / Google Fit';
                 const syncMsg = (lang.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보')
                     .replace('{source}', sourceLabel)
                     .replace('{steps}', totalStepsToday.toLocaleString());
@@ -236,7 +294,7 @@ export function createHealthService(deps = {}) {
             if (totalStepsToday === 0) {
                 setStatus(statusDiv, `<span style="color:var(--neon-gold);">${lang.sync_no_steps || '걸음 수 기록이 없습니다. (0보)'}</span>`);
             } else {
-                const sourceLabel = 'Health Connect';
+                const sourceLabel = 'Health Connect / Google Fit';
                 const syncMsg = (lang.sync_complete_msg || '동기화 완료 ({source}): 총 {steps}보')
                     .replace('{source}', sourceLabel)
                     .replace('{steps}', totalStepsToday.toLocaleString());
