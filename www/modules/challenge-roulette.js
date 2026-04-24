@@ -301,7 +301,10 @@
 
             // ★ 보상형 전면 광고 — 스핀 보상 2배 기회
             localStorage.setItem('_ri_last_spin_idx', String(resultIdx));
-            if (window.AdManager && window.AdManager.isRewardedInterstitialReady() && window.isNativePlatform) {
+            if (window.AdManager
+                && window.AdManager.isAdExposureAllowed?.()
+                && window.AdManager.isRewardedInterstitialReady()
+                && window.isNativePlatform) {
                 const watchAd = confirm(i18n[lang].ri_spin_prompt || '광고를 시청하면 보상을 한 번 더 받을 수 있습니다. 시청하시겠습니까?');
                 if (watchAd) {
                     window.AdManager.showRewardedInterstitial('spin');

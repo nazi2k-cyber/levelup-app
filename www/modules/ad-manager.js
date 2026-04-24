@@ -18,6 +18,8 @@
     const NATIVE_AD_TEST_ID = 'ca-app-pub-3940256099942544/2247696110';
     const NATIVE_AD_POSITION = 5;
     const REELS_NATIVE_AD_POSITION = 3;
+    const AD_SESSION_COUNT_KEY = 'levelup_session_count';
+    const MIN_SESSIONS_BEFORE_ADS = 3;
 
     // --- 내부 상태 ---
     let _admobInitialized = false;
@@ -52,6 +54,7 @@
     let _nativeAdMissingCount = 0;
     let _nativeAdLoadFailureCount = 0;
     let _nativeAdUsingBannerFallback = false;
+    let _adGateLoggedContexts = new Set();
 
     // 모달 오버레이 시 광고 일시 숨김 플래그
     let _adsHiddenForModal = false;
@@ -65,6 +68,20 @@
     function _AppState() { return window.AppState; }
     function _auth() { return window._auth; }
     function _i18n() { return window.i18n; }
+    function _getAdSessionCount() {
+        return parseInt(localStorage.getItem(AD_SESSION_COUNT_KEY) || '0', 10);
+    }
+    function isAdExposureAllowed() {
+        return _getAdSessionCount() >= MIN_SESSIONS_BEFORE_ADS;
+    }
+    function _logAdGateBlocked(context) {
+        if (_adGateLoggedContexts.has(context)) return;
+        _adGateLoggedContexts.add(context);
+        if (window.AppLogger) {
+            AppLogger.info(`[AdGate] ${context} 광고 지연: session=${_getAdSessionCount()}/${MIN_SESSIONS_BEFORE_ADS}`);
+        }
+    }
+
     function _getNativeAdAdapter() {
         const plugins = window?.Capacitor?.Plugins || {};
         const nativePlugin = plugins.NativeAd;
@@ -431,6 +448,10 @@
     }
 
     async function showRewardedInterstitial(context) {
+        if (!isAdExposureAllowed()) {
+            _logAdGateBlocked('rewarded_interstitial');
+            return false;
+        }
         if (!_rewardedInterstitialReady || !_admobInitialized) return false;
         try {
             const { AdMob } = window.Capacitor.Plugins;
@@ -458,6 +479,10 @@
     }
 
     async function showBanner() {
+        if (!isAdExposureAllowed()) {
+            _logAdGateBlocked('banner');
+            return;
+        }
         if (!_admobInitialized || !_isNative()) return;
         try {
             const { AdMob } = window.Capacitor.Plugins;
@@ -732,6 +757,11 @@
      * @param {Function} onFail - 광고 실패/이탈 시 콜백
      */
     async function showDDayRewardedAd(onSuccess, onFail) {
+        if (!isAdExposureAllowed()) {
+            _logAdGateBlocked('dday_rewarded');
+            if (onSuccess) onSuccess();
+            return;
+        }
         // 오늘 이미 시청했으면 바로 성공 콜백
         if (hasDDayAdShownToday()) {
             if (onSuccess) onSuccess();
@@ -771,6 +801,12 @@
 
     // --- 네이티브 광고 ---
     async function loadNativeAd(tabId) {
+        if (!isAdExposureAllowed()) {
+            _logAdGateBlocked('native_' + tabId);
+            const placeholder = document.getElementById('native-ad-placeholder-' + tabId);
+            if (placeholder) placeholder.style.display = 'none';
+            return;
+        }
         if (!_isNative()) return;
         if (_nativeAdDisabled) {
             const placeholder = document.getElementById('native-ad-placeholder-' + tabId);
@@ -1066,6 +1102,8 @@
         // D-Day 저장 보상형
         showDDayRewardedAd,
         hasDDayAdShownToday,
+        isAdExposureAllowed,
+        MIN_SESSIONS_BEFORE_ADS,
         // 내부 상태 접근 (app.js 호환)
         get nativeAdActiveTab() { return _nativeAdActiveTab; },
     };
