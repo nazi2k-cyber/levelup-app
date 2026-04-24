@@ -79,6 +79,15 @@ export function createAuthProfileModule(deps) {
             const loginPanel = document.getElementById('login-log-panel');
             if (loginPanel) loginPanel.style.display = 'none';
 
+            const shouldShowOnboarding = !localStorage.getItem(onboardingStorageKey);
+            if (shouldShowOnboarding) {
+                if (typeof markPermissionPromptPending === 'function') {
+                    markPermissionPromptPending();
+                } else {
+                    window._pendingPermissionPrompts = true;
+                }
+            }
+
             showOnboardingGuide();
             window.RatingManager?.initCheck();
 
@@ -148,13 +157,7 @@ export function createAuthProfileModule(deps) {
             initPushNotifications();
             processPendingNotification();
 
-            if (!localStorage.getItem(onboardingStorageKey)) {
-                if (typeof markPermissionPromptPending === 'function') {
-                    markPermissionPromptPending();
-                } else {
-                    window._pendingPermissionPrompts = true;
-                }
-            } else {
+            if (!shouldShowOnboarding) {
                 showPermissionPrompts();
             }
             return;

@@ -1158,6 +1158,7 @@ async function _doSaveUserData() {
             syncEnabled: normalizeBooleanForFirestore(AppState.user.syncEnabled),
             gpsEnabled: normalizeBooleanForFirestore(AppState.user.gpsEnabled),
             pushEnabled: normalizeBooleanForFirestore(AppState.user.pushEnabled),
+            cameraEnabled: normalizeBooleanForFirestore(AppState.user.cameraEnabled),
             // privateAccount: 서버에 해당 필드가 존재하거나 사용자가 토글한 경우에만 전송
             // 기존 문서에 없는 상태에서 기본값(false)을 전송하면 서버 규칙 미배포 시 permission-denied 발생
             ...(AppState._privateAccountExplicit ? { privateAccount: normalizeBooleanForFirestore(AppState.user.privateAccount) } : {}),
@@ -1446,6 +1447,7 @@ async function loadUserDataFromDB(user) {
             if(data.syncEnabled !== undefined) AppState.user.syncEnabled = data.syncEnabled;
             if(data.gpsEnabled !== undefined) AppState.user.gpsEnabled = data.gpsEnabled;
             if(data.pushEnabled !== undefined) AppState.user.pushEnabled = data.pushEnabled;
+            if(data.cameraEnabled !== undefined) AppState.user.cameraEnabled = data.cameraEnabled;
             if(data.privateAccount !== undefined) { AppState.user.privateAccount = data.privateAccount; AppState._privateAccountExplicit = true; }
             if(data.fcmToken !== undefined) AppState.user.fcmToken = data.fcmToken || null;
             // 언어 설정 복원 (로그아웃 시 localStorage.clear() 대응)
@@ -6019,11 +6021,16 @@ async function showPermissionPrompts() {
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 상태 확인 시작');
 
     // 1) 푸시 알림 — 앱 토글 off + OS 미승인일 때만 요청
-    if (!AppState.user.pushEnabled && cap.Plugins && cap.Plugins.PushNotifications) {
+    if (!AppState.user.pushEnabled && cap.Plugins && (cap.Plugins.PushNotifications || cap.Plugins.FCMPlugin)) {
         try {
-            const { PushNotifications } = cap.Plugins;
-            const status = await PushNotifications.checkPermissions();
-            if (status.receive !== 'granted') {
+            let shouldRequest = true;
+            if (cap.Plugins.PushNotifications) {
+                const { PushNotifications } = cap.Plugins;
+                const status = await PushNotifications.checkPermissions();
+                shouldRequest = status.receive !== 'granted';
+            }
+
+            if (shouldRequest) {
                 const token = await requestNativePushPermission();
                 if (token) {
                     const pushToggle = document.getElementById('push-toggle');
