@@ -6491,7 +6491,19 @@ async function requestNativePushPermission() {
     }
 
     // 방법 2: 커스텀 FCMPlugin (네이티브 브릿지)
+    // Android 13+에서 POST_NOTIFICATIONS 권한을 먼저 요청해야 OS 팝업이 표시됨
     if (cap.Plugins && cap.Plugins.FCMPlugin) {
+        if (typeof cap.Plugins.FCMPlugin.requestPermission === 'function') {
+            try {
+                const permResult = await cap.Plugins.FCMPlugin.requestPermission();
+                if (!permResult || permResult.status !== 'granted') {
+                    if (window.AppLogger) AppLogger.warn('[FCM] FCMPlugin 알림 권한 거부: ' + JSON.stringify(permResult));
+                    return null;
+                }
+            } catch (e) {
+                if (window.AppLogger) AppLogger.warn('[FCM] FCMPlugin requestPermission 오류: ' + (e.message || e));
+            }
+        }
         const result = await cap.Plugins.FCMPlugin.getToken();
         return result.token || null;
     }
