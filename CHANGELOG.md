@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.535] - 2026-04-24
+
+### 변경
+- fix: 미래 순자산 라벨 아이콘 제거 및 좌우명 모달 버튼 중앙 정렬
+
 ## [1.0.534] - 2026-04-24
 
 ### 변경
