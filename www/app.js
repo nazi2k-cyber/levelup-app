@@ -312,7 +312,7 @@ function applyCardVisibility() {
     ALL_CARD_IDS.forEach(cardId => {
         const card = document.querySelector(`#status .status-reorderable[data-card-id="${cardId}"]`);
         if (!card) return;
-        if (hidden.includes(cardId) || (AppState.isEmailUser && cardId === 'step-count')) {
+        if (hidden.includes(cardId)) {
             card.style.display = 'none';
         } else {
             // 숨김 해제 시 표시 복원 (step-count 포함)
@@ -389,7 +389,6 @@ function renderEditorCardList() {
     const section = document.getElementById('status');
     const cards = Array.from(section.querySelectorAll('.status-reorderable'));
     const visibleCards = cards.filter(c => {
-        if (AppState.isEmailUser && c.dataset.cardId === 'step-count') return false;
         return !hidden.includes(c.dataset.cardId);
     });
 
@@ -532,7 +531,7 @@ function openCardSelectModal() {
     list.innerHTML = '';
     selectAll.checked = false;
 
-    hidden.filter(cardId => !(AppState.isEmailUser && cardId === 'step-count')).forEach(cardId => {
+    hidden.forEach(cardId => {
         const info = STATUS_CARD_LABELS[cardId] || { name: cardId, icon: '📦' };
         const item = document.createElement('label');
         item.className = 'card-select-item';
@@ -5974,8 +5973,8 @@ async function showPermissionPrompts() {
         statusDiv: document.getElementById('gps-status'),
     });
 
-    // 3) 건강 데이터 — 앱 토글 off일 때만 요청 (이메일 로그인 사용자는 스킵)
-    if (!AppState.user.syncEnabled && !AppState.isEmailUser) {
+    // 3) 건강 데이터 — 앱 토글 off일 때만 요청
+    if (!AppState.user.syncEnabled) {
         try {
             const result = await healthService.enableHealthSync({
                 syncToggle: document.getElementById('sync-toggle'),
@@ -6128,13 +6127,6 @@ function updateStepCountUI() {
     const infoEl = document.getElementById('step-count-info');
     const reqPanel = document.getElementById('step-req-panel');
 
-    // 이메일 로그인 사용자는 걸음수 카드 숨김
-    if (AppState.isEmailUser) {
-        card.style.display = 'none';
-        return;
-    }
-
-    // 항상 표시
     card.style.display = '';
 
     if (!AppState.user.syncEnabled) {
