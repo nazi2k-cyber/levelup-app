@@ -5,6 +5,16 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.530] - 2026-04-24
+
+### 변경
+- Skip Google Fit auth popup when Health Connect permission is granted
+
+## [1.0.529] - 2026-04-24
+
+### 변경
+- Allow fitness sync for email-login users
+
 ## [1.0.528] - 2026-04-24
 
 ### 변경
