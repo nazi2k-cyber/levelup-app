@@ -3252,6 +3252,15 @@ function validateEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function getFirebaseAuthLanguageCode(lang) {
+    if (lang === 'en' || lang === 'ja' || lang === 'ko') return lang;
+    return 'ko';
+}
+
+function applyFirebaseAuthLanguage(lang) {
+    auth.languageCode = getFirebaseAuthLanguageCode(lang || AppState.currentLang || 'ko');
+}
+
 async function simulateLogin() {
     const email = document.getElementById('login-email').value;
     const pw = document.getElementById('login-pw').value;
@@ -3267,6 +3276,7 @@ async function simulateLogin() {
             const pwConfirm = document.getElementById('login-pw-confirm').value;
             if(pw !== pwConfirm) throw new Error(i18n[lang]?.pw_mismatch || "비밀번호 불일치");
             const userCredential = await createUserWithEmailAndPassword(auth, email, pw);
+            applyFirebaseAuthLanguage(lang);
             await sendEmailVerification(userCredential.user);
             ConversionTracker.signupComplete('email');
             await fbSignOut(auth);
@@ -3294,6 +3304,7 @@ async function handleForgotPassword() {
         return;
     }
     try {
+        applyFirebaseAuthLanguage(lang);
         await sendPasswordResetEmail(auth, email);
         alert(i18n[lang]?.forgot_pw_sent || "비밀번호 재설정 메일이 발송되었습니다. 받은편지함을 확인해주세요.");
     } catch (e) {
@@ -3522,6 +3533,7 @@ async function resendVerificationEmail() {
     btn.disabled = true;
     try {
         const userCredential = await signInWithEmailAndPassword(auth, email, pw);
+        applyFirebaseAuthLanguage(lang);
         await sendEmailVerification(userCredential.user);
         await fbSignOut(auth);
         alert(i18n[lang]?.verify_resent || "인증 메일이 재발송되었습니다.");

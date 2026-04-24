@@ -135,7 +135,16 @@ input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-ca
 .verify-icon { font-size: 3rem; margin-bottom: 16px; }
 .verify-title { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 0 0 12px 0; text-align: center; }
 .verify-email { font-size: 0.9rem; color: var(--neon-blue); font-weight: 600; margin: 0 0 8px 0; word-break: break-all; text-align: center; }
-.verify-desc { font-size: 0.8rem; color: rgba(255,255,255,0.5); text-align: center; line-height: 1.5; margin: 0 0 24px 0; }
+.verify-desc { font-size: 0.8rem; color: rgba(255,255,255,0.5); text-align: center; line-height: 1.5; margin: 0 0 12px 0; }
+.verify-app-logo-wrap { display:flex; justify-content:center; margin: 0 0 24px 0; }
+.verify-app-logo-text {
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding: 10px 16px; border-radius: 999px;
+    border: 1px solid rgba(0,217,255,0.45);
+    background: rgba(0, 217, 255, 0.08);
+    color: rgba(255,255,255,0.92);
+    font-weight: 700; font-size: 0.82rem; letter-spacing: 0.06em;
+}
 
 /* 하단 사명 */
 .login-bottom-brand {
@@ -216,6 +225,11 @@ input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-ca
     color: rgba(0,0,0,0.12);
 }
 [data-theme="light"] .verify-title {
+    color: #1a202c;
+}
+[data-theme="light"] .verify-app-logo-text {
+    border-color: rgba(43,108,176,0.35);
+    background: rgba(43,108,176,0.10);
     color: #1a202c;
 }
 [data-theme="light"] .verify-desc {
