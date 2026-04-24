@@ -48,6 +48,7 @@ public class GoogleFitPlugin extends Plugin {
     private static final int GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1001;
     private static final int ACTIVITY_RECOGNITION_REQUEST_CODE = 1002;
     private static final int GOOGLE_SIGN_IN_REQUEST_CODE = 1003;
+    private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
 
     private PluginCall savedPermissionsCall = null;
 
@@ -311,8 +312,8 @@ public class GoogleFitPlugin extends Plugin {
                     return;
                 }
 
-                LocalDate today = LocalDate.now();
-                long startOfDay = today.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+                LocalDate today = LocalDate.now(KST_ZONE);
+                long startOfDay = today.atStartOfDay(KST_ZONE).toInstant().toEpochMilli();
                 long now = System.currentTimeMillis();
 
                 DataReadRequest readRequest = new DataReadRequest.Builder()

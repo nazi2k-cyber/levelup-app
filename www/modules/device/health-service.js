@@ -19,6 +19,22 @@ export function createHealthService(deps = {}) {
         return i18n[lang] || i18n.ko || {};
     }
 
+    function getTodayKSTKey() {
+        try {
+            const formatter = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Seoul',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+            });
+            return formatter.format(new Date());
+        } catch (_) {
+            const now = new Date();
+            const utcMs = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+            return new Date(utcMs + (9 * 60 * 60 * 1000)).toISOString().slice(0, 10);
+        }
+    }
+
     function setStatus(statusDiv, html) {
         if (!statusDiv) return;
         statusDiv.style.display = 'flex';
@@ -158,6 +174,14 @@ export function createHealthService(deps = {}) {
                 }
             }
 
+            if (appearsSensorOnly) {
+                const gfSteps = await tryGoogleFitSteps();
+                if (Number.isFinite(gfSteps) && gfSteps > hcSteps) {
+                    AppLogger?.info?.(`[HealthSync] using GoogleFit steps ${gfSteps} over sensor ${hcSteps}`);
+                    return gfSteps;
+                }
+            }
+
             AppLogger?.info?.(`[HealthConnect] Native steps: ${hcSteps} (source: ${result.source})`);
             return hcSteps;
         } catch (e) {
@@ -255,7 +279,7 @@ export function createHealthService(deps = {}) {
             setStatus(statusDiv, `<span style="color:var(--text-sub);">데이터 가져오는 중...</span>`);
         }
 
-        const todayStr = new Date().toDateString();
+        const todayStr = getTodayKSTKey();
         if (!appState.user.stepData || appState.user.stepData.date !== todayStr) {
             appState.user.stepData = { date: todayStr, rewardedSteps: 0, totalSteps: 0 };
         }
