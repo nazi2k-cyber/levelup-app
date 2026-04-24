@@ -19,6 +19,7 @@
     const NATIVE_AD_POSITION = 5;
     const REELS_NATIVE_AD_POSITION = 3;
     const AD_SESSION_COUNT_KEY = 'levelup_session_count';
+    const INSTALL_TS_KEY = 'levelup_install_ts';
     const MIN_SESSIONS_BEFORE_ADS = 3;
     const NEW_USER_AD_GATE_WINDOW_MS = 24 * 60 * 60 * 1000; // 1일차만 광고 지연 적용
 
