@@ -1016,15 +1016,20 @@ function bindEvents() {
             const val00 = (slot00 && slot00.dataset.value) || '';
             const val30 = (slot30 && slot30.dataset.value) || '';
             const presets = getSchedulePresets();
+            const since = getSchedulePresetsSince();
             if (chk.checked) {
                 if (!val00 && !val30) { chk.checked = false; return; }
-                if (val00) presets[t00] = val00;
-                if (val30) presets[t30] = val30;
+                const today = getTodayStr();
+                if (val00) { presets[t00] = val00; since[t00] = today; }
+                if (val30) { presets[t30] = val30; since[t30] = today; }
             } else {
                 delete presets[t00];
                 delete presets[t30];
+                delete since[t00];
+                delete since[t30];
             }
             saveSchedulePresets(presets);
+            saveSchedulePresetsSince(since);
         });
     }
     // 퀘스트 서브탭 전환 (퀘스트 / 통계)
@@ -5461,6 +5466,12 @@ function getSchedulePresets() {
 function saveSchedulePresets(presets) {
     localStorage.setItem('planner_schedule_presets', JSON.stringify(presets));
 }
+function getSchedulePresetsSince() {
+    try { return JSON.parse(localStorage.getItem('planner_schedule_presets_since') || '{}'); } catch(e) { return {}; }
+}
+function saveSchedulePresetsSince(since) {
+    localStorage.setItem('planner_schedule_presets_since', JSON.stringify(since));
+}
 
 // 칩 뱅크 렌더링 (클릭 fill mode 소스)
 function renderTaskChipsBank() {
@@ -5799,6 +5810,10 @@ window.clearTimeboxSlot = function(time) {
         delete presets[t00];
         delete presets[t30];
         saveSchedulePresets(presets);
+        const since = getSchedulePresetsSince();
+        delete since[t00];
+        delete since[t30];
+        saveSchedulePresetsSince(since);
         // 체크박스 uncheck
         const chk = document.querySelector(`.timebox-preset-chk[data-hour="${hour}"]`);
         if (chk) chk.checked = false;
@@ -5823,10 +5838,15 @@ function renderTimeboxGrid(dateStr) {
 
     const entry = getDiaryEntry(dateStr);
     const savedBlocks = (entry && entry.blocks) ? entry.blocks : {};
-    // 프리셋 자동 적용 (빈 슬롯에만)
+    // 프리셋 자동 적용 (빈 슬롯에만, 저장 시점일 이후만)
     const presets = getSchedulePresets();
+    const since = getSchedulePresetsSince();
+    const today = getTodayStr();
     const blocks = { ...savedBlocks };
-    Object.entries(presets).forEach(([t, v]) => { if (!blocks[t]) blocks[t] = v; });
+    Object.entries(presets).forEach(([t, v]) => {
+        const sinceDate = since[t] || today;
+        if (!blocks[t] && dateStr >= sinceDate) blocks[t] = v;
+    });
 
     renderTimeboxGridWithBlocks(blocks);
 }
