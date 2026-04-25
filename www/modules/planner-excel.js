@@ -6,9 +6,14 @@
     const i18n      = window.i18n;
     const AppLogger = window.AppLogger;
 
-    const XLSX_CDN = 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js';
+    const XLSX_CDN_URLS = [
+        'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+        'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    ];
     let _xlsxLoaded = false;
     let _xlsxLoading = false;
+    let _xlsxLoadPromise = null;
     let _selectedFile = null;
 
     function getLang() {
@@ -35,22 +40,60 @@
     }
 
     function loadXlsx() {
-        return new Promise((resolve, reject) => {
-            if (_xlsxLoaded) { resolve(); return; }
-            if (_xlsxLoading) {
-                const check = setInterval(() => {
-                    if (_xlsxLoaded) { clearInterval(check); resolve(); }
-                }, 100);
-                return;
-            }
-            _xlsxLoading = true;
-            const s = document.createElement('script');
-            s.id = 'sheetjs-cdn';
-            s.src = XLSX_CDN;
-            s.onload = () => { _xlsxLoaded = true; _xlsxLoading = false; resolve(); };
-            s.onerror = () => { _xlsxLoading = false; reject(new Error('SheetJS load failed')); };
-            document.head.appendChild(s);
+        if (window.XLSX) {
+            _xlsxLoaded = true;
+            _xlsxLoading = false;
+            return Promise.resolve();
+        }
+        if (_xlsxLoaded) return Promise.resolve();
+        if (_xlsxLoadPromise) return _xlsxLoadPromise;
+
+        _xlsxLoading = true;
+        _xlsxLoadPromise = new Promise((resolve, reject) => {
+            const tryLoad = (idx) => {
+                if (window.XLSX) {
+                    _xlsxLoaded = true;
+                    _xlsxLoading = false;
+                    resolve();
+                    return;
+                }
+                if (idx >= XLSX_CDN_URLS.length) {
+                    _xlsxLoading = false;
+                    _xlsxLoadPromise = null;
+                    reject(new Error('SheetJS load failed from all CDNs'));
+                    return;
+                }
+
+                const scriptId = `sheetjs-cdn-${idx}`;
+                const stale = document.getElementById(scriptId);
+                if (stale) stale.remove();
+
+                const s = document.createElement('script');
+                s.id = scriptId;
+                s.src = XLSX_CDN_URLS[idx];
+                s.async = true;
+                s.crossOrigin = 'anonymous';
+                s.onload = () => {
+                    if (window.XLSX) {
+                        _xlsxLoaded = true;
+                        _xlsxLoading = false;
+                        resolve();
+                    } else {
+                        s.remove();
+                        tryLoad(idx + 1);
+                    }
+                };
+                s.onerror = () => {
+                    s.remove();
+                    tryLoad(idx + 1);
+                };
+                document.head.appendChild(s);
+            };
+
+            tryLoad(0);
         });
+
+        return _xlsxLoadPromise;
     }
 
     function downloadBlob(blob, filename) {
@@ -155,7 +198,7 @@
             if (AppLogger) AppLogger.log('[PlannerExcel] template downloaded');
         }).catch(err => {
             if (AppLogger) AppLogger.error('[PlannerExcel] template error', err);
-            notify(t('excel_lib_loading'));
+            notify(t('excel_export_error'));
         });
     }
 
@@ -249,8 +292,9 @@
             };
             reader.onerror = () => notify(t('excel_import_error'));
             reader.readAsArrayBuffer(file);
-        }).catch(() => {
-            notify(t('excel_lib_loading'));
+        }).catch(err => {
+            if (AppLogger) AppLogger.error('[PlannerExcel] import library load error', err);
+            notify(t('excel_import_error'));
         });
     }
 
@@ -281,6 +325,10 @@
     }
 
     function initPlannerExcel() {
+        loadXlsx().catch(err => {
+            if (AppLogger) AppLogger.warn('[PlannerExcel] preload failed', err);
+        });
+
         const exportBtn = document.getElementById('btn-excel-export');
         if (exportBtn) exportBtn.addEventListener('click', exportPlannerToExcel);
 
