@@ -3021,7 +3021,8 @@ function switchTab(tabId, el) {
     document.getElementById(tabId).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     el.classList.add('active');
-    
+    document.querySelector('header').style.display = tabId === 'status' ? '' : 'none';
+
     const mainEl = document.querySelector('main');
     if(tabId === 'status') {
         mainEl.style.overflowY = 'auto';
