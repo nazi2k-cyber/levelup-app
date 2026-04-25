@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.582] - 2026-04-25
+
+### 변경
+- feat: 플래너 Excel 내보내기/가져오기 기능 추가
+
 ## [1.0.581] - 2026-04-25
 
 ### 변경
