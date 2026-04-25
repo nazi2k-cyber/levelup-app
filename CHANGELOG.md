@@ -5,6 +5,72 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.571] - 2026-04-25
+
+### 변경
+- feat: 플래너 UX 개편 - 탭제거/DnD우선순위/슬롯시간표/자동채우기
+
+## [1.0.570] - 2026-04-25
+
+### 변경
+- docs: add IIFE architecture and AI calorie estimation plan
+
+## [1.0.569] - 2026-04-25
+
+### 변경
+- docs: expand calorie record doc with detailed requirements
+
+## [1.0.568] - 2026-04-25
+
+### 변경
+- docs: add ongoing note for daily calorie record feature
+
+## [1.0.567] - 2026-04-25
+
+### 변경
+- docs: 소셜 프로필 메시지 수발신 도입 검토문서 추가
+
+## [1.0.566] - 2026-04-25
+
+### 변경
+- docs: 시장조사 반영해 구독 결정 항목 구체화
+
+## [1.0.565] - 2026-04-25
+
+### 변경
+- docs: 구독 서비스 도입 검토 문서 추가
+
+## [1.0.564] - 2026-04-25
+
+### 변경
+- docs: add ongoing load balancing investigation report
+
+## [1.0.563] - 2026-04-25
+
+### 변경
+- Delete docs/NOTICE.md
+
+## [1.0.562] - 2026-04-25
+
+### 변경
+- Restore root NOTICE.md for compatibility
+- Move root markdown docs into docs directory
+
+## [1.0.561] - 2026-04-24
+
+### 변경
+- Add Japanese Play Store listing copy
+
+## [1.0.560] - 2026-04-24
+
+### 변경
+- docs: 미국/일본 플레이콘솔 검색키워드 추천 추가
+
+## [1.0.559] - 2026-04-24
+
+### 변경
+- docs: 플레이콘솔 맞춤 등록정보 검색키워드 추천 추가
+
 ## [1.0.558] - 2026-04-24
 
 ### 변경
