@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.566] - 2026-04-25
+
+### 변경
+- docs: 시장조사 반영해 구독 결정 항목 구체화
+
 ## [1.0.565] - 2026-04-25
 
 ### 변경
