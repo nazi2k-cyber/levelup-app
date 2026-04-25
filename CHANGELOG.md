@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.571] - 2026-04-25
+
+### 변경
+- feat: 플래너 UX 개편 - 탭제거/DnD우선순위/슬롯시간표/자동채우기
+
 ## [1.0.570] - 2026-04-25
 
 ### 변경
