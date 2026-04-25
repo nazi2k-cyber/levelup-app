@@ -9,6 +9,7 @@
     const XLSX_CDN = 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js';
     let _xlsxLoaded = false;
     let _xlsxLoading = false;
+    let _selectedFile = null;
 
     function getLang() {
         return (AppState && AppState.currentLang) || 'ko';
@@ -50,6 +51,28 @@
             s.onerror = () => { _xlsxLoading = false; reject(new Error('SheetJS load failed')); };
             document.head.appendChild(s);
         });
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
+    }
+
+    function buildWorkbook(headerRow, dataRows, sheetName) {
+        const XLSX = window.XLSX;
+        const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
+        ws['!cols'] = [
+            { wch: 12 }, { wch: 10 }, { wch: 12 },
+            { wch: 30 }, { wch: 35 }, { wch: 40 }
+        ];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        return wb;
     }
 
     function formatTasks(tasks) {
@@ -98,22 +121,41 @@
                 ];
             });
 
-            const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-            ws['!cols'] = [
-                { wch: 12 }, { wch: 10 }, { wch: 12 },
-                { wch: 30 }, { wch: 35 }, { wch: 40 }
-            ];
-
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Planner');
-
+            const wb = buildWorkbook(header, rows, 'Planner');
             const today = window.getTodayStr ? window.getTodayStr() : new Date().toISOString().slice(0, 10);
-            XLSX.writeFile(wb, `levelup_planner_${today}.xlsx`);
+            const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            downloadBlob(blob, `levelup_planner_${today}.xlsx`);
 
             if (AppLogger) AppLogger.log('[PlannerExcel] exported', dates.length, 'entries');
         }).catch(err => {
             if (AppLogger) AppLogger.error('[PlannerExcel] export error', err);
-            notify(t('excel_import_error'));
+            notify(t('excel_export_error'));
+        });
+    }
+
+    function generateTemplateExcel() {
+        loadXlsx().then(() => {
+            const XLSX = window.XLSX;
+            const header = ['Date', 'Mood', 'Category', 'Caption', 'Tasks', 'Schedule'];
+            const example = [
+                '2026-01-01',
+                'great',
+                '기타',
+                '오늘 하루도 최고!',
+                '1. 독서\n2. 운동 ✓',
+                '09:00: 아침 루틴\n14:00: 미팅'
+            ];
+
+            const wb = buildWorkbook(header, [example], 'Planner');
+            const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            downloadBlob(blob, 'levelup_planner_template.xlsx');
+
+            if (AppLogger) AppLogger.log('[PlannerExcel] template downloaded');
+        }).catch(err => {
+            if (AppLogger) AppLogger.error('[PlannerExcel] template error', err);
+            notify(t('excel_lib_loading'));
         });
     }
 
@@ -212,17 +254,68 @@
         });
     }
 
+    function openExcelImportModal() {
+        const modal = document.getElementById('excel-import-modal');
+        if (!modal) return;
+        _selectedFile = null;
+        const fileInput = document.getElementById('plannerExcelUpload');
+        const filenameEl = document.getElementById('excel-import-filename');
+        const confirmBtn = document.getElementById('btn-excel-import-confirm');
+        if (fileInput) fileInput.value = '';
+        if (filenameEl) filenameEl.textContent = '';
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.4';
+            confirmBtn.style.cursor = 'not-allowed';
+        }
+        modal.classList.remove('d-none');
+        modal.style.display = 'flex';
+    }
+
+    function closeExcelImportModal() {
+        const modal = document.getElementById('excel-import-modal');
+        if (!modal) return;
+        modal.classList.add('d-none');
+        modal.style.display = '';
+        _selectedFile = null;
+    }
+
     function initPlannerExcel() {
         const exportBtn = document.getElementById('btn-excel-export');
         if (exportBtn) exportBtn.addEventListener('click', exportPlannerToExcel);
 
         const importBtn = document.getElementById('btn-excel-import');
+        if (importBtn) importBtn.addEventListener('click', openExcelImportModal);
+
+        const templateBtn = document.getElementById('btn-excel-template-download');
+        if (templateBtn) templateBtn.addEventListener('click', generateTemplateExcel);
+
         const fileInput = document.getElementById('plannerExcelUpload');
-        if (importBtn && fileInput) {
-            importBtn.addEventListener('click', () => fileInput.click());
+        const filenameEl = document.getElementById('excel-import-filename');
+        const confirmBtn = document.getElementById('btn-excel-import-confirm');
+
+        if (fileInput) {
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files && e.target.files[0];
-                if (file) { importPlannerFromExcel(file); fileInput.value = ''; }
+                if (file) {
+                    _selectedFile = file;
+                    if (filenameEl) filenameEl.textContent = file.name;
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                    }
+                }
+            });
+        }
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                if (_selectedFile) {
+                    const fileToImport = _selectedFile;
+                    closeExcelImportModal();
+                    importPlannerFromExcel(fileToImport);
+                }
             });
         }
     }
@@ -235,4 +328,6 @@
 
     window.exportPlannerToExcel = exportPlannerToExcel;
     window.importPlannerFromExcel = importPlannerFromExcel;
+    window.openExcelImportModal = openExcelImportModal;
+    window.closeExcelImportModal = closeExcelImportModal;
 })();
