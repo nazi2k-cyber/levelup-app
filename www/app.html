@@ -672,6 +672,14 @@
             </section>
 
             <section id="quests" class="view-section">
+                <!-- Title at top -->
+                <div class="tab-page-header">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="tab-page-title" data-i18n="quest_title">📜 Daily Quests</span>
+                        <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
+                    </div>
+                </div>
+
                 <!-- Quest subtab bar -->
                 <div class="quest-tab-bar">
                     <button class="quest-tab-btn active" data-quest-tab="main" data-i18n="quest_tab_main">📜 퀘스트</button>
@@ -680,12 +688,6 @@
 
                 <!-- Main quest content -->
                 <div class="quest-tab-content active" id="quest-tab-main">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <h2 data-i18n="quest_title" style="margin:0;">Daily Quests</h2>
-                            <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
-                        </div>
-                    </div>
                     <div class="system-card" style="padding:10px;">
                         <div class="quest-list-wrapper" id="quest-list-container"></div>
                         <div id="diy-quest-section" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
@@ -796,9 +798,9 @@
             </section>
 
             <section id="dungeon" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div class="tab-page-header">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="nav_dungeon" style="margin:0;">⚔️ 던전</h2>
+                        <span class="tab-page-title" data-i18n="nav_dungeon">⚔️ 던전</span>
                         <button class="btn-info-sm" id="btn-dungeon-info">ℹ️ <span data-i18n="btn_dungeon_info">가이드</span></button>
                     </div>
                     <span class="dungeon-timer d-none" id="raid-timer">01:59:59</span>
@@ -862,8 +864,8 @@
             </section>
 
             <section id="social" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="nav_social" style="margin:0;">🏆 소셜</h2>
+                <div class="tab-page-header">
+                    <span class="tab-page-title" data-i18n="nav_social">🏆 소셜</span>
                 </div>
                 <div class="social-sticky-header">
                     <div class="social-header">
@@ -890,9 +892,9 @@
             </section>
 
             <section id="diary" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div class="tab-page-header">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <h2 data-i18n="diary_tab_title" style="margin:0;">🗓️ 플래너</h2>
+                        <span class="tab-page-title" data-i18n="diary_tab_title">🗓️ 플래너</span>
                         <button class="btn-info-sm" id="btn-planner-info">ℹ️ <span data-i18n="btn_planner_info">가이드</span></button>
                     </div>
                     <span id="planner-week-label" style="font-size:0.7rem; color:var(--neon-gold);"></span>
@@ -1054,8 +1056,8 @@
             </section>
 
             <section id="reels" class="view-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h2 data-i18n="reels_title" style="margin:0;">🎬 Day1</h2>
+                <div class="tab-page-header">
+                    <span class="tab-page-title" data-i18n="reels_title">🎬 Day1</span>
                     <button class="btn-info-sm" id="btn-day1-info">ℹ️ <span data-i18n="btn_day1_info">가이드</span></button>
                 </div>
 
