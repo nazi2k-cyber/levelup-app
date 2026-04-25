@@ -5,6 +5,16 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.576] - 2026-04-25
+
+### 변경
+- UX: 상태창 탭 제외한 상단 배너 숨김 및 섹션 헤더 통일
+
+## [1.0.575] - 2026-04-25
+
+### 변경
+- feat: 스트릭 가이드에 페널티 주의사항 추가
+
 ## [1.0.574] - 2026-04-25
 
 ### 변경

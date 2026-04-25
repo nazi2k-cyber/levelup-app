@@ -176,7 +176,7 @@ export function createStreakRareTitleModule(deps) {
         const overlay = document.createElement('div');
         overlay.id = 'streak-guide-modal-overlay';
         overlay.className = 'report-modal-overlay';
-        overlay.innerHTML = `<div class="report-modal-content streak-guide-modal"><h3 class="report-modal-title">🔥 스트릭 시스템 가이드</h3><div class="streak-guide-body"><div class="streak-guide-section"><div class="streak-guide-subtitle">📌 스트릭이란?</div><p>매일 <b>퀘스트를 완료</b>하면 연속 활동일(스트릭)이 쌓입니다.<br>스트릭에 따라 보상 배율이 상승합니다.</p></div></div><div class="report-modal-actions"><button class="report-modal-btn report-modal-submit streak-guide-close">확인</button></div></div>`;
+        overlay.innerHTML = `<div class="report-modal-content streak-guide-modal"><h3 class="report-modal-title">🔥 스트릭 시스템 가이드</h3><div class="streak-guide-body"><div class="streak-guide-section"><div class="streak-guide-subtitle">📌 스트릭이란?</div><p>매일 <b>퀘스트를 완료</b>하면 연속 활동일(스트릭)이 쌓입니다.<br>스트릭에 따라 보상 배율이 상승합니다.</p></div><div class="streak-guide-section"><div class="streak-guide-subtitle">⚠️ 스트릭 주의사항</div><p><b>스트릭 마이너스 조건:</b> 2일 이상 퀘스트 미완료 시 스트릭이 끊기고 페널티가 적용됩니다.<br><b>단순 접속만 한 경우:</b> 퀘스트를 완료하지 않으면 스트릭 유지로 인정되지 않아 동일하게 페널티를 받습니다.</p></div></div><div class="report-modal-actions"><button class="report-modal-btn report-modal-submit streak-guide-close">확인</button></div></div>`;
         document.body.appendChild(overlay);
         requestAnimationFrame(() => overlay.classList.add('active'));
         const close = () => {
