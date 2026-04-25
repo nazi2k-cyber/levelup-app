@@ -542,17 +542,46 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     width: 4px; height: 4px; border-radius: 50%; background: var(--neon-gold);
 }
 
-/* 플래너 탭 바 */
-.planner-tab-bar { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); }
-.planner-tab-btn {
-    flex: 1; padding: 10px 0; font-size: 0.85rem; font-weight: bold; color: var(--text-sub);
-    background: transparent; border: none; border-bottom: 2px solid transparent;
-    cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
-}
-.planner-tab-btn.active { color: var(--neon-gold); border-bottom-color: var(--neon-gold); }
-.planner-tab-btn:not(.active):hover { color: var(--text-main); }
-.planner-tab-content { display: none; }
-.planner-tab-content.active { display: block; }
+/* 플래너 섹션 (탭 대체) */
+.planner-section { margin-bottom: 14px; }
+.planner-section-header { font-size: 0.75rem; font-weight: bold; color: var(--neon-gold); margin-bottom: 8px; letter-spacing: 0.3px; }
+
+/* 태스크 드래그 핸들 */
+.planner-task-drag-handle { cursor: grab; color: var(--text-sub); font-size: 1rem; flex-shrink: 0; padding: 0 4px; user-select: none; touch-action: none; }
+.planner-task-drag-handle:active { cursor: grabbing; }
+.planner-task-item.task-dragging { opacity: 0.55; background: rgba(255,204,0,0.08); border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+/* 태스크 자동 번호 배지 */
+.task-rank-num { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: rgba(255,204,0,0.15); color: var(--neon-gold); font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+
+/* 칩 뱅크 (드래그 소스) */
+.planner-task-chips-bank { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0 10px 0; min-height: 38px; border-bottom: 1px dashed var(--border-color); margin-bottom: 8px; }
+.task-chip { padding: 4px 10px; background: rgba(0,217,255,0.08); border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 16px; font-size: 0.78rem; cursor: grab; user-select: none; white-space: nowrap; touch-action: none; }
+.task-chip:active { cursor: grabbing; }
+.task-chip.chip-dragging { opacity: 0.35; }
+.chip-ghost { padding: 4px 10px; background: rgba(0,217,255,0.25); border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 16px; font-size: 0.78rem; white-space: nowrap; pointer-events: none; }
+
+/* 타임박스 슬롯 (셀렉트 대체) */
+.timebox-slot { flex: 1; min-height: 30px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 5px; font-size: 0.78rem; color: var(--text-sub); display: flex; align-items: center; gap: 3px; min-width: 0; transition: border-color 0.15s, background 0.15s; overflow: hidden; }
+.timebox-slot.has-content { border-color: rgba(255,204,0,0.5); background: rgba(255,204,0,0.03); color: var(--text-main); }
+.timebox-slot.slot-drag-over { border-color: var(--neon-blue); background: rgba(0,217,255,0.1); border-style: dashed; }
+.timebox-slot.slot-disabled { opacity: 0.4; pointer-events: none; }
+.slot-value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; }
+.slot-empty { color: var(--border-color); font-size: 0.75rem; }
+.slot-clear-btn { flex-shrink: 0; background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 0.8rem; padding: 0 1px; line-height: 1; }
+.slot-clear-btn:active { color: var(--neon-red); }
+
+/* 프리셋 체크박스 열 */
+.timebox-preset-label { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; }
+.timebox-preset-label input[type="checkbox"] { width: 13px; height: 13px; cursor: pointer; accent-color: var(--neon-gold); }
+.timebox-preset-col-header { width: 20px; flex-shrink: 0; text-align: center; font-size: 0.65rem; color: var(--neon-gold); }
+
+[data-theme="light"] .timebox-slot { background: rgba(0,0,0,0.02); }
+[data-theme="light"] .timebox-slot.has-content { background: rgba(212,160,23,0.05); }
+
+/* 플래너 탭 바 (레거시 유지) */
+.planner-tab-bar { display: none; }
+.planner-tab-content { display: block; }
 
 /* 태스크 체크 버튼 (모든 태스크 공통) */
 .task-check-btn {

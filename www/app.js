@@ -1002,20 +1002,31 @@ function bindEvents() {
             btn.classList.add('selected');
         });
     });
-    // 플래너 탭 전환 (우선순위 / 시간표)
-    document.querySelectorAll('.planner-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.planner-tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.planner-tab-content').forEach(c => c.classList.remove('active'));
-            btn.classList.add('active');
-            const tab = btn.getAttribute('data-planner-tab');
-            const target = document.getElementById('planner-tab-' + tab);
-            if (target) target.classList.add('active');
-            // 탭에 따라 저장 영역 표시/숨김
-            const prioritySave = document.getElementById('priority-save-area');
-            if (prioritySave) prioritySave.style.display = tab === 'priority' ? 'block' : 'none';
+    // 타임박스 그리드: 프리셋 체크박스 이벤트 위임 (1회 바인딩)
+    const _timeboxGrid = document.getElementById('planner-timebox-grid');
+    if (_timeboxGrid) {
+        _timeboxGrid.addEventListener('change', (e) => {
+            const chk = e.target.closest('.timebox-preset-chk');
+            if (!chk) return;
+            const hour = chk.dataset.hour;
+            const t00 = `${hour}:00`;
+            const t30 = `${hour}:30`;
+            const slot00 = _timeboxGrid.querySelector(`.timebox-slot[data-time="${t00}"]`);
+            const slot30 = _timeboxGrid.querySelector(`.timebox-slot[data-time="${t30}"]`);
+            const val00 = (slot00 && slot00.dataset.value) || '';
+            const val30 = (slot30 && slot30.dataset.value) || '';
+            const presets = getSchedulePresets();
+            if (chk.checked) {
+                if (!val00 && !val30) { chk.checked = false; return; }
+                if (val00) presets[t00] = val00;
+                if (val30) presets[t30] = val30;
+            } else {
+                delete presets[t00];
+                delete presets[t30];
+            }
+            saveSchedulePresets(presets);
         });
-    });
+    }
     // 퀘스트 서브탭 전환 (퀘스트 / 통계)
     document.querySelectorAll('.quest-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1047,9 +1058,6 @@ function bindEvents() {
 
     // Reels tab
     document.getElementById('btn-reels-post').addEventListener('click', () => { if (window.postToReels) window.postToReels(); });
-    // 우선순위 탭 저장 버튼도 같은 저장 함수 연결
-    const prioritySaveBtn = document.getElementById('btn-planner-save-priority');
-    if (prioritySaveBtn) prioritySaveBtn.addEventListener('click', savePlannerEntry);
     // Planner photo upload
     document.getElementById('planner-photo-label').addEventListener('click', function(e) {
         e.preventDefault();
@@ -4565,9 +4573,10 @@ function openPlannerInfoModal() {
         ko: {
             title: '플래너 사용 가이드',
             sections: [
-                { icon: '⭐', title: '우선순위 태스크', desc: '하루의 핵심 할 일을 최대 6개 입력하세요. 왼쪽 버튼을 눌러 우선순위를 매기면 자동으로 번호가 부여됩니다.' },
-                { icon: '🕐', title: '시간표 (타임박스)', desc: '05:00~23:30까지 30분 단위로 할 일을 배치하세요. 우선순위 태스크에서 입력한 항목이 드롭다운에 표시됩니다.' },
-                { icon: '📷', title: '사진 & 한마디', desc: '시간표 탭에서 사진을 첨부하고 오늘의 한마디를 작성하세요. Day1 포스팅 시 필수입니다.' },
+                { icon: '⭐', title: '우선순위 태스크', desc: '할 일을 입력하면 생성 순서대로 번호가 자동 부여됩니다. 왼쪽 ⠿ 핸들을 길게 눌러 위아래로 드래그하면 순위가 자동으로 변경됩니다.' },
+                { icon: '🕐', title: '시간표 (타임박스)', desc: '우선순위 태스크가 위쪽에 칩으로 표시됩니다. 칩을 원하는 시간 슬롯으로 드래그해서 시간표를 채우세요. 슬롯의 × 버튼으로 제거할 수 있습니다.' },
+                { icon: '🔁', title: '자동 채우기', desc: '시간 슬롯에 할 일을 배치한 후 왼쪽 체크박스를 체크하면, 해당 시간이 매일 자동으로 채워집니다. (예: 12:00 점심, 19:00 저녁) 언체크하면 자동 채우기가 해제됩니다.' },
+                { icon: '📷', title: '사진 & 한마디', desc: '사진을 첨부하고 오늘의 한마디를 작성하세요. Day1 포스팅 시 필수입니다.' },
                 { icon: '💾', title: '저장 보상', desc: '하루 1회 저장 시 +20P & AGI +0.5 보상을 받습니다.' },
                 { icon: '📤', title: 'Day1 포스팅', desc: '시간표와 사진, 텍스트를 모두 완성하면 Day1에 포스팅할 수 있습니다. 포스팅 시 +20P & CHA +0.5 보상! 24시간 후 자동 삭제됩니다.' },
                 { icon: '🔗', title: '공유 기능', desc: '포스팅 버튼 옆 공유 아이콘을 눌러 플래너를 이미지로 저장하거나 요약 텍스트를 클립보드에 복사할 수 있습니다.' }
@@ -4576,9 +4585,10 @@ function openPlannerInfoModal() {
         en: {
             title: 'Planner Guide',
             sections: [
-                { icon: '⭐', title: 'Priority Tasks', desc: 'Enter up to 6 key tasks for the day. Tap the left button to assign priority - numbers are assigned automatically.' },
-                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Assign tasks in 30-min blocks from 05:00-23:30. Tasks from Priority list appear in the dropdown.' },
-                { icon: '📷', title: 'Photo & Caption', desc: 'Attach a photo and write a caption in the Schedule tab. Required for Day1 posting.' },
+                { icon: '⭐', title: 'Priority Tasks', desc: 'Tasks are automatically numbered in the order they are created. Long-press the ⠿ handle to drag items up or down — priority numbers update automatically.' },
+                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Your priority tasks appear as chips above the timetable. Drag a chip onto any time slot to fill the schedule. Tap × on a slot to clear it.' },
+                { icon: '🔁', title: 'Auto-Fill', desc: 'Place a task in a time slot, then check the checkbox on the left to auto-fill that slot every day. (e.g., 12:00 Lunch, 19:00 Dinner) Uncheck to disable.' },
+                { icon: '📷', title: 'Photo & Caption', desc: 'Attach a photo and write a caption. Required for Day1 posting.' },
                 { icon: '💾', title: 'Save Reward', desc: 'Save once a day to earn +20P & AGI +0.5.' },
                 { icon: '📤', title: 'Day1 Posting', desc: 'Complete the schedule, photo, and caption to post to Day1. Earn +20P & CHA +0.5! Auto-deleted after 24 hours.' },
                 { icon: '🔗', title: 'Sharing', desc: 'Tap the share icon next to the Post button to save your planner as an image or copy a summary to clipboard.' }
@@ -4587,9 +4597,10 @@ function openPlannerInfoModal() {
         ja: {
             title: 'プランナーガイド',
             sections: [
-                { icon: '⭐', title: '優先タスク', desc: '1日の重要なタスクを最大6つ入力してください。左のボタンを押すと優先順位が自動付与されます。' },
-                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '05:00〜23:30まで30分単位でタスクを配置できます。優先タスクの項目がドロップダウンに表示されます。' },
-                { icon: '📷', title: '写真 & キャプション', desc: 'スケジュールタブで写真を添付し、今日の一言を書きましょう。Day1投稿に必須です。' },
+                { icon: '⭐', title: '優先タスク', desc: 'タスクを入力すると作成順に番号が自動付与されます。⠿ハンドルを長押ししてドラッグすると順位が自動更新されます。' },
+                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '優先タスクが上部にチップとして表示されます。チップを時間スロットにドラッグしてスケジュールを埋めてください。×ボタンでスロットを消去できます。' },
+                { icon: '🔁', title: '自動入力', desc: 'スロットにタスクを配置後、左のチェックボックスをオンにするとそのスロットが毎日自動入力されます。(例: 12:00 昼食, 19:00 夕食) オフにすると解除されます。' },
+                { icon: '📷', title: '写真 & キャプション', desc: '写真を添付し、今日の一言を書きましょう。Day1投稿に必須です。' },
                 { icon: '💾', title: '保存報酬', desc: '1日1回保存で+20P & AGI +0.5の報酬を獲得できます。' },
                 { icon: '📤', title: 'Day1投稿', desc: 'スケジュール・写真・テキストを完成させるとDay1に投稿できます。投稿で+20P & CHA +0.5！24時間後に自動削除されます。' },
                 { icon: '🔗', title: '共有機能', desc: '投稿ボタン横の共有アイコンをタップして、プランナーを画像保存またはテキストをコピーできます。' }
@@ -5292,8 +5303,8 @@ let _monthlyCalendarUnlocked = false; // 오늘 보상형 광고 시청 완료 �
 let plannerPhotoData = null; // base64 or URL
 let _plannerPhotoBase64 = null; // canvas export용 base64 원본 보존 (URL 교체 후에도 유지)
 let _plannerPhotoCompressing = false;
-// plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯)
-let plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+// plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯, 생성 순으로 자동 번호)
+let plannerTasks = Array(6).fill(null).map((_, i) => ({ text: '', ranked: true, rankOrder: i + 1 }));
 
 function dateToStr(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -5387,32 +5398,26 @@ function isSelectedDateFuture() {
     return selected > today;
 }
 
-// 현재 plannerTasks에서 드롭다운 옵션 목록 생성
-function getTaskOptions() {
-    const ranked = plannerTasks
-        .map((t, i) => ({ ...t, idx: i }))
-        .filter(t => t.ranked && t.text.trim())
-        .sort((a, b) => a.rankOrder - b.rankOrder);
-    const unranked = plannerTasks.filter(t => !t.ranked && t.text.trim());
-    let rankNum = 1;
-    return [
-        ...ranked.map(t => ({ text: t.text.trim(), label: `${rankNum++}. ${t.text.trim()}` })),
-        ...unranked.map(t => ({ text: t.text.trim(), label: `· ${t.text.trim()}` }))
-    ];
+// 프리셋 관리
+function getSchedulePresets() {
+    try { return JSON.parse(localStorage.getItem('planner_schedule_presets') || '{}'); } catch(e) { return {}; }
+}
+function saveSchedulePresets(presets) {
+    localStorage.setItem('planner_schedule_presets', JSON.stringify(presets));
 }
 
-// 이미 렌더링된 타임박스 드롭다운의 옵션 목록만 갱신
-function updateTimeboxDropdownOptions() {
-    const options = getTaskOptions();
-    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
-    const optHTML = [`<option value="">${emptyLabel}</option>`,
-        ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}">${o.label}</option>`)
-    ].join('');
-    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => {
-        const cur = sel.value;
-        sel.innerHTML = optHTML;
-        if (cur) sel.value = cur;
-    });
+// 칩 뱅크 렌더링 (시간표 드래그 소스)
+function renderTaskChipsBank() {
+    const bank = document.getElementById('planner-task-chips-bank');
+    if (!bank) return;
+    const tasks = plannerTasks.filter(t => t.text.trim());
+    if (tasks.length === 0) {
+        bank.innerHTML = `<span style="font-size:0.72rem; color:var(--text-sub);">${i18n[AppState.currentLang]?.planner_chips_hint || '위 우선순위 태스크를 시간 슬롯으로 드래그하세요'}</span>`;
+        return;
+    }
+    bank.innerHTML = tasks.map((t, i) =>
+        `<div class="task-chip" data-task="${t.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}">${i + 1}. ${sanitizeText(t.text)}</div>`
+    ).join('');
 }
 
 // 우선순위 태스크 목록 렌더링
@@ -5421,28 +5426,19 @@ function renderPlannerTasks() {
     if (!container) return;
     const isFuture = isSelectedDateFuture();
 
-    // 순위 번호 계산 (rankOrder 순서대로 1,2,3...)
-    const rankedSorted = plannerTasks
-        .map((t, i) => ({ ...t, idx: i }))
-        .filter(t => t.ranked)
-        .sort((a, b) => a.rankOrder - b.rankOrder);
-    const rankMap = {};
-    rankedSorted.forEach((t, i) => { rankMap[t.idx] = i + 1; });
-
     container.innerHTML = plannerTasks.map((task, idx) => {
-        const rankNum = rankMap[idx];
-        const rankLabel = rankNum ? rankNum : '·';
-        const isRanked = !!rankNum;
+        const rankNum = idx + 1;
         const canRemove = idx >= 6;
         const isDiy = !!task.diyQuestId;
         const diyQuest = isDiy ? AppState.diyQuests.definitions.find(d => d.id === task.diyQuestId) : null;
         const isDiyDone = isDiy && (AppState.diyQuests.completedToday[task.diyQuestId] || false);
         const isDone = isDiy ? isDiyDone : !!task.done;
 
-        // 스탯 태그 (DIY만)
         const statTag = (isDiy && diyQuest) ? `<span class="diy-task-stat-inline">${sanitizeText(diyQuest.stat)}</span>` : '';
+        const dragHandle = isDiy
+            ? `<span style="width:20px;flex-shrink:0;"></span>`
+            : `<span class="planner-task-drag-handle" ${isFuture ? 'style="opacity:0.3;pointer-events:none"' : ''}>⠿</span>`;
 
-        // 체크 버튼 (모든 태스크 공통)
         let checkBtn = '';
         if (isDiy) {
             checkBtn = `<button class="task-check-btn${isDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleDiyQuest('${task.diyQuestId}')" ${isFuture ? 'disabled' : ''}>${isDone ? '✅' : '⬜'}</button>`;
@@ -5450,10 +5446,9 @@ function renderPlannerTasks() {
             checkBtn = `<button class="task-check-btn${isDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleTaskDone(${idx})" ${isFuture ? 'disabled' : ''}>${isDone ? '✅' : '⬜'}</button>`;
         }
 
-        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isDone ? ' task-done' : ''}">
-            <button class="task-rank-btn${isRanked ? ' ranked' : ''}"
-                    onclick="window.toggleTaskRank(${idx})"
-                    ${isFuture ? 'disabled' : ''}>${rankLabel}</button>
+        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isDone ? ' task-done' : ''}" data-task-idx="${idx}">
+            ${dragHandle}
+            <span class="task-rank-num">${rankNum}</span>
             ${statTag}<input class="planner-task-input${isDone ? ' task-done-input' : ''}" type="text"
                    value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
                    placeholder="${i18n[AppState.currentLang]?.planner_task_placeholder || '할 일 입력...'}"
@@ -5465,20 +5460,101 @@ function renderPlannerTasks() {
         </div>`;
     }).join('');
 
-    updateTimeboxDropdownOptions();
+    initPlannerTaskDrag();
+    renderTaskChipsBank();
 }
 
-window.toggleTaskRank = function(idx) {
-    if (plannerTasks[idx].ranked) {
-        plannerTasks[idx].ranked = false;
-        plannerTasks[idx].rankOrder = 0;
-    } else {
-        const maxOrder = plannerTasks.filter(t => t.ranked).reduce((m, t) => Math.max(m, t.rankOrder), 0);
-        plannerTasks[idx].ranked = true;
-        plannerTasks[idx].rankOrder = maxOrder + 1;
+// 태스크 DnD: 컨테이너 이벤트 위임, 1회 초기화
+function initPlannerTaskDrag() {
+    const container = document.getElementById('planner-tasks-list');
+    if (!container || container.dataset.dndInit) return;
+    container.dataset.dndInit = '1';
+
+    let dragItem = null;
+    let longPressTimer = null;
+    let isDragging = false;
+    let wasMoved = false;
+    let startY = 0;
+
+    container.addEventListener('touchstart', (e) => {
+        const handle = e.target.closest('.planner-task-drag-handle');
+        if (!handle) return;
+        const item = handle.closest('.planner-task-item');
+        if (!item) return;
+        startY = e.touches[0].clientY;
+        longPressTimer = setTimeout(() => {
+            isDragging = true;
+            wasMoved = false;
+            dragItem = item;
+            item.classList.add('task-dragging');
+            if (navigator.vibrate) navigator.vibrate(30);
+            document.addEventListener('touchmove', onDragMove, { passive: false });
+            document.addEventListener('touchend', onDragEnd);
+            document.addEventListener('touchcancel', onDragEnd);
+        }, 200);
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+        if (longPressTimer && !isDragging) {
+            if (Math.abs(e.touches[0].clientY - startY) > 8) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
+    }, { passive: true });
+
+    function onDragMove(e) {
+        if (!isDragging || !dragItem) return;
+        e.preventDefault();
+        wasMoved = true;
+        const touch = e.touches[0];
+        const items = Array.from(container.querySelectorAll('.planner-task-item'));
+        let targetIndex = items.length - 1;
+        for (let i = 0; i < items.length; i++) {
+            const rect = items[i].getBoundingClientRect();
+            if (touch.clientY < rect.top + rect.height / 2) { targetIndex = i; break; }
+        }
+        const currentIndex = items.indexOf(dragItem);
+        if (targetIndex !== currentIndex) {
+            if (targetIndex > currentIndex) container.insertBefore(dragItem, items[targetIndex].nextSibling);
+            else container.insertBefore(dragItem, items[targetIndex]);
+        }
     }
-    renderPlannerTasks();
-};
+
+    function onDragEnd() {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        if (isDragging && dragItem) {
+            dragItem.classList.remove('task-dragging');
+            if (wasMoved) syncTaskOrderFromDOM();
+        }
+        isDragging = false;
+        dragItem = null;
+        document.removeEventListener('touchmove', onDragMove);
+        document.removeEventListener('touchend', onDragEnd);
+        document.removeEventListener('touchcancel', onDragEnd);
+    }
+}
+
+// DOM 순서 → plannerTasks 배열 동기화 (DnD 완료 후)
+function syncTaskOrderFromDOM() {
+    const container = document.getElementById('planner-tasks-list');
+    if (!container) return;
+    const items = Array.from(container.querySelectorAll('.planner-task-item'));
+    const newOrder = items.map(item => {
+        const idx = parseInt(item.dataset.taskIdx);
+        return (!isNaN(idx) && plannerTasks[idx] !== undefined) ? plannerTasks[idx] : null;
+    }).filter(Boolean);
+    newOrder.forEach((t, i) => { t.rankOrder = i + 1; t.ranked = true; });
+    plannerTasks = newOrder;
+    // data-task-idx + 번호 배지 인플레이스 업데이트
+    items.forEach((item, i) => {
+        item.dataset.taskIdx = i;
+        const numEl = item.querySelector('.task-rank-num');
+        if (numEl) numEl.textContent = i + 1;
+    });
+    renderTaskChipsBank();
+}
 
 window.toggleTaskDone = function(idx) {
     if (idx < 0 || idx >= plannerTasks.length) return;
@@ -5488,17 +5564,18 @@ window.toggleTaskDone = function(idx) {
 
 window.updateTaskText = function(idx, val) {
     plannerTasks[idx].text = val;
-    updateTimeboxDropdownOptions();
+    renderTaskChipsBank();
 };
 
 window.addPlannerTask = function() {
-    plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
     renderPlannerTasks();
 };
 
 window.removeTask = function(idx) {
     if (idx < 6) return;
     plannerTasks.splice(idx, 1);
+    plannerTasks.forEach((t, i) => { t.rankOrder = i + 1; });
     renderPlannerTasks();
 };
 
@@ -5523,15 +5600,16 @@ window.copyPrevDayTasks = function(checked) {
         document.getElementById('chk-copy-prev-tasks').checked = false;
         return;
     }
-    plannerTasks = prevEntry.tasks.map(t => ({ text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0 }));
-    while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+    plannerTasks = prevEntry.tasks.map(t => ({ text: t.text || '', ranked: true, rankOrder: t.rankOrder || 0 }));
+    plannerTasks.sort((a, b) => (a.rankOrder || 999) - (b.rankOrder || 999));
+    plannerTasks.forEach((t, i) => { t.rankOrder = i + 1; });
+    while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
     renderPlannerTasks();
 };
 
 // 전일 플랜 복사 - 시간표
 window.copyPrevDaySchedule = function(checked) {
     if (!checked) {
-        // 체크 해제 시 현재 날짜 데이터로 복원
         renderTimeboxGrid(diarySelectedDate);
         return;
     }
@@ -5542,49 +5620,7 @@ window.copyPrevDaySchedule = function(checked) {
         document.getElementById('chk-copy-prev-schedule').checked = false;
         return;
     }
-    // 전일 블록 데이터로 타임박스 그리드 렌더링
-    const grid = document.getElementById('planner-timebox-grid');
-    if (!grid) return;
-    const blocks = prevEntry.blocks;
-    const options = getTaskOptions();
-    const isFuture = isSelectedDateFuture();
-    // 전일 블록에서 사용된 값 중 현재 옵션에 없는 값 추가
-    const optTexts = new Set(options.map(o => o.text));
-    const extraVals = [...new Set(Object.values(blocks))].filter(v => v && !optTexts.has(v));
-
-    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
-    const makeOpts = (currentVal) => {
-        const opts = [`<option value="">${emptyLabel}</option>`,
-            ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`),
-            ...extraVals.map(v => `<option value="${v.replace(/"/g,'&quot;')}"${v === currentVal ? ' selected' : ''}>${v}</option>`)
-        ].join('');
-        return opts;
-    };
-
-    const rows = [];
-    for (let h = 5; h < 24; h++) rows.push(h);
-
-    grid.innerHTML = rows.map(h => {
-        const t00 = `${String(h).padStart(2,'0')}:00`;
-        const t30 = `${String(h).padStart(2,'0')}:30`;
-        const val00 = blocks[t00] || '';
-        const val30 = blocks[t30] || '';
-        return `<div class="timebox-row">
-            <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
-            <select class="timebox-select${val00 ? ' has-content' : ''}"
-                    data-time="${t00}"
-                    ${isFuture ? 'disabled' : ''}
-                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
-                ${makeOpts(val00)}
-            </select>
-            <select class="timebox-select${val30 ? ' has-content' : ''}"
-                    data-time="${t30}"
-                    ${isFuture ? 'disabled' : ''}
-                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
-                ${makeOpts(val30)}
-            </select>
-        </div>`;
-    }).join('');
+    renderTimeboxGridWithBlocks(prevEntry.blocks);
 };
 
 // --- ★ 선택한 날짜 플랜 → 오늘 적용 기능 ★ ---
@@ -5674,48 +5710,163 @@ function updateApplyTodayButton() {
 
 // --- Day1 복사/필터/정렬/렌더: modules/reels.js로 분리됨 ---
 
-// 타임박스 그리드 렌더링 - 드롭다운 방식 (05:00~23:30)
+// 슬롯 값 설정 (칩 드랍 또는 직접 호출)
+function setSlotValue(slot, taskText) {
+    if (!slot) return;
+    const time = slot.dataset.time;
+    slot.dataset.value = taskText;
+    slot.classList.add('has-content');
+    slot.classList.remove('slot-drag-over');
+    slot.innerHTML = `<span class="slot-value">${sanitizeText(taskText)}</span><button class="slot-clear-btn" onclick="event.stopPropagation(); window.clearTimeboxSlot('${time}')">×</button>`;
+    // 체크박스 checked면 프리셋 자동 업데이트
+    const hour = time.split(':')[0];
+    const chk = document.querySelector(`.timebox-preset-chk[data-hour="${hour}"]`);
+    if (chk && chk.checked) {
+        const presets = getSchedulePresets();
+        presets[time] = taskText;
+        saveSchedulePresets(presets);
+    }
+}
+
+window.clearTimeboxSlot = function(time) {
+    const slot = document.querySelector(`#planner-timebox-grid .timebox-slot[data-time="${time}"]`);
+    if (!slot) return;
+    slot.dataset.value = '';
+    slot.classList.remove('has-content');
+    slot.innerHTML = '<span class="slot-empty">·</span>';
+    // 해당 시간 프리셋 제거
+    const hour = time.split(':')[0];
+    const t00 = `${hour}:00`;
+    const t30 = `${hour}:30`;
+    const presets = getSchedulePresets();
+    if (presets[t00] || presets[t30]) {
+        delete presets[t00];
+        delete presets[t30];
+        saveSchedulePresets(presets);
+        // 체크박스 uncheck
+        const chk = document.querySelector(`.timebox-preset-chk[data-hour="${hour}"]`);
+        if (chk) chk.checked = false;
+    }
+};
+
+// 칩 뱅크 → 타임박스 슬롯 DnD 초기화 (1회)
+function initTimeboxChipDrag() {
+    const bank = document.getElementById('planner-task-chips-bank');
+    if (!bank || bank.dataset.dndInit) return;
+    bank.dataset.dndInit = '1';
+
+    let dragTaskText = null;
+    let ghostEl = null;
+    let activeSlot = null;
+    let autoScrollTimer = null;
+
+    bank.addEventListener('touchstart', (e) => {
+        const chip = e.target.closest('.task-chip');
+        if (!chip) return;
+        dragTaskText = chip.dataset.task;
+        chip.classList.add('chip-dragging');
+        const touch = e.touches[0];
+        ghostEl = document.createElement('div');
+        ghostEl.className = 'task-chip chip-ghost';
+        ghostEl.textContent = chip.textContent;
+        ghostEl.style.cssText = `position:fixed;z-index:9999;pointer-events:none;left:${touch.clientX - 40}px;top:${touch.clientY - 15}px;`;
+        document.body.appendChild(ghostEl);
+        document.addEventListener('touchmove', onChipMove, { passive: false });
+        document.addEventListener('touchend', onChipEnd);
+        document.addEventListener('touchcancel', onChipEnd);
+    }, { passive: true });
+
+    function onChipMove(e) {
+        if (!dragTaskText || !ghostEl) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        ghostEl.style.left = (touch.clientX - 40) + 'px';
+        ghostEl.style.top = (touch.clientY - 15) + 'px';
+        // 자동 스크롤
+        clearInterval(autoScrollTimer);
+        if (touch.clientY < 80) autoScrollTimer = setInterval(() => window.scrollBy(0, -6), 16);
+        else if (touch.clientY > window.innerHeight - 80) autoScrollTimer = setInterval(() => window.scrollBy(0, 6), 16);
+        // 슬롯 감지
+        ghostEl.style.visibility = 'hidden';
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        ghostEl.style.visibility = 'visible';
+        document.querySelectorAll('#planner-timebox-grid .timebox-slot.slot-drag-over').forEach(s => s.classList.remove('slot-drag-over'));
+        const slot = el && el.closest && el.closest('.timebox-slot');
+        if (slot && !slot.classList.contains('slot-disabled')) {
+            slot.classList.add('slot-drag-over');
+            activeSlot = slot;
+        } else {
+            activeSlot = null;
+        }
+    }
+
+    function onChipEnd() {
+        clearInterval(autoScrollTimer);
+        autoScrollTimer = null;
+        if (dragTaskText && activeSlot) setSlotValue(activeSlot, dragTaskText);
+        if (ghostEl) { ghostEl.remove(); ghostEl = null; }
+        if (bank) bank.querySelectorAll('.chip-dragging').forEach(el => el.classList.remove('chip-dragging'));
+        document.querySelectorAll('#planner-timebox-grid .timebox-slot.slot-drag-over').forEach(s => s.classList.remove('slot-drag-over'));
+        dragTaskText = null;
+        activeSlot = null;
+        document.removeEventListener('touchmove', onChipMove);
+        document.removeEventListener('touchend', onChipEnd);
+        document.removeEventListener('touchcancel', onChipEnd);
+    }
+}
+
+// 슬롯 HTML 생성 헬퍼
+function makeSlotHTML(val, time, isFuture) {
+    const safeTime = time.replace(/"/g, '');
+    if (val) {
+        return `<div class="timebox-slot has-content${isFuture ? ' slot-disabled' : ''}" data-time="${safeTime}" data-value="${val.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"><span class="slot-value">${sanitizeText(val)}</span><button class="slot-clear-btn" onclick="event.stopPropagation(); window.clearTimeboxSlot('${safeTime}')">×</button></div>`;
+    }
+    return `<div class="timebox-slot${isFuture ? ' slot-disabled' : ''}" data-time="${safeTime}" data-value=""><span class="slot-empty">·</span></div>`;
+}
+
+// 타임박스 그리드 렌더링 - 슬롯 방식 (05:00~23:30)
 function renderTimeboxGrid(dateStr) {
     const grid = document.getElementById('planner-timebox-grid');
     if (!grid) return;
 
     const entry = getDiaryEntry(dateStr);
-    const blocks = (entry && entry.blocks) ? entry.blocks : {};
-    const isFuture = isSelectedDateFuture();
-    const options = getTaskOptions();
+    const savedBlocks = (entry && entry.blocks) ? entry.blocks : {};
+    // 프리셋 자동 적용 (빈 슬롯에만)
+    const presets = getSchedulePresets();
+    const blocks = { ...savedBlocks };
+    Object.entries(presets).forEach(([t, v]) => { if (!blocks[t]) blocks[t] = v; });
 
-    const emptyLabel = i18n[AppState.currentLang]?.timebox_empty || '-- 없음 --';
-    const makeOpts = (currentVal) => {
-        const opts = [`<option value="">${emptyLabel}</option>`,
-            ...options.map(o => `<option value="${o.text.replace(/"/g,'&quot;')}"${o.text === currentVal ? ' selected' : ''}>${o.label}</option>`)
-        ].join('');
-        return opts;
-    };
+    renderTimeboxGridWithBlocks(blocks);
+    initTimeboxChipDrag();
+}
+
+function renderTimeboxGridWithBlocks(blocks) {
+    const grid = document.getElementById('planner-timebox-grid');
+    if (!grid) return;
+    const isFuture = isSelectedDateFuture();
+    const presets = getSchedulePresets();
 
     const rows = [];
     for (let h = 5; h < 24; h++) rows.push(h);
 
     grid.innerHTML = rows.map(h => {
-        const t00 = `${String(h).padStart(2,'0')}:00`;
-        const t30 = `${String(h).padStart(2,'0')}:30`;
+        const hour = String(h).padStart(2, '0');
+        const t00 = `${hour}:00`;
+        const t30 = `${hour}:30`;
         const val00 = blocks[t00] || '';
         const val30 = blocks[t30] || '';
+        const presetChecked = !!(presets[t00] || presets[t30]);
         return `<div class="timebox-row">
-            <span class="timebox-label">${String(h).padStart(2,'0')}:00</span>
-            <select class="timebox-select${val00 ? ' has-content' : ''}"
-                    data-time="${t00}"
-                    ${isFuture ? 'disabled' : ''}
-                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
-                ${makeOpts(val00)}
-            </select>
-            <select class="timebox-select${val30 ? ' has-content' : ''}"
-                    data-time="${t30}"
-                    ${isFuture ? 'disabled' : ''}
-                    onchange="this.classList.toggle('has-content', this.value.length > 0)">
-                ${makeOpts(val30)}
-            </select>
+            <label class="timebox-preset-label" title="${i18n[AppState.currentLang]?.timebox_preset_hint || '매일 자동 채우기'}">
+                <input type="checkbox" class="timebox-preset-chk" data-hour="${hour}" ${presetChecked ? 'checked' : ''} ${isFuture ? 'disabled' : ''}>
+            </label>
+            <span class="timebox-label">${hour}:00</span>
+            ${makeSlotHTML(val00, t00, isFuture)}
+            ${makeSlotHTML(val30, t30, isFuture)}
         </div>`;
     }).join('');
+
+    initTimeboxChipDrag();
 }
 
 window.selectPlannerDate = function(dateStr) {
@@ -5756,31 +5907,31 @@ function loadPlannerForDate(dateStr) {
 
     // 태스크 로드 (새 형식 우선, 구 형식 마이그레이션)
     if (saved && saved.tasks && Array.isArray(saved.tasks)) {
+        // 하위 호환: ranked=false 태스크를 ranked=true로 처리 후 순서 정렬
         plannerTasks = saved.tasks.map(t => {
-            const d = { text: t.text || '', ranked: !!t.ranked, rankOrder: t.rankOrder || 0, done: !!t.done };
+            const d = { text: t.text || '', ranked: true, rankOrder: t.ranked ? (t.rankOrder || 999) : 999, done: !!t.done };
             if (t.diyQuestId) d.diyQuestId = t.diyQuestId;
             return d;
         });
-        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: false, rankOrder: 0 });
+        plannerTasks.sort((a, b) => a.rankOrder - b.rankOrder);
+        plannerTasks.forEach((t, i) => { t.rankOrder = i + 1; });
+        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
     } else if (saved && (saved.priorities || saved.brainDump)) {
         // 구 형식 마이그레이션: priorities(3개) + brainDump 텍스트
-        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+        plannerTasks = [];
         const oldPriorities = saved.priorities || [];
         oldPriorities.forEach((p, i) => {
-            if (p && i < 6) { plannerTasks[i].text = p; plannerTasks[i].ranked = true; plannerTasks[i].rankOrder = i + 1; }
+            if (p) plannerTasks.push({ text: p, ranked: true, rankOrder: i + 1 });
         });
-        // brainDump 줄 단위로 빈 슬롯에 채우기
         if (saved.brainDump) {
             saved.brainDump.split('\n').forEach(line => {
                 const trimmed = line.trim();
-                if (!trimmed) return;
-                const slot = plannerTasks.findIndex(t => !t.text);
-                if (slot >= 0) plannerTasks[slot].text = trimmed;
-                else plannerTasks.push({ text: trimmed, ranked: false, rankOrder: 0 });
+                if (trimmed) plannerTasks.push({ text: trimmed, ranked: true, rankOrder: plannerTasks.length + 1 });
             });
         }
+        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
     } else {
-        plannerTasks = Array(6).fill(null).map(() => ({ text: '', ranked: false, rankOrder: 0 }));
+        plannerTasks = Array(6).fill(null).map((_, i) => ({ text: '', ranked: true, rankOrder: i + 1 }));
     }
 
     // DIY 퀘스트를 빈 태스크 슬롯에 기본값으로 채우기 (오늘 날짜만)
@@ -5800,7 +5951,7 @@ function loadPlannerForDate(dateStr) {
                 plannerTasks[emptySlot].text = q.title;
                 plannerTasks[emptySlot].diyQuestId = q.id;
             } else {
-                plannerTasks.push({ text: q.title, ranked: false, rankOrder: 0, diyQuestId: q.id });
+                plannerTasks.push({ text: q.title, ranked: true, rankOrder: plannerTasks.length + 1, diyQuestId: q.id });
             }
         });
     }
@@ -5824,15 +5975,14 @@ function loadPlannerForDate(dateStr) {
         plannerDomain.applyPlannerPhotoUI(null);
     }
 
-    // 태스크 목록 렌더링 (이 안에서 updateTimeboxDropdownOptions도 호출됨)
+    // 태스크 목록 렌더링
     renderPlannerTasks();
 
-    // 타임박스 그리드 렌더링 (태스크 옵션 준비된 후)
+    // 타임박스 그리드 렌더링 (칩 뱅크 준비된 후)
     renderTimeboxGrid(dateStr);
 
     // 미래 날짜 비활성화
     const isFuture = isSelectedDateFuture();
-    document.querySelectorAll('#planner-timebox-grid .timebox-select').forEach(sel => { sel.disabled = isFuture; });
     const saveBtn = document.getElementById('btn-planner-save');
     if (saveBtn) saveBtn.disabled = isFuture;
     const addBtn = document.getElementById('btn-add-task');
@@ -5853,20 +6003,18 @@ async function savePlannerEntry() {
 
     // 저장 중 버튼 비활성화 (저장 + Day1 포스팅)
     const saveBtn = document.getElementById('btn-planner-save');
-    const savePriorityBtn = document.getElementById('btn-planner-save-priority');
     const postBtn = document.getElementById('btn-reels-post');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; }
-    if (savePriorityBtn) { savePriorityBtn.disabled = true; savePriorityBtn.style.opacity = '0.6'; }
     if (postBtn) { postBtn.disabled = true; postBtn.style.opacity = '0.6'; }
 
     const dateStr = diarySelectedDate;
 
-    // 타임박스 드롭다운 블록 수집
-    const selects = document.querySelectorAll('#planner-timebox-grid .timebox-select');
+    // 타임박스 슬롯 블록 수집
+    const slots = document.querySelectorAll('#planner-timebox-grid .timebox-slot');
     const blocks = {};
-    selects.forEach(sel => {
-        const val = sel.value.trim();
-        if (val) blocks[sel.dataset.time] = val;
+    slots.forEach(slot => {
+        const val = (slot.dataset.value || '').trim();
+        if (val) blocks[slot.dataset.time] = val;
     });
 
     // 태스크 데이터 수집 (diyQuestId, done 포함)
@@ -5967,9 +6115,7 @@ async function savePlannerEntry() {
         // 저장 완료 후 버튼 재활성화
         _plannerSaving = false;
         const _saveBtn = document.getElementById('btn-planner-save');
-        const _savePriorityBtn = document.getElementById('btn-planner-save-priority');
         if (_saveBtn) { _saveBtn.disabled = false; _saveBtn.style.opacity = ''; }
-        if (_savePriorityBtn) { _savePriorityBtn.disabled = false; _savePriorityBtn.style.opacity = ''; }
         // Day1 포스팅 버튼은 타이머 상태에 따라 복원
         if (window.updateReelsResetTimer) window.updateReelsResetTimer();
     }
