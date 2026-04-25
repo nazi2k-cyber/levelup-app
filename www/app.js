@@ -7278,6 +7278,9 @@ window.NetworkMonitor        = NetworkMonitor;
 // 릴스 모듈용 추가 노출
 window._getDoc = getDoc;
 window.getDiaryEntry = getDiaryEntry;
+window.getAllDiaryEntries    = getAllDiaryEntries;
+window.loadPlannerForDate    = loadPlannerForDate;
+window.renderPlannerCalendar = renderPlannerCalendar;
 window.getTodayStr = getTodayStr;
 Object.defineProperty(window, 'plannerPhotoData', {
     get: function() { return plannerPhotoData; },
@@ -7359,3 +7362,6 @@ import('./modules/personality.js').catch(e => console.error('[Personality] 모�
 
 // --- Rating Manager 모듈 동적 로드 ---
 import('./modules/rating-manager.js').catch(e => console.error('[RatingManager] 모듈 로드 실패:', e));
+
+// --- Planner Excel 모듈 동적 로드 ---
+import('./modules/planner-excel.js').catch(e => console.error('[PlannerExcel] 모듈 로드 실패:', e));
