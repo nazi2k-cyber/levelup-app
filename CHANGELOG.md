@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.578] - 2026-04-25
+
+### 변경
+- fix: 퀘스트/던전/소셜 섹션 헤더 이모지 i18n 교체 문제 수정
+
 ## [1.0.577] - 2026-04-25
 
 ### 변경
