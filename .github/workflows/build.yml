@@ -210,6 +210,13 @@ jobs:
           echo "✅ AndroidManifest.xml 아이콘 참조 업데이트 완료"
           grep -E "android:icon|android:roundIcon" "$MANIFEST"
 
+      # 7-4. SheetJS 로컬 번들 준비 (CDN 없이 동작하도록)
+      - name: SheetJS 로컬 번들 준비
+        run: |
+          mkdir -p www/lib
+          cp node_modules/xlsx/dist/xlsx.full.min.js www/lib/xlsx.full.min.js
+          echo "✅ SheetJS $(node -e "console.log(require('./node_modules/xlsx/package.json').version)") → www/lib/xlsx.full.min.js ($(du -h www/lib/xlsx.full.min.js | cut -f1))"
+
       # 8. 웹 소스를 Android 프로젝트에 동기화
       - name: 웹→Android 동기화
         run: npx cap sync android

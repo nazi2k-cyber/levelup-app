@@ -1,5 +1,6 @@
 node_modules/
 android/
+www/lib/
 functions/.env
 tesseract-lang/*.bak
 www/firebase-config.js
