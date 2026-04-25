@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.584] - 2026-04-25
+
+### 변경
+- fix: Excel 내보내기 오류 수정 및 가져오기 모달 추가
+
 ## [1.0.583] - 2026-04-25
 
 ### 변경
