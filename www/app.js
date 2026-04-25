@@ -6050,6 +6050,7 @@ async function savePlannerEntry() {
     const category = selectedCategoryBtn ? selectedCategoryBtn.dataset.category : '기타';
 
     const hasContent = Object.keys(blocks).length > 0 || tasksData.some(t => t.text);
+    let _plannerRewardGiven = false;
 
     try {
         let diaries;
@@ -6117,6 +6118,7 @@ async function savePlannerEntry() {
             drawRadarChart();
             if (window.updateChallengeProgress) window.updateChallengeProgress('planner_use');
             AppLogger.info('[Planner] 보상 지급: +20P, AGI +0.5');
+            _plannerRewardGiven = true;
         }
 
         await saveUserData();
@@ -6135,7 +6137,10 @@ async function savePlannerEntry() {
     }
 
     renderPlannerCalendar();
-    alert(i18n[AppState.currentLang].diary_saved || '플래너가 저장되었습니다.');
+    const _lang = AppState.currentLang;
+    alert(_plannerRewardGiven
+        ? (i18n[_lang]?.diary_saved_reward || '플래너가 저장되었습니다.\n🎁 저장 보상: +20P & AGI +0.5')
+        : (i18n[_lang]?.diary_saved || '플래너가 저장되었습니다.'));
 }
 
 // --- ★ 플래너 사진 기능 (타임테이블 사진 필수) ★ ---
