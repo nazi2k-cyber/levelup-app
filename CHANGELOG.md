@@ -5,6 +5,16 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.569] - 2026-04-25
+
+### 변경
+- docs: expand calorie record doc with detailed requirements
+
+## [1.0.568] - 2026-04-25
+
+### 변경
+- docs: add ongoing note for daily calorie record feature
+
 ## [1.0.567] - 2026-04-25
 
 ### 변경
