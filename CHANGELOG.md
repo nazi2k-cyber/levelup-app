@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.574] - 2026-04-25
+
+### 변경
+- docs: 플래너 Excel/GCal 기획 문서 업데이트 - IIFE 모듈 방식 반영
+
 ## [1.0.573] - 2026-04-25
 
 ### 변경
