@@ -1212,7 +1212,8 @@ async function _doSaveUserData() {
             onboardingSeen: localStorage.getItem(ONBOARDING_STORAGE_KEY) || '',
             big5Str: JSON.stringify(AppState.user.big5 || null),
             futureNetworthStr: localStorage.getItem('fnw_consent') ? (localStorage.getItem('future_networth_config') || '') : '',
-            schedulePresetsStr: localStorage.getItem('planner_schedule_presets') || '{}'
+            schedulePresetsStr: localStorage.getItem('planner_schedule_presets') || '{}',
+            plannerRewardsStr: localStorage.getItem('planner_rewards') || '{}'
         };
         // Firestore 보안 규칙 크기 제한에 맞춰 클라이언트에서 사전 검증/절삭
         const _strLimits = {
@@ -1221,7 +1222,7 @@ async function _doSaveUserData() {
             titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
             ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000,
             libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000,
-            big5Str: 500, futureNetworthStr: 1000, schedulePresetsStr: 10000
+            big5Str: 500, futureNetworthStr: 1000, schedulePresetsStr: 10000, plannerRewardsStr: 5000
         };
         const _overflowed = [];
         for (const [key, limit] of Object.entries(_strLimits)) {
@@ -1526,6 +1527,10 @@ async function loadUserDataFromDB(user) {
             // 플래너 자동 채우기 프리셋 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.schedulePresetsStr) {
                 localStorage.setItem('planner_schedule_presets', data.schedulePresetsStr);
+            }
+            // 플래너 보상 수령 기록 복원 (로그아웃 시 중복 보상 방지)
+            if (data.plannerRewardsStr) {
+                localStorage.setItem('planner_rewards', data.plannerRewardsStr);
             }
             // 러닝 계산기 기록 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.runningCalcHistoryStr) {
