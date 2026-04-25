@@ -556,18 +556,19 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 /* 태스크 자동 번호 배지 */
 .task-rank-num { width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%; background: rgba(255,204,0,0.15); color: var(--neon-gold); font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
 
-/* 칩 뱅크 (드래그 소스) */
+/* 칩 뱅크 (클릭 fill mode 소스) */
 .planner-task-chips-bank { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 6px 0; margin-bottom: 6px; }
-.task-chip { padding: 5px 12px; background: rgba(0,217,255,0.12); border: 1.5px solid var(--neon-blue); color: var(--neon-blue); border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: grab; user-select: none; white-space: nowrap; touch-action: none; letter-spacing: 0.2px; }
-.task-chip:active { cursor: grabbing; }
-.task-chip.chip-dragging { opacity: 0.35; }
-.chip-ghost { padding: 5px 12px; background: rgba(0,217,255,0.25); border: 1.5px solid var(--neon-blue); color: var(--neon-blue); border-radius: 20px; font-size: 0.82rem; font-weight: 600; white-space: nowrap; pointer-events: none; }
+.task-chip { padding: 5px 12px; background: rgba(0,217,255,0.12); border: 1.5px solid var(--neon-blue); color: var(--neon-blue); border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; letter-spacing: 0.2px; transition: background 0.15s, box-shadow 0.15s; }
+.task-chip.chip-active { background: rgba(0,217,255,0.35); border-color: var(--neon-blue); box-shadow: 0 0 8px rgba(0,217,255,0.5); }
+.task-chip.chip-inactive { opacity: 0.3; pointer-events: none; }
 
 /* 타임박스 슬롯 (셀렉트 대체) */
 .timebox-slot { flex: 1; min-height: 30px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 5px; font-size: 0.78rem; color: var(--text-sub); display: flex; align-items: center; gap: 3px; min-width: 0; transition: border-color 0.15s, background 0.15s; overflow: hidden; }
 .timebox-slot.has-content { border-color: rgba(255,204,0,0.5); background: rgba(255,204,0,0.03); color: var(--text-main); }
 .timebox-slot.slot-drag-over { border-color: var(--neon-blue); background: rgba(0,217,255,0.1); border-style: dashed; }
 .timebox-slot.slot-disabled { opacity: 0.4; pointer-events: none; }
+#planner-timebox-grid.fill-mode-active .timebox-slot:not(.slot-disabled) { cursor: pointer; }
+#planner-timebox-grid.fill-mode-active .timebox-slot:not(.slot-disabled):hover { border-color: var(--neon-blue); background: rgba(0,217,255,0.08); }
 .slot-value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; }
 .slot-empty { color: var(--border-color); font-size: 0.75rem; }
 .slot-clear-btn { flex-shrink: 0; background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 0.8rem; padding: 0 1px; line-height: 1; }
