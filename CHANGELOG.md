@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.596] - 2026-04-26
+
+### 변경
+- revert: 브랜치를 v1.0.595 상태로 롤백
+
 ## [1.0.595] - 2026-04-26
 
 ### 변경
