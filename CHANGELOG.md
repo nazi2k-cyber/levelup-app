@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.612] - 2026-04-26
+
+### 변경
+- Unify future net worth calculations across card/detail/title
+
 ## [1.0.611] - 2026-04-26
 
 ### 변경
