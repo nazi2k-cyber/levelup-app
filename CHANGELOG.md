@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.599] - 2026-04-26
+
+### 변경
+- refactor(planner): CSV 단일 형식으로 일원화, SheetJS 의존성 제거
+
 ## [1.0.598] - 2026-04-26
 
 ### 변경
