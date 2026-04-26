@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.606] - 2026-04-26
+
+### 변경
+- docs: Google Calendar 연동 GCP 설정 가이드 작성
+
 ## [1.0.605] - 2026-04-26
 
 ### 변경
