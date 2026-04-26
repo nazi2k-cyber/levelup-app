@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.602] - 2026-04-26
+
+### 변경
+- feat: 플래너 헤더에 구글 캘린더 연동 버튼 추가
+
 ## [1.0.601] - 2026-04-26
 
 ### 변경
