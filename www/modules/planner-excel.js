@@ -46,7 +46,11 @@
         const hasShareMissing = logs.some(l => l.stage === 'share_plugin' && l.code === 'UNSUPPORTED');
         const hasNavigatorMissing = logs.some(l => l.stage === 'navigator_share' && l.code === 'UNSUPPORTED');
         const hasBridgeMissing = logs.some(l => l.stage === 'native_bridge' && l.code === 'UNSUPPORTED');
+        const hasDataUrlFail = logs.some(l => l.stage === 'data_url_fallback' && l.code === 'FAIL');
 
+        if (hasShareMissing && hasNavigatorMissing && hasBridgeMissing && hasDataUrlFail) {
+            return '모든 내보내기 방법이 실패했어요. 파일 공유 플러그인(Share/File Opener) 설치 여부와 WebView 파일 다운로드 권한을 확인해주세요.';
+        }
         if (hasShareMissing && hasNavigatorMissing && hasBridgeMissing) {
             return '파일 공유 플러그인(Share/File Opener)이 설치되지 않았거나 비활성화되어 있어요. 앱 설정/빌드 구성을 확인해주세요.';
         }
@@ -283,6 +287,26 @@
         } else {
             logs.push({ stage: 'native_bridge', code: 'UNSUPPORTED', reason: 'bridge object missing' });
             console.warn('[PlannerExcel] native export stage', logs[logs.length - 1]);
+        }
+
+        // Last resort: data URL anchor download.
+        // Android WebView blocks createObjectURL() downloads but supports data: URI anchors.
+        try {
+            const base64 = await blobToBase64(blob);
+            const mimeType = blob.type || 'application/octet-stream';
+            const dataUrl = `data:${mimeType};base64,${base64}`;
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => document.body.removeChild(a), 300);
+            logs.push({ stage: 'data_url_fallback', code: 'SUCCESS' });
+            console.log('[PlannerExcel] native export stage', logs[logs.length - 1]);
+            return;
+        } catch (fallbackErr) {
+            logs.push({ stage: 'data_url_fallback', code: 'FAIL', reason: fallbackErr && fallbackErr.message ? fallbackErr.message : String(fallbackErr) });
+            console.error('[PlannerExcel] native export stage', logs[logs.length - 1], fallbackErr);
         }
 
         const nativeError = new Error('native file export unavailable');
