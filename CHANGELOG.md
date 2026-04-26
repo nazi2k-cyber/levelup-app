@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.595] - 2026-04-26
+
+### 변경
+- feat(planner): add csv import/export alongside xlsx
+
 ## [1.0.594] - 2026-04-26
 
 ### 변경
