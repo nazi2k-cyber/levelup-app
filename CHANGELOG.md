@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.610] - 2026-04-26
+
+### 변경
+- feat: 미래 순자산에 투자수익률(ROI) 입력 및 현재가치 환산 순자산 추가
+
 ## [1.0.609] - 2026-04-26
 
 ### 변경
