@@ -1,4 +1,4 @@
-// ===== 플래너 Excel 내보내기/가져오기 모듈 =====
+// ===== 플래너 내보내기/가져오기 모듈 =====
 (function() {
     'use strict';
 
@@ -6,15 +6,6 @@
     const i18n      = window.i18n;
     const AppLogger = window.AppLogger;
 
-    const XLSX_CDN_URLS = [
-        'lib/xlsx.full.min.js',
-        'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
-        'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-    ];
-    let _xlsxLoaded = false;
-    let _xlsxLoading = false;
-    let _xlsxLoadPromise = null;
     let _selectedFile = null;
 
     function getLang() {
@@ -60,7 +51,7 @@
         return '파일 내보내기에 실패했어요. 파일 공유 플러그인 설치 여부, 저장소 권한, WebView 환경(Android/iOS)을 확인해주세요.';
     }
 
-    function handleExcelExportError(contextLabel, err) {
+    function handleExportError(contextLabel, err) {
         const defaultMessage = t('excel_export_error');
         if (err && err.userMessage) {
             notify(err.userMessage);
@@ -69,68 +60,6 @@
         console.error(`[PlannerExcel] ${contextLabel} error`, err);
         if (AppLogger) AppLogger.error(`[PlannerExcel] ${contextLabel} error`, err);
         notify(defaultMessage);
-    }
-
-    function loadXlsx() {
-        if (window.XLSX) {
-            _xlsxLoaded = true;
-            _xlsxLoading = false;
-            return Promise.resolve();
-        }
-        if (_xlsxLoaded) return Promise.resolve();
-        if (_xlsxLoadPromise) return _xlsxLoadPromise;
-
-        _xlsxLoading = true;
-        _xlsxLoadPromise = new Promise((resolve, reject) => {
-            const tryLoad = (idx) => {
-                if (window.XLSX) {
-                    _xlsxLoaded = true;
-                    _xlsxLoading = false;
-                    resolve();
-                    return;
-                }
-                if (idx >= XLSX_CDN_URLS.length) {
-                    _xlsxLoading = false;
-                    _xlsxLoadPromise = null;
-                    reject(new Error('SheetJS load failed from all CDNs'));
-                    return;
-                }
-
-                const scriptId = `sheetjs-cdn-${idx}`;
-                const stale = document.getElementById(scriptId);
-                if (stale) stale.remove();
-
-                const s = document.createElement('script');
-                s.id = scriptId;
-                s.src = XLSX_CDN_URLS[idx];
-                s.async = true;
-                console.log('[PlannerExcel] xlsx 로드 시도:', XLSX_CDN_URLS[idx]);
-                if (XLSX_CDN_URLS[idx].startsWith('http')) {
-                    s.crossOrigin = 'anonymous';
-                }
-                s.onload = () => {
-                    if (window.XLSX) {
-                        console.log('[PlannerExcel] xlsx 로드 성공:', XLSX_CDN_URLS[idx]);
-                        _xlsxLoaded = true;
-                        _xlsxLoading = false;
-                        resolve();
-                    } else {
-                        s.remove();
-                        tryLoad(idx + 1);
-                    }
-                };
-                s.onerror = () => {
-                    console.warn('[PlannerExcel] xlsx 로드 실패:', XLSX_CDN_URLS[idx]);
-                    s.remove();
-                    tryLoad(idx + 1);
-                };
-                document.head.appendChild(s);
-            };
-
-            tryLoad(0);
-        });
-
-        return _xlsxLoadPromise;
     }
 
     function blobToBase64(blob) {
@@ -196,7 +125,7 @@
             if (savedUri) {
                 try {
                     await SharePlugin.share({
-                        title: 'Planner Excel',
+                        title: 'Planner CSV',
                         text: filename,
                         url: savedUri,
                         dialogTitle: '플래너 파일 내보내기'
@@ -222,7 +151,7 @@
                 await FileOpenerPlugin.open({
                     filePath: savedUri,
                     path: savedUri,
-                    contentType: blob.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    contentType: blob.type || 'text/csv'
                 });
                 logs.push({ stage: 'file_opener', code: 'SUCCESS' });
                 console.log('[PlannerExcel] native export stage', logs[logs.length - 1]);
@@ -321,18 +250,6 @@
         throw nativeError;
     }
 
-    function buildWorkbook(headerRow, dataRows, sheetName) {
-        const XLSX = window.XLSX;
-        const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
-        ws['!cols'] = [
-            { wch: 12 }, { wch: 10 }, { wch: 12 },
-            { wch: 30 }, { wch: 35 }, { wch: 40 }
-        ];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        return wb;
-    }
-
     function formatTasks(tasks) {
         if (!Array.isArray(tasks) || tasks.length === 0) return '';
         const ranked = tasks
@@ -389,7 +306,7 @@
         }
 
         const csvLines = [header, ...rows].map((row) => row.map(serializeCsvField).join(','));
-        const csvContent = '\uFEFF' + csvLines.join('\r\n');
+        const csvContent = '﻿' + csvLines.join('\r\n');
         const today = window.getTodayStr ? window.getTodayStr() : new Date().toISOString().slice(0, 10);
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
         return downloadBlob(blob, `levelup_planner_${today}.csv`).then(() => {
@@ -400,41 +317,8 @@
         });
     }
 
-    function exportPlannerToExcel() {
-        const header = ['Date', 'Mood', 'Category', 'Caption', 'Tasks', 'Schedule'];
-        const { dates, rows } = getPlannerExportRows();
-        if (dates.length === 0) {
-            notify(t('excel_no_data'));
-            return;
-        }
-
-        loadXlsx().then(() => {
-            const XLSX = window.XLSX;
-            const wb = buildWorkbook(header, rows, 'Planner');
-            const today = window.getTodayStr ? window.getTodayStr() : new Date().toISOString().slice(0, 10);
-            const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            return downloadBlob(blob, `levelup_planner_${today}.xlsx`).then(() => {
-                if (AppLogger && typeof AppLogger.info === 'function') {
-                    AppLogger.info(`[PlannerExcel] exported ${dates.length} entries`);
-                }
-            });
-        }).catch(err => handleExcelExportError('export', err));
-    }
-
-    function selectExportFormat() {
-        const guide = '내보내기 형식을 선택하세요:\n1 = Excel(.xlsx)\n2 = CSV(.csv)';
-        const answer = prompt(guide, '1');
-        if (answer === null) return null;
-        const normalized = String(answer).trim().toLowerCase();
-        if (normalized === '2' || normalized === 'csv' || normalized === '.csv') return 'csv';
-        return 'xlsx';
-    }
-
     function exportPlanner() {
-        const format = selectExportFormat();
-        if (!format) return;
-        const work = format === 'csv' ? exportPlannerToCsv() : exportPlannerToExcel();
+        const work = exportPlannerToCsv();
         if (work && typeof work.catch === 'function') {
             work.catch(err => {
                 console.error('[PlannerExcel] export error', err);
@@ -445,27 +329,23 @@
     }
 
     function generateTemplateExcel() {
-        loadXlsx().then(() => {
-            const XLSX = window.XLSX;
-            const header = ['Date', 'Mood', 'Category', 'Caption', 'Tasks', 'Schedule'];
-            const example = [
-                '2026-01-01',
-                'great',
-                '기타',
-                '오늘 하루도 최고!',
-                '1. 독서\n2. 운동 ✓',
-                '09:00: 아침 루틴\n14:00: 미팅'
-            ];
-
-            const wb = buildWorkbook(header, [example], 'Planner');
-            const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            return downloadBlob(blob, 'levelup_planner_template.xlsx').then(() => {
-                if (AppLogger && typeof AppLogger.info === 'function') {
-                    AppLogger.info('[PlannerExcel] template downloaded');
-                }
-            });
-        }).catch(err => handleExcelExportError('template', err));
+        const header = ['Date', 'Mood', 'Category', 'Caption', 'Tasks', 'Schedule'];
+        const example = [
+            '2026-01-01',
+            'great',
+            '기타',
+            '오늘 하루도 최고!',
+            '1. 독서\n2. 운동 ✓',
+            '09:00: 아침 루틴\n14:00: 미팅'
+        ];
+        const csvLines = [header, example].map((row) => row.map(serializeCsvField).join(','));
+        const csvContent = '﻿' + csvLines.join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+        downloadBlob(blob, 'levelup_planner_template.csv').then(() => {
+            if (AppLogger && typeof AppLogger.info === 'function') {
+                AppLogger.info('[PlannerExcel] template downloaded');
+            }
+        }).catch(err => handleExportError('template', err));
     }
 
     function parseTasks(cellValue) {
@@ -498,10 +378,7 @@
     }
 
     function parseCsvRows(csvText) {
-        // RFC4180 기반 최소 규칙:
-        // - 필드에 쉼표/줄바꿈/따옴표가 포함되면 반드시 쌍따옴표로 감싼다.
-        // - 쌍따옴표 자체는 ""(두 개)로 이스케이프한다.
-        // - 쌍따옴표 내부의 줄바꿈은 동일 필드 데이터로 유지한다.
+        // RFC4180: 쉼표/줄바꿈/따옴표 포함 필드는 쌍따옴표로 감싸고, "" 로 이스케이프
         const rows = [];
         let row = [];
         let field = '';
@@ -599,48 +476,21 @@
     }
 
     function importPlannerFromFile(file) {
-        const ext = (file && file.name ? file.name.split('.').pop() : '').toLowerCase();
-        if (ext === 'csv') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    let text = String(e.target.result || '');
-                    text = text.replace(/^\uFEFF/, '');
-                    const rows = parseCsvRows(text);
-                    importRows(rows);
-                } catch (err) {
-                    console.error('[PlannerExcel] csv import parse error', err);
-                    if (AppLogger) AppLogger.error('[PlannerExcel] csv import parse error', err);
-                    notify(t('excel_import_error'));
-                }
-            };
-            reader.onerror = () => notify(t('excel_import_error'));
-            reader.readAsText(file, 'utf-8');
-            return;
-        }
-
-        loadXlsx().then(() => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const XLSX = window.XLSX;
-                    const wb = XLSX.read(e.target.result, { type: 'array' });
-                    const ws = wb.Sheets[wb.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-                    importRows(rows);
-                } catch (err) {
-                    console.error('[PlannerExcel] import parse error', err);
-                    if (AppLogger) AppLogger.error('[PlannerExcel] import parse error', err);
-                    notify(t('excel_import_error'));
-                }
-            };
-            reader.onerror = () => notify(t('excel_import_error'));
-            reader.readAsArrayBuffer(file);
-        }).catch(err => {
-            console.error('[PlannerExcel] import library load error', err);
-            if (AppLogger) AppLogger.error('[PlannerExcel] import library load error', err);
-            notify(t('excel_import_error'));
-        });
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                let text = String(e.target.result || '');
+                text = text.replace(/^﻿/, '');
+                const rows = parseCsvRows(text);
+                importRows(rows);
+            } catch (err) {
+                console.error('[PlannerExcel] csv import parse error', err);
+                if (AppLogger) AppLogger.error('[PlannerExcel] csv import parse error', err);
+                notify(t('excel_import_error'));
+            }
+        };
+        reader.onerror = () => notify(t('excel_import_error'));
+        reader.readAsText(file, 'utf-8');
     }
 
     function openExcelImportModal() {
@@ -670,10 +520,6 @@
     }
 
     function initPlannerExcel() {
-        loadXlsx().catch(err => {
-            if (AppLogger) AppLogger.warn('[PlannerExcel] preload failed', err);
-        });
-
         const exportBtn = document.getElementById('btn-excel-export');
         if (exportBtn) exportBtn.addEventListener('click', exportPlanner);
 
@@ -719,7 +565,6 @@
         initPlannerExcel();
     }
 
-    window.exportPlannerToExcel = exportPlannerToExcel;
     window.exportPlannerToCsv = exportPlannerToCsv;
     window.importPlannerFromFile = importPlannerFromFile;
     window.openExcelImportModal = openExcelImportModal;
