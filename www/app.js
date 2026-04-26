@@ -7395,3 +7395,6 @@ import('./modules/rating-manager.js').catch(e => console.error('[RatingManager] 
 
 // --- Planner Excel 모듈 동적 로드 ---
 import('./modules/planner-excel.js').catch(e => console.error('[PlannerExcel] 모듈 로드 실패:', e));
+
+// --- Planner Google Calendar 연동 모듈 동적 로드 ---
+import('./modules/planner-gcal.js').catch(e => console.error('[PlannerGCal] 모듈 로드 실패:', e));
