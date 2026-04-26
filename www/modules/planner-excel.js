@@ -120,53 +120,7 @@
 
     async function downloadBlob(blob, filename) {
         const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
-        let saved = false;
-
-        if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
-            const Filesystem = window.Capacitor.Plugins.Filesystem;
-            try {
-                const base64Data = await blobToBase64(blob);
-                const dirs = ['DOCUMENTS', 'EXTERNAL', 'CACHE'];
-                for (const dir of dirs) {
-                    try {
-                        const result = await Filesystem.writeFile({
-                            path: filename,
-                            data: base64Data,
-                            directory: dir,
-                            recursive: true
-                        });
-                        if (result && result.uri) {
-                            console.log('[PlannerExcel] 파일 저장 성공:', result.uri);
-                        }
-                        saved = true;
-                        break;
-                    } catch (dirErr) {
-                        console.warn('[PlannerExcel] Filesystem 저장 실패:', dir, dirErr);
-                    }
-                }
-            } catch (fsErr) {
-                console.warn('[PlannerExcel] Filesystem 저장 준비 실패:', fsErr);
-            }
-        }
-
-        if (!saved && navigator.share && navigator.canShare) {
-            try {
-                const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
-                const shareData = { files: [file] };
-                if (navigator.canShare(shareData)) {
-                    await navigator.share(shareData);
-                    saved = true;
-                }
-            } catch (shareErr) {
-                if (shareErr && shareErr.name === 'AbortError') {
-                    saved = true;
-                } else {
-                    console.warn('[PlannerExcel] Share API 실패:', shareErr);
-                }
-            }
-        }
-
-        if (!saved) {
+        if (!isNative) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -174,10 +128,52 @@
             document.body.appendChild(a);
             a.click();
             setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 300);
-            saved = true;
+            return;
         }
 
-        if (!saved) throw new Error('download failed');
+        // Native(WebView): 단순 anchor 다운로드는 동작하지 않는 경우가 많음
+        // 1) 앱 내부 저장소에 파일 작성 2) 공유 시트로 내보내기
+        const Filesystem = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem;
+        const SharePlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+        let savedUri = '';
+
+        if (Filesystem) {
+            try {
+                const base64Data = await blobToBase64(blob);
+                const stampedName = `${Date.now()}_${filename}`;
+                const result = await Filesystem.writeFile({
+                    path: stampedName,
+                    data: base64Data,
+                    directory: 'CACHE',
+                    recursive: true
+                });
+                savedUri = (result && result.uri) ? result.uri : '';
+                console.log('[PlannerExcel] 파일 준비 완료:', savedUri || stampedName);
+            } catch (fsErr) {
+                console.error('[PlannerExcel] Filesystem write 실패:', fsErr);
+            }
+        }
+
+        if (SharePlugin && typeof SharePlugin.share === 'function' && savedUri) {
+            await SharePlugin.share({
+                title: 'Planner Excel',
+                text: filename,
+                url: savedUri,
+                dialogTitle: '플래너 파일 내보내기'
+            });
+            return;
+        }
+
+        if (navigator.share && navigator.canShare) {
+            const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+            const shareData = { files: [file] };
+            if (navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+                return;
+            }
+        }
+
+        throw new Error('native file export unavailable');
     }
 
     function buildWorkbook(headerRow, dataRows, sheetName) {
