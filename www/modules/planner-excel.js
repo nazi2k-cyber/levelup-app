@@ -164,12 +164,33 @@
         const SharePlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
         const FileOpenerPlugin = window.Capacitor && window.Capacitor.Plugins && (window.Capacitor.Plugins.FileOpener || window.Capacitor.Plugins.FileOpener2);
         let savedUri = '';
+        let savedPath = '';
         const logs = [];
+
+        const hasFileScheme = (uri) => typeof uri === 'string' && /^file:\/\//i.test(uri);
+        const hasContentScheme = (uri) => typeof uri === 'string' && /^content:\/\//i.test(uri);
+        const isShareableUriScheme = (uri) => hasFileScheme(uri) || hasContentScheme(uri);
+        const normalizeForShare = (uri) => {
+            if (!uri || typeof uri !== 'string') return '';
+            if (isShareableUriScheme(uri)) return uri;
+            if (uri.startsWith('/')) return `file://${uri}`;
+            return '';
+        };
+
+        logs.push({
+            stage: 'plugin_presence',
+            code: 'CHECK',
+            share: !!window.Capacitor?.Plugins?.Share,
+            filesystem: !!window.Capacitor?.Plugins?.Filesystem,
+            fileOpener: !!(window.Capacitor?.Plugins?.FileOpener || window.Capacitor?.Plugins?.FileOpener2)
+        });
+        console.log('[PlannerExcel] native export stage', logs[logs.length - 1]);
 
         if (Filesystem) {
             try {
                 const base64Data = await blobToBase64(blob);
                 const stampedName = `${Date.now()}_${filename}`;
+                savedPath = stampedName;
                 const result = await Filesystem.writeFile({
                     path: stampedName,
                     data: base64Data,
@@ -190,11 +211,31 @@
 
         if (SharePlugin && typeof SharePlugin.share === 'function') {
             if (savedUri) {
+                let shareUri = normalizeForShare(savedUri);
+                if (!shareUri && Filesystem && savedPath && typeof Filesystem.getUri === 'function') {
+                    try {
+                        const uriResult = await Filesystem.getUri({ directory: 'CACHE', path: savedPath });
+                        shareUri = normalizeForShare(uriResult && uriResult.uri ? uriResult.uri : '');
+                        if (shareUri) {
+                            savedUri = shareUri;
+                            logs.push({ stage: 'filesystem', code: 'GET_URI_SUCCESS', path: savedPath, uri: shareUri });
+                            console.log('[PlannerExcel] native export stage', logs[logs.length - 1]);
+                        }
+                    } catch (uriErr) {
+                        logs.push({ stage: 'filesystem', code: 'GET_URI_FAIL', reason: uriErr && uriErr.message ? uriErr.message : String(uriErr) });
+                        console.warn('[PlannerExcel] native export stage', logs[logs.length - 1], uriErr);
+                    }
+                }
+
+                if (!shareUri) {
+                    logs.push({ stage: 'share_plugin', code: 'SKIP_BAD_URI', uri: savedUri || null, isFileScheme: hasFileScheme(savedUri), isContentScheme: hasContentScheme(savedUri) });
+                    console.warn('[PlannerExcel] native export stage', logs[logs.length - 1]);
+                } else {
                 try {
                     await SharePlugin.share({
                         title: 'Planner Excel',
                         text: filename,
-                        url: savedUri,
+                        url: shareUri,
                         dialogTitle: '플래너 파일 내보내기'
                     });
                     logs.push({ stage: 'share_plugin', code: 'SUCCESS', via: 'uri' });
@@ -203,6 +244,7 @@
                 } catch (shareErr) {
                     logs.push({ stage: 'share_plugin', code: 'SHARE_FAIL', reason: shareErr && shareErr.message ? shareErr.message : String(shareErr) });
                     console.error('[PlannerExcel] native export stage', logs[logs.length - 1], shareErr);
+                }
                 }
             } else {
                 logs.push({ stage: 'share_plugin', code: 'SKIP_NO_URI' });

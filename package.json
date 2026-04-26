@@ -33,6 +33,7 @@
     "@capacitor/geolocation": "^6.1.1",
     "@capacitor/local-notifications": "^6.0.1",
     "@capacitor/push-notifications": "^6.0.2",
+    "@capacitor/share": "^6.2.0",
     "@codetrix-studio/capacitor-google-auth": "3.4.0-rc.4"
   },
   "devDependencies": {
