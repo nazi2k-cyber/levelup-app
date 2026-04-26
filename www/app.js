@@ -8,7 +8,7 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { NetworkMonitor } from './modules/network-monitor.js';
 import { ConversionTracker, initRemoteConfig, getExperimentVariant } from './modules/conversion-tracker.js';
 import { bootstrapCoreServices, attachFirestoreNetworkResilience } from './modules/core/bootstrap.js';
-import { getInitialAppState, getWeekStartDate } from './modules/core/app-state.js';
+import { getDefaultNewUserName, getInitialAppState, getWeekStartDate } from './modules/core/app-state.js';
 import { loadNavOrder, initNavDragReorder, wasNavDragJustEnded } from './modules/core/nav-ui.js';
 import { initAppEntryOrchestrator } from './modules/core/entry-orchestrator.js';
 import { createOnboardingModule } from './modules/domains/onboarding.js';
@@ -1140,7 +1140,7 @@ async function _doSaveUserData() {
     if(!auth.currentUser) return;
     _saveInFlight = true;
     try {
-        const normalizedName = (typeof AppState.user.name === 'string' ? AppState.user.name.trim() : '') || '신규 헌터';
+        const normalizedName = (typeof AppState.user.name === 'string' ? AppState.user.name.trim() : '') || getDefaultNewUserName(AppState.currentLang);
         const rawLevel = Number(AppState.user.level);
         const normalizedLevel = Number.isFinite(rawLevel) ? Math.max(1, Math.min(999, Math.floor(rawLevel))) : 1;
         const rawPoints = Number(AppState.user.points);
@@ -1629,7 +1629,7 @@ async function loadUserDataFromDB(user) {
             const privacyWarningEl = document.getElementById('private-account-warning');
             if (privacyWarningEl) privacyWarningEl.style.display = AppState.user.privateAccount ? 'block' : 'none';
             bridgeUpdateCameraToggleUI();
-            const loadedName = data.name || user.displayName || "신규 헌터";
+            const loadedName = data.name || user.displayName || getDefaultNewUserName(AppState.currentLang);
             // ── 기존 유저 닉네임 마이그레이션: usernames 컬렉션에 예약 ──
             if (window.AppLogger) AppLogger.info(`[NameMigration] 시작: "${loadedName}" (uid: ${user.uid.substring(0, 8)}...)`);
             try {
@@ -1686,7 +1686,7 @@ async function loadUserDataFromDB(user) {
             }
         } else {
             // 신규 유저: Auth 프로필에서 이름/사진 가져오고 Firestore 문서 생성
-            const baseName = user.displayName || "신규 헌터";
+            const baseName = user.displayName || getDefaultNewUserName(AppState.currentLang);
             if (window.AppLogger) AppLogger.info(`[NewUser] 신규 가입: baseName="${baseName}" (uid: ${user.uid.substring(0, 8)}...)`);
             const uniqueName = await generateUniqueName(baseName, user.uid);
             await claimUsername(uniqueName, user.uid);

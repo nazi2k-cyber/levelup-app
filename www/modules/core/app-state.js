@@ -6,18 +6,29 @@ export function getWeekStartDate() {
     return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
 }
 
+export function getDefaultNewUserName(lang = 'ko') {
+    const defaultNames = {
+        ko: '체인저',
+        en: 'Changer',
+        ja: 'チェンジャー',
+    };
+    return defaultNames[lang] || defaultNames.ko;
+}
+
 export function getInitialAppState() {
+    const currentLang = (() => {
+        try {
+            return localStorage.getItem('lang') || 'ko';
+        } catch (e) {
+            return 'ko';
+        }
+    })();
+
     return {
         isLoginMode: true,
-        currentLang: (() => {
-            try {
-                return localStorage.getItem('lang') || 'ko';
-            } catch (e) {
-                return 'ko';
-            }
-        })(),
+        currentLang,
         user: {
-            name: '신규 헌터',
+            name: getDefaultNewUserName(currentLang),
             level: 1,
             points: 50,
             stats: { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 },
