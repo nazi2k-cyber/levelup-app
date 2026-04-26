@@ -176,7 +176,9 @@
             const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             downloadBlob(blob, `levelup_planner_${today}.xlsx`);
 
-            if (AppLogger) AppLogger.log('[PlannerExcel] exported', dates.length, 'entries');
+            if (AppLogger && typeof AppLogger.info === 'function') {
+                AppLogger.info(`[PlannerExcel] exported ${dates.length} entries`);
+            }
         }).catch(err => {
             console.error('[PlannerExcel] export error', err);
             if (AppLogger) AppLogger.error('[PlannerExcel] export error', err);
@@ -202,7 +204,9 @@
             const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             downloadBlob(blob, 'levelup_planner_template.xlsx');
 
-            if (AppLogger) AppLogger.log('[PlannerExcel] template downloaded');
+            if (AppLogger && typeof AppLogger.info === 'function') {
+                AppLogger.info('[PlannerExcel] template downloaded');
+            }
         }).catch(err => {
             console.error('[PlannerExcel] template error', err);
             if (AppLogger) AppLogger.error('[PlannerExcel] template error', err);
@@ -292,7 +296,9 @@
                     if (window.loadPlannerForDate && currentDate) window.loadPlannerForDate(currentDate);
 
                     notify(t('excel_import_done', { count }));
-                    if (AppLogger) AppLogger.log('[PlannerExcel] imported', count, 'entries');
+                    if (AppLogger && typeof AppLogger.info === 'function') {
+                        AppLogger.info(`[PlannerExcel] imported ${count} entries`);
+                    }
                 } catch (err) {
                     console.error('[PlannerExcel] import parse error', err);
                     if (AppLogger) AppLogger.error('[PlannerExcel] import parse error', err);
