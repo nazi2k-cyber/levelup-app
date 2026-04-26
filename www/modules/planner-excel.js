@@ -537,6 +537,12 @@
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files && e.target.files[0];
                 if (file) {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (ext !== 'csv') {
+                        notify(t('excel_import_error'));
+                        fileInput.value = '';
+                        return;
+                    }
                     _selectedFile = file;
                     if (filenameEl) filenameEl.textContent = file.name;
                     if (confirmBtn) {
