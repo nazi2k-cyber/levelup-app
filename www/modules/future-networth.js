@@ -12,6 +12,13 @@
         const lang = _app().currentLang || 'ko';
         return window.i18n?.[lang]?.[key] ?? key;
     }
+    function getDefaultRoiByLangOrRegion() {
+        // 정책값: 평균 예·적금 금리(연). 추후 서버/원격 설정으로 교체 가능한 분리 지점.
+        const lang = _app().currentLang || 'ko';
+        if (lang === 'en') return 4.0;
+        if (lang === 'ja') return 0.3;
+        return 3.0;
+    }
 
     // ── Storage ──────────────────────────────────────────────────────────
     function getConfig() {
@@ -46,7 +53,7 @@
 
     // ── 산식 ──────────────────────────────────────────────────────────────
     function calcNetWorth(cfg) {
-        const { n, W_0, assets, liabilities, r, g, e, inflateS,
+        const { n, W_0, assets, liabilities, r, g, e, roi, inflateS,
                 s_car, s_housing, s_wedding, s_edu, s_medical, s_travel } = cfg;
         if (!n || !W_0 || n <= 0 || W_0 <= 0) return null;
 
@@ -54,6 +61,7 @@
         const rVal  = ((r !== undefined ? r : 2.5)) / 100;
         const gVal  = ((g !== undefined ? g : 3.0)) / 100;
         const eVal  = ((e !== undefined ? e : 70))  / 100;
+        const roiVal = ((roi !== undefined ? roi : getDefaultRoiByLangOrRegion())) / 100;
 
         const S_non_raw = (s_car||0) + (s_housing||0) + (s_wedding||0)
                         + (s_edu||0) + (s_medical||0) + (s_travel||0);
@@ -70,6 +78,21 @@
 
         return { NW_n, NW_real, M_save, M_avail, W_total, E_fixed,
                  S_non, S_non_raw, inflFactor, discount, A_0,
+        const annualSurplus = (W_total - E_fixed) / n;
+        // ROI 적용 원금:
+        // 1) 현재 순자산 A_0(양수일 때) 2) 연간 잉여현금흐름을 매년 말 적립한 적립금
+        const A_0_growth = A_0 > 0 ? A_0 * Math.pow(1 + roiVal, n) : A_0;
+        const surplusGrowth = annualSurplus > 0
+            ? (roiVal === 0
+                ? annualSurplus * n
+                : annualSurplus * ((Math.pow(1 + roiVal, n) - 1) / roiVal))
+            : annualSurplus * n;
+        const NW_n_nominal = A_0_growth + surplusGrowth - S_non;
+        const M_save   = S_non > 0 ? S_non / (n * 12) : 0;
+        const M_avail  = W_total * (1 - eVal) / (n * 12);
+
+        return { NW_n, NW_n_nominal, M_save, M_avail, W_total, E_fixed,
+                 S_non, S_non_raw, inflFactor, A_0, roiVal, annualSurplus,
                  feasible: M_avail >= M_save };
     }
 
@@ -100,7 +123,7 @@
             container.innerHTML = `
                 <div class="life-status-item">
                     <div><div class="ls-label">${nwL}</div></div>
-                    <div class="ls-value gold">${f(res.NW_n)}${u}</div>
+                    <div class="ls-value gold">${f(res.NW_n_nominal)}${u}</div>
                 </div>
                 <div class="life-status-item">
                     <div><div class="ls-label">${_t('fnw_label_nw_real')}</div></div>
@@ -247,6 +270,7 @@
 
         const rPct = (cfg.r !== undefined ? cfg.r : 2.5);
         const gPct = (cfg.g !== undefined ? cfg.g : 3.0);
+        const roiPct = (cfg.roi !== undefined ? cfg.roi : getDefaultRoiByLangOrRegion());
         const ePct = (cfg.e !== undefined ? cfg.e : 70);
         const fc   = res.feasible ? 'var(--neon-green,#00ff88)' : 'var(--neon-red,#ff4d6d)';
         const ft   = res.feasible ? _t('fnw_feasible') : _t('fnw_not_feasible');
@@ -282,6 +306,7 @@
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">n = ${cfg.n}yr</span>
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">r = ${rPct}%</span>
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">g = ${gPct}%</span>
+                    <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">roi = ${roiPct}%</span>
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">e = ${ePct}%</span>
                 </div>
 
@@ -293,7 +318,9 @@
                     <span style="font-size:0.88rem;font-weight:bold;color:var(--neon-red,#ff4d6d);">${f(res.S_non)}${u}</span>
                 </div>
                 ${snonInflateDetail}
-                ${row(_t('fnw_detail_nwn'),    `${f(res.NW_n)}${u}`,    'var(--neon-gold,#ffd700)')}
+                ${row(_t('fnw_detail_nwn'),    `${f(res.NW_n)}${u}`,    'var(--text-main)')}
+                ${row(_t('fnw_detail_roi'),    `${roiPct}%`,            'var(--neon-blue)')}
+                ${row(_t('fnw_detail_nw_real'),`${f(res.NW_n_nominal)}${u}`, 'var(--neon-gold,#ffd700)')}
 
                 <div style="height:8px;"></div>
                 ${row(_t('fnw_detail_msave'),  `${f(res.M_save)}${u}`,  'var(--neon-blue)')}
@@ -371,7 +398,7 @@
                     <input id="fnw-i-n" type="text" inputmode="numeric"
                         value="${fmtComma(cfg.n)}" placeholder="10" style="${iStyle}">
                 </div>
-                <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:8px;${fWrap}">
+                <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;${fWrap}">
                     <div>
                         <label style="${lStyle}">${_tL('fnw_label_w0')}</label>
                         <input id="fnw-i-w0" type="text" inputmode="numeric"
@@ -382,6 +409,14 @@
                         <input id="fnw-i-g" type="number" min="0" max="20" step="0.1"
                             value="${cfg.g !== undefined ? cfg.g : 3.0}" placeholder="3.0" style="${iStyle}">
                     </div>
+                    <div>
+                        <label style="${lStyle}">${_t('fnw_label_roi')}</label>
+                        <input id="fnw-i-roi" type="number" min="0" max="20" step="0.1"
+                            value="${cfg.roi !== undefined ? cfg.roi : getDefaultRoiByLangOrRegion()}" placeholder="${getDefaultRoiByLangOrRegion()}" style="${iStyle}">
+                    </div>
+                </div>
+                <div style="font-size:0.7rem;color:var(--text-sub);margin-top:-4px;margin-bottom:10px;">
+                    ${_t('fnw_roi_help')}
                 </div>
 
                 <div style="font-size:0.8rem;color:var(--text-sub);margin-bottom:6px;padding-top:4px;">
@@ -520,6 +555,7 @@
 
         const rRaw = document.getElementById('fnw-i-r')?.value;
         const gRaw = document.getElementById('fnw-i-g')?.value;
+        const roiRaw = document.getElementById('fnw-i-roi')?.value;
         const eRaw = document.getElementById('fnw-i-e')?.value;
 
         const cfg = {
@@ -528,6 +564,7 @@
             liabilities: parseComma(document.getElementById('fnw-i-liabilities')?.value),
             r: rRaw !== '' && rRaw !== null ? parseFloat(rRaw) : 2.5,
             g: gRaw !== '' && gRaw !== null ? parseFloat(gRaw) : 3.0,
+            roi: roiRaw !== '' && roiRaw !== null ? parseFloat(roiRaw) : getDefaultRoiByLangOrRegion(),
             e: eRaw !== '' && eRaw !== null ? parseFloat(eRaw) : 70,
             inflateS: document.getElementById('fnw-inflate-checkbox')?.checked === true,
             s_car:     parseComma(document.getElementById('fnw-i-s_car')?.value),
