@@ -13,6 +13,13 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
         const lang = _app().currentLang || 'ko';
         return window.i18n?.[lang]?.[key] ?? key;
     }
+    function getDefaultRoiByLangOrRegion() {
+        // 정책값: 평균 예·적금 금리(연). 추후 서버/원격 설정으로 교체 가능한 분리 지점.
+        const lang = _app().currentLang || 'ko';
+        if (lang === 'en') return 4.0;
+        if (lang === 'ja') return 0.3;
+        return 3.0;
+    }
 
     // ── Storage ──────────────────────────────────────────────────────────
     function getConfig() {
@@ -48,6 +55,47 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
     // ── 산식 ──────────────────────────────────────────────────────────────
     function calcNetWorth(cfg) {
         return calcFutureNetworth(cfg);
+        const { n, W_0, assets, liabilities, r, g, e, roi, inflateS,
+                s_car, s_housing, s_wedding, s_edu, s_medical, s_travel } = cfg;
+        if (!n || !W_0 || n <= 0 || W_0 <= 0) return null;
+
+        const A_0   = (assets || 0) - (liabilities || 0);
+        const rVal  = ((r !== undefined ? r : 2.5)) / 100;
+        const gVal  = ((g !== undefined ? g : 3.0)) / 100;
+        const eVal  = ((e !== undefined ? e : 70))  / 100;
+        const roiVal = ((roi !== undefined ? roi : getDefaultRoiByLangOrRegion())) / 100;
+
+        const S_non_raw = (s_car||0) + (s_housing||0) + (s_wedding||0)
+                        + (s_edu||0) + (s_medical||0) + (s_travel||0);
+        const inflFactor = (inflateS && rVal > 0) ? Math.pow(1 + rVal, n) : 1;
+        const S_non = S_non_raw * inflFactor;
+
+        const W_total  = gVal === 0 ? W_0 * n : W_0 * (Math.pow(1 + gVal, n) - 1) / gVal;
+        const E_fixed  = W_total * eVal;
+        const NW_n     = A_0 + (W_total - E_fixed) - S_non;
+        const discount = rVal === 0 ? 1 : Math.pow(1 + rVal, n);
+        const NW_real  = NW_n / discount;
+        const M_save   = S_non > 0 ? S_non / (n * 12) : 0;
+        const M_avail  = W_total * (1 - eVal) / (n * 12);
+
+        return { NW_n, NW_real, M_save, M_avail, W_total, E_fixed,
+                 S_non, S_non_raw, inflFactor, discount, A_0,
+        const annualSurplus = (W_total - E_fixed) / n;
+        // ROI 적용 원금:
+        // 1) 현재 순자산 A_0(양수일 때) 2) 연간 잉여현금흐름을 매년 말 적립한 적립금
+        const A_0_growth = A_0 > 0 ? A_0 * Math.pow(1 + roiVal, n) : A_0;
+        const surplusGrowth = annualSurplus > 0
+            ? (roiVal === 0
+                ? annualSurplus * n
+                : annualSurplus * ((Math.pow(1 + roiVal, n) - 1) / roiVal))
+            : annualSurplus * n;
+        const NW_n_nominal = A_0_growth + surplusGrowth - S_non;
+        const M_save   = S_non > 0 ? S_non / (n * 12) : 0;
+        const M_avail  = W_total * (1 - eVal) / (n * 12);
+
+        return { NW_n, NW_n_nominal, M_save, M_avail, W_total, E_fixed,
+                 S_non, S_non_raw, inflFactor, A_0, roiVal, annualSurplus,
+                 feasible: M_avail >= M_save };
     }
 
     // ── 카드 렌더 ─────────────────────────────────────────────────────────
@@ -77,7 +125,11 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
             container.innerHTML = `
                 <div class="life-status-item">
                     <div><div class="ls-label">${nwL}</div></div>
-                    <div class="ls-value gold">${f(res.NW_n)}${u}</div>
+                    <div class="ls-value gold">${f(res.NW_n_nominal)}${u}</div>
+                </div>
+                <div class="life-status-item">
+                    <div><div class="ls-label">${_t('fnw_label_nw_real')}</div></div>
+                    <div class="ls-value gold">${f(res.NW_real)}${u}</div>
                 </div>
                 <div class="life-status-item">
                     <div><div class="ls-label">${_t('fnw_label_m_save')}${inflateBadge}</div></div>
@@ -113,6 +165,8 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
                  </div>
                  <div style="font-size:0.78rem;color:var(--text-sub);line-height:1.7;">
                      <div>🔹 <b>인플레이션율(r)</b>: 한국은행 목표 물가 상승률(2~3%)</div>
+                     <div>🔹 <b>ROI(할인율)</b>: 예·적금 평균 금리 기반 기본값(2.5%), 개인 기대수익률에 맞게 수정 가능</div>
+                     <div>🔹 <b>현재가치 환산식</b>: 현재가치 = 명목 순자산 / (1+r)^n</div>
                      <div>🔹 <b>명목 임금상승률(g)</b>: 평균 임금상승률(기본 3.0%), 상황에 맞게 조정</div>
                      <div>🔹 <b>고정 지출 비율(e)</b>: 가계 평균 70%, 본인 소비 패턴에 맞게 조정</div>
                      <div>🔹 <b>목돈 지출</b>: 미래 물가 반영 가격으로 입력하면 더 정확</div>
@@ -131,6 +185,8 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
                  </div>
                  <div style="font-size:0.78rem;color:var(--text-sub);line-height:1.7;">
                      <div>🔹 <b>Inflation (r)</b>: Central bank target (2–3%)</div>
+                     <div>🔹 <b>ROI (discount rate)</b>: default based on average savings/deposit rate (2.5%), editable</div>
+                     <div>🔹 <b>Present Value Formula</b>: Present Value = Nominal Net Worth / (1+r)^n</div>
                      <div>🔹 <b>Nominal Wage Growth (g)</b>: avg. wage growth (default 3.0%), editable</div>
                      <div>🔹 <b>Expense Ratio (e)</b>: Avg. ~70%; adjust to your spending habits</div>
                      <div>🔹 <b>Lump-Sum items</b>: Use future prices for accuracy</div>
@@ -149,6 +205,8 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
                  </div>
                  <div style="font-size:0.78rem;color:var(--text-sub);line-height:1.7;">
                      <div>🔹 <b>インフレ率(r)</b>: 中央銀行目標値(2〜3%)</div>
+                     <div>🔹 <b>ROI（割引率）</b>: 預金・積立の平均金利ベース初期値(2.5%)、必要に応じて調整可能</div>
+                     <div>🔹 <b>現在価値換算式</b>: 現在価値 = 名目純資産 / (1+r)^n</div>
                      <div>🔹 <b>名目賃金上昇率(g)</b>: 平均賃金上昇率（初期値 3.0%）、必要に応じて調整</div>
                      <div>🔹 <b>支出比率(e)</b>: 家計平均70%基準、生活スタイルに合わせて調整</div>
                      <div>🔹 <b>一括支出</b>: 将来物価で入力すると精度UP</div>
@@ -220,6 +278,15 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
 
         const normalizedCfg = normalizeFutureNetworthConfig(cfg);
         const { r: rPct, g: gPct, e: ePct } = normalizedCfg;
+        const rPct = (cfg.r !== undefined ? cfg.r : 2.5);
+        const rVal = rPct / 100;
+        const gPct = (cfg.g !== undefined ? cfg.g : 3.0);
+        const roiPct = (cfg.roi !== undefined ? cfg.roi : getDefaultRoiByLangOrRegion());
+        const ePct = (cfg.e !== undefined ? cfg.e : 70);
+        const discountFactor = Math.pow(1 + rVal, cfg.n);
+        const discountInverse = discountFactor > 0 ? 1 / discountFactor : 0;
+        const nwNominal = res.NW_n;
+        const nwReal = discountFactor > 0 ? nwNominal / discountFactor : nwNominal;
         const fc   = res.feasible ? 'var(--neon-green,#00ff88)' : 'var(--neon-red,#ff4d6d)';
         const ft   = res.feasible ? _t('fnw_feasible') : _t('fnw_not_feasible');
 
@@ -254,6 +321,7 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">n = ${cfg.n}yr</span>
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">r = ${rPct}%</span>
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">g = ${gPct}%</span>
+                    <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">roi = ${roiPct}%</span>
                     <span style="background:rgba(0,217,255,0.1);border:1px solid rgba(0,217,255,0.3);border-radius:4px;padding:2px 8px;font-size:0.73rem;color:var(--neon-blue);">e = ${ePct}%</span>
                 </div>
 
@@ -265,7 +333,14 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
                     <span style="font-size:0.88rem;font-weight:bold;color:var(--neon-red,#ff4d6d);">${f(res.S_non)}${u}</span>
                 </div>
                 ${snonInflateDetail}
-                ${row(_t('fnw_detail_nwn'),    `${f(res.NW_n)}${u}`,    'var(--neon-gold,#ffd700)')}
+                ${row(_t('fnw_detail_nwn_nominal'), `${f(nwNominal)}${u}`, 'var(--neon-gold,#ffd700)')}
+                ${row(_t('fnw_detail_nwn_real'),    `${f(nwReal)}${u}`,    'var(--neon-green,#00ff88)')}
+                <div style="font-size:0.71rem;color:var(--text-sub);margin-top:3px;padding-left:4px;">
+                    ${_t('fnw_detail_discount_factor')}: (1+r)^n = ${discountFactor.toFixed(4)}, 1/(1+r)^n = ${discountInverse.toFixed(4)}
+                </div>
+                ${row(_t('fnw_detail_nwn'),    `${f(res.NW_n)}${u}`,    'var(--text-main)')}
+                ${row(_t('fnw_detail_roi'),    `${roiPct}%`,            'var(--neon-blue)')}
+                ${row(_t('fnw_detail_nw_real'),`${f(res.NW_n_nominal)}${u}`, 'var(--neon-gold,#ffd700)')}
 
                 <div style="height:8px;"></div>
                 ${row(_t('fnw_detail_msave'),  `${f(res.M_save)}${u}`,  'var(--neon-blue)')}
@@ -343,7 +418,7 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
                     <input id="fnw-i-n" type="text" inputmode="numeric"
                         value="${fmtComma(cfg.n)}" placeholder="10" style="${iStyle}">
                 </div>
-                <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:8px;${fWrap}">
+                <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;${fWrap}">
                     <div>
                         <label style="${lStyle}">${_tL('fnw_label_w0')}</label>
                         <input id="fnw-i-w0" type="text" inputmode="numeric"
@@ -354,6 +429,14 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
                         <input id="fnw-i-g" type="number" min="0" max="20" step="0.1"
                             value="${cfg.g !== undefined ? cfg.g : 3.0}" placeholder="3.0" style="${iStyle}">
                     </div>
+                    <div>
+                        <label style="${lStyle}">${_t('fnw_label_roi')}</label>
+                        <input id="fnw-i-roi" type="number" min="0" max="20" step="0.1"
+                            value="${cfg.roi !== undefined ? cfg.roi : getDefaultRoiByLangOrRegion()}" placeholder="${getDefaultRoiByLangOrRegion()}" style="${iStyle}">
+                    </div>
+                </div>
+                <div style="font-size:0.7rem;color:var(--text-sub);margin-top:-4px;margin-bottom:10px;">
+                    ${_t('fnw_roi_help')}
                 </div>
 
                 <div style="font-size:0.8rem;color:var(--text-sub);margin-bottom:6px;padding-top:4px;">
@@ -492,6 +575,7 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
 
         const rRaw = document.getElementById('fnw-i-r')?.value;
         const gRaw = document.getElementById('fnw-i-g')?.value;
+        const roiRaw = document.getElementById('fnw-i-roi')?.value;
         const eRaw = document.getElementById('fnw-i-e')?.value;
 
         let cfg = {
@@ -500,6 +584,7 @@ import { calcFutureNetworth, normalizeFutureNetworthConfig } from './utils/futur
             liabilities: parseComma(document.getElementById('fnw-i-liabilities')?.value),
             r: rRaw !== '' && rRaw !== null ? parseFloat(rRaw) : 2.5,
             g: gRaw !== '' && gRaw !== null ? parseFloat(gRaw) : 3.0,
+            roi: roiRaw !== '' && roiRaw !== null ? parseFloat(roiRaw) : getDefaultRoiByLangOrRegion(),
             e: eRaw !== '' && eRaw !== null ? parseFloat(eRaw) : 70,
             inflateS: document.getElementById('fnw-inflate-checkbox')?.checked === true,
             s_car:     parseComma(document.getElementById('fnw-i-s_car')?.value),

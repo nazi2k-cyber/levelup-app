@@ -5,6 +5,21 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.611] - 2026-04-26
+
+### 변경
+- Add ROI/present-value details to future net worth modal
+
+## [1.0.610] - 2026-04-26
+
+### 변경
+- Add present-value net worth to future net worth card
+
+## [1.0.609] - 2026-04-26
+
+### 변경
+- Add ROI input and compound growth to future net worth
+
 ## [1.0.608] - 2026-04-26
 
 ### 변경
