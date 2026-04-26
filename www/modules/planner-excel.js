@@ -73,9 +73,13 @@
                 s.id = scriptId;
                 s.src = XLSX_CDN_URLS[idx];
                 s.async = true;
-                s.crossOrigin = 'anonymous';
+                console.log('[PlannerExcel] xlsx 로드 시도:', XLSX_CDN_URLS[idx]);
+                if (XLSX_CDN_URLS[idx].startsWith('http')) {
+                    s.crossOrigin = 'anonymous';
+                }
                 s.onload = () => {
                     if (window.XLSX) {
+                        console.log('[PlannerExcel] xlsx 로드 성공:', XLSX_CDN_URLS[idx]);
                         _xlsxLoaded = true;
                         _xlsxLoading = false;
                         resolve();
@@ -85,6 +89,7 @@
                     }
                 };
                 s.onerror = () => {
+                    console.warn('[PlannerExcel] xlsx 로드 실패:', XLSX_CDN_URLS[idx]);
                     s.remove();
                     tryLoad(idx + 1);
                 };
@@ -171,8 +176,11 @@
             const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             downloadBlob(blob, `levelup_planner_${today}.xlsx`);
 
-            if (AppLogger) AppLogger.log('[PlannerExcel] exported', dates.length, 'entries');
+            if (AppLogger && typeof AppLogger.info === 'function') {
+                AppLogger.info(`[PlannerExcel] exported ${dates.length} entries`);
+            }
         }).catch(err => {
+            console.error('[PlannerExcel] export error', err);
             if (AppLogger) AppLogger.error('[PlannerExcel] export error', err);
             notify(t('excel_export_error'));
         });
@@ -196,8 +204,11 @@
             const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             downloadBlob(blob, 'levelup_planner_template.xlsx');
 
-            if (AppLogger) AppLogger.log('[PlannerExcel] template downloaded');
+            if (AppLogger && typeof AppLogger.info === 'function') {
+                AppLogger.info('[PlannerExcel] template downloaded');
+            }
         }).catch(err => {
+            console.error('[PlannerExcel] template error', err);
             if (AppLogger) AppLogger.error('[PlannerExcel] template error', err);
             notify(t('excel_export_error'));
         });
@@ -285,8 +296,11 @@
                     if (window.loadPlannerForDate && currentDate) window.loadPlannerForDate(currentDate);
 
                     notify(t('excel_import_done', { count }));
-                    if (AppLogger) AppLogger.log('[PlannerExcel] imported', count, 'entries');
+                    if (AppLogger && typeof AppLogger.info === 'function') {
+                        AppLogger.info(`[PlannerExcel] imported ${count} entries`);
+                    }
                 } catch (err) {
+                    console.error('[PlannerExcel] import parse error', err);
                     if (AppLogger) AppLogger.error('[PlannerExcel] import parse error', err);
                     notify(t('excel_import_error'));
                 }
@@ -294,6 +308,7 @@
             reader.onerror = () => notify(t('excel_import_error'));
             reader.readAsArrayBuffer(file);
         }).catch(err => {
+            console.error('[PlannerExcel] import library load error', err);
             if (AppLogger) AppLogger.error('[PlannerExcel] import library load error', err);
             notify(t('excel_import_error'));
         });
