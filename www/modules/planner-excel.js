@@ -325,10 +325,54 @@
             .join('\n');
     }
 
-    function exportPlannerToExcel() {
+    function getPlannerExportRows() {
         const entries = window.getAllDiaryEntries ? window.getAllDiaryEntries() : {};
         const dates = Object.keys(entries).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+        const rows = dates.map(date => {
+            const e = entries[date];
+            return [
+                date,
+                e.mood || '',
+                e.category || '',
+                e.caption || '',
+                formatTasks(e.tasks),
+                formatBlocks(e.blocks)
+            ];
+        });
+        return { dates, rows };
+    }
 
+    function serializeCsvField(value) {
+        const s = value == null ? '' : String(value);
+        if (/[",\r\n]/.test(s)) {
+            return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+    }
+
+    function exportPlannerToCsv() {
+        const header = ['Date', 'Mood', 'Category', 'Caption', 'Tasks', 'Schedule'];
+        const { dates, rows } = getPlannerExportRows();
+        if (dates.length === 0) {
+            notify(t('excel_no_data'));
+            return Promise.resolve(false);
+        }
+
+        const csvLines = [header, ...rows].map((row) => row.map(serializeCsvField).join(','));
+        const csvContent = '\uFEFF' + csvLines.join('\r\n');
+        const today = window.getTodayStr ? window.getTodayStr() : new Date().toISOString().slice(0, 10);
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+        return downloadBlob(blob, `levelup_planner_${today}.csv`).then(() => {
+            if (AppLogger && typeof AppLogger.info === 'function') {
+                AppLogger.info(`[PlannerExcel] exported ${dates.length} entries (csv)`);
+            }
+            return true;
+        });
+    }
+
+    function exportPlannerToExcel() {
+        const header = ['Date', 'Mood', 'Category', 'Caption', 'Tasks', 'Schedule'];
+        const { dates, rows } = getPlannerExportRows();
         if (dates.length === 0) {
             notify(t('excel_no_data'));
             return;
@@ -336,19 +380,6 @@
 
         loadXlsx().then(() => {
             const XLSX = window.XLSX;
-            const header = ['Date', 'Mood', 'Category', 'Caption', 'Tasks', 'Schedule'];
-            const rows = dates.map(date => {
-                const e = entries[date];
-                return [
-                    date,
-                    e.mood || '',
-                    e.category || '',
-                    e.caption || '',
-                    formatTasks(e.tasks),
-                    formatBlocks(e.blocks)
-                ];
-            });
-
             const wb = buildWorkbook(header, rows, 'Planner');
             const today = window.getTodayStr ? window.getTodayStr() : new Date().toISOString().slice(0, 10);
             const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -359,6 +390,28 @@
                 }
             });
         }).catch(err => handleExcelExportError('export', err));
+    }
+
+    function selectExportFormat() {
+        const guide = '내보내기 형식을 선택하세요:\n1 = Excel(.xlsx)\n2 = CSV(.csv)';
+        const answer = prompt(guide, '1');
+        if (answer === null) return null;
+        const normalized = String(answer).trim().toLowerCase();
+        if (normalized === '2' || normalized === 'csv' || normalized === '.csv') return 'csv';
+        return 'xlsx';
+    }
+
+    function exportPlanner() {
+        const format = selectExportFormat();
+        if (!format) return;
+        const work = format === 'csv' ? exportPlannerToCsv() : exportPlannerToExcel();
+        if (work && typeof work.catch === 'function') {
+            work.catch(err => {
+                console.error('[PlannerExcel] export error', err);
+                if (AppLogger) AppLogger.error('[PlannerExcel] export error', err);
+                notify(t('excel_export_error'));
+            });
+        }
     }
 
     function generateTemplateExcel() {
@@ -414,7 +467,128 @@
         return blocks;
     }
 
-    function importPlannerFromExcel(file) {
+    function parseCsvRows(csvText) {
+        // RFC4180 기반 최소 규칙:
+        // - 필드에 쉼표/줄바꿈/따옴표가 포함되면 반드시 쌍따옴표로 감싼다.
+        // - 쌍따옴표 자체는 ""(두 개)로 이스케이프한다.
+        // - 쌍따옴표 내부의 줄바꿈은 동일 필드 데이터로 유지한다.
+        const rows = [];
+        let row = [];
+        let field = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < csvText.length; i++) {
+            const char = csvText[i];
+            const next = csvText[i + 1];
+
+            if (inQuotes) {
+                if (char === '"' && next === '"') {
+                    field += '"';
+                    i++;
+                } else if (char === '"') {
+                    inQuotes = false;
+                } else {
+                    field += char;
+                }
+            } else if (char === '"') {
+                inQuotes = true;
+            } else if (char === ',') {
+                row.push(field);
+                field = '';
+            } else if (char === '\r') {
+                if (next === '\n') i++;
+                row.push(field);
+                rows.push(row);
+                row = [];
+                field = '';
+            } else if (char === '\n') {
+                row.push(field);
+                rows.push(row);
+                row = [];
+                field = '';
+            } else {
+                field += char;
+            }
+        }
+
+        row.push(field);
+        rows.push(row);
+        if (rows.length > 0 && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') {
+            rows.pop();
+        }
+        return rows;
+    }
+
+    function importRows(rows) {
+        if (rows.length < 2) { notify(t('excel_import_empty')); return; }
+
+        const header = rows[0].map(h => String(h).toLowerCase().trim());
+        const colDate     = header.findIndex(h => h === 'date' || h.includes('date'));
+        const colMood     = header.findIndex(h => h === 'mood' || h.includes('mood'));
+        const colCategory = header.findIndex(h => h === 'category' || h.includes('category') || h.includes('cat'));
+        const colCaption  = header.findIndex(h => h === 'caption' || h.includes('caption'));
+        const colTasks    = header.findIndex(h => h === 'tasks' || h.includes('task'));
+        const colSchedule = header.findIndex(h => h === 'schedule' || h.includes('schedule') || h.includes('block'));
+
+        if (colDate === -1) { notify(t('excel_import_error')); return; }
+
+        let diaries = {};
+        try { diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}'); } catch (_) {}
+
+        let count = 0;
+        rows.slice(1).forEach(row => {
+            const dateStr = String(row[colDate] || '').trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
+
+            const existing = diaries[dateStr] || {};
+            const newTasks  = colTasks    >= 0 ? parseTasks(row[colTasks])    : null;
+            const newBlocks = colSchedule >= 0 ? parseBlocks(row[colSchedule]) : null;
+
+            diaries[dateStr] = Object.assign({}, existing, {
+                mood:     colMood     >= 0 && row[colMood]     ? String(row[colMood]).trim()     : (existing.mood || ''),
+                category: colCategory >= 0 && row[colCategory] ? String(row[colCategory]).trim() : (existing.category || '기타'),
+                caption:  colCaption  >= 0 && row[colCaption]  ? String(row[colCaption]).trim()  : (existing.caption || ''),
+                tasks:    (newTasks  && newTasks.length  > 0) ? newTasks  : (existing.tasks  || []),
+                blocks:   (newBlocks && Object.keys(newBlocks).length > 0) ? newBlocks : (existing.blocks || {}),
+            });
+            count++;
+        });
+
+        if (count === 0) { notify(t('excel_import_empty')); return; }
+
+        localStorage.setItem('diary_entries', JSON.stringify(diaries));
+
+        if (window.renderPlannerCalendar) window.renderPlannerCalendar();
+        const currentDate = window.diarySelectedDate || (window.getTodayStr && window.getTodayStr());
+        if (window.loadPlannerForDate && currentDate) window.loadPlannerForDate(currentDate);
+
+        notify(t('excel_import_done', { count }));
+        if (AppLogger && typeof AppLogger.info === 'function') {
+            AppLogger.info(`[PlannerExcel] imported ${count} entries`);
+        }
+    }
+
+    function importPlannerFromFile(file) {
+        const ext = (file && file.name ? file.name.split('.').pop() : '').toLowerCase();
+        if (ext === 'csv') {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    let text = String(e.target.result || '');
+                    text = text.replace(/^\uFEFF/, '');
+                    const rows = parseCsvRows(text);
+                    importRows(rows);
+                } catch (err) {
+                    console.error('[PlannerExcel] csv import parse error', err);
+                    if (AppLogger) AppLogger.error('[PlannerExcel] csv import parse error', err);
+                    notify(t('excel_import_error'));
+                }
+            };
+            reader.onerror = () => notify(t('excel_import_error'));
+            reader.readAsText(file, 'utf-8');
+            return;
+        }
+
         loadXlsx().then(() => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -423,53 +597,7 @@
                     const wb = XLSX.read(e.target.result, { type: 'array' });
                     const ws = wb.Sheets[wb.SheetNames[0]];
                     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-                    if (rows.length < 2) { notify(t('excel_import_empty')); return; }
-
-                    const header = rows[0].map(h => String(h).toLowerCase());
-                    const colDate     = header.findIndex(h => h.includes('date'));
-                    const colMood     = header.findIndex(h => h.includes('mood'));
-                    const colCategory = header.findIndex(h => h.includes('category') || h.includes('cat'));
-                    const colCaption  = header.findIndex(h => h.includes('caption'));
-                    const colTasks    = header.findIndex(h => h.includes('task'));
-                    const colSchedule = header.findIndex(h => h.includes('schedule') || h.includes('block'));
-
-                    if (colDate === -1) { notify(t('excel_import_error')); return; }
-
-                    let diaries = {};
-                    try { diaries = JSON.parse(localStorage.getItem('diary_entries') || '{}'); } catch (_) {}
-
-                    let count = 0;
-                    rows.slice(1).forEach(row => {
-                        const dateStr = String(row[colDate] || '').trim();
-                        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return;
-
-                        const existing = diaries[dateStr] || {};
-                        const newTasks  = colTasks    >= 0 ? parseTasks(row[colTasks])    : null;
-                        const newBlocks = colSchedule >= 0 ? parseBlocks(row[colSchedule]) : null;
-
-                        diaries[dateStr] = Object.assign({}, existing, {
-                            mood:     colMood     >= 0 && row[colMood]     ? String(row[colMood]).trim()     : (existing.mood || ''),
-                            category: colCategory >= 0 && row[colCategory] ? String(row[colCategory]).trim() : (existing.category || '기타'),
-                            caption:  colCaption  >= 0 && row[colCaption]  ? String(row[colCaption]).trim()  : (existing.caption || ''),
-                            tasks:    (newTasks  && newTasks.length  > 0) ? newTasks  : (existing.tasks  || []),
-                            blocks:   (newBlocks && Object.keys(newBlocks).length > 0) ? newBlocks : (existing.blocks || {}),
-                        });
-                        count++;
-                    });
-
-                    if (count === 0) { notify(t('excel_import_empty')); return; }
-
-                    localStorage.setItem('diary_entries', JSON.stringify(diaries));
-
-                    if (window.renderPlannerCalendar) window.renderPlannerCalendar();
-                    const currentDate = window.diarySelectedDate || (window.getTodayStr && window.getTodayStr());
-                    if (window.loadPlannerForDate && currentDate) window.loadPlannerForDate(currentDate);
-
-                    notify(t('excel_import_done', { count }));
-                    if (AppLogger && typeof AppLogger.info === 'function') {
-                        AppLogger.info(`[PlannerExcel] imported ${count} entries`);
-                    }
+                    importRows(rows);
                 } catch (err) {
                     console.error('[PlannerExcel] import parse error', err);
                     if (AppLogger) AppLogger.error('[PlannerExcel] import parse error', err);
@@ -517,7 +645,7 @@
         });
 
         const exportBtn = document.getElementById('btn-excel-export');
-        if (exportBtn) exportBtn.addEventListener('click', exportPlannerToExcel);
+        if (exportBtn) exportBtn.addEventListener('click', exportPlanner);
 
         const importBtn = document.getElementById('btn-excel-import');
         if (importBtn) importBtn.addEventListener('click', openExcelImportModal);
@@ -549,7 +677,7 @@
                 if (_selectedFile) {
                     const fileToImport = _selectedFile;
                     closeExcelImportModal();
-                    importPlannerFromExcel(fileToImport);
+                    importPlannerFromFile(fileToImport);
                 }
             });
         }
@@ -562,7 +690,8 @@
     }
 
     window.exportPlannerToExcel = exportPlannerToExcel;
-    window.importPlannerFromExcel = importPlannerFromExcel;
+    window.exportPlannerToCsv = exportPlannerToCsv;
+    window.importPlannerFromFile = importPlannerFromFile;
     window.openExcelImportModal = openExcelImportModal;
     window.closeExcelImportModal = closeExcelImportModal;
 })();
