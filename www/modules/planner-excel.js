@@ -58,12 +58,12 @@
 
     function handleExcelExportError(contextLabel, err) {
         const defaultMessage = t('excel_export_error');
+        console.error(`[PlannerExcel] ${contextLabel} error`, err);
+        if (AppLogger) AppLogger.error(`[PlannerExcel] ${contextLabel} error`, err);
         if (err && err.userMessage) {
             notify(err.userMessage);
             return;
         }
-        console.error(`[PlannerExcel] ${contextLabel} error`, err);
-        if (AppLogger) AppLogger.error(`[PlannerExcel] ${contextLabel} error`, err);
         notify(defaultMessage);
     }
 
@@ -448,11 +448,7 @@
         if (!format) return;
         const work = format === 'csv' ? exportPlannerToCsv() : exportPlannerToExcel();
         if (work && typeof work.catch === 'function') {
-            work.catch(err => {
-                console.error('[PlannerExcel] export error', err);
-                if (AppLogger) AppLogger.error('[PlannerExcel] export error', err);
-                notify(t('excel_export_error'));
-            });
+            work.catch(err => handleExcelExportError('export', err));
         }
     }
 
