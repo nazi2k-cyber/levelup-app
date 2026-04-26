@@ -46,10 +46,10 @@
         const hasShareMissing = logs.some(l => l.stage === 'share_plugin' && l.code === 'UNSUPPORTED');
         const hasNavigatorMissing = logs.some(l => l.stage === 'navigator_share' && l.code === 'UNSUPPORTED');
         const hasBridgeMissing = logs.some(l => l.stage === 'native_bridge' && l.code === 'UNSUPPORTED');
-        const hasDataUrlFail = logs.some(l => l.stage === 'data_url_fallback' && l.code === 'FAIL');
+        const hasFsFallbackFail = logs.some(l => l.stage === 'filesystem_fallback' && l.code === 'FAIL');
 
-        if (hasShareMissing && hasNavigatorMissing && hasBridgeMissing && hasDataUrlFail) {
-            return '모든 내보내기 방법이 실패했어요. 파일 공유 플러그인(Share/File Opener) 설치 여부와 WebView 파일 다운로드 권한을 확인해주세요.';
+        if (hasShareMissing && hasNavigatorMissing && hasBridgeMissing && hasFsFallbackFail) {
+            return '모든 내보내기 방법이 실패했어요. 파일 공유 플러그인(Share/File Opener) 설치 여부와 외부 저장소 권한을 확인해주세요.';
         }
         if (hasShareMissing && hasNavigatorMissing && hasBridgeMissing) {
             return '파일 공유 플러그인(Share/File Opener)이 설치되지 않았거나 비활성화되어 있어요. 앱 설정/빌드 구성을 확인해주세요.';
@@ -289,24 +289,30 @@
             console.warn('[PlannerExcel] native export stage', logs[logs.length - 1]);
         }
 
-        // Last resort: data URL anchor download.
-        // Android WebView blocks createObjectURL() downloads but supports data: URI anchors.
-        try {
-            const base64 = await blobToBase64(blob);
-            const mimeType = blob.type || 'application/octet-stream';
-            const dataUrl = `data:${mimeType};base64,${base64}`;
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => document.body.removeChild(a), 300);
-            logs.push({ stage: 'data_url_fallback', code: 'SUCCESS' });
-            console.log('[PlannerExcel] native export stage', logs[logs.length - 1]);
-            return;
-        } catch (fallbackErr) {
-            logs.push({ stage: 'data_url_fallback', code: 'FAIL', reason: fallbackErr && fallbackErr.message ? fallbackErr.message : String(fallbackErr) });
-            console.error('[PlannerExcel] native export stage', logs[logs.length - 1], fallbackErr);
+        // Last resort: Filesystem write to a user-accessible directory.
+        // Android WebView silently ignores data/blob URL anchor downloads, so we write the file
+        // directly and notify the user where to find it.
+        if (Filesystem) {
+            let fsBase64;
+            try { fsBase64 = await blobToBase64(blob); } catch (_b64) { /* fall through */ }
+            if (fsBase64) {
+                const fsTargets = [
+                    { path: 'Download/' + filename, directory: 'EXTERNAL_STORAGE', label: '다운로드' },
+                    { path: filename, directory: 'EXTERNAL', label: '파일 저장소' }
+                ];
+                for (const target of fsTargets) {
+                    try {
+                        await Filesystem.writeFile({ path: target.path, data: fsBase64, directory: target.directory, recursive: true });
+                        logs.push({ stage: 'filesystem_fallback', code: 'SUCCESS', directory: target.directory });
+                        console.log('[PlannerExcel] native export stage', logs[logs.length - 1]);
+                        notify(target.label + '에 저장됐어요: ' + filename);
+                        return;
+                    } catch (fsErr) {
+                        logs.push({ stage: 'filesystem_fallback', code: 'FAIL', directory: target.directory, reason: fsErr && fsErr.message ? fsErr.message : String(fsErr) });
+                        console.warn('[PlannerExcel] native export stage', logs[logs.length - 1]);
+                    }
+                }
+            }
         }
 
         const nativeError = new Error('native file export unavailable');
