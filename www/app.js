@@ -130,7 +130,7 @@ async function bridgeTogglePushNotifications(...args) {
 // --- 앱 초기 로드 ---
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'habit-project', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -254,6 +254,7 @@ const STATUS_CARD_LABELS = {
     'pomodoro': { name_key: 'card_pomodoro', name: 'POMODORO', icon: '🍅' },
     'life-status': { name: 'LIFE STATUS', icon: '📅' },
     'future-networth': { name_key: 'fnw_card_title', name: '미래 순자산', icon: '💰' },
+    'habit-project': { name_key: 'habit_project_title', name: '습관형성 프로젝트', icon: '🔥' },
     'dday': { name: 'D-DAY', icon: '⏰' },
     'dday-caption': { name_key: 'card_dday_caption', name: '목표/좌우명', icon: '💬' },
     'daily-quote': { name_key: 'card_daily_quote', name: '오늘의 명언', icon: '❝' },
@@ -264,7 +265,7 @@ const STATUS_CARD_LABELS = {
     'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' },
     'big5': { name_key: 'card_big5', name: 'BIG FIVE', icon: '🧠' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'habit-project', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
