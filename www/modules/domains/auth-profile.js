@@ -202,8 +202,9 @@ export function createAuthProfileModule(deps) {
         const isFollowing = (AppState.user.friends || []).includes(userId);
         const followBtnHTML = !isMe ? `<button id="profile-modal-follow-btn" class="btn-reels-follow ${isFollowing ? 'following' : ''}" onclick="event.stopPropagation();window.toggleProfileModalFollow('${sanitizeAttr(userId)}')">${isFollowing ? (i18n[lang]?.btn_added || '팔로잉') : (i18n[lang]?.btn_add || '팔로우')}</button>` : '';
         const saveBtnHTML = isMe ? `<button class="btn-profile-save" onclick="event.stopPropagation();window.saveProfileCardAsImage('${sanitizeAttr(userId)}')">${i18n[lang]?.profile_save_btn || '저장'}</button>` : '';
+        const shareBtnHTML = isMe ? `<button class="btn-profile-share" onclick="event.stopPropagation();window.shareSocialProfile('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_share_btn || '공유'}">${i18n[lang]?.profile_share_btn || '공유'}</button>` : '';
 
-        const profileHTML = `<div style="display:flex; align-items:flex-start; gap:10px;"><div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-blue);">` : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue);"></div>`}<div style="font-size:0.75rem; color:var(--text-sub); margin-top:4px; text-align:center;">Lv. ${u.level || 1}</div></div><div style="flex:1; min-width:0;"><div style="margin-bottom:2px;">${titleBadgeHTML}</div><div style="font-size:1rem; font-weight:bold; color:var(--text-main); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${sanitizeText(u.name)}</div><div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:4px;">${followBtnHTML}<button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>${saveBtnHTML}</div><div class="profile-follow-stats" style="margin-top:4px;"><span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount || String)(followingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span><span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount || String)(followerCount)}</strong> <span>${i18n[lang]?.prof_followers || '팔로워'}</span></span></div></div></div>`;
+        const profileHTML = `<div style="display:flex; align-items:flex-start; gap:10px;"><div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0;">${u.photoURL ? `<img src="${sanitizeURL(u.photoURL)}" referrerpolicy="no-referrer" onerror="this.onerror=null;window._retryFirebaseImg(this,'${sanitizeAttr(u.photoURL)}',null,true)" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid var(--neon-blue);">` : `<div style="width:60px; height:60px; border-radius:50%; background:#444; border:2px solid var(--neon-blue);"></div>`}<div style="font-size:0.75rem; color:var(--text-sub); margin-top:4px; text-align:center;">Lv. ${u.level || 1}</div></div><div style="flex:1; min-width:0;"><div style="margin-bottom:2px;">${titleBadgeHTML}</div><div style="font-size:1rem; font-weight:bold; color:var(--text-main); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${sanitizeText(u.name)}</div><div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:4px;">${followBtnHTML}<button class="btn-profile-planner" onclick="event.stopPropagation();window.viewUserTodayPlanner('${sanitizeAttr(userId)}')" title="${i18n[lang]?.profile_view_planner || '당일 플래너'}">${i18n[lang]?.profile_planner_btn || '플래너'}</button>${saveBtnHTML}${shareBtnHTML}</div><div class="profile-follow-stats" style="margin-top:4px;"><span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount || String)(followingCount)}</strong> <span>${i18n[lang]?.prof_following || '팔로잉'}</span></span><span class="follow-stat-item"><strong>${(window.SocialModule?.formatFollowCount || String)(followerCount)}</strong> <span>${i18n[lang]?.prof_followers || '팔로워'}</span></span></div></div></div>`;
 
         document.getElementById('profile-stats-user-info').innerHTML = profileHTML;
         drawRadarChartForUser(u.stats || { str: 0, int: 0, cha: 0, vit: 0, wlth: 0, agi: 0 });
@@ -242,6 +243,61 @@ export function createAuthProfileModule(deps) {
         if (!auth.currentUser || userId === auth.currentUser.uid) return;
         await window.toggleFriend(userId);
         openProfileStatsModal(userId);
+    }
+
+
+    async function shareSocialProfile(userId) {
+        const AppState = getAppState();
+        const lang = AppState.currentLang;
+        const meId = auth.currentUser?.uid;
+        if (!userId || !meId || userId !== meId) return;
+
+        const pkg = 'com.levelup.reboot';
+        const fallbackStoreUrl = `https://play.google.com/store/apps/details?id=${pkg}`;
+        const profilePath = `profile/${encodeURIComponent(userId)}`;
+        const shareUrl = `intent://${profilePath}#Intent;scheme=levelup;package=${pkg};S.browser_fallback_url=${encodeURIComponent(fallbackStoreUrl)};end`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'LEVEL UP: REBOOT',
+                    text: shareUrl,
+                    url: shareUrl,
+                });
+                return;
+            } catch (e) {
+                if (e?.name === 'AbortError') return;
+            }
+        }
+
+        let copied = false;
+        if (navigator.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                copied = true;
+            } catch (_) {
+                copied = false;
+            }
+        }
+
+        if (!copied) {
+            const ta = document.createElement('textarea');
+            ta.value = shareUrl;
+            ta.style.position = 'fixed';
+            ta.style.top = '0';
+            ta.style.left = '0';
+            ta.style.opacity = '0';
+            ta.setAttribute('readonly', '');
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            copied = document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+
+        const copiedMsg = i18n[lang]?.profile_share_copied || '프로필 링크가 클립보드에 복사되었습니다.';
+        const failedMsg = i18n[lang]?.profile_share_failed || '공유에 실패했습니다. 다시 시도해주세요.';
+        alert(copied ? copiedMsg : failedMsg);
     }
 
     async function viewUserTodayPlanner(userId) {
@@ -300,6 +356,7 @@ export function createAuthProfileModule(deps) {
         window.closeProfileStatsModal = closeProfileStatsModal;
         window.toggleProfileModalFollow = toggleProfileModalFollow;
         window.viewUserTodayPlanner = viewUserTodayPlanner;
+        window.shareSocialProfile = shareSocialProfile;
     }
 
     return {
@@ -309,5 +366,6 @@ export function createAuthProfileModule(deps) {
         closeProfileStatsModal,
         toggleProfileModalFollow,
         viewUserTodayPlanner,
+        shareSocialProfile,
     };
 }

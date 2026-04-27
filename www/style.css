@@ -417,6 +417,9 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 /* 프로필 플래너 버튼 */
 .btn-profile-planner { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-gold); color: var(--neon-gold); border-radius: 4px; cursor: pointer; vertical-align: middle; line-height: 1.2; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex-shrink: 0; }
 .btn-profile-planner:active { background: rgba(255, 204, 0, 0.15); }
+/* 프로필 공유 버튼 */
+.btn-profile-share { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid #8b5cf6; color: #c4b5fd; border-radius: 4px; cursor: pointer; vertical-align: middle; line-height: 1.2; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex-shrink: 0; }
+.btn-profile-share:active { background: rgba(139, 92, 246, 0.15); }
 /* 프로필 저장 버튼 */
 .btn-profile-save { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 4px; cursor: pointer; vertical-align: middle; line-height: 1.2; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex-shrink: 0; }
 .btn-profile-save:active { background: rgba(0, 217, 255, 0.15); }
