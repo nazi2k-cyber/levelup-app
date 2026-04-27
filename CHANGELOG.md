@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.616] - 2026-04-27
+
+### 변경
+- 온보딩 1페이지 메시지 및 다국어 번역 추가
+
 ## [1.0.615] - 2026-04-27
 
 ### 변경
