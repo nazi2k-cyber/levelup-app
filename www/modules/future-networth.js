@@ -144,12 +144,12 @@
                     <b style="color:var(--neon-blue)">월 적립 목표액</b>을 계산합니다.
                  </p>
                  <div style="background:var(--bg-main,#0a0a0a);border-radius:8px;padding:12px;margin-bottom:10px;font-size:0.78rem;line-height:1.9;color:var(--text-sub);">
-                     <div>📈 <b>누적 수입</b> = 연소득 × <span style="color:var(--neon-blue)">((1+g)ⁿ − 1) / g</span></div>
+                     <div>📈 <b>누적 수입</b> = 연소득 × ((1+g)ⁿ − 1) / g</div>
                      <div>💸 <b>고정 지출</b> = 누적 수입 × 지출비율(e)</div>
-                     <div>💰 <b>미래 순자산</b> = 현재 순자산×(1+i)ⁿ + W₀×(1−e)×<span style="color:var(--neon-blue)">((1+g)ⁿ−(1+i)ⁿ)/(g−i)</span> − 비정기 지출</div>
-                     <div>📉 <b>현재가치 환산</b> = 미래 순자산 ÷ <span style="color:var(--neon-blue)">(1+r)ⁿ</span></div>
+                     <div>💰 <b>미래 순자산</b> = 현재 순자산×(1+i)ⁿ + W₀×(1−e)×((1+g)ⁿ−(1+i)ⁿ)/(g−i) − 비정기 지출</div>
+                     <div>📉 <b>현재가치 환산</b> = 미래 순자산 ÷ (1+r)ⁿ</div>
                      <div style="margin-top:6px;">📅 <b>월 필요 저축액</b> = 비정기 지출 ÷ (n × 12)</div>
-                     <div>💸 <b>월 가용 저축력</b> = 누적 수입 × (1 − e) ÷ (n × 12)</div>
+                     <div>💸 <b>월 가용 저축액</b> = 누적 수입 × (1 − e) ÷ (n × 12)</div>
                  </div>
                  <div style="font-size:0.78rem;color:var(--text-sub);line-height:1.7;">
                      <div>🔹 <b>인플레이션율(r)</b>: 한국은행 목표 물가 상승률(2~3%)</div>
@@ -157,19 +157,19 @@
                      <div>🔹 <b>투자수익률(i)</b>: 예적금 평균 금리(기본 3.5%), 자산 운용 수익률로 조정</div>
                      <div>🔹 <b>고정 지출 비율(e)</b>: 가계 평균 70%, 본인 소비 패턴에 맞게 조정</div>
                      <div>🔹 <b>목돈 지출</b>: 미래 물가 반영 가격으로 입력하면 더 정확</div>
-                     <div>🔹 월 가용 저축력 ≥ 월 필요 저축액 → <span style="color:var(--neon-green,#00ff88)">✅ 목표 달성 가능</span></div>
+                     <div>🔹 월 가용 저축액 ≥ 월 필요 저축액 → <span style="color:var(--neon-green,#00ff88)">✅ 목표 달성 가능</span></div>
                  </div>`,
             en: `<p style="margin:0 0 10px;color:var(--text-sub);font-size:0.8rem;line-height:1.7;">
                     Estimates <b style="color:var(--neon-blue)">net worth in n years</b> and
                     <b style="color:var(--neon-blue)">required monthly savings</b> using inflation + lifecycle expenses.
                  </p>
                  <div style="background:var(--bg-main,#0a0a0a);border-radius:8px;padding:12px;margin-bottom:10px;font-size:0.78rem;line-height:1.9;color:var(--text-sub);">
-                     <div>📈 <b>Cumul. Income</b> = Annual × <span style="color:var(--neon-blue)">((1+g)ⁿ − 1) / g</span></div>
+                     <div>📈 <b>Cumul. Income</b> = Annual × ((1+g)ⁿ − 1) / g</div>
                      <div>💸 <b>Fixed Expenses</b> = Cumul. Income × Expense Ratio (e)</div>
-                     <div>💰 <b>Future Net Worth</b> = NW₀×(1+i)ⁿ + W₀×(1−e)×<span style="color:var(--neon-blue)">((1+g)ⁿ−(1+i)ⁿ)/(g−i)</span> − Lump-Sum</div>
-                     <div>📉 <b>Present Value</b> = Future Net Worth ÷ <span style="color:var(--neon-blue)">(1+r)ⁿ</span></div>
+                     <div>💰 <b>Future Net Worth</b> = NW₀×(1+i)ⁿ + W₀×(1−e)×((1+g)ⁿ−(1+i)ⁿ)/(g−i) − Lump-Sum</div>
+                     <div>📉 <b>Present Value</b> = Future Net Worth ÷ (1+r)ⁿ</div>
                      <div style="margin-top:6px;">📅 <b>Monthly Savings Needed</b> = Lump-Sum ÷ (n × 12)</div>
-                     <div>💸 <b>Monthly Capacity</b> = Cumul. Income × (1 − e) ÷ (n × 12)</div>
+                     <div>💸 <b>Monthly Available Savings</b> = Cumul. Income × (1 − e) ÷ (n × 12)</div>
                  </div>
                  <div style="font-size:0.78rem;color:var(--text-sub);line-height:1.7;">
                      <div>🔹 <b>Inflation (r)</b>: Central bank target (2–3%)</div>
@@ -177,19 +177,19 @@
                      <div>🔹 <b>Investment ROI (i)</b>: avg. deposit rate (default 3.5%), adjust to expected returns</div>
                      <div>🔹 <b>Expense Ratio (e)</b>: Avg. ~70%; adjust to your spending habits</div>
                      <div>🔹 <b>Lump-Sum items</b>: Use future prices for accuracy</div>
-                     <div>🔹 Capacity ≥ Needed → <span style="color:var(--neon-green,#00ff88)">✅ Goal Achievable</span></div>
+                     <div>🔹 Monthly Available Savings ≥ Monthly Savings Needed → <span style="color:var(--neon-green,#00ff88)">✅ Goal Achievable</span></div>
                  </div>`,
             ja: `<p style="margin:0 0 10px;color:var(--text-sub);font-size:0.8rem;line-height:1.7;">
                     インフレと生涯イベント支出を考慮し、<b style="color:var(--neon-blue)">n年後の純資産</b>と
                     <b style="color:var(--neon-blue)">月積立目標額</b>を計算します。
                  </p>
                  <div style="background:var(--bg-main,#0a0a0a);border-radius:8px;padding:12px;margin-bottom:10px;font-size:0.78rem;line-height:1.9;color:var(--text-sub);">
-                     <div>📈 <b>累積収入</b> = 年収 × <span style="color:var(--neon-blue)">((1+g)ⁿ − 1) / g</span></div>
+                     <div>📈 <b>累積収入</b> = 年収 × ((1+g)ⁿ − 1) / g</div>
                      <div>💸 <b>固定支出</b> = 累積収入 × 支出比率(e)</div>
-                     <div>💰 <b>将来純資産</b> = 現在純資産×(1+i)ⁿ + W₀×(1−e)×<span style="color:var(--neon-blue)">((1+g)ⁿ−(1+i)ⁿ)/(g−i)</span> − 一括支出</div>
-                     <div>📉 <b>現在価値換算</b> = 将来純資産 ÷ <span style="color:var(--neon-blue)">(1+r)ⁿ</span></div>
+                     <div>💰 <b>将来純資産</b> = 現在純資産×(1+i)ⁿ + W₀×(1−e)×((1+g)ⁿ−(1+i)ⁿ)/(g−i) − 一括支出</div>
+                     <div>📉 <b>現在価値換算</b> = 将来純資産 ÷ (1+r)ⁿ</div>
                      <div style="margin-top:6px;">📅 <b>月必要積立額</b> = 一括支出 ÷ (n × 12)</div>
-                     <div>💸 <b>月積立能力</b> = 累積収入 × (1 − e) ÷ (n × 12)</div>
+                     <div>💸 <b>月利用可能貯蓄額</b> = 累積収入 × (1 − e) ÷ (n × 12)</div>
                  </div>
                  <div style="font-size:0.78rem;color:var(--text-sub);line-height:1.7;">
                      <div>🔹 <b>インフレ率(r)</b>: 中央銀行目標値(2〜3%)</div>
@@ -197,7 +197,7 @@
                      <div>🔹 <b>投資収益率(i)</b>: 預金平均金利（初期値 3.5%）、期待収益率に合わせて調整</div>
                      <div>🔹 <b>支出比率(e)</b>: 家計平均70%基準、生活スタイルに合わせて調整</div>
                      <div>🔹 <b>一括支出</b>: 将来物価で入力すると精度UP</div>
-                     <div>🔹 月積立能力 ≥ 月必要積立額 → <span style="color:var(--neon-green,#00ff88)">✅ 目標達成可能</span></div>
+                     <div>🔹 月利用可能貯蓄額 ≥ 月必要積立額 → <span style="color:var(--neon-green,#00ff88)">✅ 目標達成可能</span></div>
                  </div>`
         };
 
