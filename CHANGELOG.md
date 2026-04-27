@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.629] - 2026-04-27
+
+### 변경
+- Split ping callable by service domains with client fallback
+
 ## [1.0.628] - 2026-04-27
 
 ### 변경
