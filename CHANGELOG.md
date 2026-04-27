@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.617] - 2026-04-27
+
+### 변경
+- 온보딩 메시지 전용 첫 페이지 추가 및 슬라이드 수 조정
+
 ## [1.0.616] - 2026-04-27
 
 ### 변경
