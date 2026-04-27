@@ -14,6 +14,21 @@
     const httpsCallable = window._httpsCallable;
     const functions = window._functions;
 
+    async function callSeparatedPing(functionName, payload, legacyAction) {
+        if (!httpsCallable || !functions) throw new Error('Functions not initialized');
+        try {
+            const fn = httpsCallable(functions, functionName);
+            return await fn(payload || {});
+        } catch (e) {
+            const code = String((e && (e.code || e.message)) || '');
+            if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
+                const fallback = httpsCallable(functions, 'ping');
+                return await fallback({ action: legacyAction, ...(payload || {}) });
+            }
+            throw e;
+        }
+    }
+
     // URL을 클릭 가능한 링크로 변환 (XSS 안전)
     function linkifyText(text) {
         if (!text) return '';
@@ -108,8 +123,7 @@
 
         try {
             if (httpsCallable && functions) {
-                const fn = httpsCallable(functions, 'ping');
-                const result = await fn({ action: 'getMyNotifications' });
+                const result = await callSeparatedPing('pingGetMyNotifications', {}, 'getMyNotifications');
                 if (result.data && result.data.notifications) {
                     _serverNotifCache = result.data.notifications;
                     _lastServerFetchTime = now;
@@ -166,8 +180,7 @@
 
         try {
             if (httpsCallable && functions) {
-                const fn = httpsCallable(functions, 'ping');
-                const result = await fn({ action: 'getActiveAnnouncements' });
+                const result = await callSeparatedPing('pingGetActiveAnnouncements', {}, 'getActiveAnnouncements');
                 if (result.data && result.data.announcements) {
                     _announcementsCache = result.data.announcements;
                     _lastFetchTime = now;

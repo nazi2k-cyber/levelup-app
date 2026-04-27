@@ -334,8 +334,19 @@
             btn.textContent = t.processing || '삭제 처리 중...';
 
             try {
-                const ping = httpsCallable(functions, 'ping');
-                const result = await ping({ action: 'deleteMyAccount' });
+                let result;
+                try {
+                    const deleteFn = httpsCallable(functions, 'pingDeleteMyAccount');
+                    result = await deleteFn({});
+                } catch (e) {
+                    const code = String((e && (e.code || e.message)) || '');
+                    if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
+                        const ping = httpsCallable(functions, 'ping');
+                        result = await ping({ action: 'deleteMyAccount' });
+                    } else {
+                        throw e;
+                    }
+                }
                 if (result.data && result.data.success) {
                     document.getElementById('section-delete').classList.add('hidden');
                     showStatus('success', t.done || '계정이 성공적으로 삭제되었습니다. 이용해 주셔서 감사합니다.');

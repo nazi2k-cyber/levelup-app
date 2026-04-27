@@ -3483,8 +3483,19 @@ async function deleteMyAccount() {
         }
 
         AppLogger.info('[Auth] 계정 삭제 요청');
-        const ping = httpsCallable(functions, 'ping');
-        const result = await ping({ action: 'deleteMyAccount' });
+        let result;
+        try {
+            const deleteFn = httpsCallable(functions, 'pingDeleteMyAccount');
+            result = await deleteFn({});
+        } catch (e) {
+            const code = String((e && (e.code || e.message)) || '');
+            if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
+                const ping = httpsCallable(functions, 'ping');
+                result = await ping({ action: 'deleteMyAccount' });
+            } else {
+                throw e;
+            }
+        }
 
         if (result.data && result.data.success) {
             AppLogger.info('[Auth] 계정 삭제 완료');

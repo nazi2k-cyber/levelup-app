@@ -93,6 +93,26 @@ const pingCallableOpts = {
     timeoutSeconds: 120
 };
 
+// ping 분리용 도메인별 callable 옵션
+const catalogCallableOpts = {
+    region: "asia-northeast3",
+    cors: true,
+    invoker: "public",
+    timeoutSeconds: 60,
+};
+
+const notificationCallableOpts = {
+    region: "asia-northeast3",
+    cors: true,
+    invoker: "public",
+};
+
+const accountCallableOpts = {
+    region: "asia-northeast3",
+    cors: true,
+    invoker: "public",
+};
+
 // 어드민 대시보드 전용 옵션 — enforceAppCheck 제외.
 // 어드민 웹 패널은 App Check(reCAPTCHA v3)가 배포 환경 변수로 선택적 설정되므로
 // 미설정 시 모든 callable 호출이 "Unauthenticated" 로 실패한다.
@@ -2080,116 +2100,81 @@ async function handleLookupMovie(request) {
     };
 }
 
+const ACTION_HANDLERS = {
+    getTestUsers: handleGetTestUsers,
+    getPushLogs: handleGetPushLogs,
+    sendTestNotification: handleSendTestNotification,
+    sendAnnouncement: handleSendAnnouncement,
+    createAnnouncement: handleCreateAnnouncement,
+    updateAnnouncement: handleUpdateAnnouncement,
+    deleteAnnouncement: handleDeleteAnnouncement,
+    getAnnouncements: handleGetAnnouncements,
+    getActiveAnnouncements: handleGetActiveAnnouncements,
+    getMyNotifications: handleGetMyNotifications,
+    getClientErrorLogs: handleGetClientErrorLogs,
+    adminListUsers: handleAdminListUsers,
+    backupUserData: handleBackupUserData,
+    listBackups: handleListBackups,
+    resetUserData: handleResetUserData,
+    rollbackUserData: handleRollbackUserData,
+    getBackupSchedulerConfig: handleGetBackupSchedulerConfig,
+    updateBackupSchedulerConfig: handleUpdateBackupSchedulerConfig,
+    batchBackupAllUsers: handleBatchBackupAllUsers,
+    listBatchSessions: handleListBatchSessions,
+    batchRollbackAllUsers: handleBatchRollbackAllUsers,
+    resetPassword: handleResetPassword,
+    disableAccount: handleDisableAccount,
+    deleteAccount: handleDeleteAccount,
+    deleteMyAccount: handleDeleteMyAccount,
+    sendUserWarning: handleSendUserWarning,
+    screeningListPosts: handleScreeningListPosts,
+    screeningDeletePost: handleScreeningDeletePost,
+    screeningListReports: handleScreeningListReports,
+    screeningDismissReport: handleScreeningDismissReport,
+    migrateUsernames: handleMigrateUsernames,
+    listAdminOperators: handleListAdminOperators,
+    getUserAnalytics: handleGetUserAnalytics,
+    autoScreenPost: handleAutoScreenPost,
+    batchScreenPosts: handleBatchScreenPosts,
+    batchScreenProfiles: handleBatchScreenProfiles,
+    getScreeningResults: handleGetScreeningResults,
+    reviewScreenedPost: handleReviewScreenedPost,
+    getScreeningConfig: handleGetScreeningConfig,
+    updateScreeningConfig: handleUpdateScreeningConfig,
+    getScreeningStats: handleGetScreeningStats,
+    lookupIsbn: handleLookupIsbn,
+    searchBooks: handleSearchBooks,
+    searchMovies: handleSearchMovies,
+    lookupMovie: handleLookupMovie,
+};
+
+async function runPingAction(request, action) {
+    const handler = ACTION_HANDLERS[action];
+    if (!handler) {
+        throw new HttpsError("invalid-argument", "Unknown action: " + action);
+    }
+    try {
+        return await handler(request);
+    } catch (e) {
+        if (e instanceof HttpsError) throw e;
+        console.error("[ping/" + action + "] Unhandled:", e);
+        throw new HttpsError("internal", action + " failed: " + String(e.message || e).substring(0, 500));
+    }
+}
+
+exports.pingSearchBooks = onCall(catalogCallableOpts, async (request) => runPingAction(request, "searchBooks"));
+exports.pingLookupIsbn = onCall(catalogCallableOpts, async (request) => runPingAction(request, "lookupIsbn"));
+exports.pingSearchMovies = onCall(catalogCallableOpts, async (request) => runPingAction(request, "searchMovies"));
+exports.pingLookupMovie = onCall(catalogCallableOpts, async (request) => runPingAction(request, "lookupMovie"));
+exports.pingGetMyNotifications = onCall(notificationCallableOpts, async (request) => runPingAction(request, "getMyNotifications"));
+exports.pingGetActiveAnnouncements = onCall(notificationCallableOpts, async (request) => runPingAction(request, "getActiveAnnouncements"));
+exports.pingDeleteMyAccount = onCall(accountCallableOpts, async (request) => runPingAction(request, "deleteMyAccount"));
+
 exports.ping = onCall(pingCallableOpts, async (request) => {
-    // ── Action router: handle admin actions via ping ──
+    // ── Action router: compatibility route (legacy clients) ──
     const action = request.data?.action;
     if (action) {
-        try {
-            switch (action) {
-                case "getTestUsers":
-                    return await handleGetTestUsers(request);
-                case "getPushLogs":
-                    return await handleGetPushLogs(request);
-                case "sendTestNotification":
-                    return await handleSendTestNotification(request);
-                case "sendAnnouncement":
-                    return await handleSendAnnouncement(request);
-                // ─── 공지사항 CRUD ───
-                case "createAnnouncement":
-                    return await handleCreateAnnouncement(request);
-                case "updateAnnouncement":
-                    return await handleUpdateAnnouncement(request);
-                case "deleteAnnouncement":
-                    return await handleDeleteAnnouncement(request);
-                case "getAnnouncements":
-                    return await handleGetAnnouncements(request);
-                case "getActiveAnnouncements":
-                    return await handleGetActiveAnnouncements(request);
-                case "getMyNotifications":
-                    return await handleGetMyNotifications(request);
-                case "getClientErrorLogs":
-                    return await handleGetClientErrorLogs(request);
-                case "adminListUsers":
-                    return await handleAdminListUsers(request);
-                case "backupUserData":
-                    return await handleBackupUserData(request);
-                case "listBackups":
-                    return await handleListBackups(request);
-                case "resetUserData":
-                    return await handleResetUserData(request);
-                case "rollbackUserData":
-                    return await handleRollbackUserData(request);
-                case "getBackupSchedulerConfig":
-                    return await handleGetBackupSchedulerConfig(request);
-                case "updateBackupSchedulerConfig":
-                    return await handleUpdateBackupSchedulerConfig(request);
-                case "batchBackupAllUsers":
-                    return await handleBatchBackupAllUsers(request);
-                case "listBatchSessions":
-                    return await handleListBatchSessions(request);
-                case "batchRollbackAllUsers":
-                    return await handleBatchRollbackAllUsers(request);
-                case "resetPassword":
-                    return await handleResetPassword(request);
-                case "disableAccount":
-                    return await handleDisableAccount(request);
-                case "deleteAccount":
-                    return await handleDeleteAccount(request);
-                case "deleteMyAccount":
-                    return await handleDeleteMyAccount(request);
-                case "sendUserWarning":
-                    return await handleSendUserWarning(request);
-                case "screeningListPosts":
-                    return await handleScreeningListPosts(request);
-                case "screeningDeletePost":
-                    return await handleScreeningDeletePost(request);
-                case "screeningListReports":
-                    return await handleScreeningListReports(request);
-                case "screeningDismissReport":
-                    return await handleScreeningDismissReport(request);
-                case "migrateUsernames":
-                    return await handleMigrateUsernames(request);
-                case "listAdminOperators":
-                    return await handleListAdminOperators(request);
-                case "getUserAnalytics":
-                    return await handleGetUserAnalytics(request);
-                // ─── 자동 스크리닝 액션 ───
-                case "autoScreenPost":
-                    return await handleAutoScreenPost(request);
-                case "batchScreenPosts":
-                    return await handleBatchScreenPosts(request);
-                case "batchScreenProfiles":
-                    return await handleBatchScreenProfiles(request);
-                case "getScreeningResults":
-                    return await handleGetScreeningResults(request);
-                case "reviewScreenedPost":
-                    return await handleReviewScreenedPost(request);
-                case "getScreeningConfig":
-                    return await handleGetScreeningConfig(request);
-                case "updateScreeningConfig":
-                    return await handleUpdateScreeningConfig(request);
-                case "getScreeningStats":
-                    return await handleGetScreeningStats(request);
-                // ─── ISBN 도서 검색 ───
-                case "lookupIsbn":
-                    return await handleLookupIsbn(request);
-                // ─── 도서 키워드 검색 ───
-                case "searchBooks":
-                    return await handleSearchBooks(request);
-                // ─── 영화 키워드 검색 ───
-                case "searchMovies":
-                    return await handleSearchMovies(request);
-                // ─── 영화 상세 조회 ───
-                case "lookupMovie":
-                    return await handleLookupMovie(request);
-                default:
-                    throw new HttpsError("invalid-argument", "Unknown action: " + action);
-            }
-        } catch (e) {
-            if (e instanceof HttpsError) throw e;
-            console.error("[ping/" + action + "] Unhandled:", e);
-            throw new HttpsError("internal", action + " failed: " + String(e.message || e).substring(0, 500));
-        }
+        return await runPingAction(request, action);
     }
 
     // ── Default: diagnostic ping ──
