@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.614] - 2026-04-27
+
+### 변경
+- fix: unify formula colors and rename monthly available savings label
+
 ## [1.0.613] - 2026-04-26
 
 ### 변경
