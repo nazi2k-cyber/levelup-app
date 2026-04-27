@@ -5,6 +5,16 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.624] - 2026-04-27
+
+### 변경
+- Fix habit name rendering and guide whitespace in modal
+
+## [1.0.623] - 2026-04-27
+
+### 변경
+- Fix habit project UI ordering, modal reset, and persistence
+
 ## [1.0.622] - 2026-04-27
 
 ### 변경
