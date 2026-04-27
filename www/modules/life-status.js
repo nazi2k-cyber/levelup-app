@@ -6,6 +6,13 @@
     const i18n = window.i18n;
 
     const LIFE_STATUS_STORAGE_KEY = 'life_status_config';
+    const HABIT_PROJECT_STORAGE_KEY = 'habit_project_config';
+    const HABIT_DIFFICULTY_DAYS = { easy: 18, medium: 66, hard: 254 };
+    const HABIT_STAGE_COLORS = {
+        resistance: 'rgba(255, 107, 107, 0.6)',
+        transition: 'rgba(255, 193, 7, 0.6)',
+        automation: 'rgba(0, 217, 255, 0.6)'
+    };
 
     function getLifeStatusConfig() {
         try {
@@ -18,87 +25,305 @@
         localStorage.setItem(LIFE_STATUS_STORAGE_KEY, JSON.stringify(config));
     }
 
+    function getTodayStr() {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function getHabitProjectConfig() {
+        try {
+            const raw = localStorage.getItem(HABIT_PROJECT_STORAGE_KEY);
+            if (!raw) {
+                return {
+                    habitName: '',
+                    difficulty: 'medium',
+                    totalDays: HABIT_DIFFICULTY_DAYS.medium,
+                    startDate: getTodayStr(),
+                    checks: {}
+                };
+            }
+            const parsed = JSON.parse(raw) || {};
+            const difficulty = HABIT_DIFFICULTY_DAYS[parsed.difficulty] ? parsed.difficulty : 'medium';
+            const totalDays = HABIT_DIFFICULTY_DAYS[difficulty];
+            return {
+                habitName: typeof parsed.habitName === 'string' ? parsed.habitName : '',
+                difficulty,
+                totalDays,
+                startDate: (typeof parsed.startDate === 'string' && parsed.startDate) ? parsed.startDate : getTodayStr(),
+                checks: (parsed.checks && typeof parsed.checks === 'object') ? parsed.checks : {}
+            };
+        } catch (e) {
+            return {
+                habitName: '',
+                difficulty: 'medium',
+                totalDays: HABIT_DIFFICULTY_DAYS.medium,
+                startDate: getTodayStr(),
+                checks: {}
+            };
+        }
+    }
+
+    function saveHabitProjectConfig(config) {
+        localStorage.setItem(HABIT_PROJECT_STORAGE_KEY, JSON.stringify(config));
+    }
+
+    function getDifficultyEmoji(difficulty) {
+        if (difficulty === 'easy') return '🌱';
+        if (difficulty === 'hard') return '🚀';
+        return '🔥';
+    }
+
+    function getStageTypeByDay(day) {
+        if (day <= 22) return 'resistance';
+        if (day <= 44) return 'transition';
+        return 'automation';
+    }
+
+    function buildArrowRow(rowDays, reverse, config, elapsedDays, _t) {
+        const items = rowDays.map((day) => {
+            const checked = !!config.checks[String(day)];
+            const stageType = getStageTypeByDay(day);
+            const shouldFill = day <= elapsedDays;
+            const fillColor = shouldFill ? HABIT_STAGE_COLORS[stageType] : 'rgba(255,255,255,0.06)';
+            return `<button class="habit-day-dot ${checked ? 'checked' : ''} ${shouldFill ? 'elapsed' : ''}"
+                        type="button"
+                        data-day="${day}"
+                        title="${(_t.habit_day_title || 'Day {day}').replace('{day}', day)}"
+                        style="background:${fillColor};"
+                    >${checked ? '✔' : day}</button>`;
+        }).join('');
+
+        return `
+            <div class="habit-arrow-row ${reverse ? 'reverse' : ''}">
+                <div class="habit-arrow-body">${items}</div>
+                <div class="habit-arrow-head"></div>
+            </div>
+        `;
+    }
+
+    function renderHabitProject(config, _t) {
+        const start = new Date(config.startDate);
+        const today = new Date();
+        start.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+
+        const elapsedDaysRaw = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+        const elapsedDays = Math.max(0, Math.min(config.totalDays, elapsedDaysRaw));
+        const checkedDays = Object.values(config.checks).filter(Boolean).length;
+        const completionRate = config.totalDays > 0 ? (checkedDays / config.totalDays) * 100 : 0;
+
+        const targetDate = new Date(start);
+        targetDate.setDate(start.getDate() + config.totalDays - 1);
+        const targetDateStr = targetDate.toISOString().split('T')[0];
+
+        const allDays = Array.from({ length: config.totalDays }, (_, i) => i + 1);
+        const row1 = allDays.slice(0, 22);
+        const row2 = allDays.slice(22, 44);
+        const row3 = allDays.slice(44);
+
+        const difficultyButtons = ['easy', 'medium', 'hard'].map((key) => {
+            const active = key === config.difficulty;
+            return `<button type="button" class="habit-difficulty-btn ${active ? 'active' : ''}" data-difficulty="${key}">
+                ${_t[`habit_difficulty_${key}`] || key}
+                <span>${HABIT_DIFFICULTY_DAYS[key]}${_t.ls_unit_days || '일'}</span>
+            </button>`;
+        }).join('');
+
+        return `
+            <div class="habit-project-wrap">
+                <div class="habit-project-title-row">
+                    <div class="habit-project-title">${getDifficultyEmoji(config.difficulty)} ${_t.habit_project_title || '습관형성 프로젝트'}</div>
+                    <button type="button" class="btn-info-sm" id="btn-habit-guide">ℹ️ ${_t.habit_guide_btn || '가이드'}</button>
+                </div>
+
+                <div class="habit-input-row">
+                    <label for="habit-name-input">${_t.habit_name_label || '원하는 습관명'}</label>
+                    <input id="habit-name-input" maxlength="60" value="${window.sanitizeAttr(config.habitName || '')}" placeholder="${_t.habit_name_placeholder || '예: 물 2L 마시기'}" />
+                </div>
+
+                <div class="habit-difficulty-row">
+                    <div class="habit-difficulty-label">${_t.habit_difficulty_label || '난이도'}</div>
+                    <div class="habit-difficulty-buttons">${difficultyButtons}</div>
+                </div>
+
+                <div class="habit-phase-caption">${_t.habit_phase_caption || '저항 단계(1~22일) > 과도기 단계(23~44일) > 자동화 단계(45~66일)'}</div>
+
+                <div class="habit-arrow-z-wrap">
+                    ${buildArrowRow(row1, false, config, elapsedDays, _t)}
+                    ${row2.length ? '<div class="habit-z-connector right-to-left"></div>' : ''}
+                    ${row2.length ? buildArrowRow(row2, true, config, elapsedDays, _t) : ''}
+                    ${row3.length ? '<div class="habit-z-connector left-to-right"></div>' : ''}
+                    ${row3.length ? buildArrowRow(row3, false, config, elapsedDays, _t) : ''}
+                </div>
+
+                <div class="habit-stats-row">
+                    <span>${(_t.habit_target_date || '달성일: {date}').replace('{date}', targetDateStr)}</span>
+                    <span>${(_t.habit_elapsed_days || '경과일: {days}일').replace('{days}', elapsedDays)}</span>
+                    <span>${(_t.habit_completion_rate || '달성률: {rate}%').replace('{rate}', completionRate.toFixed(1))}</span>
+                </div>
+            </div>
+        `;
+    }
+
     function renderLifeStatus() {
         const container = document.getElementById('life-status-content');
         if (!container) return;
 
         const config = getLifeStatusConfig();
+        const habitConfig = getHabitProjectConfig();
 
         const _t = i18n[AppState.currentLang] || {};
+        let lifeStatusHTML = '';
+
         if (!config || !config.birthday) {
-            container.innerHTML = `<div style="text-align:center; padding:20px 0; color:var(--text-sub); font-size:0.85rem; line-height:1.6;">
-            ${_t.ls_empty || '생년월일을 설정하여 나의 인생 현황을 확인하세요.'}
-            <div style="margin-top:6px; font-size:0.75rem;">${_t.ls_privacy_hint || '🔒 저장 시 개인정보 수집에 동의하게 됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.'}</div>
-        </div>`;
-            return;
+            lifeStatusHTML = `<div style="text-align:center; padding:20px 0; color:var(--text-sub); font-size:0.85rem; line-height:1.6;">
+                ${_t.ls_empty || '생년월일을 설정하여 나의 인생 현황을 확인하세요.'}
+                <div style="margin-top:6px; font-size:0.75rem;">${_t.ls_privacy_hint || '🔒 저장 시 개인정보 수집에 동의하게 됩니다. 자세한 내용은 [📋 개인정보] 버튼을 확인하세요.'}</div>
+            </div>`;
+        } else {
+            const now = new Date();
+            const birth = new Date(config.birthday);
+            const expectAge = config.expectAge || 80;
+
+            const daysLived = Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+
+            let currentAge = now.getFullYear() - birth.getFullYear();
+            const mDiff = now.getMonth() - birth.getMonth();
+            if (mDiff < 0 || (mDiff === 0 && now.getDate() < birth.getDate())) currentAge--;
+
+            const expectDate = new Date(birth);
+            expectDate.setFullYear(expectDate.getFullYear() + expectAge);
+
+            const remainMs = Math.max(0, expectDate.getTime() - now.getTime());
+            const remainDays = Math.floor(remainMs / (1000 * 60 * 60 * 24));
+            const remainYears = Math.floor(remainDays / 365);
+            const remainMonths = Math.floor((remainDays % 365) / 30);
+
+            const remainUnit = config.remainUnit || 'hours';
+            let remainDetail = '';
+            if (remainUnit === 'hours') {
+                remainDetail = `${Math.floor(remainMs / (1000 * 60 * 60)).toLocaleString()}${_t.ls_unit_hours || '시간'}`;
+            } else if (remainUnit === 'days') {
+                remainDetail = `${remainDays.toLocaleString()}${_t.ls_unit_days || '일'}`;
+            } else if (remainUnit === 'weeks') {
+                remainDetail = `${Math.floor(remainDays / 7).toLocaleString()}${_t.ls_unit_weeks || '주'}`;
+            }
+
+            const totalDays = Math.floor((expectDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+            const progress = Math.min(100, Math.max(0, (daysLived / totalDays) * 100));
+
+            lifeStatusHTML = `
+                <div class="life-status-item">
+                    <div>
+                        <div class="ls-label">${_t.ls_days_lived || '살아온 날'}</div>
+                        <div class="ls-sub">${(_t.ls_current_age || '현재 나이: {age}세').replace('{age}', currentAge)}</div>
+                    </div>
+                    <div class="ls-value blue">${daysLived.toLocaleString()}${_t.ls_unit_days || '일'}</div>
+                </div>
+                <div class="life-status-item">
+                    <div>
+                        <div class="ls-label">${_t.ls_remaining || '남은 시간'}</div>
+                        <div class="ls-sub">${(_t.ls_based_on_age || '{age}세 기준').replace('{age}', expectAge)}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="ls-value gold">${(_t.ls_years_months || '{years}년 {months}개월').replace('{years}', remainYears).replace('{months}', remainMonths)}</div>
+                        <div style="font-size:0.75rem; color:var(--neon-blue); margin-top:2px;">(${remainDetail})</div>
+                    </div>
+                </div>
+                <div class="life-status-item">
+                    <div style="width:100%;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div class="ls-label">${(_t.ls_progress || '인생 진행률 ({age}세)').replace('{age}', expectAge)}</div>
+                            <div class="ls-value gold" style="font-size:1rem;">${progress.toFixed(1)}%</div>
+                        </div>
+                        <div class="life-status-progress-bar">
+                            <div class="life-status-progress-fill" style="width:${progress.toFixed(1)}%;"></div>
+                        </div>
+                    </div>
+                </div>`;
         }
 
-        const now = new Date();
-        const birth = new Date(config.birthday);
-        const expectAge = config.expectAge || 80;
+        container.innerHTML = `${lifeStatusHTML}${renderHabitProject(habitConfig, _t)}`;
+        bindHabitProjectEvents(container);
+    }
 
-        // 살아온 날
-        const daysLived = Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
-
-        // 현재 나이 (만 나이)
-        let currentAge = now.getFullYear() - birth.getFullYear();
-        const mDiff = now.getMonth() - birth.getMonth();
-        if (mDiff < 0 || (mDiff === 0 && now.getDate() < birth.getDate())) currentAge--;
-
-        // 기대 수명 날짜
-        const expectDate = new Date(birth);
-        expectDate.setFullYear(expectDate.getFullYear() + expectAge);
-
-        // 남은 시간
-        const remainMs = Math.max(0, expectDate.getTime() - now.getTime());
-        const remainDays = Math.floor(remainMs / (1000 * 60 * 60 * 24));
-        const remainYears = Math.floor(remainDays / 365);
-        const remainMonths = Math.floor((remainDays % 365) / 30);
-
-        // 괄호 안 단위 계산
-        const remainUnit = config.remainUnit || 'hours';
-        let remainDetail = '';
-        if (remainUnit === 'hours') {
-            remainDetail = `${Math.floor(remainMs / (1000 * 60 * 60)).toLocaleString()}${_t.ls_unit_hours || '시간'}`;
-        } else if (remainUnit === 'days') {
-            remainDetail = `${remainDays.toLocaleString()}${_t.ls_unit_days || '일'}`;
-        } else if (remainUnit === 'weeks') {
-            remainDetail = `${Math.floor(remainDays / 7).toLocaleString()}${_t.ls_unit_weeks || '주'}`;
+    function bindHabitProjectEvents(container) {
+        const nameInput = container.querySelector('#habit-name-input');
+        if (nameInput) {
+            nameInput.addEventListener('change', () => {
+                const cfg = getHabitProjectConfig();
+                cfg.habitName = (nameInput.value || '').trim();
+                saveHabitProjectConfig(cfg);
+                window.saveUserData?.();
+                renderLifeStatus();
+            });
         }
 
-        // 인생 진행률
-        const totalDays = Math.floor((expectDate.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
-        const progress = Math.min(100, Math.max(0, (daysLived / totalDays) * 100));
+        container.querySelectorAll('.habit-difficulty-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const next = btn.dataset.difficulty;
+                if (!HABIT_DIFFICULTY_DAYS[next]) return;
+                const cfg = getHabitProjectConfig();
+                cfg.difficulty = next;
+                cfg.totalDays = HABIT_DIFFICULTY_DAYS[next];
+                cfg.startDate = getTodayStr();
+                cfg.checks = {};
+                saveHabitProjectConfig(cfg);
+                window.saveUserData?.();
+                renderLifeStatus();
+            });
+        });
 
-        container.innerHTML = `
-        <div class="life-status-item">
-            <div>
-                <div class="ls-label">${_t.ls_days_lived || '살아온 날'}</div>
-                <div class="ls-sub">${(_t.ls_current_age || '현재 나이: {age}세').replace('{age}', currentAge)}</div>
-            </div>
-            <div class="ls-value blue">${daysLived.toLocaleString()}${_t.ls_unit_days || '일'}</div>
-        </div>
-        <div class="life-status-item">
-            <div>
-                <div class="ls-label">${_t.ls_remaining || '남은 시간'}</div>
-                <div class="ls-sub">${(_t.ls_based_on_age || '{age}세 기준').replace('{age}', expectAge)}</div>
-            </div>
-            <div style="text-align:right;">
-                <div class="ls-value gold">${(_t.ls_years_months || '{years}년 {months}개월').replace('{years}', remainYears).replace('{months}', remainMonths)}</div>
-                <div style="font-size:0.75rem; color:var(--neon-blue); margin-top:2px;">(${remainDetail})</div>
-            </div>
-        </div>
-        <div class="life-status-item">
-            <div style="width:100%;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="ls-label">${(_t.ls_progress || '인생 진행률 ({age}세)').replace('{age}', expectAge)}</div>
-                    <div class="ls-value gold" style="font-size:1rem;">${progress.toFixed(1)}%</div>
+        container.querySelectorAll('.habit-day-dot').forEach((dot) => {
+            dot.addEventListener('click', () => {
+                const day = dot.dataset.day;
+                if (!day) return;
+                const cfg = getHabitProjectConfig();
+                cfg.checks[day] = !cfg.checks[day];
+                saveHabitProjectConfig(cfg);
+                window.saveUserData?.();
+                renderLifeStatus();
+            });
+        });
+
+        const guideBtn = container.querySelector('#btn-habit-guide');
+        if (guideBtn) {
+            guideBtn.addEventListener('click', openHabitGuideModal);
+        }
+    }
+
+    function openHabitGuideModal() {
+        const _t = i18n[AppState.currentLang] || {};
+        const overlay = document.createElement('div');
+        overlay.className = 'report-modal-overlay active';
+        overlay.id = 'habit-guide-modal-overlay';
+
+        overlay.innerHTML = `
+            <div class="report-modal-content habit-guide-modal">
+                <div class="habit-guide-title">${_t.habit_guide_title || '습관 형성 가이드'}</div>
+                <div class="habit-guide-body">
+                    ${(_t.habit_guide_text || '').replace(/\n/g, '<br>')}
+                    <br><br>
+                    <strong>${_t.habit_persist_note || '※ 달성 체크 기록은 로그아웃 후에도 동기화되어 유지됩니다.'}</strong>
                 </div>
-                <div class="life-status-progress-bar">
-                    <div class="life-status-progress-fill" style="width:${progress.toFixed(1)}%;"></div>
+                <div style="display:flex; justify-content:flex-end; margin-top:12px;">
+                    <button onclick="window.closeHabitGuideModal()" class="btn-info-sm">${_t.ls_btn_cancel || '닫기'}</button>
                 </div>
             </div>
-        </div>`;
+        `;
+
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeHabitGuideModal();
+        });
+    }
+
+    function closeHabitGuideModal() {
+        const overlay = document.getElementById('habit-guide-modal-overlay');
+        if (overlay) overlay.remove();
     }
 
     function openLifeStatusSettings() {
@@ -114,7 +339,6 @@
         const _t = i18n[AppState.currentLang] || {};
         const ageSuffix = _t.ls_unit_years_suffix ?? '세';
 
-        // 저장된 생년월일을 연/월/일로 분리
         let savedYear = '', savedMonth = '', savedDay = '';
         if (savedBirthday) {
             const parts = savedBirthday.split('-');
@@ -135,19 +359,16 @@
             return new Date(parseInt(year), parseInt(month), 0).getDate();
         }
 
-        // 연도 선택 옵션 (현재 연도 → 1920)
         const yearOptArr = [`<option value="">${_t.ls_birthday_year_placeholder || '연도'}</option>`];
         for (let y = currentYear; y >= 1920; y--) {
             yearOptArr.push(`<option value="${y}" ${y.toString() === savedYear ? 'selected' : ''}>${y}${yearSuffix}</option>`);
         }
 
-        // 월 선택 옵션 (1 ~ 12)
         const monthOptArr = [`<option value="">${_t.ls_birthday_month_placeholder || '월'}</option>`];
         for (let m = 1; m <= 12; m++) {
             monthOptArr.push(`<option value="${m}" ${m.toString() === savedMonth ? 'selected' : ''}>${m}${monthSuffix}</option>`);
         }
 
-        // 일 선택 옵션 (저장된 연/월 기준으로 초기화)
         const initMaxDays = getDaysInMonth(savedYear, savedMonth);
         const dayOptArr = [`<option value="">${_t.ls_birthday_day_placeholder || '일'}</option>`];
         for (let d = 1; d <= initMaxDays; d++) {
@@ -212,7 +433,6 @@
         document.body.appendChild(overlay);
         requestAnimationFrame(() => overlay.classList.add('active'));
 
-        // 연도/월 변경 시 일(day) 옵션 동적 업데이트
         const yearSelect = overlay.querySelector('#ls-input-birth-year');
         const monthSelect = overlay.querySelector('#ls-input-birth-month');
         const daySelect = overlay.querySelector('#ls-input-birth-day');
@@ -237,7 +457,6 @@
         if (yearSelect) yearSelect.addEventListener('change', updateDayOptions);
         if (monthSelect) monthSelect.addEventListener('change', updateDayOptions);
 
-        // 체크박스 토글로 동의/철회 직접 처리
         const consentCheckbox = overlay.querySelector('#ls-consent-checkbox');
         if (consentCheckbox) {
             consentCheckbox.addEventListener('change', (e) => {
@@ -257,7 +476,6 @@
             });
         }
 
-        // 동의서 텍스트 링크 클릭 시 HTML 페이지 열기
         const consentLink = overlay.querySelector('#ls-consent-link');
         if (consentLink) {
             consentLink.addEventListener('click', () => {
@@ -280,14 +498,12 @@
 
         const birthday = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-        // 미래 날짜 검증
         const todayStr = new Date().toISOString().split('T')[0];
         if (birthday > todayStr) {
             alert(i18n[AppState.currentLang]?.birthday_future_error || '생년월일은 오늘 날짜보다 이전이어야 합니다.');
             return;
         }
 
-        // 개인정보 동의 여부 확인
         const hasConsent = localStorage.getItem('life_status_privacy_consent');
         if (!hasConsent) {
             alert(i18n[AppState.currentLang]?.privacy_consent_required || '개인정보 수집 및 이용에 동의해야 저장할 수 있습니다.');
@@ -336,7 +552,6 @@
         }
     }
 
-    // DOMContentLoaded 안전 처리
     function initLifeStatus() {
         const settingsBtn = document.getElementById('btn-life-status-settings');
         if (settingsBtn) settingsBtn.addEventListener('click', openLifeStatusSettings);
@@ -349,10 +564,10 @@
         initLifeStatus();
     }
 
-    // Public API
     window.renderLifeStatus = renderLifeStatus;
     window.openLifeStatusSettings = openLifeStatusSettings;
     window.saveLifeStatusFromModal = saveLifeStatusFromModal;
     window.resetLifeStatus = resetLifeStatus;
     window.closeLifeStatusModal = closeLifeStatusModal;
+    window.closeHabitGuideModal = closeHabitGuideModal;
 })();

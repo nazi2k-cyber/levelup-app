@@ -1203,6 +1203,7 @@ async function _doSaveUserData() {
             ddaysStr: JSON.stringify(AppState.ddays || []),
             ddayCaption: AppState.ddayCaption || '',
             lifeStatusStr: localStorage.getItem('life_status_config') || '',
+            habitProjectStr: localStorage.getItem('habit_project_config') || '',
             libraryStr: JSON.stringify(AppState.library || { books: [] }),
             moviesStr: JSON.stringify(AppState.movies || { items: [], rewardedIds: [] }),
             runningCalcHistoryStr: localStorage.getItem('running_calc_history') || '[]',
@@ -1220,7 +1221,7 @@ async function _doSaveUserData() {
             questStr: 10000, diaryStr: 500000, reelsStr: 500000,
             dungeonStr: 50000, diyQuestsStr: 50000, questHistoryStr: 200000,
             titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
-            ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000,
+            ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000, habitProjectStr: 20000,
             libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000,
             big5Str: 500, futureNetworthStr: 1000, schedulePresetsStr: 10000, plannerRewardsStr: 5000
         };
@@ -1517,6 +1518,9 @@ async function loadUserDataFromDB(user) {
             // Life Status 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.lifeStatusStr) {
                 localStorage.setItem('life_status_config', data.lifeStatusStr);
+            }
+            if (data.habitProjectStr) {
+                localStorage.setItem('habit_project_config', data.habitProjectStr);
             }
             // 미래 순자산 복원
             if (data.futureNetworthStr) {
