@@ -76,6 +76,14 @@
         return '🔥';
     }
 
+    function formatGuideText(rawText) {
+        return String(rawText || '')
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .join('<br>');
+    }
+
     function getHabitStageRanges(totalDays) {
         const safeTotalDays = Math.max(1, Number(totalDays) || 1);
         const stage1End = Math.max(1, Math.round(safeTotalDays / 3));
@@ -151,7 +159,7 @@
                 <div class="habit-project-title-row">
                     <div class="habit-project-title">${getDifficultyEmoji(config.difficulty)} ${_t.habit_project_title || '습관형성 프로젝트'}</div>
                     <div class="habit-project-actions">
-                        <button type="button" class="btn-info-sm" id="btn-habit-settings">⚙️ ${_t.settings_btn || '설정'}</button>
+                        <button type="button" class="btn-info-sm" id="btn-habit-settings">${_t.settings_btn || '설정'}</button>
                         <button type="button" class="btn-info-sm" id="btn-habit-guide">ℹ️ ${_t.habit_guide_btn || '가이드'}</button>
                     </div>
                 </div>
@@ -302,15 +310,15 @@
         overlay.className = 'report-modal-overlay active';
         overlay.id = 'habit-guide-modal-overlay';
 
-        const guideText = (_t.habit_guide_text || '').trim();
+        const guideText = formatGuideText(_t.habit_guide_text || '');
         const persistNote = (_t.habit_persist_note || '※ 달성 체크 기록은 로그아웃 후에도 동기화되어 유지됩니다.').trim();
 
         overlay.innerHTML = `
             <div class="report-modal-content habit-guide-modal">
                 <div class="habit-guide-title">${_t.habit_guide_title || '습관 형성 가이드'}</div>
                 <div class="habit-guide-body">
-                    ${guideText.replace(/\n/g, '<br>')}
-                    <br><br>
+                    ${guideText}
+                    ${guideText ? '<br><br>' : ''}
                     <strong>${persistNote}</strong>
                 </div>
                 <div style="display:flex; justify-content:flex-end; margin-top:12px;">
@@ -355,6 +363,7 @@
                     <select id="habit-settings-difficulty">${difficultyOptions}</select>
                 </div>
                 <div class="report-modal-actions">
+                    <button type="button" class="report-modal-btn report-modal-reset" onclick="window.resetHabitProjectSettingsFromModal()">${_t.ls_btn_reset || '초기화'}</button>
                     <button type="button" class="report-modal-btn report-modal-cancel" onclick="window.closeHabitProjectSettingsModal()">${_t.ls_btn_cancel || '취소'}</button>
                     <button type="button" class="report-modal-btn report-modal-submit" onclick="window.saveHabitProjectSettingsFromModal()">${_t.ls_btn_save || '저장'}</button>
                 </div>
@@ -389,6 +398,23 @@
             cfg.checks = {};
         }
         saveHabitProjectConfig(cfg);
+        window.saveUserData?.();
+        closeHabitProjectSettingsModal();
+        renderHabitProjectSection();
+    }
+
+    function resetHabitProjectSettingsFromModal() {
+        const _t = i18n[AppState.currentLang] || {};
+        const confirmed = confirm(_t.habit_reset_confirm || '습관형성 프로젝트를 초기화하시겠습니까?\n습관명/난이도/체크 기록이 모두 초기화됩니다.');
+        if (!confirmed) return;
+        const resetConfig = {
+            habitName: '',
+            difficulty: 'medium',
+            totalDays: HABIT_DIFFICULTY_DAYS.medium,
+            startDate: getTodayStr(),
+            checks: {}
+        };
+        saveHabitProjectConfig(resetConfig);
         window.saveUserData?.();
         closeHabitProjectSettingsModal();
         renderHabitProjectSection();
@@ -640,4 +666,5 @@
     window.closeHabitGuideModal = closeHabitGuideModal;
     window.closeHabitProjectSettingsModal = closeHabitProjectSettingsModal;
     window.saveHabitProjectSettingsFromModal = saveHabitProjectSettingsFromModal;
+    window.resetHabitProjectSettingsFromModal = resetHabitProjectSettingsFromModal;
 })();

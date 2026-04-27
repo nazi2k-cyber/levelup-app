@@ -845,6 +845,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .habit-day-dot {
     border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; font-size: 0.6rem; min-height: 22px;
     color: var(--text-main); background: rgba(255,255,255,0.04); cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center; padding: 0;
 }
 .habit-day-dot.checked { border-color: var(--neon-blue); color: #fff; font-weight: 700; }
 .habit-day-dot.elapsed { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
@@ -1553,6 +1554,11 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .report-modal-submit {
     background: #ff5252; color: #fff;
+}
+.report-modal-reset {
+    background: transparent;
+    color: var(--neon-red);
+    border: 1px solid var(--neon-red);
 }
 
 /* 신고 모달 라이트 테마 */
