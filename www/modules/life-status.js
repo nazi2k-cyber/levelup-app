@@ -97,10 +97,18 @@
         return 'automation';
     }
 
-    function buildArrowRow(rowDays, reverse, config, elapsedDays, _t) {
+    function getHabitElapsedDays(config) {
+        const start = new Date(config.startDate);
+        const today = new Date();
+        start.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        const elapsedDaysRaw = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+        return Math.max(0, Math.min(config.totalDays, elapsedDaysRaw));
+    }
+
+    function buildArrowRow(rowDays, reverse, stageType, stageLabel, config, elapsedDays, _t) {
         const items = rowDays.map((day) => {
             const checked = !!config.checks[String(day)];
-            const stageType = getStageTypeByDay(day, config.totalDays);
             const shouldFill = day <= elapsedDays;
             const fillColor = shouldFill ? HABIT_STAGE_COLORS[stageType] : 'rgba(255,255,255,0.06)';
             return `<button class="habit-day-dot ${checked ? 'checked' : ''} ${shouldFill ? 'elapsed' : ''}"
@@ -112,21 +120,19 @@
         }).join('');
 
         return `
-            <div class="habit-arrow-row ${reverse ? 'reverse' : ''}">
+            <div class="habit-arrow-row-wrap ${stageType}">
+                <div class="habit-arrow-title">${stageLabel}</div>
+                <div class="habit-arrow-row ${reverse ? 'reverse' : ''} ${stageType}">
                 <div class="habit-arrow-body">${items}</div>
                 <div class="habit-arrow-head"></div>
+                </div>
             </div>
         `;
     }
 
     function renderHabitProject(config, _t) {
         const start = new Date(config.startDate);
-        const today = new Date();
-        start.setHours(0, 0, 0, 0);
-        today.setHours(0, 0, 0, 0);
-
-        const elapsedDaysRaw = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
-        const elapsedDays = Math.max(0, Math.min(config.totalDays, elapsedDaysRaw));
+        const elapsedDays = getHabitElapsedDays(config);
         const checkedDays = Object.values(config.checks).filter(Boolean).length;
         const completionRate = config.totalDays > 0 ? (checkedDays / config.totalDays) * 100 : 0;
 
@@ -140,47 +146,35 @@
         const row2 = allDays.slice(ranges.stage1End, ranges.stage2End);
         const row3 = allDays.slice(ranges.stage2End);
 
-        const difficultyButtons = ['easy', 'medium', 'hard'].map((key) => {
-            const active = key === config.difficulty;
-            return `<button type="button" class="habit-difficulty-btn ${active ? 'active' : ''}" data-difficulty="${key}">
-                ${_t[`habit_difficulty_${key}`] || key}
-                <span>${HABIT_DIFFICULTY_DAYS[key]}${_t.ls_unit_days || '일'}</span>
-            </button>`;
-        }).join('');
+        const stage1Label = (_t.habit_stage1_title || '저항 단계')
+            + ` (${ranges.stage1Start}~${ranges.stage1End}${_t.ls_unit_days || '일'})`;
+        const stage2Label = (_t.habit_stage2_title || '과도기 단계')
+            + ` (${ranges.stage2Start}~${ranges.stage2End}${_t.ls_unit_days || '일'})`;
+        const stage3Label = (_t.habit_stage3_title || '자동화 단계')
+            + ` (${ranges.stage3Start}~${ranges.stage3End}${_t.ls_unit_days || '일'})`;
 
         return `
             <div class="habit-project-wrap">
                 <div class="habit-project-title-row">
                     <div class="habit-project-title">${getDifficultyEmoji(config.difficulty)} ${_t.habit_project_title || '습관형성 프로젝트'}</div>
-                    <button type="button" class="btn-info-sm" id="btn-habit-guide">ℹ️ ${_t.habit_guide_btn || '가이드'}</button>
+                    <div class="habit-project-actions">
+                        <button type="button" class="btn-info-sm" id="btn-habit-settings">⚙️ ${_t.settings_btn || '설정'}</button>
+                        <button type="button" class="btn-info-sm" id="btn-habit-guide">ℹ️ ${_t.habit_guide_btn || '가이드'}</button>
+                    </div>
                 </div>
 
-                <div class="habit-input-row">
-                    <label for="habit-name-input">${_t.habit_name_label || '원하는 습관명'}</label>
-                    <input id="habit-name-input" maxlength="60" value="${window.sanitizeAttr(config.habitName || '')}" placeholder="${_t.habit_name_placeholder || '예: 물 2L 마시기'}" />
-                </div>
-
-                <div class="habit-difficulty-row">
-                    <div class="habit-difficulty-label">${_t.habit_difficulty_label || '난이도'}</div>
-                    <div class="habit-difficulty-buttons">${difficultyButtons}</div>
-                </div>
-
-                <div class="habit-phase-caption">
-                    ${(_t.habit_phase_caption || '저항 단계({r_start}~{r_end}일) > 과도기 단계({t_start}~{t_end}일) > 자동화 단계({a_start}~{a_end}일)')
-                        .replace('{r_start}', ranges.stage1Start)
-                        .replace('{r_end}', ranges.stage1End)
-                        .replace('{t_start}', ranges.stage2Start)
-                        .replace('{t_end}', ranges.stage2End)
-                        .replace('{a_start}', ranges.stage3Start)
-                        .replace('{a_end}', ranges.stage3End)}
+                <div class="habit-info-row">
+                    <label>${_t.habit_name_label || '원하는 습관명'}</label>
+                    <div class="habit-name-view">${window.escapeHtml?.(config.habitName || '') || ''}</div>
+                    <div class="habit-start-date">${(_t.habit_start_date || '시작일: {date}').replace('{date}', config.startDate)}</div>
                 </div>
 
                 <div class="habit-arrow-z-wrap">
-                    ${buildArrowRow(row1, false, config, elapsedDays, _t)}
+                    ${buildArrowRow(row1, false, 'resistance', stage1Label, config, elapsedDays, _t)}
                     ${row2.length ? '<div class="habit-z-connector right-to-left"></div>' : ''}
-                    ${row2.length ? buildArrowRow(row2, true, config, elapsedDays, _t) : ''}
+                    ${row2.length ? buildArrowRow(row2, true, 'transition', stage2Label, config, elapsedDays, _t) : ''}
                     ${row3.length ? '<div class="habit-z-connector left-to-right"></div>' : ''}
-                    ${row3.length ? buildArrowRow(row3, false, config, elapsedDays, _t) : ''}
+                    ${row3.length ? buildArrowRow(row3, false, 'automation', stage3Label, config, elapsedDays, _t) : ''}
                 </div>
 
                 <div class="habit-stats-row">
@@ -270,52 +264,44 @@
                 </div>`;
         }
 
-        container.innerHTML = `${lifeStatusHTML}${renderHabitProject(habitConfig, _t)}`;
+        container.innerHTML = lifeStatusHTML;
+        renderHabitProjectSection();
+    }
+
+    function renderHabitProjectSection() {
+        const container = document.getElementById('habit-project-content');
+        if (!container) return;
+        const _t = i18n[AppState.currentLang] || {};
+        const habitConfig = getHabitProjectConfig();
+        container.innerHTML = renderHabitProject(habitConfig, _t);
         bindHabitProjectEvents(container);
     }
 
     function bindHabitProjectEvents(container) {
-        const nameInput = container.querySelector('#habit-name-input');
-        if (nameInput) {
-            nameInput.addEventListener('change', () => {
-                const cfg = getHabitProjectConfig();
-                cfg.habitName = (nameInput.value || '').trim();
-                saveHabitProjectConfig(cfg);
-                window.saveUserData?.();
-                renderLifeStatus();
-            });
-        }
-
-        container.querySelectorAll('.habit-difficulty-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const next = btn.dataset.difficulty;
-                if (!HABIT_DIFFICULTY_DAYS[next]) return;
-                const cfg = getHabitProjectConfig();
-                cfg.difficulty = next;
-                cfg.totalDays = HABIT_DIFFICULTY_DAYS[next];
-                cfg.startDate = getTodayStr();
-                cfg.checks = {};
-                saveHabitProjectConfig(cfg);
-                window.saveUserData?.();
-                renderLifeStatus();
-            });
-        });
-
         container.querySelectorAll('.habit-day-dot').forEach((dot) => {
             dot.addEventListener('click', () => {
-                const day = dot.dataset.day;
+                const day = Number(dot.dataset.day);
                 if (!day) return;
                 const cfg = getHabitProjectConfig();
-                cfg.checks[day] = !cfg.checks[day];
+                const elapsedDays = getHabitElapsedDays(cfg);
+                if (day > elapsedDays) {
+                    alert(i18n[AppState.currentLang]?.habit_future_check_error || '미래 날짜는 체크할 수 없습니다.');
+                    return;
+                }
+                cfg.checks[String(day)] = !cfg.checks[String(day)];
                 saveHabitProjectConfig(cfg);
                 window.saveUserData?.();
-                renderLifeStatus();
+                renderHabitProjectSection();
             });
         });
 
         const guideBtn = container.querySelector('#btn-habit-guide');
         if (guideBtn) {
             guideBtn.addEventListener('click', openHabitGuideModal);
+        }
+        const settingsBtn = container.querySelector('#btn-habit-settings');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', openHabitProjectSettingsModal);
         }
     }
 
@@ -351,6 +337,70 @@
     function closeHabitGuideModal() {
         const overlay = document.getElementById('habit-guide-modal-overlay');
         if (overlay) overlay.remove();
+    }
+
+    function openHabitProjectSettingsModal() {
+        const _t = i18n[AppState.currentLang] || {};
+        const cfg = getHabitProjectConfig();
+        const overlay = document.createElement('div');
+        overlay.className = 'report-modal-overlay active';
+        overlay.id = 'habit-settings-modal-overlay';
+
+        const difficultyOptions = ['easy', 'medium', 'hard'].map((key) =>
+            `<option value="${key}" ${cfg.difficulty === key ? 'selected' : ''}>
+                ${_t[`habit_difficulty_${key}`] || key} (${HABIT_DIFFICULTY_DAYS[key]}${_t.ls_unit_days || '일'})
+            </option>`
+        ).join('');
+
+        overlay.innerHTML = `
+            <div class="report-modal-content habit-settings-modal">
+                <div class="habit-guide-title">${_t.habit_settings_title || '습관형성 프로젝트 설정'}</div>
+                <div class="habit-settings-field">
+                    <label for="habit-settings-name">${_t.habit_name_label || '원하는 습관명'}</label>
+                    <input id="habit-settings-name" maxlength="60" value="${window.sanitizeAttr(cfg.habitName || '')}" placeholder="${_t.habit_name_placeholder || '예: 물 2L 마시기'}" />
+                </div>
+                <div class="habit-settings-field">
+                    <label for="habit-settings-difficulty">${_t.habit_difficulty_label || '난이도'}</label>
+                    <select id="habit-settings-difficulty">${difficultyOptions}</select>
+                </div>
+                <div class="report-modal-actions">
+                    <button type="button" class="report-modal-btn report-modal-cancel" onclick="window.closeHabitProjectSettingsModal()">${_t.ls_btn_cancel || '취소'}</button>
+                    <button type="button" class="report-modal-btn report-modal-submit" onclick="window.saveHabitProjectSettingsFromModal()">${_t.ls_btn_save || '저장'}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeHabitProjectSettingsModal();
+        });
+    }
+
+    function closeHabitProjectSettingsModal() {
+        document.getElementById('habit-settings-modal-overlay')?.remove();
+    }
+
+    function saveHabitProjectSettingsFromModal() {
+        const _t = i18n[AppState.currentLang] || {};
+        const name = (document.getElementById('habit-settings-name')?.value || '').trim();
+        const difficulty = document.getElementById('habit-settings-difficulty')?.value || 'medium';
+        if (!name) {
+            alert(_t.habit_name_required || '습관명을 입력해주세요.');
+            return;
+        }
+        if (!HABIT_DIFFICULTY_DAYS[difficulty]) return;
+        const cfg = getHabitProjectConfig();
+        const difficultyChanged = cfg.difficulty !== difficulty;
+        cfg.habitName = name;
+        cfg.difficulty = difficulty;
+        cfg.totalDays = HABIT_DIFFICULTY_DAYS[difficulty];
+        if (difficultyChanged) {
+            cfg.startDate = getTodayStr();
+            cfg.checks = {};
+        }
+        saveHabitProjectConfig(cfg);
+        window.saveUserData?.();
+        closeHabitProjectSettingsModal();
+        renderHabitProjectSection();
     }
 
     function openLifeStatusSettings() {
@@ -597,4 +647,6 @@
     window.resetLifeStatus = resetLifeStatus;
     window.closeLifeStatusModal = closeLifeStatusModal;
     window.closeHabitGuideModal = closeHabitGuideModal;
+    window.closeHabitProjectSettingsModal = closeHabitProjectSettingsModal;
+    window.saveHabitProjectSettingsFromModal = saveHabitProjectSettingsFromModal;
 })();
