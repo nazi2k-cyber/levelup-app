@@ -5,11 +5,6 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
-## [1.0.628] - 2026-04-27
-
-### 변경
-- 프로필 공유 UX 요구사항 반영 및 스토어 폴백 링크 적용
-
 ## [1.0.627] - 2026-04-27
 
 ### 변경
