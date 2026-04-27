@@ -130,7 +130,7 @@ async function bridgeTogglePushNotifications(...args) {
 // --- 앱 초기 로드 ---
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'habit-project', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'habit-project', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -265,7 +265,7 @@ const STATUS_CARD_LABELS = {
     'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' },
     'big5': { name_key: 'card_big5', name: 'BIG FIVE', icon: '🧠' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'habit-project', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'habit-project', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -1273,7 +1273,7 @@ async function _doSaveUserData() {
                     'dungeonStr','diyQuestsStr','questHistoryStr','titleHistoryStr',
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
-                    'libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
+                    'habitProjectStr','libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
                     'big5Str','futureNetworthStr','schedulePresetsStr'
                 ]);
                 // 기존 문서의 허용되지 않은 필드
@@ -1324,7 +1324,7 @@ async function _doSaveUserData() {
                     if (bk in _merged && typeof _merged[bk] !== 'boolean') _issues.push(`${bk}(type=${typeof _merged[bk]})`);
                 });
                 // 문자열 크기 검증
-                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10,futureNetworthStr:1000,schedulePresetsStr:10000};
+                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,habitProjectStr:20000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10,futureNetworthStr:1000,schedulePresetsStr:10000};
                 for (const [sk, sl] of Object.entries(_strChecks)) {
                     if (sk in _merged && (typeof _merged[sk] !== 'string' || _merged[sk].length > sl)) _issues.push(`${sk}(type=${typeof _merged[sk]},len=${_merged[sk]?.length},limit=${sl})`);
                 }
