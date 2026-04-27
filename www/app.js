@@ -6411,6 +6411,7 @@ async function openHealthConnectEntryPoint() {
         window.open(healthConnectUrl, '_blank');
     }
 }
+window.openHealthConnectEntryPoint = openHealthConnectEntryPoint;
 
 // --- 걸음수 상태창 UI 업데이트 ---
 function updateStepCountUI() {
