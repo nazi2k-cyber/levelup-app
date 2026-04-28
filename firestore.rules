@@ -132,7 +132,8 @@ service cloud.firestore {
         && (!('ormCalcHistoryStr' in d) || d.ormCalcHistoryStr == null || d.ormCalcHistoryStr is string)
         && (!('futureNetworthStr' in d) || d.futureNetworthStr == null || d.futureNetworthStr is string)
         && (!('schedulePresetsStr' in d) || d.schedulePresetsStr == null || d.schedulePresetsStr is string)
-        && (!('plannerRewardsStr' in d) || d.plannerRewardsStr == null || d.plannerRewardsStr is string);
+        && (!('plannerRewardsStr' in d) || d.plannerRewardsStr == null || d.plannerRewardsStr is string)
+        && (!('questSettingsStr' in d) || d.questSettingsStr == null || d.questSettingsStr is string);
     }
 
     // ──────────────────────────────────────────────
