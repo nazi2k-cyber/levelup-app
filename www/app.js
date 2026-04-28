@@ -26,7 +26,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.639';
+const APP_VERSION = '1.0.638';
 window.__APP_VERSION__ = APP_VERSION;
 if (window.AppLogger) {
     AppLogger.info('[AppStart] 빌드 버전: v' + APP_VERSION);
@@ -7431,3 +7431,6 @@ import('./modules/rating-manager.js').catch(e => console.error('[RatingManager] 
 
 // --- Planner Excel 모듈 동적 로드 ---
 import('./modules/planner-excel.js').catch(e => console.error('[PlannerExcel] 모듈 로드 실패:', e));
+
+// --- Planner Google Calendar 연동 모듈 동적 로드 ---
+import('./modules/planner-gcal.js').catch(e => console.error('[PlannerGCal] 모듈 로드 실패:', e));
