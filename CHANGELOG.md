@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.643] - 2026-04-28
+
+### 변경
+- feat: 플래너 내보내기/가져오기 클릭 시 보상형 광고 추가 (1일 1회)
+
 ## [1.0.642] - 2026-04-28
 
 ### 변경
