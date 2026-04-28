@@ -817,6 +817,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color);
     background: var(--panel-bg); color: var(--text-main); font-size: 0.85rem; min-height: 18px;
 }
+.habit-dates-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .habit-start-date { font-size: 0.7rem; color: var(--text-sub); }
 
 .habit-arrow-z-wrap { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
@@ -858,9 +859,10 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .habit-z-connector.left-to-right { margin-left: 4px; margin-right: auto; }
 
 .habit-stats-row {
-    margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px 12px; font-size: 0.72rem; color: var(--text-sub);
+    margin-top: 2px; display: flex; justify-content: flex-end; gap: 8px 12px; font-size: 0.72rem; color: var(--text-sub);
 }
 .habit-stat-item { font-weight: 700; }
+.habit-dates-row .habit-stat-target { text-align: right; }
 .habit-stat-target { color: var(--neon-blue); }
 .habit-stat-elapsed { color: var(--neon-gold); }
 .habit-stat-rate { color: #63ffb0; }

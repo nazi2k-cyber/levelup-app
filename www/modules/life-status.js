@@ -180,7 +180,14 @@
                 <div class="habit-info-row">
                     <label>${_t.habit_name_label || '원하는 습관명'}</label>
                     <div class="habit-name-view">${escapeHabitNameText(config.habitName)}</div>
-                    <div class="habit-start-date">${(_t.habit_start_date || '시작일: {date}').replace('{date}', config.startDate)}</div>
+                    <div class="habit-dates-row">
+                        <div class="habit-start-date">${(_t.habit_start_date || '시작일: {date}').replace('{date}', config.startDate)}</div>
+                        <div class="habit-stat-item habit-stat-target">${(_t.habit_target_date || '달성일: {date}').replace('{date}', targetDateStr)}</div>
+                    </div>
+                    <div class="habit-stats-row">
+                        <span class="habit-stat-item habit-stat-elapsed">${(_t.habit_elapsed_days || '경과일: {days}일').replace('{days}', elapsedDays)}</span>
+                        <span class="habit-stat-item habit-stat-rate">${(_t.habit_completion_rate || '달성률: {rate}%').replace('{rate}', completionRate.toFixed(1))}</span>
+                    </div>
                 </div>
 
                 <div class="habit-arrow-z-wrap">
@@ -191,11 +198,6 @@
                     ${row3.length ? buildArrowRow(row3, false, 'automation', stage3Label, config, elapsedDays, _t) : ''}
                 </div>
 
-                <div class="habit-stats-row">
-                    <span class="habit-stat-item habit-stat-target">${(_t.habit_target_date || '달성일: {date}').replace('{date}', targetDateStr)}</span>
-                    <span class="habit-stat-item habit-stat-elapsed">${(_t.habit_elapsed_days || '경과일: {days}일').replace('{days}', elapsedDays)}</span>
-                    <span class="habit-stat-item habit-stat-rate">${(_t.habit_completion_rate || '달성률: {rate}%').replace('{rate}', completionRate.toFixed(1))}</span>
-                </div>
             </div>
         `;
     }
