@@ -252,9 +252,11 @@ export function createAuthProfileModule(deps) {
         const user = AppState.social.users.find((x) => x.id === userId);
         if (!userId || !user) return;
 
-        const origin = (typeof window !== 'undefined' && window.location && /^https?:$/i.test(window.location.protocol))
-            ? window.location.origin
-            : 'https://bravecat.studio';
+        const origin = isNativePlatform
+            ? 'https://bravecat.studio'
+            : ((typeof window !== 'undefined' && window.location && /^https?:$/i.test(window.location.protocol))
+                ? window.location.origin
+                : 'https://bravecat.studio');
         const profileUrl = `${origin}/?profile=${encodeURIComponent(userId)}`;
 
         if (navigator.share) {
