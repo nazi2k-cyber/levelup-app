@@ -174,6 +174,24 @@
     var _isbnCandidateVotes = {};  // { isbn: { count: N, confidence: totalConf, firstSeen: ts } }
     var _isbnVoteThreshold = 2;   // Require 2+ sightings to accept a candidate
 
+    async function callSeparatedPing(functionName, payload, legacyAction) {
+        const callable = window._httpsCallable;
+        const functions = window._functions;
+        if (!callable || !functions) throw new Error('Functions not initialized');
+
+        try {
+            const fn = callable(functions, functionName);
+            return await fn(payload || {});
+        } catch (e) {
+            const code = String((e && (e.code || e.message)) || '');
+            if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
+                const fallback = callable(functions, 'ping');
+                return await fallback({ action: legacyAction, ...(payload || {}) });
+            }
+            throw e;
+        }
+    }
+
     function voteIsbnCandidate(isbn, confidence) {
         if (!isbn) return null;
         var now = Date.now();
@@ -1296,8 +1314,7 @@
         }
 
         try {
-            var _ping = window._httpsCallable(window._functions, 'ping');
-            var result = await _ping({ action: 'searchBooks', query: query, page: page });
+            var result = await callSeparatedPing('pingSearchBooks', { query: query, page: page }, 'searchBooks');
             var data = result.data || {};
             var books = data.books || [];
             _apiSearchHasMore = data.hasMore || false;
@@ -1960,8 +1977,7 @@
 
     async function fetchBookDetails(isbn) {
         try {
-            const _ping = window._httpsCallable(window._functions, 'ping');
-            const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
+            const result = await callSeparatedPing('pingLookupIsbn', { isbn: isbn }, 'lookupIsbn');
             if (result.data && result.data.book) {
                 const apiBook = result.data.book;
                 // Update stored book with additional details
@@ -2447,8 +2463,7 @@
         if (window.AppLogger) AppLogger.info('[ISBN] Looking up ISBN: ' + isbn);
         // 1) Server-side Korean book API proxy (알라딘 → 카카오 → 구글북스)
         try {
-            const _ping = window._httpsCallable(window._functions, 'ping');
-            const result = await _ping({ action: 'lookupIsbn', isbn: isbn });
+            const result = await callSeparatedPing('pingLookupIsbn', { isbn: isbn }, 'lookupIsbn');
             if (result.data && result.data.book) {
                 if (window.AppLogger) AppLogger.info('[ISBN] Server lookup success', { title: result.data.book.title, source: result.data.source || 'server' });
                 result.data.book._source = result.data.source || null;

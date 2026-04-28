@@ -1,6 +1,6 @@
 export function createOnboardingModule({ AppState, changeLanguage, showPermissionPrompts, ConversionTracker, consumePendingPermissionPrompt }) {
     const ONBOARDING_STORAGE_KEY = 'levelup_onboarding_seen';
-    const ONBOARDING_TOTAL_SLIDES = 8;
+    const ONBOARDING_TOTAL_SLIDES = 7;
     let currentSlide = 0;
     let isBound = false;
 

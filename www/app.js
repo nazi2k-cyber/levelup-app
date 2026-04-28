@@ -26,7 +26,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.617';
+const APP_VERSION = '1.0.636';
 window.__APP_VERSION__ = APP_VERSION;
 if (window.AppLogger) {
     AppLogger.info('[AppStart] 빌드 버전: v' + APP_VERSION);
@@ -130,7 +130,7 @@ async function bridgeTogglePushNotifications(...args) {
 // --- 앱 초기 로드 ---
 
 // --- 상태창 카드 순서 재배치 (길게 눌러 상하 이동) ---
-const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const DEFAULT_STATUS_CARD_ORDER = ['step-count', 'stat-radar', 'bonus-exp', 'habit-project', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 
 function saveStatusCardOrder() {
     const cards = Array.from(document.querySelectorAll('#status .status-reorderable'));
@@ -254,6 +254,7 @@ const STATUS_CARD_LABELS = {
     'pomodoro': { name_key: 'card_pomodoro', name: 'POMODORO', icon: '🍅' },
     'life-status': { name: 'LIFE STATUS', icon: '📅' },
     'future-networth': { name_key: 'fnw_card_title', name: '미래 순자산', icon: '💰' },
+    'habit-project': { name_key: 'habit_project_title', name: '습관형성 프로젝트', icon: '🔥' },
     'dday': { name: 'D-DAY', icon: '⏰' },
     'dday-caption': { name_key: 'card_dday_caption', name: '목표/좌우명', icon: '💬' },
     'daily-quote': { name_key: 'card_daily_quote', name: '오늘의 명언', icon: '❝' },
@@ -264,7 +265,7 @@ const STATUS_CARD_LABELS = {
     'meditation': { name_key: 'card_meditation', name: '명상', icon: '🧘' },
     'big5': { name_key: 'card_big5', name: 'BIG FIVE', icon: '🧠' }
 };
-const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
+const ALL_CARD_IDS = ['step-count', 'stat-radar', 'bonus-exp', 'habit-project', 'life-status', 'future-networth', 'big5', 'my-library', 'my-movies', 'running-calc', 'orm-calc', 'meditation', 'pomodoro', 'dday', 'dday-caption', 'daily-quote'];
 // 삭제 불가 카드 (이동만 가능)
 const NON_REMOVABLE_CARDS = ['stat-radar', 'bonus-exp'];
 
@@ -1203,6 +1204,7 @@ async function _doSaveUserData() {
             ddaysStr: JSON.stringify(AppState.ddays || []),
             ddayCaption: AppState.ddayCaption || '',
             lifeStatusStr: localStorage.getItem('life_status_config') || '',
+            habitProjectStr: localStorage.getItem('habit_project_config') || '',
             libraryStr: JSON.stringify(AppState.library || { books: [] }),
             moviesStr: JSON.stringify(AppState.movies || { items: [], rewardedIds: [] }),
             runningCalcHistoryStr: localStorage.getItem('running_calc_history') || '[]',
@@ -1220,7 +1222,7 @@ async function _doSaveUserData() {
             questStr: 10000, diaryStr: 500000, reelsStr: 500000,
             dungeonStr: 50000, diyQuestsStr: 50000, questHistoryStr: 200000,
             titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
-            ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000,
+            ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000, habitProjectStr: 20000,
             libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000,
             big5Str: 500, futureNetworthStr: 1000, schedulePresetsStr: 10000, plannerRewardsStr: 5000
         };
@@ -1271,7 +1273,7 @@ async function _doSaveUserData() {
                     'dungeonStr','diyQuestsStr','questHistoryStr','titleHistoryStr',
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
-                    'libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
+                    'habitProjectStr','libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
                     'big5Str','futureNetworthStr','schedulePresetsStr'
                 ]);
                 // 기존 문서의 허용되지 않은 필드
@@ -1322,7 +1324,7 @@ async function _doSaveUserData() {
                     if (bk in _merged && typeof _merged[bk] !== 'boolean') _issues.push(`${bk}(type=${typeof _merged[bk]})`);
                 });
                 // 문자열 크기 검증
-                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10,futureNetworthStr:1000,schedulePresetsStr:10000};
+                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,habitProjectStr:20000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10,futureNetworthStr:1000,schedulePresetsStr:10000};
                 for (const [sk, sl] of Object.entries(_strChecks)) {
                     if (sk in _merged && (typeof _merged[sk] !== 'string' || _merged[sk].length > sl)) _issues.push(`${sk}(type=${typeof _merged[sk]},len=${_merged[sk]?.length},limit=${sl})`);
                 }
@@ -1517,6 +1519,9 @@ async function loadUserDataFromDB(user) {
             // Life Status 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.lifeStatusStr) {
                 localStorage.setItem('life_status_config', data.lifeStatusStr);
+            }
+            if (data.habitProjectStr) {
+                localStorage.setItem('habit_project_config', data.habitProjectStr);
             }
             // 미래 순자산 복원
             if (data.futureNetworthStr) {
@@ -3478,8 +3483,19 @@ async function deleteMyAccount() {
         }
 
         AppLogger.info('[Auth] 계정 삭제 요청');
-        const ping = httpsCallable(functions, 'ping');
-        const result = await ping({ action: 'deleteMyAccount' });
+        let result;
+        try {
+            const deleteFn = httpsCallable(functions, 'pingDeleteMyAccount');
+            result = await deleteFn({});
+        } catch (e) {
+            const code = String((e && (e.code || e.message)) || '');
+            if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
+                const ping = httpsCallable(functions, 'ping');
+                result = await ping({ action: 'deleteMyAccount' });
+            } else {
+                throw e;
+            }
+        }
 
         if (result.data && result.data.success) {
             AppLogger.info('[Auth] 계정 삭제 완료');
@@ -4590,7 +4606,7 @@ function openPlannerInfoModal() {
             title: '플래너 사용 가이드',
             sections: [
                 { icon: '⭐', title: '우선순위 태스크', desc: '할 일을 입력하면 생성 순서대로 번호가 자동 부여됩니다. 왼쪽 ⠿ 핸들을 길게 눌러 위아래로 드래그하면 순위가 자동으로 변경됩니다.' },
-                { icon: '🕐', title: '시간표 (타임박스)', desc: '우선순위 태스크가 위쪽에 칩으로 표시됩니다. 칩을 원하는 시간 슬롯으로 드래그해서 시간표를 채우세요. 슬롯의 × 버튼으로 제거할 수 있습니다.' },
+                { icon: '🕐', title: '시간표 (타임박스)', desc: '우선순위 태스크가 위쪽에 칩으로 표시됩니다. 칩을 클릭하면 채우기 모드가 활성화되고, 시간 슬롯을 클릭해 채울 수 있습니다. 다른 칩을 클릭하면 해당 태스크로 전환되며, 같은 칩을 다시 클릭하면 종료됩니다. 슬롯의 × 버튼으로 제거할 수 있습니다.' },
                 { icon: '🔁', title: '자동 채우기', desc: '시간 슬롯에 할 일을 배치한 후 왼쪽 체크박스를 체크하면, 해당 시간이 매일 자동으로 채워집니다. (예: 12:00 점심, 19:00 저녁) 언체크하면 자동 채우기가 해제됩니다.' },
                 { icon: '📷', title: '사진 & 한마디', desc: '사진을 첨부하고 오늘의 한마디를 작성하세요. Day1 포스팅 시 필수입니다.' },
                 { icon: '💾', title: '저장 보상', desc: '하루 1회 저장 시 +20P & AGI +0.5 보상을 받습니다.' },
@@ -4602,7 +4618,7 @@ function openPlannerInfoModal() {
             title: 'Planner Guide',
             sections: [
                 { icon: '⭐', title: 'Priority Tasks', desc: 'Tasks are automatically numbered in the order they are created. Long-press the ⠿ handle to drag items up or down — priority numbers update automatically.' },
-                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Your priority tasks appear as chips above the timetable. Drag a chip onto any time slot to fill the schedule. Tap × on a slot to clear it.' },
+                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Priority tasks appear as chips above the timetable. Tap a chip to activate fill mode, then tap any time slot to fill it. Tap a different chip to switch tasks, or tap the same chip again to exit. Tap × on a slot to clear it.' },
                 { icon: '🔁', title: 'Auto-Fill', desc: 'Place a task in a time slot, then check the checkbox on the left to auto-fill that slot every day. (e.g., 12:00 Lunch, 19:00 Dinner) Uncheck to disable.' },
                 { icon: '📷', title: 'Photo & Caption', desc: 'Attach a photo and write a caption. Required for Day1 posting.' },
                 { icon: '💾', title: 'Save Reward', desc: 'Save once a day to earn +20P & AGI +0.5.' },
@@ -4614,7 +4630,7 @@ function openPlannerInfoModal() {
             title: 'プランナーガイド',
             sections: [
                 { icon: '⭐', title: '優先タスク', desc: 'タスクを入力すると作成順に番号が自動付与されます。⠿ハンドルを長押ししてドラッグすると順位が自動更新されます。' },
-                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '優先タスクが上部にチップとして表示されます。チップを時間スロットにドラッグしてスケジュールを埋めてください。×ボタンでスロットを消去できます。' },
+                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '優先タスクが上部にチップとして表示されます。チップをタップするとフィルモードが起動し、時間スロットをタップして埋められます。別のチップをタップするとタスクが切り替わり、同じチップを再タップすると終了します。×ボタンでスロットを消去できます。' },
                 { icon: '🔁', title: '自動入力', desc: 'スロットにタスクを配置後、左のチェックボックスをオンにするとそのスロットが毎日自動入力されます。(例: 12:00 昼食, 19:00 夕食) オフにすると解除されます。' },
                 { icon: '📷', title: '写真 & キャプション', desc: '写真を添付し、今日の一言を書きましょう。Day1投稿に必須です。' },
                 { icon: '💾', title: '保存報酬', desc: '1日1回保存で+20P & AGI +0.5の報酬を獲得できます。' },
@@ -6392,6 +6408,27 @@ async function syncHealthData(showMsg = false) {
     return healthService.syncHealthData({ showMsg });
 }
 
+async function openHealthConnectEntryPoint() {
+    const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
+    try {
+        const HealthConnect = window.Capacitor?.Plugins?.HealthConnect;
+        if (!HealthConnect) {
+            window.open(healthConnectUrl, '_blank');
+            return;
+        }
+        const availability = await HealthConnect.isAvailable();
+        if (availability?.available && typeof HealthConnect.openHealthConnect === 'function') {
+            await HealthConnect.openHealthConnect();
+            return;
+        }
+        window.open(healthConnectUrl, '_blank');
+    } catch (e) {
+        console.warn('[HealthConnect] open entry failed, fallback to store:', e?.message || e);
+        window.open(healthConnectUrl, '_blank');
+    }
+}
+window.openHealthConnectEntryPoint = openHealthConnectEntryPoint;
+
 // --- 걸음수 상태창 UI 업데이트 ---
 function updateStepCountUI() {
     const card = document.getElementById('step-count-card');
@@ -6415,9 +6452,8 @@ function updateStepCountUI() {
             const listEl = document.getElementById('step-req-list');
             if (titleEl) titleEl.textContent = lang.step_req_title || '걸음수 연동 필수 조건';
             if (listEl) {
-                const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
                 const req1Text = lang.step_req_1 || 'Health Connect 앱 설치 필요';
-                const req1Html = req1Text.replace('Health Connect', `<a href="${healthConnectUrl}" target="_blank" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
+                const req1Html = req1Text.replace('Health Connect', `<a href="javascript:void(0)" onclick="openHealthConnectEntryPoint()" style="color:inherit;text-decoration:underline;">Health Connect</a>`);
                 const items = [
                     { icon: '📲', html: req1Html },
                     { icon: '⚙️', html: (() => {

@@ -1,0 +1,63 @@
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">BRAVECAT STUDIOS circular cat emblem</title>
+  <desc id="desc">Original circular emblem inspired by classic seal-style coffeehouse marks, featuring a geometric cat face and ring text.</desc>
+
+  <!-- Background -->
+  <circle cx="600" cy="600" r="560" fill="#0B5A44"/>
+
+  <!-- Outer decorative rings -->
+  <circle cx="600" cy="600" r="520" fill="none" stroke="#F6F3E9" stroke-width="26"/>
+  <circle cx="600" cy="600" r="470" fill="none" stroke="#F6F3E9" stroke-width="14"/>
+
+  <!-- Ring separators -->
+  <g fill="#F6F3E9">
+    <circle cx="160" cy="600" r="18"/>
+    <circle cx="1040" cy="600" r="18"/>
+  </g>
+
+  <!-- Cat head container -->
+  <circle cx="600" cy="620" r="300" fill="#F6F3E9"/>
+
+  <!-- Ears -->
+  <path d="M390 430L485 260L550 430H390Z" fill="#F6F3E9"/>
+  <path d="M650 430L715 260L810 430H650Z" fill="#F6F3E9"/>
+  <path d="M430 420L487 322L526 420H430Z" fill="#0B5A44"/>
+  <path d="M674 420L713 322L770 420H674Z" fill="#0B5A44"/>
+
+  <!-- Face mask -->
+  <ellipse cx="600" cy="640" rx="230" ry="210" fill="#0B5A44"/>
+
+  <!-- Eyes -->
+  <ellipse cx="515" cy="610" rx="32" ry="26" fill="#F6F3E9"/>
+  <ellipse cx="685" cy="610" rx="32" ry="26" fill="#F6F3E9"/>
+  <ellipse cx="517" cy="612" rx="12" ry="10" fill="#0B5A44"/>
+  <ellipse cx="683" cy="612" rx="12" ry="10" fill="#0B5A44"/>
+
+  <!-- Nose + mouth -->
+  <path d="M600 645L570 682H630L600 645Z" fill="#F6F3E9"/>
+  <path d="M600 682V735" stroke="#F6F3E9" stroke-width="12" stroke-linecap="round"/>
+  <path d="M600 735C586 758 556 770 530 760" stroke="#F6F3E9" stroke-width="12" stroke-linecap="round"/>
+  <path d="M600 735C614 758 644 770 670 760" stroke="#F6F3E9" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Whiskers -->
+  <g stroke="#F6F3E9" stroke-width="10" stroke-linecap="round">
+    <line x1="425" y1="680" x2="515" y2="690"/>
+    <line x1="420" y1="720" x2="510" y2="715"/>
+    <line x1="775" y1="680" x2="685" y2="690"/>
+    <line x1="780" y1="720" x2="690" y2="715"/>
+  </g>
+
+  <!-- Ring text paths -->
+  <defs>
+    <path id="topArc" d="M160 600C160 357 357 160 600 160C843 160 1040 357 1040 600"/>
+    <path id="bottomArc" d="M1040 600C1040 843 843 1040 600 1040C357 1040 160 843 160 600"/>
+  </defs>
+
+  <!-- Brand text -->
+  <text font-family="'Montserrat', 'Noto Sans KR', Arial, sans-serif" font-size="66" font-weight="700" letter-spacing="5" fill="#F6F3E9">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">BRAVECAT STUDIOS</textPath>
+  </text>
+  <text font-family="'Montserrat', 'Noto Sans KR', Arial, sans-serif" font-size="44" font-weight="600" letter-spacing="7" fill="#F6F3E9">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">CREATE • PLAY • ROAR</textPath>
+  </text>
+</svg>

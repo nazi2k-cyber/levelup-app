@@ -5,10 +5,105 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.636] - 2026-04-28
+
+### 변경
+- 시간표 칩 클릭 UX 개선 및 가이드 설명 현행화
+
+## [1.0.635] - 2026-04-28
+
+### 변경
+- fix: 네이티브 앱 공유 URL에서 localhost 대신 실제 도메인 사용
+
+## [1.0.634] - 2026-04-28
+
+### 변경
+- feat: 프로필 공유 버튼 UX 개선
+
+## [1.0.633] - 2026-04-28
+
+### 변경
+- feat: Google Calendar 연동 CI/CD 주입 및 Android 세션 충돌 방지 (Step 6, 8)
+
+## [1.0.632] - 2026-04-28
+
+### 변경
+- Adjust habit stats/date layout and typography
+
+## [1.0.631] - 2026-04-28
+
+### 변경
+- Add BRAVECAT STUDIOS circular cat logo concept assets
+
+## [1.0.630] - 2026-04-28
+
+### 변경
+- Adjust habit date/stat layout in life status card
+
+## [1.0.629] - 2026-04-27
+
+### 변경
+- Split ping callable by service domains with client fallback
+
+## [1.0.628] - 2026-04-27
+
+### 변경
+- 소규모 업데이트 및 개선
+
+## [1.0.627] - 2026-04-27
+
+### 변경
+- 소셜 프로필 공유 버튼 및 URL 공유 기능 추가
+
+## [1.0.626] - 2026-04-27
+
+### 변경
+- docs(terms): add habit-building project coverage with translations
+
+## [1.0.625] - 2026-04-27
+
+### 변경
+- Add missing habit project i18n keys for ko/en/ja
+
+## [1.0.624] - 2026-04-27
+
+### 변경
+- Fix habit name rendering and guide whitespace in modal
+
+## [1.0.623] - 2026-04-27
+
+### 변경
+- Fix habit project UI ordering, modal reset, and persistence
+
+## [1.0.622] - 2026-04-27
+
+### 변경
+- Refactor habit project card UX and status card placement
+
+## [1.0.621] - 2026-04-27
+
+### 변경
+- Adjust habit stage ratios and improve habit stats readability
+
+## [1.0.620] - 2026-04-27
+
+### 변경
+- feat: add i18n habit formation project to life status card
+
+## [1.0.619] - 2026-04-27
+
+### 변경
+- fix: expose health connect entry handler on window
+
+## [1.0.618] - 2026-04-27
+
+### 변경
+- fix: health connect 링크 진입 분기 처리
+
 ## [1.0.617] - 2026-04-27
 
 ### 변경
-- 온보딩 메시지 전용 첫 페이지 추가 및 슬라이드 수 조정
+- revert: rollback app to v1.0.616 files
 
 ## [1.0.616] - 2026-04-27
 

@@ -47,6 +47,20 @@
         if (window.AppLogger) AppLogger.error('[Movie] ' + msg);
     }
 
+    async function callSeparatedPing(functionName, payload, legacyAction) {
+        try {
+            var fn = window._httpsCallable(window._functions, functionName);
+            return await fn(payload || {});
+        } catch (e) {
+            var code = String((e && (e.code || e.message)) || '');
+            if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
+                var fallback = window._httpsCallable(window._functions, 'ping');
+                return await fallback({ action: legacyAction, ...(payload || {}) });
+            }
+            throw e;
+        }
+    }
+
     // ── KOBIS+KMDb API (Cloud Function 경유) ──
     async function searchMoviesAPI(query, page) {
         page = page || 1;
@@ -55,8 +69,7 @@
             ? AppLogger.apiCall('[Movie]', '검색(searchMovies)')
             : null;
         try {
-            var _ping = window._httpsCallable(window._functions, 'ping');
-            var result = await _ping({ action: 'searchMovies', query: query, page: page });
+            var result = await callSeparatedPing('pingSearchMovies', { query: query, page: page }, 'searchMovies');
             var data = result.data || {};
             var movies = data.movies || [];
             var hasMore = data.hasMore || false;
@@ -80,8 +93,7 @@
             ? AppLogger.apiCall('[Movie]', '상세조회(lookupMovie)')
             : null;
         try {
-            var _ping = window._httpsCallable(window._functions, 'ping');
-            var result = await _ping({ action: 'lookupMovie', movieCd: String(movieCd), title: title, year: year, source: source });
+            var result = await callSeparatedPing('pingLookupMovie', { movieCd: String(movieCd), title: title, year: year, source: source }, 'lookupMovie');
             var data = result.data || {};
             var movie = data.movie || null;
             if (movie) {

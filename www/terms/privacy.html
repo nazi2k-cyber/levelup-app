@@ -40,7 +40,7 @@
         <button class="back-btn" onclick="history.back()">←</button>
         <span class="legal-title" id="page-title">개인정보 처리방침</span>
     </div>
-    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 17일</div>
+    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 27일</div>
 
     <!-- 한국어 -->
     <div class="content-block active" id="content-ko">
@@ -133,6 +133,11 @@
                 <td>사용자 직접 입력 (별도 동의 후 서버 저장)</td>
             </tr>
             <tr>
+                <td>습관형성 프로젝트</td>
+                <td>루틴 이름, 반복 주기, 완료 체크 이력, 연속 달성(스트릭) 기록</td>
+                <td>사용자 직접 입력 및 체크</td>
+            </tr>
+            <tr>
                 <td>언어 설정</td>
                 <td>앱 언어 선택(한국어, 영어, 일본어)</td>
                 <td>사용자 선택 시 자동 저장</td>
@@ -171,6 +176,7 @@
             <li><strong>내 영화:</strong> 영화 감상 기록 관리, KOBIS/KMDb API를 통한 영화 검색, 감상 보상 지급</li>
             <li><strong>Big5 성격검사:</strong> 성격 유형 분석 결과 표시, 맞춤형 퀘스트 추천, 자기계발 동기 부여</li>
             <li><strong>미래 순자산:</strong> 장기 순자산 예측 결과 표시, 소셜탭 저축왕 순위 제공 (별도 동의 기반)</li>
+            <li><strong>습관형성 프로젝트:</strong> 루틴 설계, 반복 수행 체크, 스트릭 시각화 및 동기 부여 제공</li>
             <li><strong>인스타그램 ID:</strong> 프로필 페이지 내 소셜 미디어 링크 표시 (선택 입력, 미입력 시 표시되지 않음)</li>
             <li><strong>LinkedIn 프로필:</strong> 프로필 페이지 내 커리어 정보 표시 (선택 입력, 미입력 시 표시되지 않음)</li>
             <li><strong>푸시 알림:</strong> 퀘스트 알림, 레이드 알림, 스트릭 알림, 서비스 공지 전달(언어별 분리 발송)</li>
@@ -258,6 +264,11 @@
                 <td>미래 순자산 데이터</td>
                 <td>회원 탈퇴 시 또는 사용자 초기화 시까지 (Firestore 동기화)</td>
                 <td>별도 동의 기반, 로그아웃 시 로컬 삭제, 서버 데이터는 탈퇴 시 삭제</td>
+            </tr>
+            <tr>
+                <td>습관형성 프로젝트 데이터</td>
+                <td>회원 탈퇴 시까지 (Firestore 동기화)</td>
+                <td>로그아웃 시 로컬 데이터 삭제, 서버 데이터는 탈퇴 시 삭제</td>
             </tr>
             <tr>
                 <td>언어 설정</td>
@@ -487,6 +498,11 @@
                 <td>User input (stored on server after separate consent)</td>
             </tr>
             <tr>
+                <td>Habit-Building Project</td>
+                <td>Routine name, recurrence cycle, completion check history, streak records</td>
+                <td>User input and check-ins</td>
+            </tr>
+            <tr>
                 <td>Language Settings</td>
                 <td>App language selection (Korean, English, Japanese)</td>
                 <td>Automatically saved on user selection</td>
@@ -525,6 +541,7 @@
             <li><strong>My Movies:</strong> Movie viewing record management, movie search via KOBIS/KMDb API, viewing rewards</li>
             <li><strong>Big5 Personality Test:</strong> Displaying personality type analysis results, personalized quest recommendations, self-improvement motivation</li>
             <li><strong>Future Net Worth:</strong> Displaying long-term net worth projections, providing Savings Ranking in the Social tab (consent-based)</li>
+            <li><strong>Habit-Building Project:</strong> Providing routine design, recurring completion checks, streak visualization, and motivation support</li>
             <li><strong>Instagram ID:</strong> Displaying a social media link on the user's profile page (optional; not shown if not provided)</li>
             <li><strong>LinkedIn Profile:</strong> Displaying career information on the user's profile page (optional; not shown if not provided)</li>
             <li><strong>Push Notifications:</strong> Quest alerts, raid alerts, streak alerts, service announcements (sent by language)</li>
@@ -612,6 +629,11 @@
                 <td>Future Net Worth Data</td>
                 <td>Until account deletion or user reset (synced via Firestore)</td>
                 <td>Separate consent-based; local data deleted on logout, server data deleted on withdrawal</td>
+            </tr>
+            <tr>
+                <td>Habit-Building Project Data</td>
+                <td>Until account deletion (synced via Firestore)</td>
+                <td>Local data deleted on logout; server data deleted on withdrawal</td>
             </tr>
             <tr>
                 <td>Language Settings</td>
@@ -841,6 +863,11 @@
                 <td>ユーザー直接入力（別途同意後にサーバー保存）</td>
             </tr>
             <tr>
+                <td>習慣形成プロジェクト</td>
+                <td>ルーティン名、反復周期、完了チェック履歴、連続達成（ストリーク）記録</td>
+                <td>ユーザー直接入力およびチェック</td>
+            </tr>
+            <tr>
                 <td>言語設定</td>
                 <td>アプリ言語選択（韓国語、英語、日本語）</td>
                 <td>ユーザー選択時に自動保存</td>
@@ -879,6 +906,7 @@
             <li><strong>マイ映画:</strong> 映画鑑賞記録管理、KOBIS/KMDb APIによる映画検索、鑑賞報酬</li>
             <li><strong>Big5性格検査:</strong> 性格タイプ分析結果の表示、カスタマイズドクエスト推薦、自己啓発モチベーション向上</li>
             <li><strong>未来純資産:</strong> 長期純資産予測結果の表示、ソーシャルタブの貯蓄王ランキングの提供（別途同意ベース）</li>
+            <li><strong>習慣形成プロジェクト:</strong> ルーティン設計、反復実行チェック、ストリーク可視化およびモチベーション支援の提供</li>
             <li><strong>Instagram ID:</strong> プロフィールページにおけるソーシャルメディアリンクの表示（任意入力。未入力の場合は表示されません）</li>
             <li><strong>LinkedInプロフィール:</strong> プロフィールページにおけるキャリア情報の表示（任意入力。未入力の場合は表示されません）</li>
             <li><strong>プッシュ通知:</strong> クエスト通知、レイド通知、ストリーク通知、サービスお知らせ（言語別分離送信）</li>
@@ -966,6 +994,11 @@
                 <td>未来純資産データ</td>
                 <td>退会時またはユーザーリセット時まで（Firestore同期）</td>
                 <td>別途同意ベース、ログアウト時ローカルデータ削除、サーバーデータは退会時削除</td>
+            </tr>
+            <tr>
+                <td>習慣形成プロジェクトデータ</td>
+                <td>退会時まで（Firestore同期）</td>
+                <td>ログアウト時ローカルデータ削除、サーバーデータは退会時削除</td>
             </tr>
             <tr>
                 <td>言語設定</td>
@@ -1107,9 +1140,9 @@
 
 <script>
 const TITLES = {
-    ko: { title: '개인정보 처리방침', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 17일' },
-    en: { title: 'Privacy Policy', date: 'Effective: March 1, 2025 | Last updated: April 17, 2026' },
-    ja: { title: 'プライバシーポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月17日' }
+    ko: { title: '개인정보 처리방침', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 27일' },
+    en: { title: 'Privacy Policy', date: 'Effective: March 1, 2025 | Last updated: April 27, 2026' },
+    ja: { title: 'プライバシーポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月27日' }
 };
 function setLang(lang) {
     const t = TITLES[lang] || TITLES.ko;

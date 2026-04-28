@@ -38,7 +38,7 @@
         <button class="back-btn" onclick="history.back()">←</button>
         <span class="legal-title" id="page-title">이용 정책</span>
     </div>
-    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 18일</div>
+    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 27일</div>
 
     <!-- 한국어 -->
     <div class="content-block active" id="content-ko">
@@ -49,7 +49,7 @@
 
     <div class="section">
         <h2>1. 기본 이용 원칙</h2>
-        <p>LEVEL UP: REBOOT는 사용자의 자기계발과 건강한 생활 습관 형성을 돕기 위한 서비스입니다. 모든 사용자는 다음 원칙을 준수해야 합니다:</p>
+        <p>LEVEL UP: REBOOT는 사용자의 자기계발과 건강한 생활 습관 형성을 돕는 습관형성 프로젝트형 서비스입니다. 모든 사용자는 다음 원칙을 준수해야 합니다:</p>
         <ul>
             <li>정직하고 성실하게 서비스를 이용할 것</li>
             <li>다른 사용자의 권리를 존중할 것</li>
@@ -150,7 +150,13 @@
             <li>검사 결과를 타인에 대한 비방이나 차별의 근거로 사용하는 행위는 금지됩니다</li>
             <li>검사 결과를 전문적인 심리 진단 또는 의학적 조언으로 해석해서는 안 됩니다</li>
         </ul>
-        <h3>4.7 미래 순자산</h3>
+        <h3>4.7 습관형성 프로젝트 기능</h3>
+        <p>습관형성 프로젝트 기능은 사용자가 루틴을 설계하고 반복 수행 여부를 체크하며, 연속 달성(스트릭)을 추적하도록 지원합니다. 허위 입력이나 자동화 도구를 통한 체크인은 금지됩니다.</p>
+        <ul>
+            <li>실제 수행하지 않은 루틴을 완료로 표시하여 보상을 부정 취득하는 행위는 금지됩니다</li>
+            <li>자동 클릭/매크로를 이용해 반복 체크를 조작하는 행위는 금지됩니다</li>
+        </ul>
+        <h3>4.8 미래 순자산</h3>
         <p>미래 순자산 기능은 사용자가 입력한 자산, 부채 및 재정 목표를 기반으로 미래의 예상 순자산을 시각화하는 참고용 도구입니다. 이 기능은 별도의 개인정보 수집 및 이용 동의를 거친 후 활성화됩니다.</p>
         <ul>
             <li>허위 재정 정보를 입력하여 보상을 부정 취득하는 행위는 금지됩니다</li>
@@ -319,7 +325,13 @@
             <li>Using test results as grounds for defamation or discrimination against others is prohibited</li>
             <li>Test results must not be interpreted as professional psychological diagnosis or medical advice</li>
         </ul>
-        <h3>4.7 Future Net Worth</h3>
+        <h3>4.7 Habit-Building Project Features</h3>
+        <p>Habit-building project features help users design routines, check recurring completion, and track streaks. False input or check-ins through automation tools are prohibited.</p>
+        <ul>
+            <li>Marking routines as completed without actual completion to fraudulently obtain rewards is prohibited</li>
+            <li>Manipulating repeated check-ins using auto-clickers/macros is prohibited</li>
+        </ul>
+        <h3>4.8 Future Net Worth</h3>
         <p>The Future Net Worth feature is a reference tool that visualizes projected future net worth based on the user's input of assets, liabilities, and financial goals. This feature is activated after separate consent for personal information collection and use.</p>
         <ul>
             <li>Entering false financial information to fraudulently obtain rewards is prohibited</li>
@@ -550,9 +562,9 @@
 
     <script>
     const TITLES = {
-        ko: { title: '이용 정책', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 18일' },
-        en: { title: 'Usage Policy', date: 'Effective: March 1, 2025 | Last updated: April 18, 2026' },
-        ja: { title: '利用ポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月18日' }
+        ko: { title: '이용 정책', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 27일' },
+        en: { title: 'Usage Policy', date: 'Effective: March 1, 2025 | Last updated: April 27, 2026' },
+        ja: { title: '利用ポリシー', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月27日' }
     };
     function setLang(lang) {
         const t = TITLES[lang] || TITLES.ko;

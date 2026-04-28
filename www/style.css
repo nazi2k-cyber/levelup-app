@@ -417,6 +417,9 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 /* 프로필 플래너 버튼 */
 .btn-profile-planner { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-gold); color: var(--neon-gold); border-radius: 4px; cursor: pointer; vertical-align: middle; line-height: 1.2; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex-shrink: 0; }
 .btn-profile-planner:active { background: rgba(255, 204, 0, 0.15); }
+/* 프로필 공유 버튼 */
+.btn-profile-share { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid #8b5cf6; color: #c4b5fd; border-radius: 4px; cursor: pointer; vertical-align: middle; line-height: 1.2; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex-shrink: 0; }
+.btn-profile-share:active { background: rgba(139, 92, 246, 0.15); }
 /* 프로필 저장 버튼 */
 .btn-profile-save { padding: 2px 8px; font-size: 0.7rem; font-weight: bold; background: transparent; border: 1px solid var(--neon-blue); color: var(--neon-blue); border-radius: 4px; cursor: pointer; vertical-align: middle; line-height: 1.2; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex-shrink: 0; }
 .btn-profile-save:active { background: rgba(0, 217, 255, 0.15); }
@@ -561,7 +564,8 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .planner-task-chips-bank { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 6px 0; margin-bottom: 6px; }
 .task-chip { padding: 5px 12px; background: rgba(0,217,255,0.12); border: 1.5px solid var(--neon-blue); color: var(--neon-blue); border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; letter-spacing: 0.2px; transition: background 0.15s, box-shadow 0.15s; }
 .task-chip.chip-active { background: rgba(0,217,255,0.35); border-color: var(--neon-blue); box-shadow: 0 0 8px rgba(0,217,255,0.5); }
-.task-chip.chip-inactive { opacity: 0.3; pointer-events: none; }
+.task-chip.chip-inactive { opacity: 0.45; }
+.timebox-fill-hint { font-size: 0.72rem; color: var(--text-sub); margin-bottom: 6px; line-height: 1.4; word-break: keep-all; }
 
 /* 타임박스 슬롯 (셀렉트 대체) */
 .timebox-slot { flex: 1; min-height: 30px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 5px; font-size: 0.78rem; color: var(--text-sub); display: flex; align-items: center; gap: 3px; min-width: 0; transition: border-color 0.15s, background 0.15s; overflow: hidden; }
@@ -791,6 +795,87 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     height: 100%; border-radius: 4px;
     background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
     transition: width 0.8s ease;
+}
+
+.habit-project-wrap {
+    margin-top: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+}
+.habit-project-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.habit-project-actions { display: flex; gap: 6px; }
+.habit-project-title { font-size: 0.9rem; font-weight: 700; color: var(--neon-gold); }
+.habit-info-row { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.habit-info-row label { font-size: 0.75rem; color: var(--text-sub); }
+.habit-name-view {
+    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color);
+    background: var(--panel-bg); color: var(--text-main); font-size: 0.85rem; min-height: 18px;
+}
+.habit-dates-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.habit-date-stack { display: flex; flex-direction: column; gap: 2px; }
+.habit-start-date { font-size: 0.7rem; color: var(--text-sub); }
+
+.habit-arrow-z-wrap { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.habit-arrow-row-wrap { display: flex; flex-direction: column; gap: 4px; }
+.habit-arrow-title { font-size: 0.7rem; font-weight: 700; padding-left: 2px; }
+.habit-arrow-row { display: flex; align-items: stretch; }
+.habit-arrow-row.reverse { flex-direction: row-reverse; }
+.habit-arrow-body {
+    flex: 1; min-height: 40px; border: 1px solid var(--border-color); border-radius: 8px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(22px, 1fr)); gap: 4px;
+    padding: 4px; background: rgba(255,255,255,0.03);
+}
+.habit-arrow-head {
+    width: 16px; margin: 0 2px; background: rgba(255,255,255,0.1);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.habit-arrow-row.reverse .habit-arrow-head {
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+.habit-arrow-row.resistance .habit-arrow-body { border-color: rgba(255, 107, 107, 0.45); background: linear-gradient(90deg, rgba(255,107,107,0.08), rgba(255,255,255,0.02)); }
+.habit-arrow-row.transition .habit-arrow-body { border-color: rgba(255, 193, 7, 0.45); background: linear-gradient(90deg, rgba(255,193,7,0.08), rgba(255,255,255,0.02)); }
+.habit-arrow-row.automation .habit-arrow-body { border-color: rgba(0, 217, 255, 0.45); background: linear-gradient(90deg, rgba(0,217,255,0.08), rgba(255,255,255,0.02)); }
+.habit-arrow-row.resistance .habit-arrow-head { background: linear-gradient(180deg, rgba(255,107,107,0.35), rgba(255,107,107,0.15)); }
+.habit-arrow-row.transition .habit-arrow-head { background: linear-gradient(180deg, rgba(255,193,7,0.35), rgba(255,193,7,0.15)); }
+.habit-arrow-row.automation .habit-arrow-head { background: linear-gradient(180deg, rgba(0,217,255,0.35), rgba(0,217,255,0.15)); }
+.habit-arrow-row-wrap.resistance .habit-arrow-title { color: #ff8f8f; }
+.habit-arrow-row-wrap.transition .habit-arrow-title { color: #ffd86a; }
+.habit-arrow-row-wrap.automation .habit-arrow-title { color: #77ecff; }
+.habit-day-dot {
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; font-size: 0.6rem; min-height: 22px;
+    color: var(--text-main); background: rgba(255,255,255,0.04); cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.habit-day-dot.checked { border-color: var(--neon-blue); color: #fff; font-weight: 700; }
+.habit-day-dot.elapsed { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
+
+.habit-z-connector { height: 8px; border-right: 2px dashed var(--border-color); border-left: 2px dashed transparent; }
+.habit-z-connector.right-to-left { margin-right: 4px; margin-left: auto; }
+.habit-z-connector.left-to-right { margin-left: 4px; margin-right: auto; }
+
+.habit-stats-row { display: flex; justify-content: flex-end; gap: 8px 12px; font-size: 1rem; color: var(--text-sub); }
+.habit-stat-item { font-weight: 700; }
+.habit-date-stack .habit-stat-target { font-size: 0.7rem; }
+.habit-stat-target { color: var(--neon-blue); }
+.habit-stat-elapsed { color: var(--neon-gold); }
+.habit-stat-rate { color: #63ffb0; }
+.habit-guide-modal { max-width: 420px; width: calc(100% - 24px); }
+.habit-guide-title { font-size: 0.95rem; font-weight: 700; color: var(--neon-blue); margin-bottom: 8px; }
+.habit-guide-body { font-size: 0.78rem; color: var(--text-main); line-height: 1.55; max-height: 58vh; overflow-y: auto; white-space: normal; text-align:left; padding-right:2px; }
+.habit-settings-modal { max-width: 360px; width: calc(100% - 24px); }
+.habit-settings-field { margin-bottom: 10px; display:flex; flex-direction:column; gap:4px; }
+.habit-settings-field label { font-size: 0.75rem; color: var(--text-sub); }
+.habit-settings-field input,
+.habit-settings-field select {
+    width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--border-color); background: var(--panel-bg); color: var(--text-main); font-size: 0.84rem;
 }
 
 /* D-Day 카드 스타일 */
@@ -1474,6 +1559,11 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 }
 .report-modal-submit {
     background: #ff5252; color: #fff;
+}
+.report-modal-reset {
+    background: transparent;
+    color: var(--neon-red);
+    border: 1px solid var(--neon-red);
 }
 
 /* 신고 모달 라이트 테마 */
