@@ -42,10 +42,12 @@
                 return;
             }
             if (document.getElementById('gis-client')) {
-                // 스크립트 태그 있지만 아직 로드 완료 전일 수 있음
+                // 스크립트 태그 있지만 아직 로드 완료 전일 수 있음 (최대 8초 대기)
+                let elapsed = 0;
                 const wait = () => {
                     if (window.google && window.google.accounts) { _gisLoaded = true; resolve(); }
-                    else setTimeout(wait, 100);
+                    else if (elapsed >= 8000) { reject(new Error('GIS 스크립트 로드 실패')); }
+                    else { elapsed += 100; setTimeout(wait, 100); }
                 };
                 wait();
                 return;
