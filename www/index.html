@@ -392,6 +392,21 @@
     <!-- Scroll animations -->
     <script>
     (function() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var profileId = params.get('profile');
+            if (profileId && /android/i.test(navigator.userAgent || '')) {
+                var playStoreUrl = 'https://play.google.com/store/apps/details?id=com.levelup.reboot';
+                var intentUrl = 'intent://bravecat.studio/?profile=' + encodeURIComponent(profileId) +
+                    '#Intent;scheme=https;package=com.levelup.reboot;S.browser_fallback_url=' +
+                    encodeURIComponent(playStoreUrl) + ';end';
+                window.location.href = intentUrl;
+            }
+        } catch (e) {}
+    })();
+    </script>
+    <script>
+    (function() {
         var i18n = {
             ko: {
                 title: 'LEVEL UP: REBOOT - 현실을 게임처럼 레벨업하세요',
