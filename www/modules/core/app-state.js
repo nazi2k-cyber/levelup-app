@@ -73,6 +73,14 @@ export function getInitialAppState() {
             raidParticipants: [],
         },
         diyQuests: { definitions: [], completedToday: {}, lastResetDate: null },
+        questSettings: (() => {
+            try {
+                const saved = localStorage.getItem('quest_settings');
+                return saved ? JSON.parse(saved) : { autoAddRegular: false, autoAddDiy: true };
+            } catch(e) {
+                return { autoAddRegular: false, autoAddDiy: true };
+            }
+        })(),
         questHistory: {},
         ddays: [],
         ddayCaption: '',

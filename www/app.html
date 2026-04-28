@@ -684,6 +684,7 @@
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span class="tab-page-title">📜 <span data-i18n="quest_title">Daily Quests</span></span>
                         <button class="btn-info-sm" id="btn-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
+                        <button class="btn-info-sm" id="btn-quest-settings">⚙️ <span data-i18n="quest_settings_btn">설정</span></button>
                     </div>
                 </div>
 
@@ -696,6 +697,9 @@
                 <!-- Main quest content -->
                 <div class="quest-tab-content active" id="quest-tab-main">
                     <div class="system-card" style="padding:10px;">
+                        <div style="margin-bottom:6px;">
+                            <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="regular_quest_label">일반 퀘스트</span>
+                        </div>
                         <div class="quest-list-wrapper" id="quest-list-container"></div>
                         <div id="diy-quest-section" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -2102,6 +2106,32 @@
 
 
     <!-- legalModal 제거됨 — 법적 페이지는 독립 HTML로 이전 -->
+
+    <!-- 퀘스트 설정 모달 -->
+    <div class="modal-overlay d-none" id="questSettingsModal" onclick="if(event.target===this){closeQuestSettingsModal();}">
+        <div class="modal-content" style="max-width: 95%; width: 340px; padding: 20px;">
+            <div class="modal-header" style="margin-bottom: 14px; padding-bottom: 8px;">
+                <span style="font-weight:bold; color:var(--neon-gold);" data-i18n="quest_settings_title">퀘스트 설정</span>
+                <button class="modal-close" onclick="closeQuestSettingsModal()">×</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.85rem; color:var(--text);" data-i18n="quest_auto_add_regular">일반 퀘스트 자동추가</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-auto-add-regular" onchange="saveQuestSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.85rem; color:var(--text);" data-i18n="quest_auto_add_diy">DIY 퀘스트 자동추가</span>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-auto-add-diy" onchange="saveQuestSettings()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- DIY 퀘스트 생성/수정 모달 -->
     <div class="modal-overlay d-none" id="diyQuestModal" onclick="if(event.target===this){closeDiyQuestModal();}">

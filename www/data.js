@@ -204,6 +204,11 @@ const i18n = {
         // 오프라인 모드
         offline_banner: "오프라인 모드 — 일부 기능이 제한됩니다",
 
+        // 퀘스트 레이블 & 설정
+        regular_quest_label: "일반 퀘스트",
+        quest_settings_btn: "설정", quest_settings_title: "퀘스트 설정",
+        quest_auto_add_regular: "일반 퀘스트 자동추가", quest_auto_add_diy: "DIY 퀘스트 자동추가",
+
         // DIY 퀘스트
         diy_quest_title: "DIY 퀘스트", btn_add_diy: "추가",
         diy_modal_create: "퀘스트 만들기", diy_modal_edit: "퀘스트 수정",
@@ -991,6 +996,11 @@ const i18n = {
         // Offline mode
         offline_banner: "Offline Mode — Some features are limited",
 
+        // Quest label & settings
+        regular_quest_label: "Daily Quests",
+        quest_settings_btn: "Settings", quest_settings_title: "Quest Settings",
+        quest_auto_add_regular: "Auto-add Daily Quest Tasks", quest_auto_add_diy: "Auto-add DIY Quest Tasks",
+
         // DIY Quests
         diy_quest_title: "DIY Quests", btn_add_diy: "Add",
         diy_modal_create: "Create Quest", diy_modal_edit: "Edit Quest",
@@ -1776,6 +1786,11 @@ const i18n = {
 
         // オフラインモード
         offline_banner: "オフラインモード — 一部の機能が制限されます",
+
+        // クエストラベル & 設定
+        regular_quest_label: "デイリークエスト",
+        quest_settings_btn: "設定", quest_settings_title: "クエスト設定",
+        quest_auto_add_regular: "デイリークエスト 自動追加", quest_auto_add_diy: "DIYクエスト 自動追加",
 
         // DIYクエスト
         diy_quest_title: "DIYクエスト", btn_add_diy: "追加",

@@ -882,6 +882,7 @@ function bindEvents() {
     document.getElementById('btn-history-close').addEventListener('click', closeTitleModal);
     document.getElementById('btn-status-info').addEventListener('click', openStatusInfoModal);
     document.getElementById('btn-quest-info').addEventListener('click', openQuestInfoModal);
+    document.getElementById('btn-quest-settings').addEventListener('click', openQuestSettingsModal);
     document.getElementById('btn-diy-quest-info').addEventListener('click', openDiyQuestInfoModal);
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
@@ -1199,6 +1200,7 @@ async function _doSaveUserData() {
             lastBonusExpDate: localStorage.getItem(`bonus_exp_date_${auth.currentUser ? auth.currentUser.uid : '_anon'}`) || '',
             lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests ?? []),
+            questSettingsStr: localStorage.getItem('quest_settings') || '',
             questHistoryStr: JSON.stringify(AppState.questHistory ?? []),
             rareTitleStr: JSON.stringify(AppState.user.rareTitle ?? {}),
             ddaysStr: JSON.stringify(AppState.ddays || []),
@@ -1224,7 +1226,8 @@ async function _doSaveUserData() {
             titleHistoryStr: 50000, streakStr: 5000, rareTitleStr: 10000,
             ddaysStr: 50000, ddayCaption: 200, lifeStatusStr: 1000, habitProjectStr: 20000,
             libraryStr: 50000, moviesStr: 50000, runningCalcHistoryStr: 10000, ormCalcHistoryStr: 10000,
-            big5Str: 500, futureNetworthStr: 1000, schedulePresetsStr: 10000, plannerRewardsStr: 5000
+            big5Str: 500, futureNetworthStr: 1000, schedulePresetsStr: 10000, plannerRewardsStr: 5000,
+            questSettingsStr: 200
         };
         const _overflowed = [];
         for (const [key, limit] of Object.entries(_strLimits)) {
@@ -1274,7 +1277,7 @@ async function _doSaveUserData() {
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
                     'habitProjectStr','libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
-                    'big5Str','futureNetworthStr','schedulePresetsStr'
+                    'big5Str','futureNetworthStr','schedulePresetsStr','questSettingsStr'
                 ]);
                 // 기존 문서의 허용되지 않은 필드
                 const _extraFields = _existingKeys.filter(k => !_allowedFields.has(k));
@@ -1324,7 +1327,7 @@ async function _doSaveUserData() {
                     if (bk in _merged && typeof _merged[bk] !== 'boolean') _issues.push(`${bk}(type=${typeof _merged[bk]})`);
                 });
                 // 문자열 크기 검증
-                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,habitProjectStr:20000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10,futureNetworthStr:1000,schedulePresetsStr:10000};
+                const _strChecks = {questStr:10000,diaryStr:500000,reelsStr:500000,dungeonStr:50000,diyQuestsStr:50000,questHistoryStr:200000,titleHistoryStr:50000,streakStr:5000,rareTitleStr:10000,ddaysStr:50000,ddayCaption:200,lifeStatusStr:1000,habitProjectStr:20000,libraryStr:50000,moviesStr:50000,runningCalcHistoryStr:10000,ormCalcHistoryStr:10000,questWeekStart:10,lastRouletteDate:10,lastBonusExpDate:10,futureNetworthStr:1000,schedulePresetsStr:10000,questSettingsStr:200};
                 for (const [sk, sl] of Object.entries(_strChecks)) {
                     if (sk in _merged && (typeof _merged[sk] !== 'string' || _merged[sk].length > sl)) _issues.push(`${sk}(type=${typeof _merged[sk]},len=${_merged[sk]?.length},limit=${sl})`);
                 }
@@ -1515,6 +1518,13 @@ async function loadUserDataFromDB(user) {
                 try { AppState.movies = JSON.parse(data.moviesStr); } catch(e) { AppState.movies = { items: [], rewardedIds: [] }; }
                 if (!AppState.movies || !Array.isArray(AppState.movies.items)) AppState.movies = { items: [], rewardedIds: [] };
                 if (!Array.isArray(AppState.movies.rewardedIds)) AppState.movies.rewardedIds = [];
+            }
+            // 퀘스트 설정 복원
+            if (data.questSettingsStr) {
+                try {
+                    localStorage.setItem('quest_settings', data.questSettingsStr);
+                    AppState.questSettings = JSON.parse(data.questSettingsStr);
+                } catch(e) {}
             }
             // Life Status 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.lifeStatusStr) {
@@ -4451,6 +4461,31 @@ function openQuestInfoModal() {
     m.classList.add('d-flex');
 }
 
+function openQuestSettingsModal() {
+    const s = AppState.questSettings;
+    document.getElementById('toggle-auto-add-regular').checked = s.autoAddRegular;
+    document.getElementById('toggle-auto-add-diy').checked = s.autoAddDiy;
+    const m = document.getElementById('questSettingsModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+function closeQuestSettingsModal() {
+    const m = document.getElementById('questSettingsModal');
+    m.classList.add('d-none');
+    m.classList.remove('d-flex');
+}
+
+function saveQuestSettings() {
+    AppState.questSettings.autoAddRegular = document.getElementById('toggle-auto-add-regular').checked;
+    AppState.questSettings.autoAddDiy = document.getElementById('toggle-auto-add-diy').checked;
+    try { localStorage.setItem('quest_settings', JSON.stringify(AppState.questSettings)); } catch(e) {}
+    saveUserData();
+}
+
+window.closeQuestSettingsModal = closeQuestSettingsModal;
+window.saveQuestSettings = saveQuestSettings;
+
 function openDiyQuestInfoModal() {
     const lang = AppState.currentLang;
     document.getElementById('info-modal-title').innerText = i18n[lang].diy_guide_title || "DIY 퀘스트 가이드";
@@ -5969,26 +6004,46 @@ function loadPlannerForDate(dateStr) {
         plannerTasks = Array(6).fill(null).map((_, i) => ({ text: '', ranked: true, rankOrder: i + 1 }));
     }
 
-    // DIY 퀘스트를 빈 태스크 슬롯에 기본값으로 채우기 (오늘 날짜만)
+    // 퀘스트 자동추가 (오늘 날짜만, 설정에 따라)
     if (dateStr === getTodayStr()) {
         checkDiyDailyReset();
-        const diyDefs = AppState.diyQuests.definitions || [];
-        diyDefs.forEach(q => {
-            // 이미 diyQuestId로 연결된 항목이 있으면 스킵
-            const alreadyById = plannerTasks.some(t => t.diyQuestId === q.id);
-            if (alreadyById) return;
-            // 동일한 텍스트가 있으면 diyQuestId 연결만 추가
-            const sameText = plannerTasks.find(t => t.text === q.title && !t.diyQuestId);
-            if (sameText) { sameText.diyQuestId = q.id; return; }
-            // 빈 슬롯 찾아서 채우기
-            const emptySlot = plannerTasks.findIndex(t => !t.text.trim());
-            if (emptySlot >= 0) {
-                plannerTasks[emptySlot].text = q.title;
-                plannerTasks[emptySlot].diyQuestId = q.id;
-            } else {
-                plannerTasks.push({ text: q.title, ranked: true, rankOrder: plannerTasks.length + 1, diyQuestId: q.id });
-            }
-        });
+        const qs = AppState.questSettings || {};
+
+        // DIY 퀘스트 자동추가
+        if (qs.autoAddDiy !== false) {
+            const diyDefs = AppState.diyQuests.definitions || [];
+            diyDefs.forEach(q => {
+                const alreadyById = plannerTasks.some(t => t.diyQuestId === q.id);
+                if (alreadyById) return;
+                const sameText = plannerTasks.find(t => t.text === q.title && !t.diyQuestId);
+                if (sameText) { sameText.diyQuestId = q.id; return; }
+                const emptySlot = plannerTasks.findIndex(t => !t.text.trim());
+                if (emptySlot >= 0) {
+                    plannerTasks[emptySlot].text = q.title;
+                    plannerTasks[emptySlot].diyQuestId = q.id;
+                } else {
+                    plannerTasks.push({ text: q.title, ranked: true, rankOrder: plannerTasks.length + 1, diyQuestId: q.id });
+                }
+            });
+        }
+
+        // 일반 퀘스트 자동추가
+        if (qs.autoAddRegular) {
+            const day = AppState.quest.currentDayOfWeek;
+            const regularQuests = weeklyQuestData[day] || [];
+            const lang = AppState.currentLang;
+            regularQuests.forEach(q => {
+                const title = q.title[lang] || q.title.ko;
+                const alreadyExists = plannerTasks.some(t => t.text === title);
+                if (alreadyExists) return;
+                const emptySlot = plannerTasks.findIndex(t => !t.text.trim());
+                if (emptySlot >= 0) {
+                    plannerTasks[emptySlot].text = title;
+                } else {
+                    plannerTasks.push({ text: title, ranked: true, rankOrder: plannerTasks.length + 1 });
+                }
+            });
+        }
     }
 
     // 캡션 복원
