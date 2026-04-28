@@ -4606,7 +4606,7 @@ function openPlannerInfoModal() {
             title: '플래너 사용 가이드',
             sections: [
                 { icon: '⭐', title: '우선순위 태스크', desc: '할 일을 입력하면 생성 순서대로 번호가 자동 부여됩니다. 왼쪽 ⠿ 핸들을 길게 눌러 위아래로 드래그하면 순위가 자동으로 변경됩니다.' },
-                { icon: '🕐', title: '시간표 (타임박스)', desc: '우선순위 태스크가 위쪽에 칩으로 표시됩니다. 칩을 원하는 시간 슬롯으로 드래그해서 시간표를 채우세요. 슬롯의 × 버튼으로 제거할 수 있습니다.' },
+                { icon: '🕐', title: '시간표 (타임박스)', desc: '우선순위 태스크가 위쪽에 칩으로 표시됩니다. 칩을 클릭하면 채우기 모드가 활성화되고, 시간 슬롯을 클릭해 채울 수 있습니다. 다른 칩을 클릭하면 해당 태스크로 전환되며, 같은 칩을 다시 클릭하면 종료됩니다. 슬롯의 × 버튼으로 제거할 수 있습니다.' },
                 { icon: '🔁', title: '자동 채우기', desc: '시간 슬롯에 할 일을 배치한 후 왼쪽 체크박스를 체크하면, 해당 시간이 매일 자동으로 채워집니다. (예: 12:00 점심, 19:00 저녁) 언체크하면 자동 채우기가 해제됩니다.' },
                 { icon: '📷', title: '사진 & 한마디', desc: '사진을 첨부하고 오늘의 한마디를 작성하세요. Day1 포스팅 시 필수입니다.' },
                 { icon: '💾', title: '저장 보상', desc: '하루 1회 저장 시 +20P & AGI +0.5 보상을 받습니다.' },
@@ -4618,7 +4618,7 @@ function openPlannerInfoModal() {
             title: 'Planner Guide',
             sections: [
                 { icon: '⭐', title: 'Priority Tasks', desc: 'Tasks are automatically numbered in the order they are created. Long-press the ⠿ handle to drag items up or down — priority numbers update automatically.' },
-                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Your priority tasks appear as chips above the timetable. Drag a chip onto any time slot to fill the schedule. Tap × on a slot to clear it.' },
+                { icon: '🕐', title: 'Schedule (Timebox)', desc: 'Priority tasks appear as chips above the timetable. Tap a chip to activate fill mode, then tap any time slot to fill it. Tap a different chip to switch tasks, or tap the same chip again to exit. Tap × on a slot to clear it.' },
                 { icon: '🔁', title: 'Auto-Fill', desc: 'Place a task in a time slot, then check the checkbox on the left to auto-fill that slot every day. (e.g., 12:00 Lunch, 19:00 Dinner) Uncheck to disable.' },
                 { icon: '📷', title: 'Photo & Caption', desc: 'Attach a photo and write a caption. Required for Day1 posting.' },
                 { icon: '💾', title: 'Save Reward', desc: 'Save once a day to earn +20P & AGI +0.5.' },
@@ -4630,7 +4630,7 @@ function openPlannerInfoModal() {
             title: 'プランナーガイド',
             sections: [
                 { icon: '⭐', title: '優先タスク', desc: 'タスクを入力すると作成順に番号が自動付与されます。⠿ハンドルを長押ししてドラッグすると順位が自動更新されます。' },
-                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '優先タスクが上部にチップとして表示されます。チップを時間スロットにドラッグしてスケジュールを埋めてください。×ボタンでスロットを消去できます。' },
+                { icon: '🕐', title: 'スケジュール (タイムボックス)', desc: '優先タスクが上部にチップとして表示されます。チップをタップするとフィルモードが起動し、時間スロットをタップして埋められます。別のチップをタップするとタスクが切り替わり、同じチップを再タップすると終了します。×ボタンでスロットを消去できます。' },
                 { icon: '🔁', title: '自動入力', desc: 'スロットにタスクを配置後、左のチェックボックスをオンにするとそのスロットが毎日自動入力されます。(例: 12:00 昼食, 19:00 夕食) オフにすると解除されます。' },
                 { icon: '📷', title: '写真 & キャプション', desc: '写真を添付し、今日の一言を書きましょう。Day1投稿に必須です。' },
                 { icon: '💾', title: '保存報酬', desc: '1日1回保存で+20P & AGI +0.5の報酬を獲得できます。' },

@@ -564,7 +564,8 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .planner-task-chips-bank { display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 6px 0; margin-bottom: 6px; }
 .task-chip { padding: 5px 12px; background: rgba(0,217,255,0.12); border: 1.5px solid var(--neon-blue); color: var(--neon-blue); border-radius: 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; letter-spacing: 0.2px; transition: background 0.15s, box-shadow 0.15s; }
 .task-chip.chip-active { background: rgba(0,217,255,0.35); border-color: var(--neon-blue); box-shadow: 0 0 8px rgba(0,217,255,0.5); }
-.task-chip.chip-inactive { opacity: 0.3; pointer-events: none; }
+.task-chip.chip-inactive { opacity: 0.45; }
+.timebox-fill-hint { font-size: 0.72rem; color: var(--text-sub); margin-bottom: 6px; line-height: 1.4; word-break: keep-all; }
 
 /* 타임박스 슬롯 (셀렉트 대체) */
 .timebox-slot { flex: 1; min-height: 30px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 5px; font-size: 0.78rem; color: var(--text-sub); display: flex; align-items: center; gap: 3px; min-width: 0; transition: border-color 0.15s, background 0.15s; overflow: hidden; }

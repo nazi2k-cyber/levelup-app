@@ -240,6 +240,7 @@ const i18n = {
         raid_data_sent: "데이터 전송 완료", raid_contribute_btn: "데이터 동기화 (기여하기)",
         // 플래너 UI
         planner_add_btn: "+ 추가", planner_task_placeholder: "할 일 입력...",
+        timebox_fill_hint: "태스크 버튼 클릭 → 시간 슬롯 클릭으로 채우기 (같은 버튼 재클릭 시 종료)",
         timebox_empty: "-- 없음 --",
         // 피트니스 동기화
         sync_complete_msg: "동기화 완료 ({source})", sync_reward_msg: "추가 보상: +{points}P, STR +{str}",
@@ -1026,6 +1027,7 @@ const i18n = {
         raid_data_sent: "Data Sent", raid_contribute_btn: "Sync Data (Contribute)",
         // Planner UI
         planner_add_btn: "+ Add", planner_task_placeholder: "Enter task...",
+        timebox_fill_hint: "Tap a task chip → tap a time slot to fill (tap same chip again to exit)",
         timebox_empty: "-- None --",
         // Fitness Sync
         sync_complete_msg: "Sync complete ({source}): {steps} steps total", sync_reward_msg: "Bonus: +{points}P, STR +{str}",
@@ -1811,6 +1813,7 @@ const i18n = {
         raid_data_sent: "データ送信完了", raid_contribute_btn: "データ同期（貢献する）",
         // プランナーUI
         planner_add_btn: "+ 追加", planner_task_placeholder: "タスクを入力...",
+        timebox_fill_hint: "チップをタップ → 時間スロットをタップで埋める（同じチップ再タップで終了）",
         timebox_empty: "-- なし --",
         // フィットネス同期
         sync_complete_msg: "同期完了 ({source}): 合計 {steps}歩", sync_reward_msg: "追加報酬: +{points}P, STR +{str}",
