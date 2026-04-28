@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.644] - 2026-04-28
+
+### 변경
+- feat: 플래너 1~6번 항목 리셋 버튼 추가 및 퀘스트 설정 모달 타이틀 변경
+
 ## [1.0.643] - 2026-04-28
 
 ### 변경
