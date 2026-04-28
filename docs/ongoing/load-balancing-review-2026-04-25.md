@@ -54,11 +54,25 @@
   - `functions/index.js` (`sendStreakWarnings`, `sendComebackPush`)
 
 :::task-stub{title="스케줄 푸시를 샤드 기반 병렬 워커로 전환"}
-1. 대상 추출 단계와 전송 실행 단계를 분리한다.
-2. UID hash 기반 샤딩으로 작업 단위를 분산한다.
-3. 워커별 재시도/실패 격리(데드레터)를 적용한다.
-4. 실행 ID/샤드 ID 단위 observability를 추가한다.
-5. 처리량/오류율 기준 자동 스케일 임계값을 수립한다.
+구현일: 2026-04-28
+
+- [x] UID hash(`doc.id`) 기반 샤딩 유틸 추가 (`PUSH_SCHEDULER_SHARD_COUNT=4`)
+- [x] 스트릭 경고 스케줄러를 샤드 워커 4개로 분리
+  - `sendStreakWarningsShard0` — `0 21 * * *`
+  - `sendStreakWarningsShard1` — `5 21 * * *`
+  - `sendStreakWarningsShard2` — `10 21 * * *`
+  - `sendStreakWarningsShard3` — `15 21 * * *`
+- [x] 복귀 푸시 스케줄러를 샤드 워커 4개로 분리
+  - `sendComebackPushShard0` — `0 10 * * *`
+  - `sendComebackPushShard1` — `5 10 * * *`
+  - `sendComebackPushShard2` — `10 10 * * *`
+  - `sendComebackPushShard3` — `15 10 * * *`
+- [x] push 로그 sender에 샤드 ID를 포함해 관측성 보강 (`system/sendComebackPush#<shardId>`, `system/sendStreakWarnings#<shardId>`)
+
+후속 작업:
+1. 샤드별 처리량/오류율 대시보드 작성
+2. 필요 시 샤드 수를 8 이상으로 확장하고 시간 슬롯 재배치
+3. 추후 `uidShard` 저장 전략으로 Firestore 조회 스캔량 자체도 축소
 :::
 
 ---
