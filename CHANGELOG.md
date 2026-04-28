@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.633] - 2026-04-28
+
+### 변경
+- feat: Google Calendar 연동 CI/CD 주입 및 Android 세션 충돌 방지 (Step 6, 8)
+
 ## [1.0.632] - 2026-04-28
 
 ### 변경
