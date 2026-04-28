@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.636] - 2026-04-28
+
+### 변경
+- 시간표 칩 클릭 UX 개선 및 가이드 설명 현행화
+
 ## [1.0.635] - 2026-04-28
 
 ### 변경
