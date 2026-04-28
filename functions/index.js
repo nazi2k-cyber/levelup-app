@@ -2442,11 +2442,18 @@ exports.sendDailyReminder = onSchedule({
 
 // ─── 3. 스트릭 위험 경고 (매일 21:00 KST — 2일 이상 미접속 유저에게 개별 발송) ───
 
-exports.sendStreakWarnings = onSchedule({
-    schedule: "0 21 * * *",
-    timeZone: "Asia/Seoul",
-    region: "asia-northeast3"
-}, async () => {
+const PUSH_SCHEDULER_SHARD_COUNT = 4;
+
+function getStableShardFromUid(uid, shardCount = PUSH_SCHEDULER_SHARD_COUNT) {
+    // 간단한 deterministic hash (djb2 변형)
+    let hash = 5381;
+    for (let i = 0; i < uid.length; i++) {
+        hash = ((hash << 5) + hash) ^ uid.charCodeAt(i);
+    }
+    return Math.abs(hash) % shardCount;
+}
+
+async function runStreakWarningsShard(shardId, shardCount = PUSH_SCHEDULER_SHARD_COUNT) {
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
 
@@ -2460,6 +2467,7 @@ exports.sendStreakWarnings = onSchedule({
     let invalidTokenCount = 0;
 
     for (const doc of usersSnap.docs) {
+        if (getStableShardFromUid(doc.id, shardCount) !== shardId) continue;
         const data = doc.data();
         if (!data.fcmToken) continue;
 
@@ -2521,7 +2529,7 @@ exports.sendStreakWarnings = onSchedule({
                 target: String(data.fcmToken).substring(0, 20) + "...",
                 success: true,
                 messageId: String(response),
-                sender: "system/sendStreakWarnings",
+                sender: `system/sendStreakWarnings#${shardId}`,
                 uid: doc.id
             });
             await writeUserNotification(doc.id, { type: msgType, title: msg.title, body: msg.body });
@@ -2544,24 +2552,43 @@ exports.sendStreakWarnings = onSchedule({
                     target: String(data.fcmToken).substring(0, 20) + "...",
                     success: false,
                     error: String(e.code || e.message),
-                    sender: "system/sendStreakWarnings",
+                    sender: `system/sendStreakWarnings#${shardId}`,
                     uid: doc.id
                 });
             } catch (_logErr) { /* ignore */ }
         }
     }
 
-    console.log(`[스트릭 경고] 경고: ${warningCount}명, 끊어짐: ${brokenCount}명, 토큰 정리: ${invalidTokenCount}건`);
-});
+    console.log(`[스트릭 경고][샤드 ${shardId}/${shardCount}] 경고: ${warningCount}명, 끊어짐: ${brokenCount}명, 토큰 정리: ${invalidTokenCount}건`);
+}
+
+exports.sendStreakWarningsShard0 = onSchedule({
+    schedule: "0 21 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3"
+}, async () => runStreakWarningsShard(0));
+
+exports.sendStreakWarningsShard1 = onSchedule({
+    schedule: "5 21 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3"
+}, async () => runStreakWarningsShard(1));
+
+exports.sendStreakWarningsShard2 = onSchedule({
+    schedule: "10 21 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3"
+}, async () => runStreakWarningsShard(2));
+
+exports.sendStreakWarningsShard3 = onSchedule({
+    schedule: "15 21 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3"
+}, async () => runStreakWarningsShard(3));
 
 // ─── 3-1. 복귀 푸시 (매일 10:00 KST — 1d/3d/7d 미접속 유저에게 개별 발송) ───
 
-exports.sendComebackPush = onSchedule({
-    schedule: "0 10 * * *",
-    timeZone: "Asia/Seoul",
-    region: "asia-northeast3",
-    timeoutSeconds: 540
-}, async () => {
+async function runComebackPushShard(shardId, shardCount = PUSH_SCHEDULER_SHARD_COUNT) {
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];
 
@@ -2575,6 +2602,7 @@ exports.sendComebackPush = onSchedule({
     const TIER_MAP = { 1: "comeback_24h", 3: "comeback_72h", 7: "comeback_7d" };
 
     for (const doc of usersSnap.docs) {
+        if (getStableShardFromUid(doc.id, shardCount) !== shardId) continue;
         const data = doc.data();
         if (!data.fcmToken) continue;
 
@@ -2647,7 +2675,7 @@ exports.sendComebackPush = onSchedule({
                 target: String(data.fcmToken).substring(0, 20) + "...",
                 success: true,
                 messageId: String(response),
-                sender: "system/sendComebackPush",
+                sender: `system/sendComebackPush#${shardId}`,
                 uid: doc.id
             });
             await writeUserNotification(doc.id, { type: msgType, title: msg.title, body: msg.body });
@@ -2668,15 +2696,43 @@ exports.sendComebackPush = onSchedule({
                     target: String(data.fcmToken).substring(0, 20) + "...",
                     success: false,
                     error: String(e.code || e.message),
-                    sender: "system/sendComebackPush",
+                    sender: `system/sendComebackPush#${shardId}`,
                     uid: doc.id
                 });
             } catch (_logErr) { /* ignore */ }
         }
     }
 
-    console.log(`[복귀 푸시] 24h: ${counts.comeback_24h}명, 72h: ${counts.comeback_72h}명, 7d: ${counts.comeback_7d}명, 복귀 리셋: ${counts.reset}건, 토큰 정리: ${counts.invalidToken}건`);
-});
+    console.log(`[복귀 푸시][샤드 ${shardId}/${shardCount}] 24h: ${counts.comeback_24h}명, 72h: ${counts.comeback_72h}명, 7d: ${counts.comeback_7d}명, 복귀 리셋: ${counts.reset}건, 토큰 정리: ${counts.invalidToken}건`);
+}
+
+exports.sendComebackPushShard0 = onSchedule({
+    schedule: "0 10 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540
+}, async () => runComebackPushShard(0));
+
+exports.sendComebackPushShard1 = onSchedule({
+    schedule: "5 10 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540
+}, async () => runComebackPushShard(1));
+
+exports.sendComebackPushShard2 = onSchedule({
+    schedule: "10 10 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540
+}, async () => runComebackPushShard(2));
+
+exports.sendComebackPushShard3 = onSchedule({
+    schedule: "15 10 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3",
+    timeoutSeconds: 540
+}, async () => runComebackPushShard(3));
 
 // ─── 4. 공지사항 수동 발송 (Callable Function — 관리자 전용) ───
 // NOTE: Individual exports kept for direct invocation; primary path is via ping router.
