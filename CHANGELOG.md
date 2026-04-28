@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.632] - 2026-04-28
+
+### 변경
+- Adjust habit stats/date layout and typography
+
 ## [1.0.631] - 2026-04-28
 
 ### 변경
