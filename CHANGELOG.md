@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.642] - 2026-04-28
+
+### 변경
+- feat: 퀘스트 일반 퀘스트 레이블 추가 및 퀘스트 설정 모달 구현
+- Move planner guide button next to planner title
+
 ## [1.0.641] - 2026-04-28
 
 ### 변경
