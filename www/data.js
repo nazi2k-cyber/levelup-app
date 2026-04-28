@@ -206,7 +206,7 @@ const i18n = {
 
         // 퀘스트 레이블 & 설정
         regular_quest_label: "일반 퀘스트",
-        quest_settings_btn: "설정", quest_settings_title: "퀘스트 설정",
+        quest_settings_btn: "설정", quest_settings_title: "플래너 자동입력",
         quest_auto_add_regular: "일반 퀘스트 자동추가", quest_auto_add_diy: "DIY 퀘스트 자동추가",
 
         // DIY 퀘스트
@@ -998,7 +998,7 @@ const i18n = {
 
         // Quest label & settings
         regular_quest_label: "Daily Quests",
-        quest_settings_btn: "Settings", quest_settings_title: "Quest Settings",
+        quest_settings_btn: "Settings", quest_settings_title: "Planner Auto-add",
         quest_auto_add_regular: "Auto-add Daily Quest Tasks", quest_auto_add_diy: "Auto-add DIY Quest Tasks",
 
         // DIY Quests
@@ -1789,7 +1789,7 @@ const i18n = {
 
         // クエストラベル & 設定
         regular_quest_label: "デイリークエスト",
-        quest_settings_btn: "設定", quest_settings_title: "クエスト設定",
+        quest_settings_btn: "設定", quest_settings_title: "プランナー自動追加",
         quest_auto_add_regular: "デイリークエスト 自動追加", quest_auto_add_diy: "DIYクエスト 自動追加",
 
         // DIYクエスト

@@ -5553,7 +5553,6 @@ function renderPlannerTasks() {
 
     container.innerHTML = plannerTasks.map((task, idx) => {
         const rankNum = idx + 1;
-        const canRemove = idx >= 6;
         const isDiy = !!task.diyQuestId;
         const diyQuest = isDiy ? AppState.diyQuests.definitions.find(d => d.id === task.diyQuestId) : null;
         const isDiyDone = isDiy && (AppState.diyQuests.completedToday[task.diyQuestId] || false);
@@ -5579,7 +5578,7 @@ function renderPlannerTasks() {
                    oninput="window.updateTaskText(${idx}, this.value)"
                    ${isFuture ? 'disabled' : ''}>
             ${checkBtn}
-            ${canRemove && !isDiy ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
+            ${!isDiy ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
         </div>`;
     }).join('');
 
@@ -5696,9 +5695,12 @@ window.addPlannerTask = function() {
 };
 
 window.removeTask = function(idx) {
-    if (idx < 6) return;
-    plannerTasks.splice(idx, 1);
-    plannerTasks.forEach((t, i) => { t.rankOrder = i + 1; });
+    if (idx < 6) {
+        plannerTasks[idx] = { text: '', ranked: true, rankOrder: idx + 1 };
+    } else {
+        plannerTasks.splice(idx, 1);
+        plannerTasks.forEach((t, i) => { t.rankOrder = i + 1; });
+    }
     renderPlannerTasks();
 };
 
