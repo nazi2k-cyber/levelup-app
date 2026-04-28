@@ -5500,7 +5500,7 @@ function renderTaskChipsBank() {
     if (!bank) return;
     const tasks = plannerTasks.filter(t => t.text.trim());
     if (tasks.length === 0) {
-        bank.innerHTML = `<span style="font-size:0.72rem; color:var(--text-sub);">${i18n[AppState.currentLang]?.planner_chips_hint || '태스크 버튼을 클릭하고 시간 슬롯을 눌러 채우세요'}</span>`;
+        bank.innerHTML = '';
         return;
     }
     bank.innerHTML = tasks.map((t) =>
