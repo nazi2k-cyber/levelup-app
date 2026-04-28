@@ -48,6 +48,9 @@
             crossorigin="anonymous"></script>
     <!-- Tesseract.js loaded on-demand when scanner opens (saves initial load time) -->
 
+    <!-- Google Identity Services — native WebView 동적 주입 실패 방지를 위해 정적 pre-load -->
+    <script src="https://accounts.google.com/gsi/client" async id="gis-client"></script>
+
 </head>
 <body>
 
