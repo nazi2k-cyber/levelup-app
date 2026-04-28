@@ -137,6 +137,7 @@ jobs:
           fi
           sed -i "s|GOOGLE_WEB_CLIENT_ID_PLACEHOLDER|$GOOGLE_WEB_CLIENT_ID|g" capacitor.config.json
           sed -i "s|GOOGLE_WEB_CLIENT_ID_PLACEHOLDER|$GOOGLE_WEB_CLIENT_ID|g" www/app.js
+          sed -i "s|GOOGLE_WEB_CLIENT_ID_PLACEHOLDER|$GOOGLE_WEB_CLIENT_ID|g" www/modules/planner-gcal.js
           echo "✅ Google Web Client ID 주입 완료: ${GOOGLE_WEB_CLIENT_ID:0:40}..."
 
       # 7. Android 플랫폼 추가 (android/ 폴더가 없을 때 자동 생성)

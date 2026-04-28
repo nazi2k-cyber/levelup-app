@@ -236,6 +236,19 @@ jobs:
           fi
           echo "✅ firebase-config.js API 키 검증 완료"
 
+      - name: Google Web Client ID 주입
+        if: steps.detect.outputs.deploy_hosting == 'true'
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+        run: |
+          if [ -z "$GOOGLE_WEB_CLIENT_ID" ]; then
+            echo "❌ GOOGLE_WEB_CLIENT_ID 시크릿이 설정되지 않았습니다."
+            exit 1
+          fi
+          sed -i "s|GOOGLE_WEB_CLIENT_ID_PLACEHOLDER|$GOOGLE_WEB_CLIENT_ID|g" www/app.js
+          sed -i "s|GOOGLE_WEB_CLIENT_ID_PLACEHOLDER|$GOOGLE_WEB_CLIENT_ID|g" www/modules/planner-gcal.js
+          echo "✅ Google Web Client ID 주입 완료: ${GOOGLE_WEB_CLIENT_ID:0:40}..."
+
       - name: Firebase Hosting 배포
         if: steps.detect.outputs.deploy_hosting == 'true'
         run: firebase deploy --only hosting --project ${{ env.FIREBASE_PROJECT }}

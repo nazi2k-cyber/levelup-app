@@ -114,31 +114,9 @@
     }
 
     async function getAccessTokenNative() {
-        try {
-            const { GoogleAuth } = window.Capacitor.Plugins;
-            if (!GoogleAuth) {
-                notify(t('gcal_scope_required'));
-                return null;
-            }
-            await GoogleAuth.initialize({
-                clientId: CLIENT_ID,
-                scopes: [CALENDAR_SCOPE],
-                grantOfflineAccess: false
-            });
-            const googleUser = await GoogleAuth.signIn();
-            const token = googleUser && googleUser.authentication && googleUser.authentication.accessToken;
-            if (!token) {
-                notify(t('gcal_error', { msg: 'accessToken 없음' }));
-                return null;
-            }
-            return token;
-        } catch (e) {
-            if (AppLogger) AppLogger.error('[PlannerGCal] native getAccessToken 실패', e);
-            const code = String(e.code || '');
-            if (code === '12501') { notify(t('gcal_denied')); }
-            else { notify(t('gcal_error', { msg: e.message || code })); }
-            return null;
-        }
+        // WebView GIS 팝업 사용 — GoogleAuth 플러그인 세션 충돌 방지
+        await loadGisScript();
+        return getAccessTokenWeb();
     }
 
     async function getAccessToken() {
