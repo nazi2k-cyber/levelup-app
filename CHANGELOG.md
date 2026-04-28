@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.635] - 2026-04-28
+
+### 변경
+- fix: 네이티브 앱 공유 URL에서 localhost 대신 실제 도메인 사용
+
 ## [1.0.634] - 2026-04-28
 
 ### 변경
