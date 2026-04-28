@@ -5554,11 +5554,16 @@ function renderPlannerTasks() {
     container.innerHTML = plannerTasks.map((task, idx) => {
         const rankNum = idx + 1;
         const isDiy = !!task.diyQuestId;
+        const isRegular = task.regularQuestIdx !== undefined;
+        const isAutoApplied = isDiy || isRegular;
         const diyQuest = isDiy ? AppState.diyQuests.definitions.find(d => d.id === task.diyQuestId) : null;
         const isDiyDone = isDiy && (AppState.diyQuests.completedToday[task.diyQuestId] || false);
-        const isDone = isDiy ? isDiyDone : !!task.done;
+        const isRegularDone = isRegular && (AppState.quest.completedState[AppState.quest.currentDayOfWeek][task.regularQuestIdx] || false);
+        const isDone = isDiy ? isDiyDone : (isRegular ? isRegularDone : !!task.done);
 
-        const statTag = (isDiy && diyQuest) ? `<span class="diy-task-stat-inline">${sanitizeText(diyQuest.stat)}</span>` : '';
+        let statTag = '';
+        if (isDiy && diyQuest) statTag = `<span class="diy-task-stat-inline">${sanitizeText(diyQuest.stat)}</span>`;
+        else if (isRegular && task.regularQuestStat) statTag = `<span class="diy-task-stat-inline">${sanitizeText(task.regularQuestStat)}</span>`;
         const dragHandle = `<span class="planner-task-drag-handle" ${isFuture ? 'style="opacity:0.3;pointer-events:none"' : ''}>⠿</span>`;
 
         let checkBtn = '';
@@ -5568,17 +5573,17 @@ function renderPlannerTasks() {
             checkBtn = `<button class="task-check-btn${isDone ? ' checked' : ''}" onclick="event.stopPropagation(); window.toggleTaskDone(${idx})" ${isFuture ? 'disabled' : ''}>${isDone ? '✅' : '⬜'}</button>`;
         }
 
-        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isDone ? ' task-done' : ''}" data-task-idx="${idx}">
+        return `<div class="planner-task-item${isDiy ? ' planner-diy-item' : ''}${isRegular ? ' planner-regular-item' : ''}${isDone ? ' task-done' : ''}" data-task-idx="${idx}">
             ${dragHandle}
             <span class="task-rank-num">${rankNum}</span>
             ${statTag}<input class="planner-task-input${isDone ? ' task-done-input' : ''}" type="text"
                    value="${task.text.replace(/"/g,'&quot;').replace(/</g,'&lt;')}"
                    placeholder="${i18n[AppState.currentLang]?.planner_task_placeholder || '할 일 입력...'}"
                    maxlength="50"
-                   oninput="window.updateTaskText(${idx}, this.value)"
-                   ${isFuture ? 'disabled' : ''}>
+                   oninput="${isAutoApplied ? '' : `window.updateTaskText(${idx}, this.value)`}"
+                   ${isFuture || isAutoApplied ? 'disabled' : ''}>
             ${checkBtn}
-            ${!isDiy ? `<button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>` : ''}
+            <button class="task-remove-btn" onclick="window.removeTask(${idx})" ${isFuture ? 'disabled' : ''}>×</button>
         </div>`;
     }).join('');
 
@@ -5680,8 +5685,14 @@ function syncTaskOrderFromDOM() {
 
 window.toggleTaskDone = function(idx) {
     if (idx < 0 || idx >= plannerTasks.length) return;
-    plannerTasks[idx].done = !plannerTasks[idx].done;
-    renderPlannerTasks();
+    const task = plannerTasks[idx];
+    if (task.regularQuestIdx !== undefined) {
+        window.toggleQuest(task.regularQuestIdx);
+        renderPlannerTasks();
+    } else {
+        task.done = !task.done;
+        renderPlannerTasks();
+    }
 };
 
 window.updateTaskText = function(idx, val) {
@@ -6034,15 +6045,17 @@ function loadPlannerForDate(dateStr) {
             const day = AppState.quest.currentDayOfWeek;
             const regularQuests = weeklyQuestData[day] || [];
             const lang = AppState.currentLang;
-            regularQuests.forEach(q => {
+            regularQuests.forEach((q, qIdx) => {
                 const title = q.title[lang] || q.title.ko;
-                const alreadyExists = plannerTasks.some(t => t.text === title);
+                const alreadyExists = plannerTasks.some(t => t.text === title || t.regularQuestIdx === qIdx);
                 if (alreadyExists) return;
                 const emptySlot = plannerTasks.findIndex(t => !t.text.trim());
                 if (emptySlot >= 0) {
                     plannerTasks[emptySlot].text = title;
+                    plannerTasks[emptySlot].regularQuestIdx = qIdx;
+                    plannerTasks[emptySlot].regularQuestStat = q.stat;
                 } else {
-                    plannerTasks.push({ text: title, ranked: true, rankOrder: plannerTasks.length + 1 });
+                    plannerTasks.push({ text: title, ranked: true, rankOrder: plannerTasks.length + 1, regularQuestIdx: qIdx, regularQuestStat: q.stat });
                 }
             });
         }

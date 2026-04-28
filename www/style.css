@@ -605,6 +605,8 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 
 /* 플래너 내 DIY 퀘스트 통합 스타일 */
 .planner-diy-item { border: 1px solid rgba(255,204,0,0.15); border-radius: 8px; background: rgba(255,204,0,0.03); }
+/* 플래너 내 일반 퀘스트 자동적용 아이템 */
+.planner-regular-item { border: 1px solid rgba(0,217,255,0.15); border-radius: 8px; background: rgba(0,217,255,0.03); }
 .diy-task-stat-inline {
     font-size: 0.6rem; font-weight: bold; color: var(--neon-gold);
     background: rgba(255,204,0,0.12); padding: 2px 5px; border-radius: 4px;
