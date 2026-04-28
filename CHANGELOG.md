@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.641] - 2026-04-28
+
+### 변경
+- fix(planner): remove duplicate time slot guidance text
+
 ## [1.0.640] - 2026-04-28
 
 ### 변경
