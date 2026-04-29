@@ -67,6 +67,12 @@ service cloud.firestore {
         && (!('totalSteps' in s) || (s.totalSteps is number && s.totalSteps >= 0));
     }
 
+    // subscription 필드 불변성: 클라이언트가 직접 변경 불가 (Admin SDK만 쓰기 허용)
+    function isSubscriptionImmutable() {
+      return !('subscription' in request.resource.data)
+          || resource.data.get('subscription', null) == request.resource.data.subscription;
+    }
+
     // ──────────────────────────────────────────────
     // users 문서 필드 타입 검증
     // ──────────────────────────────────────────────
@@ -147,14 +153,16 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null
         && request.auth.uid == userId
-        && isValidUserFieldsPart1();
+        && isValidUserFieldsPart1()
+        && !('subscription' in request.resource.data);
       // update 시 타입 검증 + 델타 검증 (포인트·레벨 급변 방지) + 빈도 제한
       allow update: if request.auth != null
         && request.auth.uid == userId
         && isValidUserFieldsPart1()
         && isValidPointsDelta()
         && isValidLevelDelta()
-        && notTooFrequent();
+        && notTooFrequent()
+        && isSubscriptionImmutable();
       // 계정 삭제: 본인 문서만 삭제 가능 (Google 정책 준수)
       allow delete: if request.auth != null
         && request.auth.uid == userId;

@@ -70,6 +70,7 @@
     function _AppState() { return window.AppState; }
     function _auth() { return window._auth; }
     function _i18n() { return window.i18n; }
+    function isNoAdsUser() { return _AppState()?.user?.subscription?.noAds === true; }
     function _getAdSessionCount() {
         return parseInt(localStorage.getItem(AD_SESSION_COUNT_KEY) || '0', 10);
     }
@@ -395,6 +396,10 @@
      */
     async function showRewarded(opts) {
         opts = opts || {};
+        if (isNoAdsUser()) {
+            if (opts.onSuccess) opts.onSuccess();
+            return true;
+        }
         if (!_isNative()) {
             if (opts.onSuccess) opts.onSuccess();
             return true;
@@ -468,6 +473,10 @@
     }
 
     async function showRewardedInterstitial(context) {
+        if (isNoAdsUser()) {
+            if (window.applyRewardedInterstitialBonus) window.applyRewardedInterstitialBonus(context);
+            return false;
+        }
         if (!isAdExposureAllowed()) {
             _logAdGateBlocked('rewarded_interstitial');
             return false;
@@ -499,6 +508,7 @@
     }
 
     async function showBanner() {
+        if (isNoAdsUser()) return;
         if (!isAdExposureAllowed()) {
             _logAdGateBlocked('banner');
             return;
@@ -871,6 +881,11 @@
 
     // --- 네이티브 광고 ---
     async function loadNativeAd(tabId) {
+        if (isNoAdsUser()) {
+            const placeholder = document.getElementById('native-ad-placeholder-' + tabId);
+            if (placeholder) placeholder.style.display = 'none';
+            return;
+        }
         if (!isAdExposureAllowed()) {
             _logAdGateBlocked('native_' + tabId);
             const placeholder = document.getElementById('native-ad-placeholder-' + tabId);

@@ -50,6 +50,7 @@ export function getInitialAppState() {
             privateAccount: false,
             big5: null,
             isAdmin: false,
+            subscription: { noAds: false, unlimitedDiyQuests: false },
         },
         quest: {
             currentDayOfWeek: new Date().getDay(),

@@ -1555,6 +1555,12 @@ async function loadUserDataFromDB(user) {
             if (data.ormCalcHistoryStr) {
                 localStorage.setItem('orm_calc_history', data.ormCalcHistoryStr);
             }
+            if (data.subscription && typeof data.subscription === 'object') {
+                AppState.user.subscription = {
+                    noAds: data.subscription.noAds === true,
+                    unlimitedDiyQuests: data.subscription.unlimitedDiyQuests === true,
+                };
+            }
             // 계산기 보상 날짜 복원 (재설치/로그아웃 시 무한 보상 방지)
             if (data.rcLastRewardDate) {
                 localStorage.setItem('rc_last_reward_date', data.rcLastRewardDate);
@@ -2261,7 +2267,7 @@ window.showDiyQuestModal = (questId) => {
     const isEdit = !!questId;
     const existing = isEdit ? AppState.diyQuests.definitions.find(d => d.id === questId) : null;
 
-    if (!isEdit && AppState.diyQuests.definitions.length >= 6) {
+    if (!isEdit && !AppState.user.subscription?.unlimitedDiyQuests && AppState.diyQuests.definitions.length >= 6) {
         const lang = AppState.currentLang;
         alert(i18n[lang]?.diy_limit_reached || 'Max 6 custom quests');
         return;
