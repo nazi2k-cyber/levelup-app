@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.655] - 2026-04-29
+
+### 변경
+- docs: flesh out incremental backup sharding plan
+
 ## [1.0.654] - 2026-04-29
 
 ### 변경
