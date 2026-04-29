@@ -2493,8 +2493,9 @@ async function refreshDungeonMapUserLocation(force = false) {
     try {
         if (isNative && window.Capacitor.Plugins?.Geolocation) {
             const { Geolocation } = window.Capacitor.Plugins;
-            const permResult = await Geolocation.requestPermissions();
-            if (permResult.location === 'denied') return;
+            // 권한 요청 없이 현재 허용 상태만 확인 — 팝업 표시 안 함
+            const permStatus = await Geolocation.checkPermissions();
+            if (permStatus.location !== 'granted') return;
             const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
             lat = position.coords.latitude;
             lng = position.coords.longitude;
