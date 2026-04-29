@@ -6424,8 +6424,8 @@ async function showPermissionPrompts() {
             });
         }
     } else {
-        // 이미 허용됐거나 지원 불가: 상태만 동기화
-        await locationService.promptGpsPermissionIfNeeded({
+        // 이미 허용됐거나 지원 불가: 상태만 동기화 (권한 요청 없이)
+        await locationService.syncWithOsPermissions({
             gpsToggle: document.getElementById('gps-toggle'),
             statusDiv: document.getElementById('gps-status'),
         });
