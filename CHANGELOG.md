@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.662] - 2026-04-29
+
+### 변경
+- feat: 전체 체크박스 토글 - 클릭 시 전부 언체크, 재클릭 시 전체 선택
+
 ## [1.0.661] - 2026-04-29
 
 ### 변경
