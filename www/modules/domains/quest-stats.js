@@ -90,17 +90,18 @@ export function createQuestStatsModule(deps) {
         const refDow = state.selectedDate ? new Date(state.selectedDate + 'T00:00:00').getDay() : new Date().getDay();
         const quests = weeklyQuestData[refDow] || [];
         const selectedCount = state.selectedDailyKeys.length;
-        const baseLabel = { ko: '데일리', en: 'Daily', ja: 'デイリー' };
+        const baseLabel = { ko: '일반 퀘스트', en: 'General Quest', ja: '一般クエスト' };
         const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
         btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
         btn.style.color = selectedCount > 0 ? 'var(--neon-cyan)' : '';
         btn.style.borderColor = selectedCount > 0 ? 'var(--neon-cyan)' : '';
 
         const dayNames = { ko:["일","월","화","수","목","금","토"], en:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja:["日","月","火","水","木","金","土"] };
-        const allLabel = { ko: '전체 보기', en: 'Clear', ja: 'クリア' };
+        const selectAllLabel = { ko: '전체', en: 'All', ja: '全体' };
         const dowName = (dayNames[lang] || dayNames.en)[refDow];
+        const isAllSelected = state.selectedDailyKeys.length === 0;
         menu.innerHTML = [
-            `<div class="qstats-diy-dd-item" onclick="window.clearQstatsDailySelection()">${allLabel[lang] || allLabel.en}</div>`,
+            `<label class="qstats-diy-dd-item" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" ${isAllSelected ? 'checked' : ''} onchange="window.toggleQstatsDailyAll(this.checked)">${selectAllLabel[lang] || selectAllLabel.en}</label>`,
             `<div style="padding:4px 12px; font-size:0.62rem; color:var(--text-sub); border-bottom:1px solid rgba(255,255,255,0.06);">${dowName}요일 퀘스트 (멀티 선택)</div>`,
             ...quests.map((q, i) => {
                 const key = `${refDow}:${i}`;
@@ -119,15 +120,16 @@ export function createQuestStatsModule(deps) {
         wrap.style.display = defs.length > 0 ? 'block' : 'none';
         const selectedCount = state.selectedDiyIds.length;
         const lang = AppState.currentLang;
-        const baseLabel = { ko: 'DIY', en: 'DIY', ja: 'DIY' };
+        const baseLabel = { ko: 'DIY퀘스트', en: 'DIY Quest', ja: 'DIYクエスト' };
         const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
         btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
         btn.style.color = selectedCount > 0 ? 'var(--neon-gold)' : '';
         btn.style.borderColor = 'var(--neon-gold)';
 
-        const allLabel = { ko: '전체 보기', en: 'Clear', ja: 'クリア' };
+        const selectAllLabel = { ko: '전체', en: 'All', ja: '全体' };
+        const isAllSelected = state.selectedDiyIds.length === 0;
         menu.innerHTML = [
-            `<div class="qstats-diy-dd-item" onclick="window.clearQstatsDiySelection()">${allLabel[lang] || allLabel.en}</div>`,
+            `<label class="qstats-diy-dd-item" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" ${isAllSelected ? 'checked' : ''} onchange="window.toggleQstatsDiyAll(this.checked)">${selectAllLabel[lang] || selectAllLabel.en}</label>`,
             ...defs.map((q) => {
                 const active = state.selectedDiyIds.includes(q.id) ? ' active' : '';
                 return `<div class="qstats-diy-dd-item${active}" onclick="window.toggleQstatsDiyQuest('${q.id}')"><span style="margin-right:6px;">${active ? '☑' : '☐'}</span><span class="quest-stat-tag" style="font-size:0.55rem; padding:1px 4px; margin-right:4px;">${q.stat}</span>${q.title}</div>`;
@@ -369,10 +371,12 @@ export function createQuestStatsModule(deps) {
         window.toggleQstatsDailyDropdown = () => document.getElementById('qstats-daily-dropdown-menu')?.classList.toggle('d-none');
         window.toggleQstatsDailyQuest = (dow, idx) => { toggleMultiSelection(state.selectedDailyKeys, `${dow}:${idx}`); state.selectedDate = null; state.selectedDiyIds = []; render(); };
         window.clearQstatsDailySelection = () => { state.selectedDailyKeys = []; state.selectedDate = null; render(); };
+        window.toggleQstatsDailyAll = (checked) => { if (!checked) state.selectedDailyKeys = []; state.selectedDate = null; render(); };
 
         window.toggleQstatsDiyDropdown = () => document.getElementById('qstats-diy-dropdown-menu')?.classList.toggle('d-none');
         window.toggleQstatsDiyQuest = (questId) => { toggleMultiSelection(state.selectedDiyIds, questId); state.selectedDate = null; state.selectedDailyKeys = []; render(); };
         window.clearQstatsDiySelection = () => { state.selectedDiyIds = []; state.selectedDate = null; render(); };
+        window.toggleQstatsDiyAll = (checked) => { if (!checked) state.selectedDiyIds = []; state.selectedDate = null; render(); };
         window.setQstatsChartRange = (range) => { state.chartRange = range === 'weekly' ? 'weekly' : 'monthly'; render(); };
     }
 
