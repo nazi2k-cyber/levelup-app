@@ -36,6 +36,7 @@ export function createAuthProfileModule(deps) {
         getTodayStr,
         getDiaryEntry,
         getTodayKST,
+        updatePremiumExpiryUI,
     } = deps;
 
     let initializedUid = null;

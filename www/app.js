@@ -837,6 +837,7 @@ const authProfileDomain = createAuthProfileModule({
     getTodayStr,
     getDiaryEntry,
     getTodayKST,
+    updatePremiumExpiryUI,
 });
 authProfileDomain.bindWindowHandlers();
 
@@ -2271,14 +2272,16 @@ window.showDiyQuestModal = (questId) => {
     const existing = isEdit ? AppState.diyQuests.definitions.find(d => d.id === questId) : null;
 
     if (!isEdit) {
-        const isPremium = AppState.user.subscription?.unlimitedDiyQuests === true;
-        const limit = isPremium ? 36 : 6;
-        if (AppState.diyQuests.definitions.length >= limit) {
-            const lang = AppState.currentLang;
-            const msgKey = isPremium ? 'diy_limit_reached_premium' : 'diy_limit_reached';
-            const fallback = isPremium ? 'Max 36 custom quests.' : 'Max 6 custom quests.';
-            alert(i18n[lang]?.[msgKey] || fallback);
-            return;
+        if (!AppState.user.isAdmin) {
+            const isPremium = AppState.user.subscription?.unlimitedDiyQuests === true;
+            const limit = isPremium ? 36 : 6;
+            if (AppState.diyQuests.definitions.length >= limit) {
+                const lang = AppState.currentLang;
+                const msgKey = isPremium ? 'diy_limit_reached_premium' : 'diy_limit_reached';
+                const fallback = isPremium ? 'Max 36 custom quests.' : 'Max 6 custom quests.';
+                alert(i18n[lang]?.[msgKey] || fallback);
+                return;
+            }
         }
     }
 
