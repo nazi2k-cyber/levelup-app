@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.665] - 2026-04-29
+
+### 변경
+- fix: 습관 보상 중복 방지 강화 - 마이그레이션 및 난이도 변경 처리
+
 ## [1.0.664] - 2026-04-29
 
 ### 변경
