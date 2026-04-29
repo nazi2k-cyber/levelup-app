@@ -1121,6 +1121,14 @@
                         <span data-i18n="set_theme">라이트 모드</span>
                         <label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider"></span></label>
                     </div>
+                    <div id="premium-expiry-row" class="setting-row" style="display:none;">
+                        <span data-i18n="set_premium_expiry">프리미엄 사용기간</span>
+                        <span id="premium-expiry-date" style="font-size:0.85rem; color:var(--neon-blue); font-weight:bold;"></span>
+                    </div>
+                    <div id="premium-manage-row" class="setting-row" style="display:none; flex-direction:column; align-items:flex-start; gap:8px;">
+                        <span data-i18n="set_premium_manage_label">프리미엄 구독</span>
+                        <button class="btn-primary" style="width:100%; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.75rem; padding:8px;" onclick="window.openPlayStoreSubscriptions()" data-i18n="set_premium_manage_btn">플레이스토어 구독 관리</button>
+                    </div>
                 </div>
                 <div class="system-card">
                     <div class="setting-row">
