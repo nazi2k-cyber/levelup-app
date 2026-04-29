@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.670] - 2026-04-29
+
+### 변경
+- feat: 멀티리전 페일오버 전략 구현 (asia-northeast3 → asia-northeast1)
+
 ## [1.0.669] - 2026-04-29
 
 ### 변경
