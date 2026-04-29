@@ -50,13 +50,18 @@
             const parsed = JSON.parse(raw) || {};
             const difficulty = HABIT_DIFFICULTY_DAYS[parsed.difficulty] ? parsed.difficulty : 'medium';
             const totalDays = HABIT_DIFFICULTY_DAYS[difficulty];
+            const checks = (parsed.checks && typeof parsed.checks === 'object') ? parsed.checks : {};
+            // 구버전 데이터 마이그레이션: rewardedDays 없으면 기존 checks에서 초기화
+            const rewardedDays = (parsed.rewardedDays && typeof parsed.rewardedDays === 'object')
+                ? parsed.rewardedDays
+                : Object.fromEntries(Object.entries(checks).filter(([, v]) => v === true));
             return {
                 habitName: typeof parsed.habitName === 'string' ? parsed.habitName : '',
                 difficulty,
                 totalDays,
                 startDate: (typeof parsed.startDate === 'string' && parsed.startDate) ? parsed.startDate : getTodayStr(),
-                checks: (parsed.checks && typeof parsed.checks === 'object') ? parsed.checks : {},
-                rewardedDays: (parsed.rewardedDays && typeof parsed.rewardedDays === 'object') ? parsed.rewardedDays : {},
+                checks,
+                rewardedDays,
                 stageBonusAwarded: Array.isArray(parsed.stageBonusAwarded) ? parsed.stageBonusAwarded : [false, false, false]
             };
         } catch (e) {
@@ -475,8 +480,8 @@
         if (difficultyChanged) {
             cfg.startDate = getTodayStr();
             cfg.checks = {};
-            cfg.rewardedDays = {};
             cfg.stageBonusAwarded = [false, false, false];
+            // rewardedDays는 난이도 변경 시에도 유지 (day 번호당 1회 보상 원칙)
         }
         saveHabitProjectConfig(cfg);
         window.saveUserData?.();
