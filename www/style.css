@@ -2113,6 +2113,102 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     width: 24px; background: var(--neon-blue);
 }
 
+/* 권한 안내 오버레이 (알림/신체활동/위치) */
+.perm-guide-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(10,10,20,0.88);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.perm-guide-overlay.pg-visible { opacity: 1; pointer-events: auto; }
+
+.perm-guide-content {
+    background: #12121e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 28px 28px 0 0;
+    padding: 36px 28px calc(40px + env(safe-area-inset-bottom));
+    width: 100%; max-width: 480px; box-sizing: border-box;
+    text-align: center;
+    transform: translateY(48px); transition: transform 0.35s cubic-bezier(0.25,0.1,0.25,1);
+    animation: none;
+}
+[data-theme="light"] .perm-guide-content {
+    background: #ffffff; border-color: rgba(0,0,0,0.07);
+}
+.perm-guide-overlay.pg-visible .perm-guide-content { transform: translateY(0); }
+
+.pg-icon-wrap {
+    width: 80px; height: 80px; border-radius: 24px;
+    margin: 0 auto 24px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid transparent; box-sizing: border-box;
+    transition: background 0.3s, border-color 0.3s;
+}
+
+.pg-title {
+    font-size: 1.3rem; font-weight: 700; color: var(--text-main);
+    margin: 0 0 10px; word-break: keep-all; letter-spacing: -0.02em;
+}
+
+.pg-desc {
+    font-size: 0.88rem; color: var(--text-sub); line-height: 1.72;
+    margin: 0 0 26px; word-break: keep-all;
+}
+
+.pg-feature-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 16px 18px; margin-bottom: 24px;
+    text-align: left;
+}
+[data-theme="light"] .pg-feature-card {
+    background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06);
+}
+
+.pg-feature-label {
+    font-size: 0.68rem; color: var(--text-sub); font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px;
+}
+
+.pg-feature-row { display: flex; align-items: center; gap: 14px; }
+
+.pg-feature-icon {
+    font-size: 1.6rem; flex-shrink: 0;
+    width: 46px; height: 46px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05); border-radius: 14px;
+}
+[data-theme="light"] .pg-feature-icon { background: rgba(0,0,0,0.04); }
+
+.pg-feature-text { display: flex; flex-direction: column; gap: 3px; text-align: left; }
+
+.pg-feature-name {
+    font-size: 0.95rem; font-weight: 700; color: var(--text-main);
+}
+
+.pg-feature-desc {
+    font-size: 0.78rem; color: var(--text-sub); line-height: 1.45;
+}
+
+.pg-allow-btn {
+    width: 100%; padding: 15px; border-radius: 50px;
+    border: none; color: #fff; font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin-bottom: 12px; letter-spacing: 0.01em;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+.pg-allow-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+.pg-skip-btn {
+    width: 100%; padding: 13px; border-radius: 50px;
+    background: transparent; border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-sub); font-size: 0.9rem; cursor: pointer;
+    transition: background 0.2s;
+}
+[data-theme="light"] .pg-skip-btn { border-color: rgba(0,0,0,0.1); }
+.pg-skip-btn:active { background: rgba(255,255,255,0.05); }
+
 /* 뽀모도로 타이머 */
 #pomo-progress-ring { transition: stroke-dashoffset 1s linear, stroke 0.3s; }
 .pomo-dot {

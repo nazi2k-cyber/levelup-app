@@ -21,6 +21,7 @@ import { createPushService } from './modules/device/push-service.js';
 import { createPlatformCapabilities } from './modules/device/platform-capabilities.js';
 import { createLocationService } from './modules/device/location-service.js';
 import { createHealthService } from './modules/device/health-service.js';
+import { createPermissionGuideModule } from './modules/device/permission-guide.js';
 
 if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
@@ -86,6 +87,11 @@ const healthService = createHealthService({
     updateStepCountUI: () => updateStepCountUI(),
     updatePointUI: () => updatePointUI(),
     drawRadarChart: () => drawRadarChart(),
+});
+
+const permissionGuide = createPermissionGuideModule({
+    getCurrentLang: () => AppState.currentLang,
+    i18n,
 });
 
 function getPermissionService() {
@@ -6349,7 +6355,7 @@ function openAppSettingsInternal() {
     }
 }
 
-// --- 로그인 시 앱 토글 off + OS 권한 미승인 항목만 순차 요청 ---
+// --- 로그인 시 앱 토글 off + OS 권한 미승인 항목만 순차 요청 (설명 페이지 → OS 팝업) ---
 async function showPermissionPrompts() {
     const isNative = platformCapabilities.isNativePlatform();
     if (!isNative) return;
@@ -6357,7 +6363,7 @@ async function showPermissionPrompts() {
     const cap = window.Capacitor;
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 상태 확인 시작');
 
-    // 1) 푸시 알림 — 앱 토글 off + OS 미승인일 때만 요청
+    // 1) 알림 — 앱 토글 off + OS 미승인일 때 설명 페이지 → OS 팝업
     if (!AppState.user.pushEnabled && cap.Plugins && (cap.Plugins.PushNotifications || cap.Plugins.FCMPlugin)) {
         try {
             let shouldRequest = true;
@@ -6368,12 +6374,15 @@ async function showPermissionPrompts() {
             }
 
             if (shouldRequest) {
-                const token = await requestNativePushPermission();
-                if (token) {
-                    const pushToggle = document.getElementById('push-toggle');
-                    const statusDiv = document.getElementById('push-status');
-                    pushService.applyPushEnabled({ token, pushToggle, statusDiv });
-                    await setupNativePushListeners();
+                const userAllowed = await permissionGuide.show('push');
+                if (userAllowed) {
+                    const token = await requestNativePushPermission();
+                    if (token) {
+                        const pushToggle = document.getElementById('push-toggle');
+                        const statusDiv = document.getElementById('push-status');
+                        pushService.applyPushEnabled({ token, pushToggle, statusDiv });
+                        await setupNativePushListeners();
+                    }
                 }
             }
         } catch (e) {
@@ -6381,35 +6390,65 @@ async function showPermissionPrompts() {
         }
     }
 
-    // 2) GPS 위치 — 앱 토글 off + OS 미승인일 때만 요청
-    await locationService.promptGpsPermissionIfNeeded({
-        gpsToggle: document.getElementById('gps-toggle'),
-        statusDiv: document.getElementById('gps-status'),
-    });
-
-    // 3) 건강 데이터 — 앱 토글 off일 때만 요청
-    if (!AppState.user.syncEnabled) {
-        try {
-            const result = await healthService.enableHealthSync({
-                syncToggle: document.getElementById('sync-toggle'),
-                statusDiv: document.getElementById('sync-status'),
-                showMsg: false,
-            });
-            if (result.ok) {
-                updateStepCountUI(); // 권한 승인 즉시 상태창 UI 반영
-                healthService.syncHealthData({ showMsg: true }).then(() => {
-                    // 권한 직후 SDK 초기화 지연으로 데이터 조회 실패 시 재시도
-                    if (!AppState.user.stepData || AppState.user.stepData.totalSteps === 0) {
-                        setTimeout(() => healthService.syncHealthData({ showMsg: true }), 2000);
-                    }
+    // 2) 신체 활동 — 앱 토글 off + OS 미승인일 때 설명 페이지 → OS 팝업
+    if (await _shouldShowHealthGuide()) {
+        const userAllowed = await permissionGuide.show('health');
+        if (userAllowed) {
+            try {
+                const result = await healthService.enableHealthSync({
+                    syncToggle: document.getElementById('sync-toggle'),
+                    statusDiv: document.getElementById('sync-status'),
+                    showMsg: false,
                 });
+                if (result.ok) {
+                    updateStepCountUI();
+                    healthService.syncHealthData({ showMsg: true }).then(() => {
+                        if (!AppState.user.stepData || AppState.user.stepData.totalSteps === 0) {
+                            setTimeout(() => healthService.syncHealthData({ showMsg: true }), 2000);
+                        }
+                    });
+                }
+            } catch (e) {
+                if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
             }
-        } catch (e) {
-            if (window.AppLogger) AppLogger.warn('[PermPrompt] Fitness check/request error: ' + (e.message || JSON.stringify(e)));
         }
     }
 
+    // 3) 위치 — 앱 토글 off + OS 미승인일 때 설명 페이지 → OS 팝업
+    if (await _shouldShowGpsGuide()) {
+        const userAllowed = await permissionGuide.show('gps');
+        if (userAllowed) {
+            await locationService.promptGpsPermissionIfNeeded({
+                gpsToggle: document.getElementById('gps-toggle'),
+                statusDiv: document.getElementById('gps-status'),
+            });
+        }
+    } else {
+        // 이미 허용됐거나 지원 불가: 상태만 동기화
+        await locationService.promptGpsPermissionIfNeeded({
+            gpsToggle: document.getElementById('gps-toggle'),
+            statusDiv: document.getElementById('gps-status'),
+        });
+    }
+
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 확인/요청 완료');
+}
+
+async function _shouldShowHealthGuide() {
+    if (AppState.user.syncEnabled) return false;
+    return platformCapabilities.supportsHealth();
+}
+
+async function _shouldShowGpsGuide() {
+    if (!platformCapabilities.supportsGps() || AppState.user.gpsEnabled) return false;
+    const geolocation = platformCapabilities.getGeolocationPlugin();
+    if (!geolocation) return false;
+    try {
+        const status = await geolocation.checkPermissions();
+        return status.location !== 'granted';
+    } catch {
+        return false;
+    }
 }
 
 async function toggleGPS() {
