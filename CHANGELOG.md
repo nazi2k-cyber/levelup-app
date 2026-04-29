@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.653] - 2026-04-29
+
+### 변경
+- feat: 권한 설명 페이지 3종 추가 (알림/신체활동/위치)
+
 ## [1.0.652] - 2026-04-29
 
 ### 변경
