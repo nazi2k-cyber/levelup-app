@@ -2270,10 +2270,16 @@ window.showDiyQuestModal = (questId) => {
     const isEdit = !!questId;
     const existing = isEdit ? AppState.diyQuests.definitions.find(d => d.id === questId) : null;
 
-    if (!isEdit && !AppState.user.subscription?.unlimitedDiyQuests && AppState.diyQuests.definitions.length >= 6) {
-        const lang = AppState.currentLang;
-        alert(i18n[lang]?.diy_limit_reached || 'Max 6 custom quests');
-        return;
+    if (!isEdit) {
+        const isPremium = AppState.user.subscription?.unlimitedDiyQuests === true;
+        const limit = isPremium ? 36 : 6;
+        if (AppState.diyQuests.definitions.length >= limit) {
+            const lang = AppState.currentLang;
+            const msgKey = isPremium ? 'diy_limit_reached_premium' : 'diy_limit_reached';
+            const fallback = isPremium ? 'Max 36 custom quests.' : 'Max 6 custom quests.';
+            alert(i18n[lang]?.[msgKey] || fallback);
+            return;
+        }
     }
 
     const titleInput = document.getElementById('diy-title-input');
@@ -4529,7 +4535,7 @@ function openDiyQuestInfoModal() {
         ko: {
             sections: [
                 { icon: '📝', title: '나만의 퀘스트 만들기', desc: '원하는 목표를 직접 퀘스트로 등록할 수 있습니다. 제목(최대 20자), 설명(최대 40자), 연결할 스탯을 선택하세요.' },
-                { icon: '🔢', title: '최대 6개 생성 가능', desc: 'DIY 퀘스트는 최대 6개까지 만들 수 있습니다. 불필요한 퀘스트는 삭제 후 새로 만들어 주세요.' },
+                { icon: '🔢', title: '최대 6개 생성 가능 (프리미엄 최대 36개)', desc: 'DIY 퀘스트는 최대 6개까지 만들 수 있습니다. 프리미엄 회원은 최대 36개까지 생성 가능합니다. 불필요한 퀘스트는 삭제 후 새로 만들어 주세요.' },
                 { icon: '🔄', title: '매일 자동 초기화', desc: '매일 자정(KST)에 완료 상태가 초기화됩니다. 시스템 퀘스트와 동일하게 매일 반복됩니다.' },
                 { icon: '📊', title: '스탯 연동', desc: 'STR · INT · CHA · VIT · WLTH · AGI 중 하나를 선택하면, 완료 시 해당 스탯에 보상이 적용됩니다.' },
                 { icon: '🎯', title: '보상 구조', desc: '완료 시 기본 20포인트 + 0.5 스탯이 지급되며, 연속 달성(스트릭)에 따라 배율이 증가합니다. 크리티컬 히트도 발동됩니다.' },
@@ -4540,7 +4546,7 @@ function openDiyQuestInfoModal() {
         en: {
             sections: [
                 { icon: '📝', title: 'Create Your Own Quest', desc: 'Register your personal goals as quests. Set a title (max 20 chars), description (max 40 chars), and choose a stat.' },
-                { icon: '🔢', title: 'Up to 6 Quests', desc: 'You can create a maximum of 6 DIY quests. Delete unused quests to make room for new ones.' },
+                { icon: '🔢', title: 'Up to 6 Quests (Premium: 36)', desc: 'You can create up to 6 DIY quests (36 for Premium members). Delete unused quests to make room for new ones.' },
                 { icon: '🔄', title: 'Daily Auto-Reset', desc: 'Completion status resets at midnight (KST) every day, just like system quests.' },
                 { icon: '📊', title: 'Stat Linked', desc: 'Choose from STR · INT · CHA · VIT · WLTH · AGI. Completing the quest rewards the selected stat.' },
                 { icon: '🎯', title: 'Rewards', desc: 'Earn 20 points + 0.5 stat per completion. Streak multipliers and critical hits apply.' },
@@ -4551,7 +4557,7 @@ function openDiyQuestInfoModal() {
         ja: {
             sections: [
                 { icon: '📝', title: '自分だけのクエスト作成', desc: '自分の目標をクエストとして登録できます。タイトル(最大20文字)、説明(最大40文字)、ステータスを選択してください。' },
-                { icon: '🔢', title: '最大6個まで作成可能', desc: 'DIYクエストは最大6個まで作成できます。不要なクエストは削除してから新しく作成してください。' },
+                { icon: '🔢', title: '最大6個まで作成可能（プレミアム: 最大36個）', desc: 'DIYクエストは最大6個まで（プレミアム会員は最大36個）作成できます。不要なクエストは削除してから新しく作成してください。' },
                 { icon: '🔄', title: '毎日自動リセット', desc: '毎日深夜0時(KST)に完了状態がリセットされます。システムクエストと同様に毎日繰り返されます。' },
                 { icon: '📊', title: 'ステータス連動', desc: 'STR · INT · CHA · VIT · WLTH · AGIから1つ選択すると、完了時にそのステータスに報酬が適用されます。' },
                 { icon: '🎯', title: '報酬構造', desc: '完了時に基本20ポイント + 0.5ステータスが付与され、連続達成(ストリーク)で倍率が増加します。クリティカルヒットも発動します。' },
