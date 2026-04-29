@@ -1559,7 +1559,10 @@ async function loadUserDataFromDB(user) {
                 AppState.user.subscription = {
                     noAds: data.subscription.noAds === true,
                     unlimitedDiyQuests: data.subscription.unlimitedDiyQuests === true,
+                    plan: data.subscription.plan || null,
+                    expireDate: data.subscription.expireDate || null,
                 };
+                updatePremiumExpiryUI();
             }
             // 계산기 보상 날짜 복원 (재설치/로그아웃 시 무한 보상 방지)
             if (data.rcLastRewardDate) {
@@ -3178,6 +3181,31 @@ function refreshSettingsStatusMessages() {
         }
     }
 }
+
+function updatePremiumExpiryUI() {
+    const sub = AppState.user.subscription;
+    const expiryRow = document.getElementById('premium-expiry-row');
+    const manageRow = document.getElementById('premium-manage-row');
+    const dateEl = document.getElementById('premium-expiry-date');
+    if (!expiryRow || !manageRow || !dateEl) return;
+
+    if (sub.plan === 'test') {
+        dateEl.textContent = '9999-12-31';
+        expiryRow.style.display = 'flex';
+        manageRow.style.display = 'none';
+    } else if (sub.expireDate) {
+        dateEl.textContent = sub.expireDate;
+        expiryRow.style.display = 'flex';
+        manageRow.style.display = 'none';
+    } else {
+        expiryRow.style.display = 'none';
+        manageRow.style.display = 'flex';
+    }
+}
+
+window.openPlayStoreSubscriptions = function() {
+    window.open('https://play.google.com/store/account/subscriptions?package=com.levelup.reboot', '_blank');
+};
 
 function changeLanguage(langCode) {
     const oldLang = AppState.currentLang;
