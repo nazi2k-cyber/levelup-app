@@ -1562,8 +1562,8 @@ async function loadUserDataFromDB(user) {
                     plan: data.subscription.plan || null,
                     expireDate: data.subscription.expireDate || null,
                 };
-                updatePremiumExpiryUI();
             }
+            updatePremiumExpiryUI();
             // 계산기 보상 날짜 복원 (재설치/로그아웃 시 무한 보상 방지)
             if (data.rcLastRewardDate) {
                 localStorage.setItem('rc_last_reward_date', data.rcLastRewardDate);
