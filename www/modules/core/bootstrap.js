@@ -40,9 +40,7 @@ export function bootstrapCoreServices(firebaseConfig) {
     });
 
     const storage = getStorage(app);
-    const functionRegions = ['asia-northeast3', 'asia-northeast1'];
-    const functions = getFunctions(app, functionRegions[0]);
-    const functionsByRegion = Object.fromEntries(functionRegions.map((region) => [region, getFunctions(app, region)]));
+    const functions = getFunctions(app, 'asia-northeast3');
 
     let analytics = null;
     try {
@@ -75,7 +73,7 @@ export function bootstrapCoreServices(firebaseConfig) {
         console.warn('[FCM] Messaging 초기화 스킵:', e.message);
     }
 
-    return { app, auth, db, storage, functions, functionsByRegion, functionRegions, analytics, remoteConfig, messaging, isNativePlatform };
+    return { app, auth, db, storage, functions, analytics, remoteConfig, messaging, isNativePlatform };
 }
 
 export function attachFirestoreNetworkResilience(db) {

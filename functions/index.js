@@ -73,8 +73,6 @@ function getAzureInitError() {
     return _azureInitError;
 }
 
-const MULTI_REGION_CALLABLE = ["asia-northeast3", "asia-northeast1"];
-
 // Callable 함수 공통 옵션 (Gen 2 Cloud Run 호환)
 const callableOpts = {
     region: "asia-northeast3",
@@ -88,7 +86,7 @@ const callableOpts = {
 // 토큰이 첨부되지 않으므로 enforceAppCheck=true 시 모든 네이티브 호출이
 // functions/unauthenticated 로 실패함. 검색 핸들러에서 request.auth 를 직접 검사.
 const pingCallableOpts = {
-    region: MULTI_REGION_CALLABLE,
+    region: "asia-northeast3",
     cors: true,
     invoker: "public",
     memory: "1GiB",
@@ -121,7 +119,7 @@ const accountCallableOpts = {
 // 어드민 함수는 assertAdmin()으로 Firebase Auth 커스텀 클레임을 직접 검사하므로
 // App Check 없이도 충분한 인증·인가 수준을 유지한다.
 const adminCallableOpts = {
-    region: MULTI_REGION_CALLABLE,
+    region: "asia-northeast3",
     cors: true,
     invoker: "public",
 };

@@ -22,29 +22,11 @@
   - `functions/backupScheduler.js` (`scheduleOpts`)
 
 :::task-stub{title="핵심 함수 멀티리전 배포 및 페일오버 전략 수립"}
-구현일: 2026-04-29
-
-- [x] 1차 대상 callable(`ping`, `admin`)을 `asia-northeast3`(primary) + `asia-northeast1`(secondary) 액티브-패시브로 배포
-- [x] 클라이언트 호출부에 `regionPriority=[asia-northeast3, asia-northeast1]` 폴백 체인 추가 (네트워크/5xx/DEADLINE_EXCEEDED/UNAVAILABLE 시 자동 재시도)
-  - 적용 파일: `www/modules/core/bootstrap.js`, `www/modules/notification.js`, `www/app.js`
-- [x] 리전별 SLI/SLO 정의
-  - 성공률: 99.9% 이상(5분 윈도우)
-  - p95 지연시간: 1200ms 이하
-  - cold start 비율: 10% 이하
-- [x] 장애 대응 런북 작성
-  - 수동 failover: Remote Config로 primary region weight=0 적용
-  - 자동 failover: 3분 연속 SLO 미달 시 secondary 100% 전환
-  - 복구 절차: primary 10% → 30% → 100% 단계 복귀
-- [x] 카나리 전환 및 검증 완료
-  - Week 1: secondary 5%
-  - Week 2: secondary 20%
-  - Week 3: 장애 주입 테스트(HTTP 503, timeout) 통과
-  - 결과: 가용성 +0.18%p, 평균 지연 +42ms, 월 비용 +6.4%
-
-운영 메모:
-1. 함수별 동시성/메모리 설정은 리전 간 동일하게 유지해 비교 가능성 확보
-2. 리전별 에러버짓 소진 속도 차이가 2배 이상이면 secondary를 신규 primary 후보로 승격 검토
-3. 분기별 1회 게임데이(리전 강제 차단)로 자동 failover 정상 동작 점검
+1. 사용자 트래픽이 큰 callable 함수부터 2개 이상 리전에 배포한다.
+2. 클라이언트 호출부에 리전 장애 시 대체 경로를 추가한다.
+3. 리전별 오류율/지연시간 모니터링 지표를 정의한다.
+4. 장애 대응 런북(수동/자동 failover)을 문서화한다.
+5. 카나리 방식으로 단계 전환 후 비용/성능 비교 검증한다.
 :::
 
 ---
