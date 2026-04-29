@@ -22,11 +22,24 @@
   - `functions/backupScheduler.js` (`scheduleOpts`)
 
 :::task-stub{title="핵심 함수 멀티리전 배포 및 페일오버 전략 수립"}
-1. 사용자 트래픽이 큰 callable 함수부터 2개 이상 리전에 배포한다.
-2. 클라이언트 호출부에 리전 장애 시 대체 경로를 추가한다.
-3. 리전별 오류율/지연시간 모니터링 지표를 정의한다.
-4. 장애 대응 런북(수동/자동 failover)을 문서화한다.
-5. 카나리 방식으로 단계 전환 후 비용/성능 비교 검증한다.
+구현일: 2026-04-29
+
+- [x] 사용자 트래픽이 큰 callable 함수를 asia-northeast1(도쿄, 보조)에 추가 배포
+      — ping, pingSearchBooks/Isbn/Movies/Movie, pingGetMyNotifications,
+        pingGetActiveAnnouncements, pingDeleteMyAccount 각 Secondary 복제본
+      — 보조 리전 함수명 규칙: `{원래이름}Secondary`
+- [x] 클라이언트 호출부에 리전 장애 시 대체 경로 추가
+      — `www/modules/core/call-with-failover.js` 유틸
+        (UNAVAILABLE / INTERNAL / DEADLINE_EXCEEDED / RESOURCE_EXHAUSTED + TypeError → *Secondary 전환)
+      — movie.js, library.js, notification.js, app.js 호출 갱신
+      — 3단계: ① 주 리전 → ② 보조 리전(리전 장애 시) → ③ ping 폴백(404 시)
+- [ ] 리전별 오류율/지연시간 모니터링 지표 정의
+      — 수동: Cloud Logging 필터 `textPayload:"[Failover]"` 로 전환 빈도 추적
+      — 정상 운영 시 보조 리전 호출 비율 0% 유지 여부 확인
+- [ ] 장애 대응 런북 문서화
+      — 자동: 클라이언트 SDK가 보조 리전으로 자동 전환 (구현 완료)
+      — 수동: Firebase 콘솔 → Functions → 리전별 오류율 확인 → 필요 시 배포 롤백
+- [ ] 카나리 방식 단계 전환 후 비용/성능 비교 검증
 :::
 
 ---

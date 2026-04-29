@@ -175,17 +175,15 @@
     var _isbnVoteThreshold = 2;   // Require 2+ sightings to accept a candidate
 
     async function callSeparatedPing(functionName, payload, legacyAction) {
-        const callable = window._httpsCallable;
-        const functions = window._functions;
-        if (!callable || !functions) throw new Error('Functions not initialized');
-
+        if (!window._callWithRegionalFailover || !window._httpsCallable || !window._functions) {
+            throw new Error('Functions not initialized');
+        }
         try {
-            const fn = callable(functions, functionName);
-            return await fn(payload || {});
+            return await window._callWithRegionalFailover(functionName, payload || {});
         } catch (e) {
             const code = String((e && (e.code || e.message)) || '');
             if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
-                const fallback = callable(functions, 'ping');
+                const fallback = window._httpsCallable(window._functions, 'ping');
                 return await fallback({ action: legacyAction, ...(payload || {}) });
             }
             throw e;

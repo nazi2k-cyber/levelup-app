@@ -41,6 +41,7 @@ export function bootstrapCoreServices(firebaseConfig) {
 
     const storage = getStorage(app);
     const functions = getFunctions(app, 'asia-northeast3');
+    const functionsSecondary = getFunctions(app, 'asia-northeast1');
 
     let analytics = null;
     try {
@@ -73,7 +74,7 @@ export function bootstrapCoreServices(firebaseConfig) {
         console.warn('[FCM] Messaging 초기화 스킵:', e.message);
     }
 
-    return { app, auth, db, storage, functions, analytics, remoteConfig, messaging, isNativePlatform };
+    return { app, auth, db, storage, functions, functionsSecondary, analytics, remoteConfig, messaging, isNativePlatform };
 }
 
 export function attachFirestoreNetworkResilience(db) {

@@ -49,8 +49,7 @@
 
     async function callSeparatedPing(functionName, payload, legacyAction) {
         try {
-            var fn = window._httpsCallable(window._functions, functionName);
-            return await fn(payload || {});
+            return await window._callWithRegionalFailover(functionName, payload || {});
         } catch (e) {
             var code = String((e && (e.code || e.message)) || '');
             if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {

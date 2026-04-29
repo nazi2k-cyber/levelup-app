@@ -15,10 +15,12 @@
     const functions = window._functions;
 
     async function callSeparatedPing(functionName, payload, legacyAction) {
-        if (!httpsCallable || !functions) throw new Error('Functions not initialized');
+        // window._callWithRegionalFailover는 app.js가 설정한 뒤 호출 시점에 접근
+        if (!window._callWithRegionalFailover || !httpsCallable || !functions) {
+            throw new Error('Functions not initialized');
+        }
         try {
-            const fn = httpsCallable(functions, functionName);
-            return await fn(payload || {});
+            return await window._callWithRegionalFailover(functionName, payload || {});
         } catch (e) {
             const code = String((e && (e.code || e.message)) || '');
             if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {

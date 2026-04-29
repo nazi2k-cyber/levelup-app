@@ -124,6 +124,16 @@ const adminCallableOpts = {
     invoker: "public",
 };
 
+// ─── 멀티리전 페일오버 — 보조 리전 옵션 (asia-northeast1, Tokyo) ───
+// asia-northeast3(Seoul)과 같은 아시아 태평양 권역이나 다른 가용 영역.
+// 스케줄러·트리거는 단일 리전 유지. 사용자 트래픽 callable만 이중화.
+const SECONDARY_REGION = "asia-northeast1";
+
+const pingCallableOptsSecondary         = { ...pingCallableOpts,         region: SECONDARY_REGION };
+const catalogCallableOptsSecondary      = { ...catalogCallableOpts,      region: SECONDARY_REGION };
+const notificationCallableOptsSecondary = { ...notificationCallableOpts, region: SECONDARY_REGION };
+const accountCallableOptsSecondary      = { ...accountCallableOpts,      region: SECONDARY_REGION };
+
 // ─── Admin / Master claim helper ───
 
 const ADMIN_EMAILS = process.env.ADMIN_EMAILS
@@ -2170,7 +2180,16 @@ exports.pingGetMyNotifications = onCall(notificationCallableOpts, async (request
 exports.pingGetActiveAnnouncements = onCall(notificationCallableOpts, async (request) => runPingAction(request, "getActiveAnnouncements"));
 exports.pingDeleteMyAccount = onCall(accountCallableOpts, async (request) => runPingAction(request, "deleteMyAccount"));
 
-exports.ping = onCall(pingCallableOpts, async (request) => {
+// ─── 보조 리전(asia-northeast1) 복제본 ───
+exports.pingSearchBooksSecondary            = onCall(catalogCallableOptsSecondary,      async (request) => runPingAction(request, "searchBooks"));
+exports.pingLookupIsbnSecondary             = onCall(catalogCallableOptsSecondary,      async (request) => runPingAction(request, "lookupIsbn"));
+exports.pingSearchMoviesSecondary           = onCall(catalogCallableOptsSecondary,      async (request) => runPingAction(request, "searchMovies"));
+exports.pingLookupMovieSecondary            = onCall(catalogCallableOptsSecondary,      async (request) => runPingAction(request, "lookupMovie"));
+exports.pingGetMyNotificationsSecondary     = onCall(notificationCallableOptsSecondary, async (request) => runPingAction(request, "getMyNotifications"));
+exports.pingGetActiveAnnouncementsSecondary = onCall(notificationCallableOptsSecondary, async (request) => runPingAction(request, "getActiveAnnouncements"));
+exports.pingDeleteMyAccountSecondary        = onCall(accountCallableOptsSecondary,      async (request) => runPingAction(request, "deleteMyAccount"));
+
+async function handlePing(request) {
     // ── Action router: compatibility route (legacy clients) ──
     const action = request.data?.action;
     if (action) {
@@ -2246,7 +2265,10 @@ exports.ping = onCall(pingCallableOpts, async (request) => {
     }
 
     return result;
-});
+}
+
+exports.ping          = onCall(pingCallableOpts,          handlePing);
+exports.pingSecondary = onCall(pingCallableOptsSecondary, handlePing);
 
 // ─── 다국어 알림 메시지 ───
 
