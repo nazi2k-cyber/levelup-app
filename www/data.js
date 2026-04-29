@@ -607,7 +607,8 @@ const i18n = {
         habit_reset_confirm: "습관형성 프로젝트를 초기화하시겠습니까?\n습관명/난이도/체크 기록이 모두 초기화됩니다.",
         habit_guide_title: "습관 형성 가이드",
         habit_persist_note: "※ 달성 체크 기록은 로그아웃 후에도 동기화되어 유지됩니다.",
-        habit_guide_text: "새로운 습관이 뇌에 각인되어 자동으로 수행되기까지 걸리는 시간에 대해 가장 널리 인용되는 연구와 그 과학적 원리를 정리했습니다.\n\n1) 평균적으로 걸리는 시간: 66일\n- UCL Phillippa Lally 교수팀(2009) 연구에서 새로운 행동 자동화 평균은 66일입니다.\n- 최소 18일, 최대 254일까지 개인차가 큽니다.\n\n2) 습관 형성 3단계\n- 저항 단계(1~22일): 의지력이 가장 많이 필요한 구간\n- 과도기 단계(23~44일): 행동이 익숙해지기 시작하는 구간\n- 자동화 단계(45~66일): 기저핵 회로에 저장되어 자동 수행이 쉬워지는 구간\n\n3) 더 빠르게 만드는 팁\n- 신호-행동-보상 루틴 설계\n- Tiny Habits(아주 작은 시작)\n- 환경 설계(의지력 의존 최소화)\n\n4) 하루 건너뛰어도 괜찮을까?\n- 하루의 실수는 전체 실패를 의미하지 않습니다. 다음 날 다시 이어가는 회복력이 핵심입니다.",
+        habit_check_reward_msg: "습관 달성! ⚡ AGI +{agi}",
+        habit_guide_text: "새로운 습관이 뇌에 각인되어 자동으로 수행되기까지 걸리는 시간에 대해 가장 널리 인용되는 연구와 그 과학적 원리를 정리했습니다.\n\n1) 평균적으로 걸리는 시간: 66일\n- UCL Phillippa Lally 교수팀(2009) 연구에서 새로운 행동 자동화 평균은 66일입니다.\n- 최소 18일, 최대 254일까지 개인차가 큽니다.\n\n2) 습관 형성 3단계\n- 저항 단계(1~22일): 의지력이 가장 많이 필요한 구간\n- 과도기 단계(23~44일): 행동이 익숙해지기 시작하는 구간\n- 자동화 단계(45~66일): 기저핵 회로에 저장되어 자동 수행이 쉬워지는 구간\n\n3) 더 빠르게 만드는 팁\n- 신호-행동-보상 루틴 설계\n- Tiny Habits(아주 작은 시작)\n- 환경 설계(의지력 의존 최소화)\n\n4) 하루 건너뛰어도 괜찮을까?\n- 하루의 실수는 전체 실패를 의미하지 않습니다. 다음 날 다시 이어가는 회복력이 핵심입니다.\n\n5) 난이도별 AGI 보상\n- 쉬움: 체크 1회당 AGI +0.1\n- 보통: 체크 1회당 AGI +0.2\n- 어려움: 체크 1회당 AGI +0.3",
 
         // Future Net Worth
         fnw_card_title: "미래 순자산",
@@ -1405,7 +1406,8 @@ const i18n = {
         habit_reset_confirm: "Reset the Habit Project?\nHabit name, difficulty, and all check records will be reset.",
         habit_guide_title: "Habit Formation Guide",
         habit_persist_note: "※ Check records are synced and kept even after logout.",
-        habit_guide_text: "This guide summarizes the most cited research and neuroscience behind how long it takes for a new behavior to become automatic.\n\n1) Average time: 66 days\n- In the 2009 UCL study by Phillippa Lally et al., automaticity took 66 days on average.\n- It ranged from 18 to 254 days depending on behavior complexity and person.\n\n2) Three phases\n- Resistance (Day 1–22): highest willpower cost\n- Transition (Day 23–44): behavior becomes more familiar\n- Automation (Day 45–66): basal ganglia circuits support lower-effort execution\n\n3) Tips to accelerate\n- Build cue-action-reward routines\n- Start tiny (Tiny Habits)\n- Design your environment instead of relying on willpower\n\n4) Missing one day\n- Missing one day does not reset everything. Recovery and continuity are what matter.",
+        habit_check_reward_msg: "Habit completed! ⚡ AGI +{agi}",
+        habit_guide_text: "This guide summarizes the most cited research and neuroscience behind how long it takes for a new behavior to become automatic.\n\n1) Average time: 66 days\n- In the 2009 UCL study by Phillippa Lally et al., automaticity took 66 days on average.\n- It ranged from 18 to 254 days depending on behavior complexity and person.\n\n2) Three phases\n- Resistance (Day 1–22): highest willpower cost\n- Transition (Day 23–44): behavior becomes more familiar\n- Automation (Day 45–66): basal ganglia circuits support lower-effort execution\n\n3) Tips to accelerate\n- Build cue-action-reward routines\n- Start tiny (Tiny Habits)\n- Design your environment instead of relying on willpower\n\n4) Missing one day\n- Missing one day does not reset everything. Recovery and continuity are what matter.\n\n5) Difficulty-based AGI rewards\n- Easy: AGI +0.1 per check\n- Medium: AGI +0.2 per check\n- Hard: AGI +0.3 per check",
 
         // Future Net Worth
         fnw_card_title: "Future Net Worth",
@@ -2203,7 +2205,8 @@ const i18n = {
         habit_reset_confirm: "習慣形成プロジェクトを初期化しますか？\n習慣名/難易度/チェック記録がすべて初期化されます。",
         habit_guide_title: "習慣形成ガイド",
         habit_persist_note: "※ 達成チェック記録はログアウト後も同期され維持されます。",
-        habit_guide_text: "新しい習慣が脳に刻まれ、自動で実行されるまでにかかる時間について、よく引用される研究と科学的原理をまとめました。\n\n1) 平均期間: 66日\n- 2009年のUCL Phillippa Lally研究では、行動の自動化まで平均66日でした。\n- 最短18日、最長254日で、個人差が大きいです。\n\n2) 3段階\n- 抵抗段階(1〜22日): 意志力消費が最も大きい\n- 過渡期段階(23〜44日): 行動に慣れ始める\n- 自動化段階(45〜66日): 基底核に保存され、少ない努力で実行しやすくなる\n\n3) 早めるコツ\n- 合図-行動-報酬ルーティン設計\n- Tiny Habits(小さく始める)\n- 意志力より環境設計\n\n4) 1日抜けても大丈夫？\n- 1日の失敗は全体失敗ではありません。翌日に再開する回復力が重要です。",
+        habit_check_reward_msg: "習慣達成！ ⚡ AGI +{agi}",
+        habit_guide_text: "新しい習慣が脳に刻まれ、自動で実行されるまでにかかる時間について、よく引用される研究と科学的原理をまとめました。\n\n1) 平均期間: 66日\n- 2009年のUCL Phillippa Lally研究では、行動の自動化まで平均66日でした。\n- 最短18日、最長254日で、個人差が大きいです。\n\n2) 3段階\n- 抵抗段階(1〜22日): 意志力消費が最も大きい\n- 過渡期段階(23〜44日): 行動に慣れ始める\n- 自動化段階(45〜66日): 基底核に保存され、少ない努力で実行しやすくなる\n\n3) 早めるコツ\n- 合図-行動-報酬ルーティン設計\n- Tiny Habits(小さく始める)\n- 意志力より環境設計\n\n4) 1日抜けても大丈夫？\n- 1日の失敗は全体失敗ではありません。翌日に再開する回復力が重要です。\n\n5) 難易度別AGI報酬\n- 易しい: チェック1回ごとに AGI +0.1\n- 普通: チェック1回ごとに AGI +0.2\n- 難しい: チェック1回ごとに AGI +0.3",
 
         // Future Net Worth
         fnw_card_title: "将来の純資産",

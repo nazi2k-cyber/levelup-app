@@ -8,6 +8,7 @@
     const LIFE_STATUS_STORAGE_KEY = 'life_status_config';
     const HABIT_PROJECT_STORAGE_KEY = 'habit_project_config';
     const HABIT_DIFFICULTY_DAYS = { easy: 18, medium: 66, hard: 254 };
+    const HABIT_DIFFICULTY_AGI_REWARD = { easy: 0.1, medium: 0.2, hard: 0.3 };
     const HABIT_STAGE_COLORS = {
         resistance: 'rgba(255, 107, 107, 0.6)',
         transition: 'rgba(255, 193, 7, 0.6)',
@@ -74,6 +75,10 @@
         if (difficulty === 'easy') return '🌱';
         if (difficulty === 'hard') return '🚀';
         return '🔥';
+    }
+
+    function getHabitAgiRewardByDifficulty(difficulty) {
+        return HABIT_DIFFICULTY_AGI_REWARD[difficulty] || HABIT_DIFFICULTY_AGI_REWARD.medium;
     }
 
     function formatGuideText(rawText) {
@@ -304,7 +309,20 @@
                     alert(i18n[AppState.currentLang]?.habit_future_check_error || '미래 날짜는 체크할 수 없습니다.');
                     return;
                 }
-                cfg.checks[String(day)] = !cfg.checks[String(day)];
+                const wasChecked = !!cfg.checks[String(day)];
+                const willCheck = !wasChecked;
+                cfg.checks[String(day)] = willCheck;
+                if (willCheck) {
+                    const agiReward = getHabitAgiRewardByDifficulty(cfg.difficulty);
+                    if (AppState.user?.pendingStats && typeof AppState.user.pendingStats.agi === 'number') {
+                        AppState.user.pendingStats.agi += agiReward;
+                    }
+                    if (typeof window.showToast === 'function') {
+                        const _t = i18n[AppState.currentLang] || {};
+                        const msgTpl = _t.habit_check_reward_msg || '습관 달성! ⚡ AGI +{agi}';
+                        window.showToast(msgTpl.replace('{agi}', String(agiReward)));
+                    }
+                }
                 saveHabitProjectConfig(cfg);
                 window.saveUserData?.();
                 renderHabitProjectSection();
