@@ -84,12 +84,14 @@
   - `functions/backupScheduler.js` (`runScheduledBackup`)
 
 :::task-stub{title="백업 파이프라인 증분/분산 처리 전환"}
-구현안(비용/안정성 개선 초안):
+구현안(비용/안정성 개선):
 
-- [ ] `users` 문서에 `lastBackupAt` 필드를 추가하고, 백업 기준 시각(`cursorTs`) 이후 변경분만 조회
+구현일: 2026-04-29
+
+- [x] `users` 문서에 `lastBackupAt` 필드를 추가하고, `updatedAt` 커서(`lastCursorAt`) 이후 변경분만 조회
 - [ ] `updatedAt >= cursorTs` + `uidHash % shardCount` 조건으로 샤드 워커 분리 실행
-- [ ] 워커별 `MAX_DOCS_PER_RUN`, `MAX_MS_PER_RUN` 컷오프 적용 후 다음 커서 예약
-- [ ] `backup_sessions/{sessionId}`에 샤드 상태(`pending/running/succeeded/failed`) 및 처리 건수 기록
+- [x] 실행당 `BACKUP_MAX_DOCS_PER_RUN`, `BACKUP_MAX_MS_PER_RUN` 컷오프 적용 및 `lastCursorAt` 갱신
+- [x] `backup_sessions/{sessionId}`에 실행 메타(`hasMore`, `previousCursorAt`, `nextCursorAt`, 처리 건수, 실행시간) 기록
 - [ ] 실패 샤드만 재시도하는 재실행 엔드포인트(또는 스케줄러) 추가
 
 권장 파라미터(초기값):
