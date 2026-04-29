@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.649] - 2026-04-29
+
+### 변경
+- fix: 비구독 사용자에게도 프리미엄 구독 관리 버튼 표시
+
 ## [1.0.648] - 2026-04-29
 
 ### 변경
