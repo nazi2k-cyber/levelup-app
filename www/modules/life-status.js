@@ -9,6 +9,7 @@
     const HABIT_PROJECT_STORAGE_KEY = 'habit_project_config';
     const HABIT_DIFFICULTY_DAYS = { easy: 18, medium: 66, hard: 254 };
     const HABIT_DIFFICULTY_AGI_REWARD = { easy: 0.1, medium: 0.2, hard: 0.3 };
+    const HABIT_STAGE_BONUS_MULTIPLIER = [5, 10, 15];
     const HABIT_STAGE_COLORS = {
         resistance: 'rgba(255, 107, 107, 0.6)',
         transition: 'rgba(255, 193, 7, 0.6)',
@@ -84,8 +85,18 @@
     function formatGuideText(rawText) {
         return String(rawText || '')
             .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
+            .map(line => {
+                const t = line.trim();
+                if (!t) return null;
+                if (/^\d+\)/.test(t)) {
+                    return `<span style="font-weight:700; color:var(--text-main);">${t}</span>`;
+                }
+                if (t.includes('AGI +') || t.includes('AGI ×')) {
+                    return `<span style="color:var(--neon-gold);">${t}</span>`;
+                }
+                return t;
+            })
+            .filter(Boolean)
             .join('<br>');
     }
 
@@ -150,6 +161,7 @@
     }
 
     function renderHabitProject(config, _t) {
+        const hasName = !!config.habitName;
         const start = new Date(config.startDate);
         const elapsedDays = getHabitElapsedDays(config);
         const checkedDays = Object.values(config.checks).filter(Boolean).length;
@@ -191,8 +203,8 @@
                             <div class="habit-stat-item habit-stat-target">${(_t.habit_target_date || '달성일: {date}').replace('{date}', targetDateStr)}</div>
                         </div>
                         <div class="habit-stats-row">
-                            <span class="habit-stat-item habit-stat-elapsed">${(_t.habit_elapsed_days || '경과일: {days}일').replace('{days}', elapsedDays)}</span>
-                            <span class="habit-stat-item habit-stat-rate">${(_t.habit_completion_rate || '달성률: {rate}%').replace('{rate}', completionRate.toFixed(1))}</span>
+                            <span class="habit-stat-item habit-stat-elapsed">${(_t.habit_elapsed_days || '경과일: {days}일').replace('{days}', hasName ? String(elapsedDays) : '-')}</span>
+                            <span class="habit-stat-item habit-stat-rate">${hasName ? (_t.habit_completion_rate || '달성률: {rate}%').replace('{rate}', completionRate.toFixed(1)) : (_t.habit_completion_rate_none || '달성률: -')}</span>
                         </div>
                     </div>
                 </div>
@@ -304,9 +316,14 @@
                 const day = Number(dot.dataset.day);
                 if (!day) return;
                 const cfg = getHabitProjectConfig();
+                const _t = i18n[AppState.currentLang] || {};
+                if (!cfg.habitName) {
+                    alert(_t.habit_no_name_check_error || '습관명을 먼저 설정해주세요.');
+                    return;
+                }
                 const elapsedDays = getHabitElapsedDays(cfg);
                 if (day > elapsedDays) {
-                    alert(i18n[AppState.currentLang]?.habit_future_check_error || '미래 날짜는 체크할 수 없습니다.');
+                    alert(_t.habit_future_check_error || '미래 날짜는 체크할 수 없습니다.');
                     return;
                 }
                 const wasChecked = !!cfg.checks[String(day)];
@@ -314,14 +331,40 @@
                 cfg.checks[String(day)] = willCheck;
                 if (willCheck) {
                     const agiReward = getHabitAgiRewardByDifficulty(cfg.difficulty);
-                    if (AppState.user?.pendingStats && typeof AppState.user.pendingStats.agi === 'number') {
+                    if (AppState.user && AppState.user.pendingStats) {
+                        if (typeof AppState.user.pendingStats.agi !== 'number') AppState.user.pendingStats.agi = 0;
                         AppState.user.pendingStats.agi += agiReward;
                     }
-                    if (typeof window.showToast === 'function') {
-                        const _t = i18n[AppState.currentLang] || {};
-                        const msgTpl = _t.habit_check_reward_msg || '습관 달성! ⚡ AGI +{agi}';
-                        window.showToast(msgTpl.replace('{agi}', String(agiReward)));
-                    }
+                    const msgTpl = _t.habit_check_reward_msg || '습관 달성! ⚡ AGI +{agi}';
+                    window.showToast?.(msgTpl.replace('{agi}', String(agiReward)));
+
+                    if (!Array.isArray(cfg.stageBonusAwarded)) cfg.stageBonusAwarded = [false, false, false];
+                    const ranges = getHabitStageRanges(cfg.totalDays);
+                    const stageNames = [
+                        _t.habit_stage1_title || '저항 단계',
+                        _t.habit_stage2_title || '과도기 단계',
+                        _t.habit_stage3_title || '자동화 단계',
+                    ];
+                    [
+                        { start: ranges.stage1Start, end: ranges.stage1End, idx: 0 },
+                        { start: ranges.stage2Start, end: ranges.stage2End, idx: 1 },
+                        { start: ranges.stage3Start, end: ranges.stage3End, idx: 2 },
+                    ].forEach(({ start, end, idx }) => {
+                        if (cfg.stageBonusAwarded[idx]) return;
+                        const allChecked = Array.from({ length: end - start + 1 }, (_, i) => start + i)
+                            .every(d => !!cfg.checks[String(d)]);
+                        if (!allChecked) return;
+                        const bonusAgi = parseFloat((agiReward * HABIT_STAGE_BONUS_MULTIPLIER[idx]).toFixed(1));
+                        if (AppState.user && AppState.user.pendingStats) {
+                            if (typeof AppState.user.pendingStats.agi !== 'number') AppState.user.pendingStats.agi = 0;
+                            AppState.user.pendingStats.agi += bonusAgi;
+                        }
+                        cfg.stageBonusAwarded[idx] = true;
+                        const bonusMsg = (_t.habit_stage_bonus_msg || '🎉 {stage} 완료! 보너스 AGI +{bonus}')
+                            .replace('{stage}', stageNames[idx])
+                            .replace('{bonus}', String(bonusAgi));
+                        setTimeout(() => window.showToast?.(bonusMsg), 1500);
+                    });
                 }
                 saveHabitProjectConfig(cfg);
                 window.saveUserData?.();
