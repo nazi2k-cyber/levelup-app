@@ -51,17 +51,13 @@
             const difficulty = HABIT_DIFFICULTY_DAYS[parsed.difficulty] ? parsed.difficulty : 'medium';
             const totalDays = HABIT_DIFFICULTY_DAYS[difficulty];
             const checks = (parsed.checks && typeof parsed.checks === 'object') ? parsed.checks : {};
-            // 구버전 데이터 마이그레이션: rewardedDays 없으면 기존 checks에서 초기화
-            const rewardedDays = (parsed.rewardedDays && typeof parsed.rewardedDays === 'object')
-                ? parsed.rewardedDays
-                : Object.fromEntries(Object.entries(checks).filter(([, v]) => v === true));
             return {
                 habitName: typeof parsed.habitName === 'string' ? parsed.habitName : '',
                 difficulty,
                 totalDays,
                 startDate: (typeof parsed.startDate === 'string' && parsed.startDate) ? parsed.startDate : getTodayStr(),
                 checks,
-                rewardedDays,
+                rewardedDates: (parsed.rewardedDates && typeof parsed.rewardedDates === 'object') ? parsed.rewardedDates : {},
                 stageBonusAwarded: Array.isArray(parsed.stageBonusAwarded) ? parsed.stageBonusAwarded : [false, false, false]
             };
         } catch (e) {
@@ -336,8 +332,9 @@
                 const wasChecked = !!cfg.checks[String(day)];
                 const willCheck = !wasChecked;
                 cfg.checks[String(day)] = willCheck;
-                if (willCheck && !cfg.rewardedDays[String(day)]) {
-                    cfg.rewardedDays[String(day)] = true;
+                const todayStr = getTodayStr();
+                if (willCheck && !cfg.rewardedDates[todayStr]) {
+                    cfg.rewardedDates[todayStr] = true;
                     const agiReward = getHabitAgiRewardByDifficulty(cfg.difficulty);
                     if (AppState.user && AppState.user.pendingStats) {
                         if (typeof AppState.user.pendingStats.agi !== 'number') AppState.user.pendingStats.agi = 0;
@@ -481,7 +478,7 @@
             cfg.startDate = getTodayStr();
             cfg.checks = {};
             cfg.stageBonusAwarded = [false, false, false];
-            // rewardedDays는 난이도 변경 시에도 유지 (day 번호당 1회 보상 원칙)
+            // rewardedDates는 날짜 기반이므로 난이도 변경·초기화와 무관하게 유지
         }
         saveHabitProjectConfig(cfg);
         window.saveUserData?.();
@@ -493,13 +490,14 @@
         const _t = i18n[AppState.currentLang] || {};
         const confirmed = confirm(_t.habit_reset_confirm || '습관형성 프로젝트를 초기화하시겠습니까?\n습관명/난이도/체크 기록이 모두 초기화됩니다.');
         if (!confirmed) return;
+        const prevCfg = getHabitProjectConfig();
         const resetConfig = {
             habitName: '',
             difficulty: 'medium',
             totalDays: HABIT_DIFFICULTY_DAYS.medium,
             startDate: getTodayStr(),
             checks: {},
-            rewardedDays: {},
+            rewardedDates: prevCfg.rewardedDates || {},
             stageBonusAwarded: [false, false, false]
         };
         saveHabitProjectConfig(resetConfig);
