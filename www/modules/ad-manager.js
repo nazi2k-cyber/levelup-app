@@ -70,7 +70,10 @@
     function _AppState() { return window.AppState; }
     function _auth() { return window._auth; }
     function _i18n() { return window.i18n; }
-    function isNoAdsUser() { return _AppState()?.user?.subscription?.noAds === true; }
+    function isNoAdsUser() {
+        const s = _AppState();
+        return s?.user?.subscription?.noAds === true || s?.user?.isAdmin === true;
+    }
     function _getAdSessionCount() {
         return parseInt(localStorage.getItem(AD_SESSION_COUNT_KEY) || '0', 10);
     }

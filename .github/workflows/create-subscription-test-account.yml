@@ -1,0 +1,63 @@
+name: 구독 테스트 계정 생성
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_email:
+        description: '테스트 계정 이메일'
+        required: false
+        default: 'test-subscription@levelup.test'
+        type: string
+      test_password:
+        description: '테스트 계정 비밀번호 (미입력 시 기본값 사용)'
+        required: false
+        default: ''
+        type: string
+
+concurrency:
+  group: create-subscription-test-account
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  create-account:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 소스코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 셋업
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Google 서비스 계정 인증
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: firebase-admin 설치
+        run: npm install --no-save firebase-admin
+        working-directory: ${{ github.workspace }}
+
+      - name: 테스트 계정 생성
+        env:
+          TEST_EMAIL: ${{ github.event.inputs.test_email }}
+          TEST_PASSWORD: ${{ github.event.inputs.test_password != '' && github.event.inputs.test_password || 'TestPass123!' }}
+        run: node scripts/create-subscription-test-account.js
+
+      - name: 결과 요약
+        if: always()
+        run: |
+          echo "## 구독 테스트 계정 생성" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 이메일 | \`${{ github.event.inputs.test_email || 'test-subscription@levelup.test' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 구독 설정 | noAds=true, unlimitedDiyQuests=true, plan=test |" >> $GITHUB_STEP_SUMMARY
+          echo "| 권한 | admin (Custom Claim) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 실행자 | \`${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 실행 시각 | \`$(date -u '+%Y-%m-%d %H:%M:%S UTC')\` |" >> $GITHUB_STEP_SUMMARY
