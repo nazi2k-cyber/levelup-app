@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.659] - 2026-04-29
+
+### 변경
+- 퀘스트 통계 필터 라벨 및 전체 체크박스 동작 변경
+
 ## [1.0.658] - 2026-04-29
 
 ### 변경
