@@ -3195,7 +3195,11 @@ function updatePremiumExpiryUI() {
     const dateEl = document.getElementById('premium-expiry-date');
     if (!expiryRow || !manageRow || !dateEl) return;
 
-    if (sub.plan === 'test') {
+    if (AppState.user.isAdmin) {
+        dateEl.textContent = '관리자';
+        expiryRow.style.display = 'flex';
+        manageRow.style.display = 'none';
+    } else if (sub.plan === 'test') {
         dateEl.textContent = '9999-12-31';
         expiryRow.style.display = 'flex';
         manageRow.style.display = 'none';
@@ -3210,7 +3214,14 @@ function updatePremiumExpiryUI() {
 }
 
 window.openPlayStoreSubscriptions = function() {
-    window.open('https://play.google.com/store/account/subscriptions?package=com.levelup.reboot', '_blank');
+    alert('추후 도입 예정입니다.');
+};
+
+window.openPremiumInfoModal = function() {
+    const modal = document.getElementById('premiumInfoModal');
+    if (!modal) return;
+    modal.classList.remove('d-none');
+    modal.classList.add('d-flex');
 };
 
 function changeLanguage(langCode) {

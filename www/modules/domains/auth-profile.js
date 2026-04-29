@@ -94,6 +94,7 @@ export function createAuthProfileModule(deps) {
             const tokenResult = await getIdTokenResult(user);
             const isDev = tokenResult.claims.admin === true;
             AppState.user.isAdmin = isDev;
+            if (typeof updatePremiumExpiryUI === 'function') updatePremiumExpiryUI();
             const settingsLogCard = document.getElementById('settings-log-card');
             const adminLoggerToggleCard = document.getElementById('admin-logger-toggle-card');
             if (adminLoggerToggleCard) adminLoggerToggleCard.style.display = isDev ? 'block' : 'none';

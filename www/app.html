@@ -1126,7 +1126,10 @@
                         <span id="premium-expiry-date" style="font-size:0.85rem; color:var(--neon-blue); font-weight:bold;"></span>
                     </div>
                     <div id="premium-manage-row" class="setting-row" style="display:none; flex-direction:column; align-items:flex-start; gap:8px;">
-                        <span data-i18n="set_premium_manage_label">프리미엄 구독</span>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span data-i18n="set_premium_manage_label">프리미엄 구독</span>
+                            <button class="btn-info-sm" onclick="window.openPremiumInfoModal()" style="font-size:0.65rem; padding:2px 6px;">ℹ️</button>
+                        </div>
                         <button class="btn-primary" style="width:100%; background:rgba(0,217,255,0.1); border:1px solid var(--neon-blue); color:var(--neon-blue); font-size:0.75rem; padding:8px;" onclick="window.openPlayStoreSubscriptions()" data-i18n="set_premium_manage_btn">플레이스토어 구독 관리</button>
                     </div>
                 </div>
@@ -2112,6 +2115,25 @@
         </div>
     </div>
 
+
+    <!-- 프리미엄 기능 설명 모달 -->
+    <div class="modal-overlay d-none" id="premiumInfoModal" onclick="if(event.target===this){document.getElementById('premiumInfoModal').classList.add('d-none');document.getElementById('premiumInfoModal').classList.remove('d-flex');}">
+        <div class="modal-content" style="max-width: 95%; width: 360px; padding: 15px;">
+            <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
+                <span style="font-weight:bold; color:var(--neon-blue);">⭐ 프리미엄 혜택 안내</span>
+                <button class="modal-close" onclick="document.getElementById('premiumInfoModal').classList.add('d-none');document.getElementById('premiumInfoModal').classList.remove('d-flex');">×</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; max-height: 70vh; font-size:0.85rem; line-height:1.7;">
+                <ul style="padding-left:1.2em; margin:0; list-style:none;">
+                    <li style="margin-bottom:10px;">🚫 <strong>광고 제거</strong><br><span style="color:var(--text-sub); font-size:0.8rem;">앱 내 모든 광고가 표시되지 않습니다.</span></li>
+                    <li style="margin-bottom:10px;">📋 <strong>DIY 퀘스트 확장</strong><br><span style="color:var(--text-sub); font-size:0.8rem;">DIY 퀘스트를 최대 36개까지 생성할 수 있습니다. (일반 6개)</span></li>
+                </ul>
+                <div style="margin-top:14px; padding:10px; background:rgba(0,217,255,0.06); border:1px solid rgba(0,217,255,0.2); border-radius:8px; font-size:0.78rem; color:var(--text-sub);">
+                    구독 관련 기능은 추후 도입 예정입니다.
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- legalModal 제거됨 — 법적 페이지는 독립 HTML로 이전 -->
 
