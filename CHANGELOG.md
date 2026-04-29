@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.663] - 2026-04-29
+
+### 변경
+- fix: showToast → showInAppNotification으로 교체
+
 ## [1.0.662] - 2026-04-29
 
 ### 변경
