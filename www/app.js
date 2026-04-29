@@ -2952,6 +2952,17 @@ window.joinDungeon = async () => {
     const station = seoulStations[AppState.dungeon.stationIdx];
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
+    // 최초 던전 입장 시: 위치 권한 안내 페이지 표시 후 OS 팝업 요청
+    if (isNative && await _shouldShowGpsGuide()) {
+        const userAllowed = await permissionGuide.show('gps');
+        if (userAllowed) {
+            await locationService.promptGpsPermissionIfNeeded({
+                gpsToggle: document.getElementById('gps-toggle'),
+                statusDiv: document.getElementById('gps-status'),
+            });
+        }
+    }
+
     if (isNative && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation) {
         try {
             const { Geolocation } = window.Capacitor.Plugins;
@@ -6414,22 +6425,11 @@ async function showPermissionPrompts() {
         }
     }
 
-    // 3) 위치 — 앱 토글 off + OS 미승인일 때 설명 페이지 → OS 팝업
-    if (await _shouldShowGpsGuide()) {
-        const userAllowed = await permissionGuide.show('gps');
-        if (userAllowed) {
-            await locationService.promptGpsPermissionIfNeeded({
-                gpsToggle: document.getElementById('gps-toggle'),
-                statusDiv: document.getElementById('gps-status'),
-            });
-        }
-    } else {
-        // 이미 허용됐거나 지원 불가: 상태만 동기화 (권한 요청 없이)
-        await locationService.syncWithOsPermissions({
-            gpsToggle: document.getElementById('gps-toggle'),
-            statusDiv: document.getElementById('gps-status'),
-        });
-    }
+    // 3) 위치 — 상태 동기화만 (GPS 권한 안내/요청은 최초 던전 입장 시 진행)
+    await locationService.syncWithOsPermissions({
+        gpsToggle: document.getElementById('gps-toggle'),
+        statusDiv: document.getElementById('gps-status'),
+    });
 
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 확인/요청 완료');
 }
