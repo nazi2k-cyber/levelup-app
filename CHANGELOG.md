@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.656] - 2026-04-29
+
+### 변경
+- fix: 위치 권한 설명 페이지 없이 OS 팝업 호출되는 버그 수정
+
 ## [1.0.655] - 2026-04-29
 
 ### 변경
