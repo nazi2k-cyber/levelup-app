@@ -7524,6 +7524,8 @@ Object.defineProperty(window, 'diarySelectedDate', {
 window.showInAppNotification = showInAppNotification;
 window.changeLanguage = changeLanguage;
 window._httpsCallable = httpsCallable;
+window._functionsByRegion = core.functionsByRegion || { "asia-northeast3": functions };
+window._functionRegions = core.functionRegions || ["asia-northeast3"];
 window._functions = functions;
 window.checkReadingRareTitles = checkReadingRareTitles;
 window.checkMovieRareTitles = checkMovieRareTitles;

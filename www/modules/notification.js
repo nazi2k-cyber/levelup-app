@@ -14,16 +14,40 @@
     const httpsCallable = window._httpsCallable;
     const functions = window._functions;
 
+
+
+    function isRetriableFunctionError(error) {
+        const code = String((error && (error.code || error.message)) || '').toUpperCase();
+        return code.includes('DEADLINE_EXCEEDED') || code.includes('UNAVAILABLE') || code.includes('INTERNAL') || code.includes('RESOURCE_EXHAUSTED') || code.includes('ABORTED') || code.includes('TIMEOUT') || code.includes('5XX') || code.includes('500') || code.includes('502') || code.includes('503') || code.includes('504') || code.includes('NETWORK');
+    }
+
+    async function callWithRegionFallback(functionName, payload) {
+        const regions = Array.isArray(window._functionRegions) && window._functionRegions.length > 0
+            ? window._functionRegions
+            : ['asia-northeast3'];
+        let lastErr = null;
+        for (const region of regions) {
+            try {
+                const regionFunctions = (window._functionsByRegion && window._functionsByRegion[region]) || functions;
+                const fn = httpsCallable(regionFunctions, functionName);
+                return await fn(payload || {});
+            } catch (e) {
+                lastErr = e;
+                if (!isRetriableFunctionError(e)) throw e;
+                if (window.AppLogger) window.AppLogger.warn('[Functions] region fallback: ' + region + ' failed for ' + functionName + ' (' + ((e && (e.code || e.message)) || 'unknown') + ')');
+            }
+        }
+        throw lastErr || new Error('Function call failed in all regions');
+    }
+
     async function callSeparatedPing(functionName, payload, legacyAction) {
         if (!httpsCallable || !functions) throw new Error('Functions not initialized');
         try {
-            const fn = httpsCallable(functions, functionName);
-            return await fn(payload || {});
+            return await callWithRegionFallback(functionName, payload);
         } catch (e) {
             const code = String((e && (e.code || e.message)) || '');
             if (code.includes('functions/not-found') || code.includes('NOT_FOUND') || code.includes('404')) {
-                const fallback = httpsCallable(functions, 'ping');
-                return await fallback({ action: legacyAction, ...(payload || {}) });
+                return await callWithRegionFallback('ping', { action: legacyAction, ...(payload || {}) });
             }
             throw e;
         }

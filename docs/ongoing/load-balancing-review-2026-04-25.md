@@ -25,7 +25,8 @@
 구현일: 2026-04-29
 
 - [x] 1차 대상 callable(`ping`, `admin`)을 `asia-northeast3`(primary) + `asia-northeast1`(secondary) 액티브-패시브로 배포
-- [x] 클라이언트 호출부에 `regionPriority=[asia-northeast3, asia-northeast1]` 폴백 체인 추가 (네트워크/5xx/DEADLINE_EXCEEDED 시 자동 재시도)
+- [x] 클라이언트 호출부에 `regionPriority=[asia-northeast3, asia-northeast1]` 폴백 체인 추가 (네트워크/5xx/DEADLINE_EXCEEDED/UNAVAILABLE 시 자동 재시도)
+  - 적용 파일: `www/modules/core/bootstrap.js`, `www/modules/notification.js`, `www/app.js`
 - [x] 리전별 SLI/SLO 정의
   - 성공률: 99.9% 이상(5분 윈도우)
   - p95 지연시간: 1200ms 이하
