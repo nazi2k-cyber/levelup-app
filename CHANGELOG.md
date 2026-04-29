@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.652] - 2026-04-29
+
+### 변경
+- fix: 관리자 계정 프리미엄 표시 누락 및 DIY 퀘스트 6개 제한 적용 버그 수정
+
 ## [1.0.651] - 2026-04-29
 
 ### 변경
