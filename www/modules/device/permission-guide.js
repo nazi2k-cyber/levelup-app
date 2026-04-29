@@ -47,15 +47,20 @@ export function createPermissionGuideModule({ getCurrentLang, i18n }) {
 
             const skipBtn = overlay.querySelector('.pg-skip-btn');
 
-            function cleanup() {
-                overlay.classList.remove('pg-visible');
-                setTimeout(() => overlay.classList.add('d-none'), 320);
+            function detach() {
                 allowBtn?.removeEventListener('click', onAllow);
                 skipBtn?.removeEventListener('click', onSkip);
             }
 
-            function onAllow() { cleanup(); resolve(true); }
-            function onSkip()  { cleanup(); resolve(false); }
+            // resolve는 오버레이가 완전히 사라진 뒤 호출 — 다음 show()와 타이머 충돌 방지
+            function hide(result) {
+                detach();
+                overlay.classList.remove('pg-visible');
+                setTimeout(() => { overlay.classList.add('d-none'); resolve(result); }, 320);
+            }
+
+            function onAllow() { hide(true); }
+            function onSkip()  { hide(false); }
 
             allowBtn?.addEventListener('click', onAllow);
             skipBtn?.addEventListener('click', onSkip);
