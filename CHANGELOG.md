@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.666] - 2026-04-29
+
+### 변경
+- refactor: 보상 추적을 day번호→날짜(rewardedDates) 기반으로 전환
+
 ## [1.0.665] - 2026-04-29
 
 ### 변경
