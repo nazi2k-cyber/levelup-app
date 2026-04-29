@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.654] - 2026-04-29
+
+### 변경
+- fix: 나중에 선택 시 다음 권한 안내가 스킵되는 버그 수정
+
 ## [1.0.653] - 2026-04-29
 
 ### 변경
