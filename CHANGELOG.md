@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.660] - 2026-04-29
+
+### 변경
+- fix: 습관형성 프로젝트 체크/보상/가이드 개선
+
 ## [1.0.659] - 2026-04-29
 
 ### 변경
