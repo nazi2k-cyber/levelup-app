@@ -55,7 +55,9 @@
                 difficulty,
                 totalDays,
                 startDate: (typeof parsed.startDate === 'string' && parsed.startDate) ? parsed.startDate : getTodayStr(),
-                checks: (parsed.checks && typeof parsed.checks === 'object') ? parsed.checks : {}
+                checks: (parsed.checks && typeof parsed.checks === 'object') ? parsed.checks : {},
+                rewardedDays: (parsed.rewardedDays && typeof parsed.rewardedDays === 'object') ? parsed.rewardedDays : {},
+                stageBonusAwarded: Array.isArray(parsed.stageBonusAwarded) ? parsed.stageBonusAwarded : [false, false, false]
             };
         } catch (e) {
             return {
@@ -329,7 +331,8 @@
                 const wasChecked = !!cfg.checks[String(day)];
                 const willCheck = !wasChecked;
                 cfg.checks[String(day)] = willCheck;
-                if (willCheck) {
+                if (willCheck && !cfg.rewardedDays[String(day)]) {
+                    cfg.rewardedDays[String(day)] = true;
                     const agiReward = getHabitAgiRewardByDifficulty(cfg.difficulty);
                     if (AppState.user && AppState.user.pendingStats) {
                         if (typeof AppState.user.pendingStats.agi !== 'number') AppState.user.pendingStats.agi = 0;
@@ -337,6 +340,7 @@
                     }
                     const msgTpl = _t.habit_check_reward_msg || '습관 달성! ⚡ AGI +{agi}';
                     window.showInAppNotification?.('', msgTpl.replace('{agi}', String(agiReward)));
+                    if (window.AppLogger) window.AppLogger.info(`[HabitReward] Day ${day} checked: AGI +${agiReward} (difficulty: ${cfg.difficulty})`);
 
                     if (!Array.isArray(cfg.stageBonusAwarded)) cfg.stageBonusAwarded = [false, false, false];
                     const ranges = getHabitStageRanges(cfg.totalDays);
@@ -363,6 +367,7 @@
                         const bonusMsg = (_t.habit_stage_bonus_msg || '🎉 {stage} 완료! 보너스 AGI +{bonus}')
                             .replace('{stage}', stageNames[idx])
                             .replace('{bonus}', String(bonusAgi));
+                        if (window.AppLogger) window.AppLogger.info(`[HabitReward] Stage ${idx + 1} complete bonus: AGI +${bonusAgi}`);
                         setTimeout(() => window.showInAppNotification?.('', bonusMsg), 1500);
                     });
                 }
@@ -470,6 +475,8 @@
         if (difficultyChanged) {
             cfg.startDate = getTodayStr();
             cfg.checks = {};
+            cfg.rewardedDays = {};
+            cfg.stageBonusAwarded = [false, false, false];
         }
         saveHabitProjectConfig(cfg);
         window.saveUserData?.();
@@ -486,7 +493,9 @@
             difficulty: 'medium',
             totalDays: HABIT_DIFFICULTY_DAYS.medium,
             startDate: getTodayStr(),
-            checks: {}
+            checks: {},
+            rewardedDays: {},
+            stageBonusAwarded: [false, false, false]
         };
         saveHabitProjectConfig(resetConfig);
         window.saveUserData?.();
