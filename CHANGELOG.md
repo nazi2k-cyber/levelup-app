@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.672] - 2026-04-30
+
+### 변경
+- feat: add collapse/expand toggle for habit project stages
+
 ## [1.0.671] - 2026-04-29
 
 ### 변경
