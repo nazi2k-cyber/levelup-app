@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.680] - 2026-04-30
+
+### 변경
+- docs: 해킹 탐지 스케줄러 작동 방식 및 문자 발송 원리 문서 추가
+
 ## [1.0.679] - 2026-04-30
 
 ### 변경
