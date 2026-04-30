@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.683] - 2026-04-30
+
+### 변경
+- docs: add Windows Capacitor GitHub execution plan
+
 ## [1.0.682] - 2026-04-30
 
 ### 변경
