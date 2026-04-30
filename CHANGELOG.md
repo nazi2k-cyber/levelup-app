@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.686] - 2026-04-30
+
+### 변경
+- feat: 보안 리포트에 AI 봇 API Key 설정 UI 및 액션 로그 추가
+
 ## [1.0.685] - 2026-04-30
 
 ### 변경
