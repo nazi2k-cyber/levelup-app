@@ -459,11 +459,11 @@
                 </div>
 
                 <div style="padding:10px 12px;background:rgba(255,200,0,0.05);border:1px solid rgba(255,200,0,0.2);border-radius:8px;">
-                    <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin-bottom:4px;">
-                        <input type="checkbox" id="fnw-inflate-checkbox" ${cfg.inflateS ? 'checked' : ''} style="margin-top:3px;flex-shrink:0;">
+                    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
+                        <input type="checkbox" id="fnw-inflate-checkbox" ${cfg.inflateS ? 'checked' : ''} style="flex-shrink:0;">
                         <span style="font-size:0.73rem;color:var(--text-sub);line-height:1.55;">${_t('fnw_inflate_lump')}</span>
                     </label>
-                    <div id="fnw-inflate-preview" style="font-size:0.72rem;color:var(--neon-gold,#ffd700);min-height:14px;padding-left:20px;"></div>
+                    <div id="fnw-inflate-preview" style="font-size:0.72rem;color:var(--neon-gold,#ffd700);padding-left:20px;display:none;"></div>
                 </div>
                 <div style="margin-top:8px;margin-bottom:14px;padding:12px;background:rgba(0,217,255,0.05);border:1px solid rgba(0,217,255,0.2);border-radius:8px;">
                     <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;">
@@ -531,8 +531,10 @@
                 const inflated = Math.round(S_raw * factor);
                 previewEl.textContent =
                     `${_t('fnw_inflate_total')}: ${inflated.toLocaleString()}${_tUnit('fnw_unit_man')} (×${factor.toFixed(2)})`;
+                previewEl.style.display = 'block';
             } else {
                 previewEl.textContent = '';
+                previewEl.style.display = 'none';
             }
         }
         document.getElementById('fnw-inflate-checkbox')
