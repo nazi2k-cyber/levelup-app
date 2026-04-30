@@ -10,6 +10,7 @@ const { checkRateLimit } = require("./rateLimiter");
 const securityTriggers = require("./securityTriggers");
 const securityScheduler = require("./securityScheduler");
 const hackingDetectionScheduler = require("./hackingDetectionScheduler");
+const aiBotActionRunner = require("./aiBotActionRunner");
 const backupScheduler = require("./backupScheduler");
 const { encryptPhone, maskPhone } = require("./smsGateway");
 const textScreening = require("./textScreening");
@@ -4606,6 +4607,9 @@ exports.generateThumbnail = onObjectFinalized({
 exports.onUserPointsUpdate = securityTriggers.onUserPointsUpdate;
 exports.onUserStatsReset = securityTriggers.onUserStatsReset;
 exports.onAdminClaimSet = securityTriggers.onAdminClaimSet;
+
+// ─── AI 봇 액션 러너 (Phase 4) ───
+exports.onSecurityFindingCreated = aiBotActionRunner.onSecurityFindingCreated;
 
 // ─── 보안 스케줄러 (Phase 3) ───
 exports.detectAnomalousPoints = securityScheduler.detectAnomalousPoints;
