@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.684] - 2026-04-30
+
+### 변경
+- feat: 해킹 탐지 AI 봇 액션 러너 추가
+
 ## [1.0.683] - 2026-04-30
 
 ### 변경
