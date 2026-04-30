@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.675] - 2026-04-30
+
+### 변경
+- docs: 사용자 패턴분석 계획서 추가
+
 ## [1.0.674] - 2026-04-30
 
 ### 변경
