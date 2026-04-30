@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.676] - 2026-04-30
+
+### 변경
+- feat: 관리자 패널에 '패턴 분석' 탭 신설
+
 ## [1.0.675] - 2026-04-30
 
 ### 변경
