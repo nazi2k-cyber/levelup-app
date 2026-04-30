@@ -109,6 +109,23 @@ score에 따라 대응 강도를 조절합니다.
 ## 응답 형식
 도구 호출 전에 한국어로 간단한 분석 텍스트를 먼저 작성하고, 그 다음 필요한 도구들을 순서대로 호출하세요.`;
 
+// ─── Firestore + env 에서 Claude 설정 로드 ───
+async function loadClaudeConfig() {
+    try {
+        const snap = await db().collection("admin_config").doc("ai_bot").get();
+        const data = snap.exists ? snap.data() : {};
+        return {
+            apiKey: data.claudeApiKey || process.env.CLAUDE_API_KEY || null,
+            dryRun: data.aiDryRun === true || process.env.AI_BOT_DRY_RUN === "true",
+        };
+    } catch {
+        return {
+            apiKey: process.env.CLAUDE_API_KEY || null,
+            dryRun: process.env.AI_BOT_DRY_RUN === "true",
+        };
+    }
+}
+
 // ─── 마스터 어드민 여부 확인 ───
 async function isMasterAdmin(uid) {
     try {
@@ -281,8 +298,8 @@ exports.onSecurityFindingCreated = onDocumentCreated(
             console.warn(`[AIBot] 마스터 어드민 탐지 — 계정 수정 도구 제한 uid=${uid}`);
         }
 
-        const apiKey = process.env.CLAUDE_API_KEY;
-        const isDryRun = !apiKey || process.env.AI_BOT_DRY_RUN === "true";
+        const { apiKey, dryRun: configDryRun } = await loadClaudeConfig();
+        const isDryRun = !apiKey || configDryRun;
 
         let claudeReasoning = null;
         let actionsPlanned = [];

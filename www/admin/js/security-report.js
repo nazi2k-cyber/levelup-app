@@ -13,6 +13,9 @@ const updateSmsConfig       = httpsCallable(functions, "updateSmsConfig");
 const registerAdminContact  = httpsCallable(functions, "registerAdminContact");
 const getAdminContacts      = httpsCallable(functions, "getAdminContacts");
 const removeAdminContact    = httpsCallable(functions, "removeAdminContact");
+const getAiBotConfig        = httpsCallable(functions, "getAiBotConfig");
+const updateAiBotConfig     = httpsCallable(functions, "updateAiBotConfig");
+const getAiBotActionLogs    = httpsCallable(functions, "getAiBotActionLogs");
 
 const ALERT_META = {
     points_spike:        { label: "포인트 급증",           color: "#ff9800" },
@@ -46,6 +49,10 @@ let _rules = [];
 // 연락처 상태
 let _contacts = [];
 
+// AI Bot 액션 로그 상태
+let _botLogs = [];
+let _botLogDays = 7;
+
 export function initSecurityReport(containerId) {
     _container = document.getElementById(containerId);
     render();
@@ -54,6 +61,29 @@ export function initSecurityReport(containerId) {
 function render() {
     if (!_container) return;
     const masterSection = isMaster() ? `
+        <div class="card" id="sr-ai-bot-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h2>AI 봇 설정 <span class="badge badge-info" style="font-size:10px;">MASTER</span></h2>
+                <span id="sr-ai-key-status" class="text-sub text-sm">로딩 중...</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; padding:10px 14px; background:#1a1a1a; border-radius:6px; border:1px solid #333;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <span class="text-sm" style="color:var(--text-sub); min-width:110px;">Claude API Key</span>
+                    <input id="sr-ai-api-key" type="password" placeholder="sk-ant-api03-..." autocomplete="off"
+                        style="flex:1; min-width:200px; padding:6px 10px; font-size:0.85rem; border:1px solid #444; border-radius:4px; background:#111; color:#fff;">
+                    <button class="btn btn-sm" id="sr-btn-save-ai-key">저장</button>
+                    <button class="btn btn-sm btn-outline" id="sr-btn-remove-ai-key" style="color:#ff5252;border-color:#ff5252;">삭제</button>
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span class="text-sm" style="color:var(--text-sub); min-width:110px;">Dry-run 모드</span>
+                    <label style="display:flex; gap:6px; align-items:center; cursor:pointer;">
+                        <input type="checkbox" id="sr-ai-dry-run">
+                        <span class="text-sm">활성화 (AI 판단만, 실제 조치 미실행)</span>
+                    </label>
+                    <button class="btn btn-sm btn-outline" id="sr-btn-save-ai-dryrun">저장</button>
+                </div>
+            </div>
+        </div>
         <div class="card" id="sr-rules-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <h2>탐지 룰 설정 <span class="badge badge-info" style="font-size:10px;">MASTER</span></h2>
@@ -123,6 +153,21 @@ function render() {
             <div id="sr-findings-area"><p class="text-sub text-sm">조회 버튼을 눌러 탐지 결과를 불러오세요.</p></div>
         </div>
 
+        <div class="card" id="sr-bot-log-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h2>AI 봇 액션 로그</h2>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <select id="sr-bot-log-days" style="width:auto; padding:6px 10px; font-size:0.8rem;">
+                        <option value="1">최근 1일</option>
+                        <option value="7" selected>최근 7일</option>
+                        <option value="30">최근 30일</option>
+                    </select>
+                    <button class="btn btn-outline btn-sm" id="sr-btn-load-bot-logs">조회</button>
+                </div>
+            </div>
+            <div id="sr-bot-log-area"><p class="text-sub text-sm">조회 버튼을 눌러 AI 봇 처리 이력을 불러오세요.</p></div>
+        </div>
+
         <div class="card" id="sr-sms-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <h2>SMS 발송 이력</h2>
@@ -158,7 +203,14 @@ function render() {
         document.getElementById("sr-btn-save-cap")?.addEventListener("click", saveSmsConfig);
     }
 
+    document.getElementById("sr-btn-load-bot-logs").addEventListener("click", loadBotLogs);
+    document.getElementById("sr-bot-log-days").addEventListener("change", e => { _botLogDays = parseInt(e.target.value, 10); });
+
     if (isMaster()) {
+        loadAiBotConfig();
+        document.getElementById("sr-btn-save-ai-key")?.addEventListener("click", saveAiApiKey);
+        document.getElementById("sr-btn-remove-ai-key")?.addEventListener("click", removeAiApiKey);
+        document.getElementById("sr-btn-save-ai-dryrun")?.addEventListener("click", saveAiDryRun);
         document.getElementById("sr-btn-load-rules").addEventListener("click", loadRules);
         document.getElementById("sr-btn-load-contacts").addEventListener("click", loadContacts);
         document.getElementById("sr-btn-register-contact").addEventListener("click", registerContact);
@@ -169,6 +221,7 @@ export async function loadSecurityReport() {
     await loadAlerts();
     await loadFindings();
     await loadSmsLogs();
+    await loadBotLogs();
 }
 
 async function loadAlerts() {
@@ -586,3 +639,143 @@ async function saveSmsConfig() {
         terror("SmsConfig", "저장 실패: " + e.message);
     }
 }
+
+// ─── AI Bot 설정 ───
+
+const AI_BOT_KEY_SOURCE = { firestore: "Firestore 저장됨", env: "환경변수(배포설정)", none: "미설정" };
+
+async function loadAiBotConfig() {
+    const statusEl = document.getElementById("sr-ai-key-status");
+    const dryRunEl = document.getElementById("sr-ai-dry-run");
+    if (!statusEl) return;
+    try {
+        const result = await getAiBotConfig({});
+        const { hasKey, keySource, maskedKey, aiDryRun } = result.data || {};
+        const sourceLabel = AI_BOT_KEY_SOURCE[keySource] || keySource;
+        statusEl.innerHTML = hasKey
+            ? `<span style="color:#69f0ae;">● API Key 설정됨</span> <span class="text-sub" style="font-size:0.78rem;">${escHtml(maskedKey || "")} (${sourceLabel})</span>`
+            : `<span style="color:#ff5252;">● API Key 미설정 — dry-run 모드</span>`;
+        if (dryRunEl) dryRunEl.checked = aiDryRun || false;
+    } catch (e) {
+        statusEl.textContent = "설정 로드 실패";
+        terror("AiBot", "AI Bot 설정 조회 실패: " + e.message);
+    }
+}
+
+async function saveAiApiKey() {
+    const input = document.getElementById("sr-ai-api-key");
+    const key = (input?.value || "").trim();
+    if (!key) { twarn("AiBot", "API Key를 입력하세요."); return; }
+    if (!key.startsWith("sk-ant-")) { twarn("AiBot", "Claude API Key는 sk-ant- 로 시작해야 합니다."); return; }
+    try {
+        await updateAiBotConfig({ claudeApiKey: key });
+        tok("AiBot", "Claude API Key가 저장되었습니다.");
+        if (input) input.value = "";
+        await loadAiBotConfig();
+    } catch (e) {
+        terror("AiBot", "API Key 저장 실패: " + e.message);
+    }
+}
+
+async function removeAiApiKey() {
+    if (!confirm("저장된 Claude API Key를 삭제하시겠습니까? (환경변수에 설정된 키는 유지됩니다)")) return;
+    try {
+        await updateAiBotConfig({ claudeApiKey: "" });
+        tok("AiBot", "API Key가 삭제되었습니다.");
+        await loadAiBotConfig();
+    } catch (e) {
+        terror("AiBot", "API Key 삭제 실패: " + e.message);
+    }
+}
+
+async function saveAiDryRun() {
+    const checked = document.getElementById("sr-ai-dry-run")?.checked ?? false;
+    try {
+        await updateAiBotConfig({ aiDryRun: checked });
+        tok("AiBot", `Dry-run 모드가 ${checked ? "활성화" : "비활성화"}되었습니다.`);
+        await loadAiBotConfig();
+    } catch (e) {
+        terror("AiBot", "Dry-run 설정 저장 실패: " + e.message);
+    }
+}
+
+// ─── AI 봇 액션 로그 ───
+
+const BOT_TOOL_META = {
+    disable_user_account: { label: "계정 비활성화", color: "#ff5252" },
+    revoke_user_sessions: { label: "세션 만료",     color: "#ff9800" },
+    revoke_admin_claim:   { label: "클레임 회수",   color: "#ff9800" },
+    backup_user_data:     { label: "데이터 백업",   color: "#69f0ae" },
+    flag_for_review:      { label: "검토 플래그",   color: "#00e5ff" },
+};
+
+async function loadBotLogs() {
+    const area = document.getElementById("sr-bot-log-area");
+    if (!area) return;
+    area.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
+    tlog("AiBot", `AI 봇 액션 로그 조회 중 (최근 ${_botLogDays}일)...`);
+    try {
+        const result = await getAiBotActionLogs({ days: _botLogDays, pageSize: 50 });
+        _botLogs = result.data?.logs || [];
+        tok("AiBot", `${_botLogs.length}건 조회 완료`);
+        renderBotLogs(area);
+    } catch (e) {
+        terror("AiBot", "AI 봇 로그 조회 실패: " + e.message);
+        area.innerHTML = `<p class="text-error text-sm">오류: ${escHtml(e.message)}</p>`;
+    }
+}
+
+function renderBotLogs(el) {
+    if (_botLogs.length === 0) {
+        el.innerHTML = '<p class="text-sub text-sm">해당 기간에 AI 봇 처리 이력이 없습니다.</p>';
+        return;
+    }
+
+    const rows = _botLogs.map((log, idx) => {
+        const sevColor = SEVERITY_COLOR[log.severity] || "#888";
+        const sevLabel = SEVERITY_LABEL[log.severity] || log.severity;
+        const dt = log.executedAt ? new Date(log.executedAt).toLocaleString("ko-KR") : "—";
+        const dryBadge = log.dryRun
+            ? '<span class="badge" style="background:#33333380;color:#888;font-size:10px;">DRY-RUN</span>'
+            : '<span class="badge" style="background:#69f0ae20;color:#69f0ae;border:1px solid #69f0ae40;font-size:10px;">실행됨</span>';
+
+        const actionBadges = (log.actionsExecuted || []).map(a => {
+            const meta = BOT_TOOL_META[a.tool] || { label: a.tool, color: "#888" };
+            const ok = a.success || a.dryRun;
+            const opacity = ok ? "1" : "0.4";
+            return `<span class="badge" style="background:${meta.color}20;color:${meta.color};border:1px solid ${meta.color}40;opacity:${opacity};font-size:10px;" title="${a.error || (a.dryRun ? "dry-run" : "")}">${meta.label}${ok ? "" : " ✗"}</span>`;
+        }).join(" ");
+
+        const reasonId = `bot-reason-${idx}`;
+        const hasReason = !!(log.claudeReasoning && !log.dryRun);
+
+        return `
+            <tr style="cursor:${hasReason ? "pointer" : "default"};" onclick="${hasReason ? `window._srToggleBotReason('${reasonId}')` : ""}">
+                <td class="text-sm" style="color:${sevColor};">${escHtml(log.ruleId)}</td>
+                <td class="text-sm">${escHtml(log.clusterKey)}</td>
+                <td><span class="badge" style="background:${sevColor}20;color:${sevColor};border:1px solid ${sevColor}40;">${sevLabel}</span></td>
+                <td class="text-sm" style="color:${sevColor};font-weight:700;">${log.score}</td>
+                <td style="max-width:240px;">${actionBadges || '<span class="text-sub text-sm">—</span>'}</td>
+                <td>${dryBadge}</td>
+                <td class="text-sub text-sm" style="white-space:nowrap;">${dt}</td>
+            </tr>
+            ${hasReason ? `
+            <tr id="${reasonId}" style="display:none;">
+                <td colspan="7" style="padding:8px 16px; background:#111; border-bottom:1px solid #333;">
+                    <div style="font-size:0.8rem; color:#ccc; white-space:pre-wrap; line-height:1.5;">${escHtml(log.claudeReasoning)}</div>
+                </td>
+            </tr>` : ""}`;
+    }).join("");
+
+    el.innerHTML = `
+        <p class="text-sub text-sm" style="margin-bottom:8px;">탐지 룰명을 클릭하면 Claude 분석 내용을 펼쳐볼 수 있습니다.</p>
+        <table>
+            <thead><tr><th>규칙</th><th>대상</th><th>위험도</th><th>점수</th><th>실행 액션</th><th>모드</th><th>처리 시각</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
+
+window._srToggleBotReason = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = el.style.display === "none" ? "table-row" : "none";
+};
