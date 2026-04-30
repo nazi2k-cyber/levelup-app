@@ -1718,6 +1718,212 @@ async function handleGetUserAnalytics(request) {
     };
 }
 
+// ─── Admin: 사용자 패턴 분석 핸들러 ───
+
+async function handleGetPatternAnalysis(request) {
+    await assertAdmin(request);
+
+    const now = Date.now();
+    const DAY = 86400000;
+    const sevenDaysAgo   = now - 7  * DAY;
+    const thirtyDaysAgo  = now - 30 * DAY;
+    const twoDaysAgo     = now - 2  * DAY;
+    const oneDayAgo      = now - 1  * DAY;
+
+    // Firebase Auth 유저 목록 → uid별 가입 시각(ms) 맵
+    const uidToCreatedAt = new Map();
+    try {
+        const listResult = await getAuth().listUsers(1000);
+        for (const u of listResult.users) {
+            const ms = new Date(u.metadata.creationTime).getTime();
+            if (Number.isFinite(ms)) uidToCreatedAt.set(u.uid, ms);
+        }
+    } catch (e) {
+        console.warn("[getPatternAnalysis] listUsers failed:", e.message);
+    }
+
+    // 집계 변수
+    let totalUsers = 0;
+    let dau = 0, wau = 0, mau = 0;
+    let segmentHighActive = 0, segmentLowActive = 0, segmentDormant = 0, segmentNew = 0;
+    let streakAtRisk = 0, streakZero = 0, streakSum = 0;
+    const streakDist = { "0": 0, "1-7": 0, "8-30": 0, "31-100": 0, "100+": 0 };
+    let subscribedCount = 0;
+    const planDist = {};
+    const levelDist = { "1-10": 0, "11-30": 0, "31-50": 0, "51-100": 0, "100+": 0 };
+    const pointsDist = { "0-100": 0, "101-1000": 0, "1001-10000": 0, "10000+": 0 };
+
+    // 코호트: key = 해당 주 월요일 "YYYY-MM-DD"
+    const cohortMap = new Map();
+    // { size, dau:0, d1Count, d7Count, d30Count, d1Elig, d7Elig, d30Elig }
+
+    function getMondayKey(ms) {
+        const d = new Date(ms);
+        const day = d.getUTCDay(); // 0=Sun
+        const diff = (day === 0) ? -6 : 1 - day;
+        d.setUTCDate(d.getUTCDate() + diff);
+        return d.toISOString().slice(0, 10);
+    }
+
+    function toDateStr(ms) {
+        return new Date(ms).toISOString().slice(0, 10);
+    }
+
+    const usersSnap = await db.collection("users").get();
+
+    for (const doc of usersSnap.docs) {
+        totalUsers++;
+        const data = doc.data();
+
+        // ── 스트릭 파싱 ──
+        let lastActiveMs = null;
+        let currentStreak = 0;
+        let activeDates = [];
+        try {
+            const streak = JSON.parse(data.streakStr || "{}");
+            if (streak.lastActiveDate) lastActiveMs = new Date(streak.lastActiveDate).getTime();
+            currentStreak = Number(streak.currentStreak) || 0;
+            activeDates = Array.isArray(streak.activeDates) ? streak.activeDates : [];
+        } catch (_) { /* ignore */ }
+
+        // ── DAU / WAU / MAU ──
+        if (lastActiveMs !== null) {
+            if (lastActiveMs >= oneDayAgo)     dau++;
+            if (lastActiveMs >= sevenDaysAgo)  wau++;
+            if (lastActiveMs >= thirtyDaysAgo) mau++;
+        }
+
+        // ── 세그먼트 ──
+        const createdAtMs = uidToCreatedAt.get(doc.id) || null;
+        const isNew = createdAtMs !== null && createdAtMs >= sevenDaysAgo;
+        if (isNew) {
+            segmentNew++;
+        } else if (lastActiveMs !== null && lastActiveMs >= sevenDaysAgo) {
+            segmentHighActive++;
+        } else if (lastActiveMs !== null && lastActiveMs >= thirtyDaysAgo) {
+            segmentLowActive++;
+        } else {
+            segmentDormant++;
+        }
+
+        // ── 스트릭 ──
+        streakSum += currentStreak;
+        if (currentStreak === 0) {
+            streakZero++;
+        } else if (lastActiveMs !== null && lastActiveMs < twoDaysAgo) {
+            streakAtRisk++;
+        }
+        if (currentStreak === 0)       streakDist["0"]++;
+        else if (currentStreak <= 7)   streakDist["1-7"]++;
+        else if (currentStreak <= 30)  streakDist["8-30"]++;
+        else if (currentStreak <= 100) streakDist["31-100"]++;
+        else                           streakDist["100+"]++;
+
+        // ── 구독 ──
+        const sub = data.subscription;
+        const hasSub = typeof sub === "object" && sub !== null &&
+            (sub.noAds === true || sub.unlimitedDiyQuests === true || sub.plan);
+        if (hasSub) {
+            subscribedCount++;
+            const planKey = (sub && sub.plan) ? String(sub.plan) : "test";
+            planDist[planKey] = (planDist[planKey] || 0) + 1;
+        } else {
+            planDist["free"] = (planDist["free"] || 0) + 1;
+        }
+
+        // ── 레벨 / 포인트 ──
+        const lv = Number(data.level) || 1;
+        if      (lv <= 10)  levelDist["1-10"]++;
+        else if (lv <= 30)  levelDist["11-30"]++;
+        else if (lv <= 50)  levelDist["31-50"]++;
+        else if (lv <= 100) levelDist["51-100"]++;
+        else                levelDist["100+"]++;
+
+        const pts = Number(data.points) || 0;
+        if      (pts <= 100)   pointsDist["0-100"]++;
+        else if (pts <= 1000)  pointsDist["101-1000"]++;
+        else if (pts <= 10000) pointsDist["1001-10000"]++;
+        else                   pointsDist["10000+"]++;
+
+        // ── 코호트 리텐션 ──
+        if (createdAtMs !== null) {
+            const weekKey = getMondayKey(createdAtMs);
+            if (!cohortMap.has(weekKey)) {
+                cohortMap.set(weekKey, { size: 0, d1Count: 0, d7Count: 0, d30Count: 0, d1Elig: 0, d7Elig: 0, d30Elig: 0 });
+            }
+            const cohort = cohortMap.get(weekKey);
+            cohort.size++;
+
+            // D1: 가입 다음 날
+            if (now - createdAtMs >= 1 * DAY) {
+                cohort.d1Elig++;
+                const d1Str = toDateStr(createdAtMs + 1 * DAY);
+                if (activeDates.includes(d1Str)) cohort.d1Count++;
+            }
+            // D7: 가입 7일 후
+            if (now - createdAtMs >= 7 * DAY) {
+                cohort.d7Elig++;
+                const d7Str = toDateStr(createdAtMs + 7 * DAY);
+                if (activeDates.includes(d7Str)) cohort.d7Count++;
+            }
+            // D30: 가입 30일 후
+            if (now - createdAtMs >= 30 * DAY) {
+                cohort.d30Elig++;
+                const d30Str = toDateStr(createdAtMs + 30 * DAY);
+                if (activeDates.includes(d30Str)) cohort.d30Count++;
+            }
+        }
+    }
+
+    // 전체 D1/D7/D30 집계
+    let d1Eligible = 0, d1Count = 0, d7Eligible = 0, d7Count = 0, d30Eligible = 0, d30Count = 0;
+    for (const c of cohortMap.values()) {
+        d1Eligible  += c.d1Elig;  d1Count  += c.d1Count;
+        d7Eligible  += c.d7Elig;  d7Count  += c.d7Count;
+        d30Eligible += c.d30Elig; d30Count += c.d30Count;
+    }
+
+    const stickiness = mau > 0 ? dau / mau : 0;
+    const avgStreak  = totalUsers > 0 ? streakSum / totalUsers : 0;
+
+    // 코호트 배열 (최근 12주, 최신순)
+    const cohorts = Array.from(cohortMap.entries())
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .slice(0, 12)
+        .map(([week, c]) => ({
+            week,
+            size: c.size,
+            d1Rate: c.d1Elig > 0 ? c.d1Count / c.d1Elig : null,
+            d7Rate: c.d7Elig > 0 ? c.d7Count / c.d7Elig : null,
+            d30Rate: c.d30Elig > 0 ? c.d30Count / c.d30Elig : null,
+            d1Eligible: c.d1Elig,
+            d7Eligible: c.d7Elig,
+            d30Eligible: c.d30Elig
+        }));
+
+    return {
+        totalUsers,
+        dau, wau, mau,
+        stickiness,
+        d1RetentionRate: d1Eligible > 0 ? d1Count / d1Eligible : 0,
+        d7RetentionRate: d7Eligible > 0 ? d7Count / d7Eligible : 0,
+        d30RetentionRate: d30Eligible > 0 ? d30Count / d30Eligible : 0,
+        d1Eligible, d7Eligible, d30Eligible,
+        segmentHighActive, segmentLowActive, segmentDormant, segmentNew,
+        avgStreak: Math.round(avgStreak * 10) / 10,
+        streakAtRisk, streakZero,
+        streakDistribution: streakDist,
+        subscribedCount,
+        subscriptionRate: totalUsers > 0 ? subscribedCount / totalUsers : 0,
+        freeCount: totalUsers - subscribedCount,
+        planDistribution: planDist,
+        cohorts,
+        levelDistribution: levelDist,
+        pointsDistribution: pointsDist,
+        computedAt: now
+    };
+}
+
 // ─── ISBN 도서 검색 (한국 도서 API 프록시) ───
 async function handleLookupIsbn(request) {
     if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
@@ -2144,6 +2350,7 @@ const ACTION_HANDLERS = {
     migrateUsernames: handleMigrateUsernames,
     listAdminOperators: handleListAdminOperators,
     getUserAnalytics: handleGetUserAnalytics,
+    getPatternAnalysis: handleGetPatternAnalysis,
     autoScreenPost: handleAutoScreenPost,
     batchScreenPosts: handleBatchScreenPosts,
     batchScreenProfiles: handleBatchScreenProfiles,

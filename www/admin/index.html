@@ -48,6 +48,7 @@
             <button class="tab-btn" data-tab="autoscreen">자동 스크리닝</button>
             <button class="tab-btn" data-tab="reports">신고 관리</button>
             <button class="tab-btn" data-tab="secreport">보안 리포트</button>
+            <button class="tab-btn" data-tab="patterns">패턴 분석</button>
         </nav>
 
         <!-- Tab Contents -->
@@ -61,6 +62,7 @@
         <div id="tab-autoscreen" class="tab-content"></div>
         <div id="tab-reports" class="tab-content"></div>
         <div id="tab-secreport" class="tab-content"></div>
+        <div id="tab-patterns" class="tab-content"></div>
     </div>
 </div>
 
@@ -101,6 +103,7 @@ import { initPostScreening } from "./js/post-screening.js";
 import { initAutoScreening } from "./js/auto-screening.js";
 import { initReportManagement } from "./js/report-management.js";
 import { initSecurityReport, loadSecurityReport } from "./js/security-report.js";
+import { initPatternAnalysis, loadPatternAnalysis } from "./js/pattern-analysis.js";
 
 // Initialize log panel and tabs
 initLogPanel();
@@ -188,8 +191,9 @@ onAdminAuth((user, admin, master, operator) => {
         initAutoScreening("tab-autoscreen");
         initReportManagement("tab-reports");
         initSecurityReport("tab-secreport");
+        initPatternAnalysis("tab-patterns");
 
-        if (admin) { loadDashboard(); loadUserAnalytics(); loadSecurityReport(); }
+        if (admin) { loadDashboard(); loadUserAnalytics(); loadSecurityReport(); loadPatternAnalysis(); }
     } else {
         loginSec.classList.remove("hidden");
         adminSec.classList.add("hidden");

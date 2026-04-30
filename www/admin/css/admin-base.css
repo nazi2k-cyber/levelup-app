@@ -275,6 +275,27 @@ td { padding: 8px; border-bottom: 1px solid var(--border); }
     .ua-top-books-table { font-size: 0.75rem; }
 }
 
+/* ─── Pattern Analysis ─── */
+.pa-segment-pill { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.7rem; font-weight:600; margin-top:6px; }
+.pa-pill-high    { background:#4caf5033; color:#4caf50; }
+.pa-pill-low     { background:#ffc10733; color:#ffc107; }
+.pa-pill-dormant { background:#ff525233; color:#ff5252; }
+.pa-pill-new     { background:#00e5ff33; color:#00e5ff; }
+
+.pa-retention-table { width:100%; border-collapse:collapse; font-size:0.8rem; margin-top:8px; }
+.pa-retention-table th { text-align:center; padding:8px 12px; border-bottom:2px solid var(--border); color:var(--text-sub); font-size:0.75rem; font-weight:600; white-space:nowrap; }
+.pa-retention-table th:first-child { text-align:left; }
+.pa-retention-table td { padding:7px 12px; border-bottom:1px solid var(--border); text-align:center; }
+.pa-retention-table td:first-child { text-align:left; color:var(--text-sub); font-size:0.75rem; }
+.pa-retention-table tbody tr:hover { background:var(--accent-dim); }
+.pa-ret-high   { color:#4caf50; font-weight:700; }
+.pa-ret-medium { color:#ffc107; font-weight:600; }
+.pa-ret-low    { color:#ff5252; }
+.pa-ret-na     { color:var(--text-sub); font-size:0.7rem; }
+
+.pa-meter-track { height:6px; background:var(--bg-deep); border-radius:3px; overflow:hidden; margin-top:6px; }
+.pa-meter-fill  { height:100%; border-radius:3px; background:var(--accent); transition:width 0.4s ease; }
+
 /* ─── Reported Post Row Highlight ─── */
 .ps-reported { background: rgba(255, 82, 82, 0.08); }
 .ps-reported:hover { background: rgba(255, 82, 82, 0.15); }
