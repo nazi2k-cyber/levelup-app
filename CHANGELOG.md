@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.679] - 2026-04-30
+
+### 변경
+- feat: 해킹 탐지 자동 스케줄러 + 어드민 SMS 알림 구현
+- Update habit-building project description in consumer terms
+
 ## [1.0.678] - 2026-04-30
 
 ### 변경
