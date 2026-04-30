@@ -125,3 +125,168 @@ Free 플랜 + Private에서는 이 설정이 무시됩니다.
 5. **Actions 모니터링** — 첫 달 분 사용량 확인 (Settings → Billing → Actions)
 
 > Firebase Hosting 이전을 1번에서 완료하면 Pages 다운타임 없이 전환 가능합니다.
+
+---
+
+## 부록: 사전 조치 상세 절차
+
+### 전체 흐름
+
+```
+현재:  bravecat.studio  →  GitHub Pages      →  docs/index.html
+목표:  bravecat.studio  →  Firebase Hosting  →  www/index.html  (동일 파일)
+```
+
+`www/index.html`은 `sync-landing-page.yml`로 `docs/index.html`과 이미 동기화되므로
+콘텐츠 변경 없이 서빙 경로만 바꾸면 됩니다.
+
+- Firebase 프로젝트: `levelup-app-53d02`
+- 퍼블릭 디렉토리: `www/` (`firebase.json` 기준)
+
+---
+
+### STEP 0: 현재 DNS TTL 확인 (전환 D-2 ~ D-1)
+
+DNS 레코드 변경 후 전 세계 DNS 서버에 새 정보가 전파되는 시간이 TTL입니다.
+TTL이 크면(예: 86400초 = 24시간) 레코드를 바꿔도 일부 사용자는 하루 동안 GitHub Pages로 접속합니다.
+
+**현재 TTL 조회:**
+
+```bash
+dig bravecat.studio A +noall +answer
+```
+
+출력 예시:
+```
+bravecat.studio.  3600  IN  A  185.199.108.153   ← GitHub Pages IP, TTL=3600
+bravecat.studio.  3600  IN  A  185.199.109.153
+bravecat.studio.  3600  IN  A  185.199.110.153
+bravecat.studio.  3600  IN  A  185.199.111.153
+```
+
+**TTL을 300초(5분)로 낮추기:**
+
+도메인 등록업체(가비아, Cloudflare 등) DNS 관리 패널에서 `bravecat.studio` A 레코드의 TTL을 `300`으로 변경합니다.
+
+> TTL 변경 자체도 기존 TTL만큼 전파 시간이 걸립니다.
+> 현재 TTL이 3600초라면 낮추는 작업을 **실제 전환 최소 1시간 전**에 완료해야 효과가 있습니다.
+
+---
+
+### STEP 1: Firebase 콘솔에서 커스텀 도메인 추가
+
+1. Firebase 콘솔 → `levelup-app-53d02` 프로젝트 → **Hosting** 메뉴
+2. **커스텀 도메인 추가** 클릭
+3. 도메인 입력: `bravecat.studio`
+4. `www.bravecat.studio` 리디렉션 추가 여부 선택 (권장: 추가)
+
+---
+
+### STEP 2: 도메인 소유권 인증 (TXT 레코드)
+
+Firebase가 소유권 확인용 TXT 레코드를 제공합니다.
+
+```
+타입:  TXT
+호스트: bravecat.studio (또는 @)
+값:    firebase=xxxxxxxxxxxxxxxxxxxxxx  ← Firebase 콘솔에서 확인
+```
+
+DNS 관리 패널에서 위 TXT 레코드를 추가한 뒤 Firebase 콘솔에서 **인증 완료** 버튼 클릭.
+TXT 레코드 전파: 보통 수 분 ~ 수십 분 소요.
+
+---
+
+### STEP 3: Firebase가 제공하는 A 레코드 확인
+
+`bravecat.studio`는 **Apex 도메인**(www 없는 최상위)이므로 CNAME을 쓸 수 없습니다(DNS 표준 제약).
+Firebase는 이를 위해 **A 레코드(IPv4) 2개**를 제공합니다.
+
+소유권 인증 후 Firebase 콘솔에서 다음 형태로 표시됩니다:
+
+```
+타입:  A
+호스트: bravecat.studio (또는 @)
+값:    151.101.x.x   ← Firebase 콘솔에서 확인 (프로젝트별로 다름)
+값:    151.101.x.x
+```
+
+이 값을 메모해 둡니다.
+
+---
+
+### STEP 4: DNS 레코드 교체 (실제 전환)
+
+도메인 관리 패널에서 **기존 GitHub Pages A 레코드를 삭제**하고 Firebase A 레코드로 교체합니다.
+
+| 변경 전 (GitHub Pages) | 변경 후 (Firebase Hosting) |
+|----------------------|--------------------------|
+| A → 185.199.108.153 | A → Firebase IP 1 |
+| A → 185.199.109.153 | A → Firebase IP 2 |
+| A → 185.199.110.153 | (삭제) |
+| A → 185.199.111.153 | (삭제) |
+| TTL: 300 | TTL: 300 (유지) |
+
+`www.bravecat.studio`도 추가할 경우:
+
+```
+타입:  CNAME
+호스트: www
+값:    levelup-app-53d02.web.app
+TTL:   300
+```
+
+---
+
+### STEP 5: Firebase SSL 인증서 자동 발급 대기
+
+DNS 전파가 완료되면 Firebase가 **Let's Encrypt 인증서를 자동 발급**합니다.
+Firebase 콘솔 Hosting 패널에서 상태가 `연결됨`으로 바뀌는 것을 확인합니다.
+
+소요 시간: TTL을 300초로 낮췄다면 **5~30분** 내 완료.
+
+---
+
+### STEP 6: 동작 확인 후 레포 Private 전환
+
+```bash
+# HTTPS 정상 응답 확인
+curl -I https://bravecat.studio
+
+# HTTP → HTTPS 리디렉션 확인
+curl -I http://bravecat.studio
+
+# Firebase 서빙 확인 (응답 헤더에 x-firebase-* 포함 여부)
+curl -v https://bravecat.studio 2>&1 | grep -i "server\|firebase"
+```
+
+응답이 정상이면 이 시점에서 레포를 Private으로 전환해도 `bravecat.studio`는 영향 없습니다.
+
+---
+
+### 전환 타임라인 예시
+
+```
+D-2  현재 TTL 조회
+D-1  DNS TTL → 300초로 변경
+     Firebase 콘솔: 도메인 추가 + TXT 레코드 소유권 인증
+
+D-0  (전환 당일)
+     09:00  DNS A 레코드 교체 (GitHub Pages IP → Firebase IP)
+     09:05  Firebase 콘솔에서 DNS 전파 감지 확인
+     09:30  SSL 인증서 발급 완료 확인
+     09:35  https://bravecat.studio 정상 동작 확인
+     09:40  레포 Private 전환 (GitHub Settings → Danger Zone)
+
+D+1  DNS TTL → 3600초로 복원 (안정화 후)
+```
+
+---
+
+### 주의사항
+
+| 항목 | 내용 |
+|------|------|
+| `docs/CNAME` 파일 | Private 전환 후 GitHub Pages 비활성화 시 의미 없어짐. 이후 삭제 가능 |
+| `firebase.json` rewrite 규칙 | `"source": "**", "destination": "/index.html"` — 존재하지 않는 경로는 모두 `index.html`(랜딩페이지)로 포워딩. 앱(`www/app.html`)은 파일이 실제 존재하므로 정상 서빙됨 |
+| `sync-landing-page.yml` | Firebase 이전 후에도 `www/ ↔ docs/` 동기화는 계속 동작. `docs/`는 백업 역할로 유지 가능 |
