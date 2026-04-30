@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.688] - 2026-04-30
+
+### 변경
+- docs: 사전 조치(Firebase 커스텀 도메인 + DNS TTL) 상세 절차 추가
+
 ## [1.0.687] - 2026-04-30
 
 ### 변경
