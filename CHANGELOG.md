@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.687] - 2026-04-30
+
+### 변경
+- docs: GitHub Public→Private 전환 시 문제점 분석 문서 추가
+
 ## [1.0.686] - 2026-04-30
 
 ### 변경
