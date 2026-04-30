@@ -9,7 +9,9 @@ const { getAuth } = require("firebase-admin/auth");
 const { checkRateLimit } = require("./rateLimiter");
 const securityTriggers = require("./securityTriggers");
 const securityScheduler = require("./securityScheduler");
+const hackingDetectionScheduler = require("./hackingDetectionScheduler");
 const backupScheduler = require("./backupScheduler");
+const { encryptPhone, maskPhone } = require("./smsGateway");
 const textScreening = require("./textScreening");
 
 initializeApp();
@@ -4648,4 +4650,154 @@ exports.getSecurityAlerts = onCall(adminCallableOpts, async (request) => {
     });
 
     return { alerts, byType, total: alerts.length, days };
+});
+
+// ─── 해킹 탐지 스케줄러 (Phase 4) ───
+exports.detectHackingAttempts = hackingDetectionScheduler.detectHackingAttempts;
+
+// ─── 탐지 결과 조회 ───
+exports.getSecurityFindings = onCall(adminCallableOpts, async (request) => {
+    await assertAdmin(request);
+    const { Timestamp: FSTimestamp } = require("firebase-admin/firestore");
+    const { days = 7, severity = null, pageSize = 50 } = request.data || {};
+    const since = new Date(Date.now() - Math.min(days, 90) * 24 * 60 * 60 * 1000);
+
+    const snap = await db.collection("security_findings")
+        .where("detectedAt", ">=", FSTimestamp.fromDate(since))
+        .orderBy("detectedAt", "desc")
+        .limit(200)
+        .get();
+
+    let findings = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        detectedAt: d.data().detectedAt?.toDate?.()?.toISOString() || null,
+    }));
+
+    if (severity) findings = findings.filter(f => f.severity === severity);
+    findings = findings.slice(0, Math.min(pageSize, 200));
+
+    const bySeverity = {};
+    findings.forEach(f => { bySeverity[f.severity] = (bySeverity[f.severity] || 0) + 1; });
+
+    return { findings, bySeverity, total: findings.length, days };
+});
+
+// ─── 탐지 룰 조회 ───
+exports.getSecurityRules = onCall(adminCallableOpts, async (request) => {
+    await assertAdmin(request);
+
+    const DEFAULT_RULES = require("./hackingDetectionScheduler").DEFAULT_RULES ||
+        hackingDetectionScheduler.DEFAULT_RULES;
+
+    const snap = await db.collection("security_rules").get();
+    const dbRules = {};
+    snap.docs.forEach(d => { dbRules[d.id] = { id: d.id, ...d.data() }; });
+
+    // DEFAULT_RULES 와 병합 후 반환
+    const baseDefaults = [
+        { id: "login_failure_spike",    name: "로그인 실패 폭증",    enabled: true, severity: "high",     score: 70, threshold: 10, windowMinutes: 60,    cooldownMinutes: 30 },
+        { id: "repeat_points_spike",    name: "반복 포인트 급증",    enabled: true, severity: "high",     score: 75, threshold: 1,  windowMinutes: 1440,  cooldownMinutes: 60 },
+        { id: "stats_manipulation",     name: "스탯 조작 의심",      enabled: true, severity: "critical", score: 90, threshold: 1,  windowMinutes: 1440,  cooldownMinutes: 30 },
+        { id: "admin_claim_suspicious", name: "어드민 클레임 이상",  enabled: true, severity: "high",     score: 80, threshold: 2,  windowMinutes: 60,    cooldownMinutes: 60 },
+        { id: "dormant_admin_access",   name: "휴면 어드민 접근",    enabled: true, severity: "medium",   score: 50, threshold: 1,  windowMinutes: 10080, cooldownMinutes: 10080 },
+    ];
+
+    const rules = baseDefaults.map(def => ({ ...def, ...(dbRules[def.id] || {}) }));
+    return { rules };
+});
+
+// ─── 탐지 룰 수정 (master 전용) ───
+exports.updateSecurityRule = onCall(adminCallableOpts, async (request) => {
+    await assertMaster(request);
+    const { ruleId, enabled, threshold, cooldownMinutes, score } = request.data || {};
+
+    if (!ruleId) throw new HttpsError("invalid-argument", "ruleId 가 필요합니다.");
+
+    const update = { updatedAt: require("firebase-admin/firestore").FieldValue.serverTimestamp(), updatedBy: request.auth.uid };
+    if (enabled !== undefined) update.enabled = Boolean(enabled);
+    if (threshold !== undefined) update.threshold = Number(threshold);
+    if (cooldownMinutes !== undefined) update.cooldownMinutes = Number(cooldownMinutes);
+    if (score !== undefined) update.score = Math.min(100, Math.max(0, Number(score)));
+
+    await db.collection("security_rules").doc(ruleId).set(update, { merge: true });
+
+    // 감사 로그
+    await db.collection("audit_logs").add({
+        action: "update_security_rule",
+        ruleId,
+        changes: { enabled, threshold, cooldownMinutes, score },
+        performedBy: request.auth.uid,
+        performedAt: require("firebase-admin/firestore").FieldValue.serverTimestamp(),
+    });
+
+    return { ok: true, ruleId };
+});
+
+// ─── SMS 발송 이력 조회 ───
+exports.getSmsAlertLogs = onCall(adminCallableOpts, async (request) => {
+    await assertAdmin(request);
+    const { Timestamp: FSTimestamp } = require("firebase-admin/firestore");
+    const { days = 7, pageSize = 50 } = request.data || {};
+    const since = new Date(Date.now() - Math.min(days, 90) * 24 * 60 * 60 * 1000);
+
+    const snap = await db.collection("security_sms_logs")
+        .where("lastAttemptAt", ">=", FSTimestamp.fromDate(since))
+        .orderBy("lastAttemptAt", "desc")
+        .limit(Math.min(pageSize, 200))
+        .get();
+
+    const logs = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        sentAt: d.data().sentAt?.toDate?.()?.toISOString() || null,
+        lastAttemptAt: d.data().lastAttemptAt?.toDate?.()?.toISOString() || null,
+    }));
+
+    return { logs, total: logs.length };
+});
+
+// ─── 어드민 연락처 등록 (master 전용) ───
+exports.registerAdminContact = onCall(adminCallableOpts, async (request) => {
+    await assertMaster(request);
+    const { phone } = request.data || {};
+    if (!phone || !/^\d{10,11}$/.test(phone.replace(/\D/g, ""))) {
+        throw new HttpsError("invalid-argument", "유효한 전화번호(숫자 10-11자리)를 입력하세요.");
+    }
+
+    const digits = phone.replace(/\D/g, "");
+    const encryptedPhone = encryptPhone(digits);
+    const masked = maskPhone(digits);
+
+    const { FieldValue: FV } = require("firebase-admin/firestore");
+    await db.collection("admin_contacts").doc(request.auth.uid).set({
+        uid: request.auth.uid,
+        maskedPhone: masked,
+        encryptedPhone: encryptedPhone || "",
+        smsEnabled: true,
+        updatedAt: FV.serverTimestamp(),
+        updatedBy: request.auth.uid,
+    });
+
+    return { ok: true, maskedPhone: masked };
+});
+
+// ─── 어드민 연락처 조회 (master 전용) ───
+exports.getAdminContacts = onCall(adminCallableOpts, async (request) => {
+    await assertMaster(request);
+    const snap = await db.collection("admin_contacts").get();
+    const contacts = snap.docs.map(d => {
+        const data = d.data();
+        return { uid: d.id, maskedPhone: data.maskedPhone, smsEnabled: data.smsEnabled, updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null };
+    });
+    return { contacts };
+});
+
+// ─── 어드민 연락처 삭제 (master 전용) ───
+exports.removeAdminContact = onCall(adminCallableOpts, async (request) => {
+    await assertMaster(request);
+    const { uid } = request.data || {};
+    if (!uid) throw new HttpsError("invalid-argument", "uid 가 필요합니다.");
+    await db.collection("admin_contacts").doc(uid).delete();
+    return { ok: true };
 });
