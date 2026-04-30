@@ -458,15 +458,14 @@
                     ${lumpGrid}
                 </div>
 
-                <div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,200,0,0.05);border:1px solid rgba(255,200,0,0.2);border-radius:8px;">
+                <div style="padding:10px 12px;background:rgba(255,200,0,0.05);border:1px solid rgba(255,200,0,0.2);border-radius:8px;">
                     <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;margin-bottom:4px;">
                         <input type="checkbox" id="fnw-inflate-checkbox" ${cfg.inflateS ? 'checked' : ''} style="margin-top:3px;flex-shrink:0;">
                         <span style="font-size:0.73rem;color:var(--text-sub);line-height:1.55;">${_t('fnw_inflate_lump')}</span>
                     </label>
                     <div id="fnw-inflate-preview" style="font-size:0.72rem;color:var(--neon-gold,#ffd700);min-height:14px;padding-left:20px;"></div>
                 </div>
-
-                <div style="margin-bottom:14px;padding:12px;background:rgba(0,217,255,0.05);border:1px solid rgba(0,217,255,0.2);border-radius:8px;">
+                <div style="margin-top:8px;margin-bottom:14px;padding:12px;background:rgba(0,217,255,0.05);border:1px solid rgba(0,217,255,0.2);border-radius:8px;">
                     <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;">
                         <input type="checkbox" id="fnw-consent-checkbox" ${localStorage.getItem(CONSENT_KEY) ? 'checked' : ''} style="margin-top:3px;flex-shrink:0;">
                         <span style="font-size:0.72rem;color:var(--text-sub);line-height:1.55;">${_t('fnw_consent_label')}</span>
