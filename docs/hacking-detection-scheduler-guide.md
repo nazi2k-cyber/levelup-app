@@ -344,3 +344,137 @@ x-ncp-apigw-signature-v2: HMAC-SHA256 서명
 3. `skipped_cooldown` → 쿨다운 대기 중, 정상 동작
 4. `skipped_cap` → 일일 상한 초과, `SMS_DAILY_CAP` 상향 또는 내일 재확인
 5. `failed` → NCP SENS API 오류, `gatewayResponse` 필드에서 상세 확인
+
+---
+
+## 15. 문자 수신 시 상황별 액션 플랜
+
+### 공통 초동 절차 (모든 문자 수신 시)
+
+```
+1. 어드민 패널 접속 → 보안 리포트 탭
+2. 탐지 결과(Findings) 조회로 score · eventCount 확인
+3. 해당 clusterKey(uid 또는 IP)의 원시 알림 확인
+4. 아래 룰별 대응 진행
+```
+
+---
+
+### 룰별 상세 액션
+
+#### 1. 로그인 실패 폭증 (`login_failure_spike`)
+> 1시간 내 동일 계정 인증 실패 10회 이상
+
+| score | 상황 판단 | 조치 |
+|-------|----------|------|
+| 70–79 | 사용자 실수 가능성 | 관찰 유지, 추가 발생 시 재검토 |
+| 80–89 | Brute-force 의심 | 해당 계정 일시 잠금 (Firebase Console) |
+| 90+ | 자동화 공격 확실 | 계정 잠금 + IP 차단 + 방화벽 룰 추가 |
+
+**Firebase Console 계정 잠금 경로**
+```
+Firebase Console → Authentication → 해당 사용자 → Disable account
+```
+
+---
+
+#### 2. 반복 포인트 급증 (`repeat_points_spike`)
+> 24시간 내 동일 유저 포인트 급증 3회 이상
+
+```
+1. 어드민 패널 → 유저 관리 → 해당 uid 검색
+2. 포인트 내역 및 퀘스트 완료 이력 확인
+3. 정상 플레이 범위 초과 여부 판단
+   ├─ 정상 → 오탐, 룰 threshold 상향 조정
+   └─ 이상 → 포인트 롤백 + 계정 정지 + security_alerts 기록 검토
+4. 반복 발생 시 해당 uid를 수동 감시 목록에 추가
+```
+
+---
+
+#### 3. 스탯 조작 의심 (`stats_manipulation`) — Critical
+> 퀘스트 완료 수 등 스탯이 감소 (데이터 직접 조작 의심)
+
+**즉각 대응 필요**
+
+```
+1. 해당 유저 계정 즉시 비활성화
+2. Firestore Console에서 해당 users/{uid} 문서 스냅샷 백업
+3. user_backups 컬렉션에서 직전 정상 백업 확인
+4. 조작된 필드 식별 → 정상값으로 복원
+5. 어떤 경로로 조작했는지 app_error_logs 역추적
+6. Firestore Rules에 해당 필드 write 차단 추가 검토
+```
+
+> score 90으로 시작하는 Critical 룰 — **수신 즉시 조치**
+
+---
+
+#### 4. 어드민 클레임 이상 (`admin_claim_suspicious`)
+> 1시간 내 어드민 권한 부여 2건 이상
+
+```
+1. 어드민 패널 → Claim 관리 → 최근 부여 이력 확인
+2. admin_audit_log 컬렉션에서 grantedBy 확인
+   ├─ 본인이 의도한 작업 → 정상, 오탐 처리
+   └─ 의도하지 않은 부여 → 아래 진행
+3. 비정상 부여된 클레임 즉시 회수 (removeAdminClaim)
+4. grantedBy 계정의 토큰 강제 만료
+   Firebase Console → Authentication → Revoke all sessions
+5. 해당 계정 MFA 재설정 요구
+6. 어떤 함수 호출로 부여됐는지 Cloud Functions 로그 확인
+```
+
+---
+
+#### 5. 휴면 어드민 접근 (`dormant_admin_access`)
+> 90일 이상 미접속 어드민 계정 감지
+
+```
+1. 어드민 패널 → Claim 관리에서 해당 계정 확인
+2. 본인 접속 여부 확인 (실제 담당자에게 직접 연락)
+   ├─ 본인 접속 → 계정 활성 전환, 쿨다운 룰 적용
+   └─ 본인 아님 → 아래 진행
+3. 해당 계정 즉시 비활성화 + 클레임 회수
+4. 접속 기기·IP 확인 (Firebase Console → Authentication → 로그인 기록)
+5. 비밀번호 강제 초기화
+```
+
+---
+
+### 대응 우선순위 매트릭스
+
+```
+                즉각 대응              30분 내 대응             업무시간 내
+                ─────────────────────────────────────────────────────────
+Critical    │   stats_manipulation
+High        │                          login_failure (90+)      login_failure (80~89)
+            │                          admin_claim_suspicious
+Medium      │                                                   dormant_admin
+Low         │                                                   (UI 확인만)
+```
+
+---
+
+### 오탐 판단 기준 및 조치
+
+| 상황 | 판단 | 조치 |
+|------|------|------|
+| 유저가 빠르게 반복 퀘스트 클리어 | 오탐 | `repeat_points_spike` threshold 상향 |
+| 관리자가 직접 클레임 부여 중 | 오탐 | `admin_claim_suspicious` cooldown 연장 |
+| 내부 테스트 계정 활동 | 오탐 | 테스트 uid를 룰 예외 처리 |
+| 마이그레이션 등 대량 자동화 작업 | 오탐 | 작업 전 해당 룰 임시 비활성화 |
+
+> 오탐 조치: 어드민 UI → 룰 설정 → threshold 또는 cooldown 조정 후 저장 (즉시 반영, 코드 배포 불필요)
+
+---
+
+### SMS 미수신 시 확인 순서 (재확인)
+
+```
+security_sms_logs 상태별:
+  dry_run          → 환경변수 미설정 (SMS_SERVICE_ID 등)
+  skipped_cooldown → 정상, 쿨다운 대기 중
+  skipped_cap      → 일일 상한 초과 → 어드민 UI에서 smsDailyCap 상향
+  failed           → NCP SENS 장애 → gatewayResponse 필드에서 상세 확인
+```
