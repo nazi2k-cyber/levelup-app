@@ -15,6 +15,7 @@
         transition: 'rgba(255, 193, 7, 0.6)',
         automation: 'rgba(0, 217, 255, 0.6)'
     };
+    const HABIT_COLLAPSE_KEY = 'habit_project_collapsed';
 
     function getLifeStatusConfig() {
         try {
@@ -139,7 +140,7 @@
         return Math.max(0, Math.min(config.totalDays, elapsedDaysRaw));
     }
 
-    function buildArrowRow(rowDays, reverse, stageType, stageLabel, config, elapsedDays, _t) {
+    function buildArrowRow(rowDays, reverse, stageType, stageLabel, config, elapsedDays, _t, toggleHTML) {
         const items = rowDays.map((day) => {
             const checked = !!config.checks[String(day)];
             const shouldFill = day <= elapsedDays;
@@ -154,13 +155,22 @@
 
         return `
             <div class="habit-arrow-row-wrap ${stageType}">
-                <div class="habit-arrow-title">${stageLabel}</div>
+                <div class="habit-arrow-title-row">
+                    <div class="habit-arrow-title">${stageLabel}</div>
+                    ${toggleHTML || ''}
+                </div>
                 <div class="habit-arrow-row ${reverse ? 'reverse' : ''} ${stageType}">
                 <div class="habit-arrow-body">${items}</div>
                 <div class="habit-arrow-head"></div>
                 </div>
             </div>
         `;
+    }
+
+    function getCurrentHabitStageType(elapsedDays, ranges) {
+        if (elapsedDays <= ranges.stage1End) return 'resistance';
+        if (elapsedDays <= ranges.stage2End) return 'transition';
+        return 'automation';
     }
 
     function renderHabitProject(config, _t) {
@@ -179,6 +189,10 @@
         const row1 = allDays.slice(0, ranges.stage1End);
         const row2 = allDays.slice(ranges.stage1End, ranges.stage2End);
         const row3 = allDays.slice(ranges.stage2End);
+        const isCollapsed = localStorage.getItem(HABIT_COLLAPSE_KEY) !== 'false';
+        const currentStageType = getCurrentHabitStageType(Math.max(1, elapsedDays), ranges);
+        const toggleLabel = isCollapsed ? (_t.habit_expand_btn || '펼치기') : (_t.habit_collapse_btn || '접기');
+        const toggleHTML = `<button type="button" class="btn-info-sm habit-stage-toggle-btn" id="btn-habit-stage-toggle">${toggleLabel}</button>`;
 
         const stage1Label = (_t.habit_stage1_title || '저항 단계')
             + ` (${ranges.stage1Start}~${ranges.stage1End}${_t.ls_unit_days || '일'})`;
@@ -213,11 +227,19 @@
                 </div>
 
                 <div class="habit-arrow-z-wrap">
-                    ${buildArrowRow(row1, false, 'resistance', stage1Label, config, elapsedDays, _t)}
-                    ${row2.length ? '<div class="habit-z-connector right-to-left"></div>' : ''}
-                    ${row2.length ? buildArrowRow(row2, true, 'transition', stage2Label, config, elapsedDays, _t) : ''}
-                    ${row3.length ? '<div class="habit-z-connector left-to-right"></div>' : ''}
-                    ${row3.length ? buildArrowRow(row3, false, 'automation', stage3Label, config, elapsedDays, _t) : ''}
+                    ${isCollapsed
+                        ? (currentStageType === 'resistance'
+                            ? buildArrowRow(row1, false, 'resistance', stage1Label, config, elapsedDays, _t, toggleHTML)
+                            : currentStageType === 'transition'
+                                ? buildArrowRow(row2, true, 'transition', stage2Label, config, elapsedDays, _t, toggleHTML)
+                                : buildArrowRow(row3, false, 'automation', stage3Label, config, elapsedDays, _t, toggleHTML))
+                        : `
+                            ${buildArrowRow(row1, false, 'resistance', stage1Label, config, elapsedDays, _t, currentStageType === 'resistance' ? toggleHTML : '')}
+                            ${row2.length ? '<div class="habit-z-connector right-to-left"></div>' : ''}
+                            ${row2.length ? buildArrowRow(row2, true, 'transition', stage2Label, config, elapsedDays, _t, currentStageType === 'transition' ? toggleHTML : '') : ''}
+                            ${row3.length ? '<div class="habit-z-connector left-to-right"></div>' : ''}
+                            ${row3.length ? buildArrowRow(row3, false, 'automation', stage3Label, config, elapsedDays, _t, currentStageType === 'automation' ? toggleHTML : '') : ''}
+                        `}
                 </div>
 
             </div>
@@ -386,6 +408,14 @@
         const settingsBtn = container.querySelector('#btn-habit-settings');
         if (settingsBtn) {
             settingsBtn.addEventListener('click', openHabitProjectSettingsModal);
+        }
+        const stageToggleBtn = container.querySelector('#btn-habit-stage-toggle');
+        if (stageToggleBtn) {
+            stageToggleBtn.addEventListener('click', () => {
+                const isCollapsed = localStorage.getItem(HABIT_COLLAPSE_KEY) !== 'false';
+                localStorage.setItem(HABIT_COLLAPSE_KEY, isCollapsed ? 'false' : 'true');
+                renderHabitProjectSection();
+            });
         }
     }
 
