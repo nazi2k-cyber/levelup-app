@@ -1,7 +1,7 @@
 {
   "name": "levelup-reboot-functions",
   "description": "LEVEL UP: REBOOT — Firebase Cloud Functions (푸시 알림 발송)",
-  "version": "1.0.682",
+  "version": "1.0.689",
   "main": "index.js",
   "engines": {
     "node": "20"
@@ -11,6 +11,7 @@
     "deploy": "firebase deploy --only functions"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.56.0",
     "@azure-rest/ai-content-safety": "^1.0.0",
     "@azure/core-auth": "^1.9.0",
     "@tensorflow/tfjs": "^4.22.0",

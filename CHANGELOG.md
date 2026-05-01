@@ -5,6 +5,41 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.689] - 2026-04-30
+
+### 변경
+- docs: Firebase 전환 실제 진행 상황 및 ACME 에러 해결 방법 추가
+
+## [1.0.688] - 2026-04-30
+
+### 변경
+- docs: 사전 조치(Firebase 커스텀 도메인 + DNS TTL) 상세 절차 추가
+
+## [1.0.687] - 2026-04-30
+
+### 변경
+- docs: GitHub Public→Private 전환 시 문제점 분석 문서 추가
+
+## [1.0.686] - 2026-04-30
+
+### 변경
+- feat: 보안 리포트에 AI 봇 API Key 설정 UI 및 액션 로그 추가
+
+## [1.0.685] - 2026-04-30
+
+### 변경
+- 소규모 업데이트 및 개선
+
+## [1.0.684] - 2026-04-30
+
+### 변경
+- feat: 해킹 탐지 AI 봇 액션 러너 추가
+
+## [1.0.683] - 2026-04-30
+
+### 변경
+- docs: add Windows Capacitor GitHub execution plan
+
 ## [1.0.682] - 2026-04-30
 
 ### 변경

@@ -10,6 +10,7 @@ const { checkRateLimit } = require("./rateLimiter");
 const securityTriggers = require("./securityTriggers");
 const securityScheduler = require("./securityScheduler");
 const hackingDetectionScheduler = require("./hackingDetectionScheduler");
+const aiBotActionRunner = require("./aiBotActionRunner");
 const backupScheduler = require("./backupScheduler");
 const { encryptPhone, maskPhone } = require("./smsGateway");
 const textScreening = require("./textScreening");
@@ -4607,6 +4608,9 @@ exports.onUserPointsUpdate = securityTriggers.onUserPointsUpdate;
 exports.onUserStatsReset = securityTriggers.onUserStatsReset;
 exports.onAdminClaimSet = securityTriggers.onAdminClaimSet;
 
+// ─── AI 봇 액션 러너 (Phase 4) ───
+exports.onSecurityFindingCreated = aiBotActionRunner.onSecurityFindingCreated;
+
 // ─── 보안 스케줄러 (Phase 3) ───
 exports.detectAnomalousPoints = securityScheduler.detectAnomalousPoints;
 exports.detectBruteForce = securityScheduler.detectBruteForce;
@@ -4836,4 +4840,94 @@ exports.updateSmsConfig = onCall(adminCallableOpts, async (request) => {
     });
 
     return { ok: true, smsDailyCap };
+});
+
+// ─── AI Bot 설정 조회 (admin) ───
+exports.getAiBotConfig = onCall(adminCallableOpts, async (request) => {
+    await assertAdmin(request);
+    const snap = await db.collection("admin_config").doc("ai_bot").get();
+    const data = snap.exists ? snap.data() : {};
+    const hasEnvKey = !!process.env.CLAUDE_API_KEY;
+
+    let maskedKey = null;
+    if (data.claudeApiKey) {
+        const k = data.claudeApiKey;
+        maskedKey = k.length > 14 ? `${k.slice(0, 10)}...${k.slice(-4)}` : "****";
+    } else if (hasEnvKey) {
+        const k = process.env.CLAUDE_API_KEY;
+        maskedKey = k.length > 14 ? `${k.slice(0, 10)}...${k.slice(-4)}` : "****";
+    }
+
+    return {
+        hasKey: !!(data.claudeApiKey || hasEnvKey),
+        keySource: data.claudeApiKey ? "firestore" : (hasEnvKey ? "env" : "none"),
+        maskedKey,
+        aiDryRun: data.aiDryRun === true || process.env.AI_BOT_DRY_RUN === "true",
+    };
+});
+
+// ─── AI Bot 설정 수정 (master 전용) ───
+exports.updateAiBotConfig = onCall(adminCallableOpts, async (request) => {
+    await assertMaster(request);
+    const { claudeApiKey, aiDryRun } = request.data || {};
+    const { FieldValue: FV } = require("firebase-admin/firestore");
+
+    const update = { updatedAt: FV.serverTimestamp(), updatedBy: request.auth.uid };
+    if (typeof claudeApiKey === "string") {
+        if (claudeApiKey && !claudeApiKey.startsWith("sk-ant-")) {
+            throw new HttpsError("invalid-argument", "Claude API Key 형식이 올바르지 않습니다. sk-ant- 로 시작해야 합니다.");
+        }
+        update.claudeApiKey = claudeApiKey;
+    }
+    if (typeof aiDryRun === "boolean") {
+        update.aiDryRun = aiDryRun;
+    }
+
+    await db.collection("admin_config").doc("ai_bot").set(update, { merge: true });
+    await db.collection("audit_logs").add({
+        action: "update_ai_bot_config",
+        changes: { hasKey: !!(claudeApiKey || undefined), aiDryRun },
+        performedBy: request.auth.uid,
+        performedAt: FV.serverTimestamp(),
+    });
+
+    return { ok: true };
+});
+
+// ─── AI Bot 액션 로그 조회 (admin) ───
+exports.getAiBotActionLogs = onCall(adminCallableOpts, async (request) => {
+    await assertAdmin(request);
+    const { days = 7, pageSize = 50 } = request.data || {};
+    const { Timestamp: TS } = require("firebase-admin/firestore");
+    const since = new Date(Date.now() - Math.min(days, 90) * 24 * 60 * 60 * 1000);
+
+    const snap = await db.collection("ai_bot_action_logs")
+        .where("executedAt", ">=", TS.fromDate(since))
+        .orderBy("executedAt", "desc")
+        .limit(Math.min(pageSize, 100))
+        .get();
+
+    const logs = snap.docs.map(d => {
+        const data = d.data();
+        return {
+            id: d.id,
+            findingId: data.findingId || null,
+            ruleId: data.ruleId,
+            severity: data.severity,
+            score: data.score,
+            clusterKey: data.clusterKey,
+            claudeReasoning: data.claudeReasoning || null,
+            actionsPlanned: data.actionsPlanned || [],
+            actionsExecuted: (data.actionsExecuted || []).map(a => ({
+                tool: a.tool,
+                success: a.result?.success ?? false,
+                error: a.result?.error || null,
+                dryRun: a.result?.dryRun || false,
+            })),
+            dryRun: data.dryRun || false,
+            executedAt: data.executedAt?.toMillis?.() || null,
+        };
+    });
+
+    return { logs, total: logs.length };
 });
