@@ -6,9 +6,11 @@ useDefault = true
 [allowlist]
 description = "Known-safe public Firebase client-side config values"
 
-# firebase-config.example.js is a committed template with placeholder values only.
+# Example/template files contain placeholder values only — not real secrets.
 paths = [
   "firebase-config.example.js",
+  '''.*example.*''',
+  '''.*template.*''',
 ]
 
 # These are public Firebase client-side identifiers (not secrets).
@@ -23,18 +25,6 @@ regexes = [
   "G-4DBGG03CCJ",
 ]
 
-[[rules]]
-id = "google-api-key-override"
-description = "Detect hardcoded Google/Firebase API keys (AIzaSy... format)"
-regex = '''AIza[0-9A-Za-z_-]{35}'''
-tags = ["google", "firebase", "api-key"]
-
-  [rules.allowlist]
-  paths = [
-    ".*example.*",
-    ".*template.*",
-  ]
-  regexes = [
-    "^\\s*#",
-    "^\\s*//",
-  ]
+# NOTE: No custom [[rules]] block — the default gcp-api-key rule already detects
+# AIza[0-9A-Za-z_-]{35} (Firebase/GCP API keys). A duplicate custom rule caused
+# double-detection, bypassing .gitleaksignore suppressions for historical commits.
