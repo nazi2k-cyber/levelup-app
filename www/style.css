@@ -344,6 +344,19 @@ h2 { font-size: 1rem; color: var(--neon-blue); margin-top: 0; margin-bottom: 12p
 .quest-row.done .quest-title { text-decoration: line-through; }
 .quest-row.done .quest-checkbox { background: var(--neon-gold); border-color: var(--neon-gold); }
 .quest-row.done .quest-checkbox::after { content: "✓"; color: #000; font-size: 12px; font-weight: bold; }
+.quest-row.inactive { opacity: 0.35; cursor: default; }
+.quest-row.inactive .quest-title,
+.quest-row.inactive .quest-desc { text-decoration: none; }
+.quest-row.inactive .quest-checkbox { border-color: rgba(170, 170, 170, 0.6); }
+
+.diy-schedule-badge {
+    font-size: 0.62rem;
+    color: var(--text-sub);
+    border: 1px solid rgba(180, 180, 180, 0.4);
+    border-radius: 999px;
+    padding: 2px 6px;
+    white-space: nowrap;
+}
 
 .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.85rem; font-weight: bold; color: var(--neon-blue); }
 .cal-grid { display: flex; justify-content: space-between; gap: 4px; }

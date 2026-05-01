@@ -2209,6 +2209,15 @@ function isDiyQuestActiveOnDate(q, dateObj = new Date()) {
 function getActiveDiyDefsForDate(dateObj = new Date()) {
     return (AppState.diyQuests.definitions || []).filter(q => isDiyQuestActiveOnDate(q, dateObj));
 }
+function getDiyScheduleLabel(q, lang = AppState.currentLang) {
+    if (!q || q.scheduleType !== 'weekly') return (i18n[lang]?.diy_schedule_daily || '매일');
+    const names = (i18n[lang]?.day_short_names || ['일', '월', '화', '수', '목', '금', '토']);
+    const days = (Array.isArray(q.scheduleDays) ? q.scheduleDays : []).sort((a, b) => a - b);
+    if (days.length === 0) return (i18n[lang]?.diy_schedule_weekly || '매주');
+    if (days.length === 7) return (i18n[lang]?.diy_schedule_daily || '매일');
+    if (days.length === 1) return `${i18n[lang]?.diy_schedule_weekly || '매주'} ${names[days[0]]}${i18n[lang]?.day_suffix || '요일'}`;
+    return `${i18n[lang]?.diy_schedule_weekly || '매주'} ${days.map(d => names[d]).join('/')}`;
+}
 
 function renderDiyQuestList() {
     const container = document.getElementById('diy-quest-list');
@@ -2216,25 +2225,35 @@ function renderDiyQuestList() {
     if (!container || !section) return;
 
     checkDiyDailyReset();
-    const defs = getActiveDiyDefsForDate();
+    const defs = (AppState.diyQuests.definitions || []);
 
     section.style.display = (defs.length > 0) ? 'block' : 'block';
 
     container.innerHTML = defs.map(q => {
-        const isDone = AppState.diyQuests.completedToday[q.id] || false;
+        const isActiveToday = isDiyQuestActiveOnDate(q);
+        const isDone = (isActiveToday && AppState.diyQuests.completedToday[q.id]) || false;
+        const scheduleLabel = getDiyScheduleLabel(q);
         return `
-            <div class="quest-row ${isDone ? 'done' : ''}" onclick="window.toggleDiyQuest('${q.id}')">
+            <div class="quest-row ${isDone ? 'done' : ''} ${isActiveToday ? '' : 'inactive'}" onclick="window.toggleDiyQuest('${q.id}')">
                 <div>
                     <div class="quest-title"><span class="quest-stat-tag">${sanitizeText(q.stat)}</span>${sanitizeText(q.title)}</div>
                     <div class="quest-desc">${sanitizeText(q.desc)}</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="diy-schedule-badge">${sanitizeText(scheduleLabel)}</span>
                     <span class="diy-quest-edit" onclick="event.stopPropagation(); window.showDiyQuestModal('${q.id}')">✎</span>
                     <div class="quest-checkbox"></div>
                 </div>
             </div>
         `;
     }).join('');
+    const rows = Array.from(container.querySelectorAll('.quest-row'));
+    rows.sort((a, b) => {
+        const ai = a.classList.contains('inactive') ? 1 : 0;
+        const bi = b.classList.contains('inactive') ? 1 : 0;
+        return ai - bi;
+    });
+    rows.forEach(r => container.appendChild(r));
 }
 
 // 플래너 내 DIY 퀘스트를 우선순위 태스크 형태로 렌더링
