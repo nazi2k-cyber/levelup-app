@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.694] - 2026-05-01
+
+### 변경
+- Delete CAPACITOR_WINDOWS_GITHUB_PLAN.md
+
 ## [1.0.693] - 2026-05-01
 
 ### 변경
