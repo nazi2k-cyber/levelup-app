@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.696] - 2026-05-01
+
+### 변경
+- fix: gitleaks 커스텀 룰 제거 — gcp-api-key 이중검출로 .gitleaksignore 우회 문제 해결
+
 ## [1.0.695] - 2026-05-01
 
 ### 변경
