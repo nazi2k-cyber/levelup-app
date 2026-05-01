@@ -113,3 +113,7 @@ npx cap run android
 - PR 생성 시 CI 자동 실행 및 품질 게이트 동작
 - 태그 푸시 시 Android 아티팩트 자동 생성
 - 릴리즈 체크리스트 기반으로 제출/롤백 절차 문서화 완료
+
+
+## 참고 문서
+- iOS 빌드/서명/배포 상세: `docs/ongoing/CAPACITOR_IOS_BUILD_DETAIL_PLAN.md`
