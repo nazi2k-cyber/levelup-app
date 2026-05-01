@@ -330,3 +330,62 @@ D+1  DNS TTL → 3600초로 복원 (안정화 후)
 | `docs/CNAME` 파일 | Private 전환 후 GitHub Pages 비활성화 시 의미 없어짐. 이후 삭제 가능 |
 | `firebase.json` rewrite 규칙 | `"source": "**", "destination": "/index.html"` — 앱(`www/app.html`)은 파일이 실제 존재하므로 정상 서빙됨 |
 | `sync-landing-page.yml` | Firebase 이전 후에도 `www/ ↔ docs/` 동기화는 계속 동작. `docs/`는 백업 역할로 유지 가능 |
+
+---
+
+## 부록 C: 검증 결과 — 브랜치 보호 규칙 수정 불필요 확인
+
+> 검증일: 2026-05-01  
+> 검증 방법: `.github/workflows/apply-branch-protection.yml` 페이로드 및 `.github/workflows/pr-check.yml` 구현 코드 직접 분석
+
+### 결론: **브랜치 보호 규칙 파일 수정 불필요**
+
+Private 전환 후에도 `apply-branch-protection.yml`은 오류 없이 실행되며, 핵심 보호 기능은 유지됩니다.
+`require_code_owner_reviews: true`만 Free 플랜 제한으로 **에러 없이 무시**됩니다.
+
+### 규칙별 동작 검증
+
+`apply-branch-protection.yml` 페이로드(lines 77–99)를 기준으로 각 설정의 Private 전환 후 동작:
+
+| 설정 | 값 | Private 전환 후 동작 |
+|------|-----|----------------------|
+| `required_status_checks.strict` | `true` | ✅ 정상 — main 최신 커밋 기반 체크 강제 |
+| `required_status_checks.contexts` | validate, firestore-rules, secret-scan, build-check | ✅ 정상 — 4개 체크 통과 없이 merge 불가 |
+| `require_code_owner_reviews` | `true` | ⚠️ **무시됨** — Free Org + Private에서 API가 200을 반환하지만 실제 미적용 |
+| `required_approving_review_count` | `0` | ✅ 정상 — 리뷰 수 0명 요구 유지 |
+| `dismiss_stale_reviews` | `true` | ✅ 정상 — 새 커밋 시 기존 승인 자동 취소 |
+| `allow_force_pushes` | `false` | ✅ 정상 — force push 차단 유지 |
+| `allow_deletions` | `false` | ✅ 정상 — 브랜치 삭제 차단 유지 |
+| `enforce_admins` | `false` | ✅ 정상 — Admin 우회 허용 유지 |
+| `restrictions` | `null` | ✅ 정상 — push 제한 없음 유지 |
+
+### `secret-scan` Required Status Check — gitleaks 라이선스 문제 비해당
+
+문제 3(Gitleaks 라이선스 요구)은 `security-scan.yml`(주간 스케줄)에만 해당됩니다.
+
+Required Status Check로 등록된 `secret-scan`은 **`pr-check.yml`의 별도 잡**으로, gitleaks-action을 사용하지 않습니다:
+
+```yaml
+# pr-check.yml — secret-scan 잡 구현 (lines 93–151)
+# gitleaks-action 미사용. 쉘 스크립트로 직접 grep 패턴 매칭:
+PATTERNS=(
+  "-----BEGIN (RSA |EC )?PRIVATE KEY-----"
+  "AKIA[0-9A-Z]{16}"       # AWS Access Key
+  "sk_live_[a-zA-Z0-9]+"  # Stripe Secret Key
+  "ghp_[a-zA-Z0-9]{36}"   # GitHub PAT
+  "xoxb-[0-9]+-..."        # Slack Bot Token
+  "AIza[0-9A-Za-z_-]{35}" # Google API Key
+)
+```
+
+→ Private 전환 후 **라이선스 없이도 `secret-scan` 체크 정상 통과**.
+
+### 요약
+
+| 항목 | 판단 |
+|------|------|
+| 브랜치 보호 규칙 파일 수정 필요 여부 | **불필요** |
+| 워크플로우 오류 발생 여부 | **없음** |
+| CODEOWNERS 리뷰 강제 유지 여부 | **유지 안 됨** (Free 플랜 제한, 에러는 없음) |
+| PR merge 차단 기능 유지 여부 | **유지됨** (4개 status check + PR 필수) |
+| force push / 브랜치 삭제 차단 유지 여부 | **유지됨** |
