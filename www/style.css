@@ -1832,6 +1832,27 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     color: var(--neon-gold);
     background: rgba(255, 204, 0, 0.1);
 }
+.diy-schedule-selector, .diy-weekday-selector {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+.diy-weekday-selector { grid-template-columns: repeat(7, 1fr); }
+.diy-schedule-btn, .diy-weekday-btn {
+    padding: 6px 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-sub);
+    cursor: pointer;
+}
+.diy-schedule-btn.active, .diy-weekday-btn.active {
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+    background: rgba(0, 217, 255, 0.12);
+}
 .diy-quest-edit {
     font-size: 0.7rem;
     color: var(--text-sub);

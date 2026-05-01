@@ -1849,7 +1849,7 @@ function checkDailyAllClear() {
     const regularAllDone = AppState.quest.completedState[day].every(v => v);
     if (!regularAllDone) return;
 
-    const diyDefs = AppState.diyQuests.definitions;
+    const diyDefs = getActiveDiyDefsForDate();
     const diyAllDone = diyDefs.length === 0 || diyDefs.every(q => AppState.diyQuests.completedToday[q.id]);
     if (!diyAllDone) return;
 
@@ -2130,12 +2130,14 @@ function updateQuestHistory() {
     const today = getTodayKST();
     const day = AppState.quest.currentDayOfWeek;
     const regularCompleted = AppState.quest.completedState[day].filter(v => v).length;
-    const diyCompleted = Object.values(AppState.diyQuests.completedToday).filter(v => v).length;
-    const totalPossible = 12 + AppState.diyQuests.definitions.length;
-    const diyTotal = AppState.diyQuests.definitions.length;
+    const activeDiyDefs = getActiveDiyDefsForDate();
+    const activeIds = new Set(activeDiyDefs.map(q => q.id));
+    const diyCompleted = Object.entries(AppState.diyQuests.completedToday).filter(([id, v]) => activeIds.has(id) && v).length;
+    const totalPossible = 12 + activeDiyDefs.length;
+    const diyTotal = activeDiyDefs.length;
     // 개별 DIY 퀘스트 완료 상태 스냅샷 (dc: { [questId]: boolean })
     const dc = {};
-    AppState.diyQuests.definitions.forEach(q => {
+    activeDiyDefs.forEach(q => {
         dc[q.id] = AppState.diyQuests.completedToday[q.id] === true;
     });
     // 데일리 퀘스트 완료 상태 스냅샷 (rc: boolean[12])
@@ -2199,6 +2201,14 @@ function checkDiyDailyReset() {
         AppState.diyQuests.lastResetDate = today;
     }
 }
+function isDiyQuestActiveOnDate(q, dateObj = new Date()) {
+    if (!q || q.scheduleType !== 'weekly') return true;
+    const days = Array.isArray(q.scheduleDays) ? q.scheduleDays : [];
+    return days.includes(dateObj.getDay());
+}
+function getActiveDiyDefsForDate(dateObj = new Date()) {
+    return (AppState.diyQuests.definitions || []).filter(q => isDiyQuestActiveOnDate(q, dateObj));
+}
 
 function renderDiyQuestList() {
     const container = document.getElementById('diy-quest-list');
@@ -2206,7 +2216,7 @@ function renderDiyQuestList() {
     if (!container || !section) return;
 
     checkDiyDailyReset();
-    const defs = AppState.diyQuests.definitions;
+    const defs = getActiveDiyDefsForDate();
 
     section.style.display = (defs.length > 0) ? 'block' : 'block';
 
@@ -2235,6 +2245,7 @@ function renderPlannerDiyQuests() {
 window.toggleDiyQuest = (questId) => {
     const q = AppState.diyQuests.definitions.find(d => d.id === questId);
     if (!q) return;
+    if (!isDiyQuestActiveOnDate(q)) return;
 
     const wasCompleted = AppState.diyQuests.completedToday[questId] || false;
     AppState.diyQuests.completedToday[questId] = !wasCompleted;
@@ -2301,6 +2312,15 @@ window.showDiyQuestModal = (questId) => {
 
     if (titleInput) titleInput.value = existing ? existing.title : '';
     if (descInput) descInput.value = existing ? existing.desc : '';
+    document.querySelectorAll('.diy-schedule-btn').forEach(btn => {
+        btn.classList.toggle('active', (existing?.scheduleType || 'daily') === btn.dataset.schedule);
+    });
+    document.querySelectorAll('.diy-weekday-btn').forEach(btn => {
+        const wd = Number(btn.dataset.weekday);
+        btn.classList.toggle('active', !!existing?.scheduleDays?.includes(wd));
+    });
+    const weekdaySelector = document.getElementById('diy-weekday-selector');
+    if (weekdaySelector) weekdaySelector.classList.toggle('d-none', (existing?.scheduleType || 'daily') !== 'weekly');
     if (modalTitle) {
         const lang = AppState.currentLang;
         modalTitle.textContent = isEdit ? (i18n[lang]?.diy_modal_edit || 'Edit Quest') : (i18n[lang]?.diy_modal_create || 'Create Quest');
@@ -2322,13 +2342,18 @@ window.saveDiyQuest = () => {
     const titleInput = document.getElementById('diy-title-input');
     const descInput = document.getElementById('diy-desc-input');
     const activeStatBtn = document.querySelector('.diy-stat-btn.active');
+    const activeScheduleBtn = document.querySelector('.diy-schedule-btn.active');
+    const selectedWeekdays = Array.from(document.querySelectorAll('.diy-weekday-btn.active')).map(btn => Number(btn.dataset.weekday));
 
     const title = (titleInput?.value || '').trim();
     const desc = (descInput?.value || '').trim();
     const stat = activeStatBtn?.dataset.stat;
+    const scheduleType = activeScheduleBtn?.dataset.schedule || 'daily';
+    const scheduleDays = scheduleType === 'weekly' ? selectedWeekdays : [];
 
     if (!title) return;
     if (!stat) return;
+    if (scheduleType === 'weekly' && scheduleDays.length === 0) return;
 
     const editId = modal?.dataset.editId;
     const lang = AppState.currentLang;
@@ -2348,6 +2373,8 @@ window.saveDiyQuest = () => {
             q.title = title;
             q.desc = desc;
             q.stat = stat;
+            q.scheduleType = scheduleType;
+            q.scheduleDays = scheduleDays;
         }
     } else {
         AppState.diyQuests.definitions.push({
@@ -2355,6 +2382,8 @@ window.saveDiyQuest = () => {
             title: title,
             desc: desc,
             stat: stat,
+            scheduleType,
+            scheduleDays,
             createdAt: Date.now()
         });
     }
@@ -2394,6 +2423,13 @@ window.selectDiyStat = (btn) => {
     document.querySelectorAll('.diy-stat-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 };
+window.selectDiySchedule = (btn) => {
+    document.querySelectorAll('.diy-schedule-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const weekdaySelector = document.getElementById('diy-weekday-selector');
+    if (weekdaySelector) weekdaySelector.classList.toggle('d-none', btn.dataset.schedule !== 'weekly');
+};
+window.toggleDiyWeekday = (btn) => btn.classList.toggle('active');
 
 function renderCalendar() {
     renderQstatsCalendar(); // 통계 탭 주간 진척도도 함께 갱신
@@ -6113,7 +6149,7 @@ function loadPlannerForDate(dateStr) {
 
         // DIY 퀘스트 자동추가
         if (qs.autoAddDiy !== false) {
-            const diyDefs = AppState.diyQuests.definitions || [];
+            const diyDefs = getActiveDiyDefsForDate() || [];
             diyDefs.forEach(q => {
                 const alreadyById = plannerTasks.some(t => t.diyQuestId === q.id);
                 if (alreadyById) return;

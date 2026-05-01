@@ -2202,6 +2202,22 @@
                     <input type="text" id="diy-desc-input" maxlength="40" class="login-input" style="margin-top:4px; font-size:0.85rem;">
                 </div>
                 <div>
+                    <label style="font-size:0.75rem; color:var(--text-sub);" data-i18n="diy_schedule_label">주기</label>
+                    <div class="diy-schedule-selector" style="margin-top:6px;">
+                        <button class="diy-schedule-btn active" data-schedule="daily" onclick="window.selectDiySchedule(this)" data-i18n="diy_schedule_daily">매일</button>
+                        <button class="diy-schedule-btn" data-schedule="weekly" onclick="window.selectDiySchedule(this)" data-i18n="diy_schedule_weekly">매주</button>
+                    </div>
+                    <div id="diy-weekday-selector" class="diy-weekday-selector d-none" style="margin-top:6px;">
+                        <button class="diy-weekday-btn" data-weekday="0" onclick="window.toggleDiyWeekday(this)" data-i18n="weekday_sun">일</button>
+                        <button class="diy-weekday-btn" data-weekday="1" onclick="window.toggleDiyWeekday(this)" data-i18n="weekday_mon">월</button>
+                        <button class="diy-weekday-btn" data-weekday="2" onclick="window.toggleDiyWeekday(this)" data-i18n="weekday_tue">화</button>
+                        <button class="diy-weekday-btn" data-weekday="3" onclick="window.toggleDiyWeekday(this)" data-i18n="weekday_wed">수</button>
+                        <button class="diy-weekday-btn" data-weekday="4" onclick="window.toggleDiyWeekday(this)" data-i18n="weekday_thu">목</button>
+                        <button class="diy-weekday-btn" data-weekday="5" onclick="window.toggleDiyWeekday(this)" data-i18n="weekday_fri">금</button>
+                        <button class="diy-weekday-btn" data-weekday="6" onclick="window.toggleDiyWeekday(this)" data-i18n="weekday_sat">토</button>
+                    </div>
+                </div>
+                <div>
                     <label style="font-size:0.75rem; color:var(--text-sub);" data-i18n="diy_select_stat">스탯 선택</label>
                     <div class="diy-stat-selector" style="margin-top:6px;">
                         <button class="diy-stat-btn" data-stat="STR" onclick="window.selectDiyStat(this)">STR</button>
