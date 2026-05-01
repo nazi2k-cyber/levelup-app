@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.697] - 2026-05-01
+
+### 변경
+- fix: 퀘스트 차트 범위 라벨을 주간/월간 기준으로 명시
+
 ## [1.0.696] - 2026-05-01
 
 ### 변경
