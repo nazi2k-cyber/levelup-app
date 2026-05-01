@@ -227,9 +227,13 @@ export function createQuestStatsModule(deps) {
                     if (k === todayStr) {
                         const regularDone = (AppState.quest.completedState[AppState.quest.currentDayOfWeek] || []).filter(v => v).length;
                         const diyDone = Object.values(AppState.diyQuests.completedToday || {}).filter(v => v).length;
-                        return state.diyOnly ? diyDone : (regularDone + diyDone);
+                        const done = state.diyOnly ? diyDone : (regularDone + diyDone);
+                        const total = state.diyOnly ? AppState.diyQuests.definitions.length : (12 + AppState.diyQuests.definitions.length);
+                        return total > 0 ? (done / total) : 0;
                     }
-                    return state.diyOnly ? (rec.d || 0) : ((rec.r || 0) + (rec.d || 0));
+                    const done = state.diyOnly ? (rec.d || 0) : ((rec.r || 0) + (rec.d || 0));
+                    const total = state.diyOnly ? (rec.dt != null ? rec.dt : Math.max((rec.t || 12) - 12, 0)) : (rec.t || 12);
+                    return total > 0 ? (done / total) : 0;
                 })
             });
         }
@@ -275,9 +279,11 @@ export function createQuestStatsModule(deps) {
         const now = new Date();
         const labels = [];
         if (state.chartRange === 'weekly') {
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(now);
-                d.setDate(now.getDate() - i);
+            const start = new Date(now);
+            start.setDate(now.getDate() - now.getDay());
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
                 labels.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
             }
         } else {
@@ -287,60 +293,47 @@ export function createQuestStatsModule(deps) {
             for (let d = 1; d <= days; d++) labels.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
         }
 
-        if (rangeLabel) rangeLabel.textContent = state.chartRange === 'weekly' ? '최근 7일' : '이번 달';
+        if (rangeLabel) rangeLabel.textContent = state.chartRange === 'weekly' ? '이번 주 (일~토)' : '이번 달 (1일~말일)';
         const series = getChartSeries(history, labels);
+        const ranked = series.map((s) => {
+            let done = 0, total = 0;
+            s.values.forEach((v) => {
+                if (v == null) return;
+                done += v;
+                total += 1;
+            });
+            const rate = total > 0 ? Math.round((done / total) * 100) : 0;
+            return { ...s, rate };
+        });
 
-        const diyCount = AppState.diyQuests.definitions.length;
-        const hasSpecificSelection = state.selectedDailyKeys.length > 0 || state.selectedDiyIds.length > 0;
-        let maxY;
-        if (hasSpecificSelection) {
-            maxY = 1;
-        } else if (state.diyOnly) {
-            maxY = Math.max(diyCount, 1);
-        } else {
-            maxY = Math.max(12 + diyCount, 1);
-        }
-
-        const padding = { top: 16, right: 8, bottom: 24, left: 26 };
-        const W = 320, H = 180;
+        const W = 320;
+        const barHeight = 18;
+        const rowGap = 8;
+        const maxRows = Math.max(ranked.length, 1);
+        const H = 40 + (barHeight + rowGap) * maxRows + 24;
+        const padding = { top: 20, right: 30, bottom: 20, left: 90 };
         const chartW = W - padding.left - padding.right;
-        const chartH = H - padding.top - padding.bottom;
-
-        const toX = (idx) => padding.left + (labels.length === 1 ? 0 : (idx / (labels.length - 1)) * chartW);
-        const toY = (v) => padding.top + chartH - (v / maxY) * chartH;
+        const xFromRate = (rate) => padding.left + (Math.max(0, Math.min(100, rate)) / 100) * chartW;
 
         let svgContent = '';
-        const gridVals = [...new Set([0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * maxY)))];
-        gridVals.forEach((val) => {
-            const y = toY(val);
-            svgContent += `<line x1="${padding.left}" y1="${y}" x2="${W - padding.right}" y2="${y}" stroke="rgba(255,255,255,0.12)" stroke-width="0.6"/>`;
-            svgContent += `<text x="${padding.left - 4}" y="${y + 3}" text-anchor="end" fill="rgba(255,255,255,0.5)" font-size="8">${val}</text>`;
+        [0, 25, 50, 75, 100].forEach((val) => {
+            const x = xFromRate(val);
+            svgContent += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${H - padding.bottom}" stroke="rgba(255,255,255,0.12)" stroke-width="0.7"/>`;
+            svgContent += `<text x="${x}" y="${H - 6}" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="8">${val}%</text>`;
         });
 
-        series.forEach((s) => {
-            let path = '';
-            s.values.forEach((v, idx) => {
-                if (v == null) return;
-                const cmd = path ? 'L' : 'M';
-                path += `${cmd}${toX(idx)} ${toY(v)} `;
-            });
-            if (path) svgContent += `<path d="${path.trim()}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
-            s.values.forEach((v, idx) => {
-                if (v == null) return;
-                svgContent += `<circle cx="${toX(idx)}" cy="${toY(v)}" r="2" fill="${s.color}"/>`;
-            });
+        ranked.forEach((s, idx) => {
+            const y = padding.top + idx * (barHeight + rowGap);
+            const width = Math.max(0, xFromRate(s.rate) - padding.left);
+            const safeName = String(s.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const shortName = safeName.length > 10 ? `${safeName.slice(0, 10)}…` : safeName;
+            svgContent += `<rect x="${padding.left}" y="${y}" width="${chartW}" height="${barHeight}" rx="6" ry="6" fill="rgba(255,255,255,0.07)"/>`;
+            svgContent += `<rect x="${padding.left}" y="${y}" width="${width}" height="${barHeight}" rx="6" ry="6" fill="${s.color}"/>`;
+            svgContent += `<text x="${padding.left - 6}" y="${y + 12}" text-anchor="end" fill="rgba(255,255,255,0.85)" font-size="8">${shortName}</text>`;
+            svgContent += `<text x="${Math.min(padding.left + width + 4, W - padding.right + 4)}" y="${y + 12}" fill="rgba(255,255,255,0.85)" font-size="8">${s.rate}%</text>`;
         });
 
-        const tickIndexes = state.chartRange === 'weekly'
-            ? labels.map((_, i) => i)
-            : labels.reduce((acc, _, i) => { const day = i + 1; if (day === 1 || day % 5 === 0) acc.push(i); return acc; }, []);
-
-        tickIndexes.forEach((idx) => {
-            const d = new Date(labels[idx] + 'T00:00:00');
-            const txt = state.chartRange === 'weekly' ? `${d.getMonth() + 1}/${d.getDate()}` : `${d.getDate()}일`;
-            svgContent += `<text x="${toX(idx)}" y="${H - 8}" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="8">${txt}</text>`;
-        });
-
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
         svg.innerHTML = svgContent;
         if (legend) {
             legend.innerHTML = series.map((s) => `<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;"></span>${s.name}</span>`).join('');
