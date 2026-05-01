@@ -19,7 +19,11 @@
    - 서명 없이 시뮬레이터 빌드(회귀 확인)
 2. `.github/workflows/ios-release.yml`  
    - 태그(`v*`) + 수동 트리거  
+<<<<<<< codex/create-ios-build-documentation-markdown-tb2uu5
    - **`runs-on: macos-15` 고정**으로 archive/export/TestFlight 업로드
+=======
+   - archive/export/TestFlight 업로드
+>>>>>>> main
 
 ### 1-2. 스크립트 파일
 1. `scripts/ci/ios/setup-signing.sh`  
@@ -57,11 +61,14 @@
 
 ## 3) ios-build.yml (PR 품질 게이트) 요구사항
 
+<<<<<<< codex/create-ios-build-documentation-markdown-tb2uu5
 ### 러너 정책
 - `runs-on: macos-15` (기본)
 - Xcode 메이저 업데이트 영향 최소화를 위해 `macos-latest` 대신 고정 버전 사용
 - 분기별 1회 `macos-latest` 테스트 브랜치 검증 후 버전 상향
 
+=======
+>>>>>>> main
 ## 트리거
 - `pull_request` (main/develop 대상)
 - `workflow_dispatch`
@@ -81,11 +88,14 @@
 
 ## 4) ios-release.yml (태그 릴리즈) 요구사항
 
+<<<<<<< codex/create-ios-build-documentation-markdown-tb2uu5
 ### 러너 정책
 - `runs-on: macos-15`
 - 필요 시 `environment: ios-release` 보호 규칙(승인자) 적용
 - 릴리즈 잡은 동시 실행 충돌 방지를 위해 `concurrency: ios-release` 적용
 
+=======
+>>>>>>> main
 ## 트리거
 - `push.tags: v*`
 - `workflow_dispatch`
@@ -158,9 +168,12 @@
 1. `ios-build.yml` 초안 추가(PR check 전용)
 2. `docs/ongoing/IOS_SECRETS_CHECKLIST.md` 추가
 3. `CAPACITOR_WINDOWS_GITHUB_PLAN.md`의 iOS 섹션을 “저장소 자산 기반 단계”로 교체
+<<<<<<< codex/create-ios-build-documentation-markdown-tb2uu5
 
 
 ## 9) macOS runner 운영 체크포인트
 - GitHub-hosted macOS runner 사용을 기본값으로 한다.
 - 워크플로우 로그에 `Xcode` 버전 출력 단계를 추가해 빌드 재현성 확보.
 - runner 이미지 변경 공지 시, `ios-build.yml`을 먼저 실행해 호환성 확인 후 `ios-release.yml` 실행.
+=======
+>>>>>>> main
