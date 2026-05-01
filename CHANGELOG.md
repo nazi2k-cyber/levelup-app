@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.693] - 2026-05-01
+
+### 변경
+- ci: release AAB 출시 노트에 일본어(ja-JP) 추가
+
 ## [1.0.692] - 2026-05-01
 
 ### 변경
