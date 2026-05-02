@@ -232,7 +232,7 @@ export function createQuestStatsModule(deps) {
 
         if (selectedDaily.length === 0 && selectedDiy.length === 0) {
             series.push({
-                name: state.diyOnly ? 'DIY' : 'ALL',
+                name: state.diyOnly ? ({ ko: '사이드', en: 'SIDE', ja: 'サイド' }[AppState.currentLang] || 'SIDE') : 'ALL',
                 color: '#00d9ff',
                 values: labels.map((k) => {
                     const rec = history[k];

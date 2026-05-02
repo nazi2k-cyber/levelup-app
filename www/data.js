@@ -207,7 +207,7 @@ const i18n = {
         // 퀘스트 레이블 & 설정
         regular_quest_label: "주간 퀘스트",
         quest_settings_btn: "설정", quest_settings_title: "플래너 자동입력",
-        quest_auto_add_regular: "일반 퀘스트 자동추가", quest_auto_add_diy: "DIY 퀘스트 자동추가",
+        quest_auto_add_regular: "주간 퀘스트 자동추가", quest_auto_add_diy: "사이드 퀘스트 자동추가",
 
         // DIY 퀘스트
         diy_quest_title: "사이드 퀘스트", btn_add_diy: "추가",
@@ -1012,7 +1012,7 @@ const i18n = {
         // Quest label & settings
         regular_quest_label: "Weekly Quests",
         quest_settings_btn: "Settings", quest_settings_title: "Planner Auto-add",
-        quest_auto_add_regular: "Auto-add Daily Quest Tasks", quest_auto_add_diy: "Auto-add DIY Quest Tasks",
+        quest_auto_add_regular: "Auto-add Weekly Quest Tasks", quest_auto_add_diy: "Auto-add Side Quest Tasks",
 
         // DIY Quests
         diy_quest_title: "Side Quests", btn_add_diy: "Add",
@@ -1816,7 +1816,7 @@ const i18n = {
         // クエストラベル & 設定
         regular_quest_label: "週間クエスト",
         quest_settings_btn: "設定", quest_settings_title: "プランナー自動追加",
-        quest_auto_add_regular: "デイリークエスト 自動追加", quest_auto_add_diy: "DIYクエスト 自動追加",
+        quest_auto_add_regular: "週間クエスト 自動追加", quest_auto_add_diy: "サイドクエスト 自動追加",
 
         // DIYクエスト
         diy_quest_title: "サイドクエスト", btn_add_diy: "追加",
