@@ -63,10 +63,12 @@ npx cap run android
 - 아티팩트 업로드
 - (선택) Play Console 자동 업로드
 
-### 3-3. iOS 관련 주의사항
-- Windows에서 iOS 서명/아카이브는 불가
-- GitHub Actions **macOS runner(macos-15 고정)** 로 iOS 빌드/서명/업로드 수행
-- Windows에서는 웹코드/공통 로직 검증 중심으로 운영
+### 3-3. iOS 저장소 자산 기반 단계
+- Phase 1: `.github/workflows/ios-build.yml` 추가(PR/수동 트리거, 시뮬레이터 빌드)
+- Phase 2: macOS에서 `npx cap add ios` 수행 후 `ios/` 디렉토리 커밋
+- Phase 3: `.github/workflows/ios-release.yml` + signing 스크립트 + exportOptions 템플릿 반영
+- Phase 4: `docs/ongoing/IOS_SECRETS_CHECKLIST.md` 기준으로 시크릿 운영/만료 점검
+- 공통 원칙: iOS 워크플로우는 **macOS runner(macos-15 고정)** 로 실행
 
 ## 4단계: 환경변수/시크릿 정책
 - `.env`는 커밋 금지
