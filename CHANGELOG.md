@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.707] - 2026-05-02
+
+### 변경
+- Make iOS PR workflow non-blocking when ios project is absent
+
 ## [1.0.706] - 2026-05-02
 
 ### 변경
