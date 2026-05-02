@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.711] - 2026-05-02
+
+### 변경
+- Bypass CapacitorCommunityAdmob pod failure in CI iOS build
+
 ## [1.0.710] - 2026-05-02
 
 ### 변경
