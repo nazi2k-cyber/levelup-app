@@ -2131,16 +2131,16 @@
     <div class="modal-overlay d-none" id="premiumInfoModal" onclick="if(event.target===this){document.getElementById('premiumInfoModal').classList.add('d-none');document.getElementById('premiumInfoModal').classList.remove('d-flex');}">
         <div class="modal-content" style="max-width: 95%; width: 360px; padding: 15px;">
             <div class="modal-header" style="margin-bottom: 8px; padding-bottom: 8px;">
-                <span style="font-weight:bold; color:var(--neon-blue);">⭐ 프리미엄 혜택 안내</span>
+                <span style="font-weight:bold; color:var(--neon-blue);"><span data-i18n="premium_info_title">⭐ 프리미엄 혜택 안내</span></span>
                 <button class="modal-close" onclick="document.getElementById('premiumInfoModal').classList.add('d-none');document.getElementById('premiumInfoModal').classList.remove('d-flex');">×</button>
             </div>
             <div class="modal-body" style="overflow-y: auto; max-height: 70vh; font-size:0.85rem; line-height:1.7;">
                 <ul style="padding-left:1.2em; margin:0; list-style:none;">
-                    <li style="margin-bottom:10px;">🚫 <strong>광고 제거</strong><br><span style="color:var(--text-sub); font-size:0.8rem;">앱 내 모든 광고가 표시되지 않습니다.</span></li>
-                    <li style="margin-bottom:10px;">📋 <strong>DIY 퀘스트 확장</strong><br><span style="color:var(--text-sub); font-size:0.8rem;">DIY 퀘스트를 최대 36개까지 생성할 수 있습니다. (일반 6개)</span></li>
+                    <li style="margin-bottom:10px;">🚫 <strong data-i18n="premium_info_adfree_title">광고 제거</strong><br><span style="color:var(--text-sub); font-size:0.8rem;" data-i18n="premium_info_adfree_desc">앱 내 모든 광고가 표시되지 않습니다.</span></li>
+                    <li style="margin-bottom:10px;">📋 <strong data-i18n="premium_info_sidequest_title">사이드 퀘스트 확장</strong><br><span style="color:var(--text-sub); font-size:0.8rem;" data-i18n="premium_info_sidequest_desc">사이드 퀘스트를 최대 36개까지 생성할 수 있습니다. (주간 6개)</span></li>
                 </ul>
                 <div style="margin-top:14px; padding:10px; background:rgba(0,217,255,0.06); border:1px solid rgba(0,217,255,0.2); border-radius:8px; font-size:0.78rem; color:var(--text-sub);">
-                    구독 관련 기능은 추후 도입 예정입니다.
+                    <span data-i18n="premium_info_coming_soon">구독 관련 기능은 추후 도입 예정입니다.</span>
                 </div>
             </div>
         </div>
