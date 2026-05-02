@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.720] - 2026-05-02
+
+### 변경
+- fix(i18n): update premium subscription modal wording to side quests
+
 ## [1.0.719] - 2026-05-02
 
 ### 변경
