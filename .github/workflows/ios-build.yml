@@ -57,6 +57,7 @@ jobs:
       - name: CI 전용 AdMob 플러그인 제외 (iOS 컴파일 안정화)
         run: |
           npm uninstall @capacitor-community/admob --no-save || true
+          npm install --no-save @capacitor/ios@^6.2.0
           echo "ℹ️ CI에서는 CapacitorCommunityAdmob Swift 모듈 오류 회피를 위해 iOS 빌드 대상에서 제외"
 
       - name: iOS 네이티브 프로젝트 생성/동기화
@@ -70,10 +71,12 @@ jobs:
           npx cap sync ios
 
       - name: CocoaPods 설치
+        if: hashFiles('ios/App/Podfile') != ''
         working-directory: ios/App
         run: pod install
 
       - name: 시뮬레이터 빌드
+        if: hashFiles('ios/App/Podfile') != ''
         working-directory: ios/App
         run: |
           set -o pipefail
@@ -91,14 +94,14 @@ jobs:
             build 2>&1 | tee build-logs/xcodebuild.log
 
       - name: 빌드 실패 원인 요약
-        if: failure()
+        if: failure() && hashFiles('ios/App/build-logs/xcodebuild.log') != ''
         working-directory: ios/App
         run: |
           echo "=== xcodebuild error summary ==="
           rg -n "error:|\*\* BUILD FAILED \*\*|no such module|Undefined symbols|CodeSign|Provisioning" build-logs/xcodebuild.log | tail -n 50 || true
 
       - name: xcodebuild 로그 업로드
-        if: always()
+        if: always() && hashFiles('ios/App/build-logs/xcodebuild.log') != ''
         uses: actions/upload-artifact@v4
         with:
           name: ios-xcodebuild-log
