@@ -24,6 +24,8 @@ const i18n = {
         step_req_reward: "1,000보마다 +10P & STR +0.5 보상",
         btn_myinfo: "&#9881; 내 정보", btn_back: "&#8592; 돌아가기",
         set_title: "System Settings", set_lang: "언어 (Language)", set_theme: "라이트 모드", set_push: "푸시 알림 수신", set_gps: "앱 실행 시 현위치 탐색", set_sync: "피트니스 동기화 (Health Connect)", set_logout: "로그아웃", set_premium_expiry: "프리미엄 사용기간", set_premium_manage_label: "프리미엄 구독", set_premium_manage_btn: "플레이스토어 구독 관리",
+        premium_info_title: "⭐ 프리미엄 혜택 안내", premium_info_adfree_title: "광고 제거", premium_info_adfree_desc: "앱 내 모든 광고가 표시되지 않습니다.",
+        premium_info_sidequest_title: "사이드 퀘스트 확장", premium_info_sidequest_desc: "사이드 퀘스트를 최대 36개까지 생성할 수 있습니다. (주간 6개)", premium_info_coming_soon: "구독 관련 기능은 추후 도입 예정입니다.",
         set_delete_title: "계정 삭제", set_delete_desc: "계정을 삭제하면 모든 게임 데이터(레벨, 포인트, 퀘스트 기록 등)가 영구적으로 삭제되며 복구할 수 없습니다.", set_delete_account: "계정 삭제", del_confirm: "정말로 계정을 삭제하시겠습니까?\n\n삭제된 계정은 복구할 수 없으며, 모든 게임 데이터가 영구적으로 삭제됩니다.", del_confirm2: "마지막 확인입니다.\n계정을 삭제하면 되돌릴 수 없습니다.\n\n정말 삭제하시겠습니까?", del_processing: "삭제 처리 중...", del_done: "계정이 삭제되었습니다. 이용해 주셔서 감사합니다.", del_fail: "계정 삭제에 실패했습니다.",
         no_friend: "팔로잉한 사용자가 없습니다.", no_follower: "팔로워가 없습니다.", prof_followers: "팔로워", prof_following: "팔로잉", btn_add: "팔로우", btn_added: "팔로잉", gps_on: "위치 권한 활성화됨", gps_off: "위치 탐색 중지됨", gps_off_by_os: "OS 설정에서 위치 권한이 해제되어 비활성화됨", gps_err: "위치 정보 오류", gps_denied: "위치 권한이 거부되었습니다. 설정에서 권한을 허용해주세요.", gps_denied_confirm: "위치 권한이 거부된 상태입니다.\n앱 설정에서 위치 권한을 허용하시겠습니까?", gps_unavailable: "위치 정보를 사용할 수 없습니다. GPS 신호를 확인해주세요.", gps_timeout: "위치 탐색 시간이 초과되었습니다. 다시 시도해주세요.", gps_no_support: "위치 서비스를 지원하지 않는 기기입니다.", gps_searching: "위치 탐색 중...", gps_retrying: "위치 재탐색 중...", gps_revoke_confirm: "위치 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?", modal_title: "칭호 이력 조회",
         name_prompt: "새로운 닉네임을 입력하세요.", sync_req: "동기화 요청 중...", sync_done: "동기화 완료 (포인트 지급)", sync_off: "동기화 해제됨", sync_off_by_os: "OS 설정에서 건강 데이터 권한이 해제되어 비활성화됨", sync_revoke_confirm: "건강 데이터 권한을 완전히 해제하려면 OS 설정에서 권한을 꺼야 합니다.\n앱 설정으로 이동하시겠습니까?", exit_hint: "종료하려면 다시 누르세요",
@@ -205,12 +207,12 @@ const i18n = {
         offline_banner: "오프라인 모드 — 일부 기능이 제한됩니다",
 
         // 퀘스트 레이블 & 설정
-        regular_quest_label: "일반 퀘스트",
+        regular_quest_label: "주간 퀘스트",
         quest_settings_btn: "설정", quest_settings_title: "플래너 자동입력",
-        quest_auto_add_regular: "일반 퀘스트 자동추가", quest_auto_add_diy: "DIY 퀘스트 자동추가",
+        quest_auto_add_regular: "주간 퀘스트 자동추가", quest_auto_add_diy: "사이드 퀘스트 자동추가",
 
         // DIY 퀘스트
-        diy_quest_title: "DIY 퀘스트", btn_add_diy: "추가",
+        diy_quest_title: "사이드 퀘스트", btn_add_diy: "추가",
         diy_modal_create: "퀘스트 만들기", diy_modal_edit: "퀘스트 수정",
         diy_input_title: "제목", diy_input_desc: "설명", diy_select_stat: "스탯 선택",
         diy_schedule_label: "주기", diy_schedule_daily: "매일", diy_schedule_weekly: "매주",
@@ -220,13 +222,13 @@ const i18n = {
         diy_limit_reached_premium: "최대 36개까지 추가 가능합니다.",
         diy_confirm_delete: "이 퀘스트를 삭제하시겠습니까?",
         diy_duplicate_name: "같은 이름의 퀘스트가 이미 존재합니다.",
-        diy_guide_title: "DIY 퀘스트 가이드",
+        diy_guide_title: "사이드 퀘스트 가이드",
 
         // 퀘스트 통계 서브탭
         quest_tab_main: "📜 퀘스트", quest_tab_stats: "📊 통계",
         qstats_monthly_title: "월간 퀘스트 통계", qstats_annual_title: "연간 퀘스트 통계",
         qstats_empty: "퀘스트를 완료하면 통계가 기록됩니다.",
-        qstats_diy_only: "DIY 퀘스트만",
+        qstats_diy_only: "사이드 퀘스트만",
         qstats_active_days: "활동일", qstats_total_completed: "완료 퀘스트", qstats_avg_rate: "평균 달성률", qstats_perfect_days: "올클리어",
         month_names_short: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
 
@@ -833,6 +835,8 @@ const i18n = {
         step_req_reward: "+10P & STR +0.5 per 1,000 steps",
         btn_myinfo: "&#9881; My Info", btn_back: "&#8592; Back",
         set_title: "System Settings", set_lang: "Language", set_theme: "Light Theme", set_push: "Push Notifications", set_gps: "Auto Location Tracking", set_sync: "Fitness Sync (Health Connect)", set_logout: "Logout", set_premium_expiry: "Premium Expiry", set_premium_manage_label: "Premium Subscription", set_premium_manage_btn: "Manage on Play Store",
+        premium_info_title: "⭐ Premium Benefits", premium_info_adfree_title: "Ad-Free", premium_info_adfree_desc: "All in-app ads are removed.",
+        premium_info_sidequest_title: "Side Quest Expansion", premium_info_sidequest_desc: "Create up to 36 side quests. (Weekly quests: 6)", premium_info_coming_soon: "Subscription management features are coming soon.",
         set_delete_title: "Delete Account", set_delete_desc: "Deleting your account will permanently remove all game data (level, points, quest history, etc.) and cannot be undone.", set_delete_account: "Delete Account", del_confirm: "Are you sure you want to delete your account?\n\nThis action cannot be undone and all game data will be permanently deleted.", del_confirm2: "Final confirmation.\nDeleting your account is irreversible.\n\nAre you sure you want to proceed?", del_processing: "Deleting account...", del_done: "Your account has been deleted. Thank you for using our service.", del_fail: "Failed to delete account.",
         no_friend: "Not following anyone.", no_follower: "No followers.", prof_followers: "Followers", prof_following: "Following", btn_add: "Follow", btn_added: "Following", gps_on: "Location tracking on", gps_off: "Location tracking off", gps_off_by_os: "Disabled due to location permission revoked in OS settings", gps_err: "Location Error", gps_denied: "Location permission denied. Please enable it in settings.", gps_denied_confirm: "Location permission is denied.\nWould you like to open app settings to allow it?", gps_unavailable: "Location unavailable. Please check GPS signal.", gps_timeout: "Location search timed out. Please try again.", gps_no_support: "This device does not support location services.", gps_searching: "Searching location...", gps_retrying: "Retrying location...", gps_revoke_confirm: "To fully revoke location permission, you need to disable it in OS settings.\nGo to app settings?", modal_title: "Title History",
         name_prompt: "Enter new player name.", sync_req: "Requesting sync...", sync_done: "Sync complete", sync_off: "Sync disabled", sync_off_by_os: "Disabled due to health data permission revoked in OS settings", sync_revoke_confirm: "To fully revoke health data permission, you need to disable it in OS settings.\nGo to app settings?", exit_hint: "Press back again to exit",
@@ -1010,12 +1014,12 @@ const i18n = {
         offline_banner: "Offline Mode — Some features are limited",
 
         // Quest label & settings
-        regular_quest_label: "Daily Quests",
+        regular_quest_label: "Weekly Quests",
         quest_settings_btn: "Settings", quest_settings_title: "Planner Auto-add",
-        quest_auto_add_regular: "Auto-add Daily Quest Tasks", quest_auto_add_diy: "Auto-add DIY Quest Tasks",
+        quest_auto_add_regular: "Auto-add Weekly Quest Tasks", quest_auto_add_diy: "Auto-add Side Quest Tasks",
 
         // DIY Quests
-        diy_quest_title: "DIY Quests", btn_add_diy: "Add",
+        diy_quest_title: "Side Quests", btn_add_diy: "Add",
         diy_modal_create: "Create Quest", diy_modal_edit: "Edit Quest",
         diy_input_title: "Title", diy_input_desc: "Description", diy_select_stat: "Select Stat",
         diy_schedule_label: "Repeat", diy_schedule_daily: "Daily", diy_schedule_weekly: "Weekly",
@@ -1025,13 +1029,13 @@ const i18n = {
         diy_limit_reached_premium: "Max 36 custom quests.",
         diy_confirm_delete: "Delete this quest?",
         diy_duplicate_name: "A quest with this name already exists.",
-        diy_guide_title: "DIY Quest Guide",
+        diy_guide_title: "Side Quest Guide",
 
         // Quest Stats Subtab
         quest_tab_main: "📜 Quests", quest_tab_stats: "📊 Stats",
         qstats_monthly_title: "Monthly Quest Stats", qstats_annual_title: "Annual Quest Stats",
         qstats_empty: "Complete quests to start tracking statistics.",
-        qstats_diy_only: "DIY Quests Only",
+        qstats_diy_only: "Side Quests Only",
         qstats_active_days: "Active Days", qstats_total_completed: "Completed", qstats_avg_rate: "Avg. Rate", qstats_perfect_days: "Perfect Days",
         month_names_short: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
 
@@ -1637,6 +1641,8 @@ const i18n = {
         step_req_reward: "1,000歩ごとに +10P & STR +0.5 報酬",
         btn_myinfo: "&#9881; マイ情報", btn_back: "&#8592; 戻る",
         set_title: "システム設定", set_lang: "言語 (Language)", set_theme: "ライトモード", set_push: "プッシュ通知受信", set_gps: "起動時の位置情報取得", set_sync: "フィットネス同期 (Health Connect)", set_logout: "ログアウト", set_premium_expiry: "プレミアム有効期限", set_premium_manage_label: "プレミアムサブスク", set_premium_manage_btn: "Play Storeで管理",
+        premium_info_title: "⭐ プレミアム特典のご案内", premium_info_adfree_title: "広告非表示", premium_info_adfree_desc: "アプリ内のすべての広告が表示されなくなります。",
+        premium_info_sidequest_title: "サイドクエスト拡張", premium_info_sidequest_desc: "サイドクエストを最大36個まで作成できます。（週間クエストは6個）", premium_info_coming_soon: "サブスクリプション関連機能は今後導入予定です。",
         set_delete_title: "アカウント削除", set_delete_desc: "アカウントを削除すると、すべてのゲームデータ（レベル、ポイント、クエスト履歴など）が完全に削除され、復元できません。", set_delete_account: "アカウント削除", del_confirm: "本当にアカウントを削除しますか？\n\n削除されたアカウントは復元できず、すべてのゲームデータが完全に削除されます。", del_confirm2: "最終確認です。\nアカウントを削除すると元に戻せません。\n\n本当に削除しますか？", del_processing: "削除処理中...", del_done: "アカウントが削除されました。ご利用ありがとうございました。", del_fail: "アカウントの削除に失敗しました。",
         no_friend: "フォロー中のユーザーがいません。", no_follower: "フォロワーがいません。", prof_followers: "フォロワー", prof_following: "フォロー中", btn_add: "フォロー", btn_added: "フォロー中", gps_on: "位置情報有効", gps_off: "位置情報停止", gps_off_by_os: "OS設定で位置情報の権限が解除されたため無効化されました", gps_err: "位置情報エラー", gps_denied: "位置情報の権限が拒否されました。設定で許可してください。", gps_denied_confirm: "位置情報の権限が拒否されています。\nアプリ設定で位置情報を許可しますか？", gps_unavailable: "位置情報が利用できません。GPS信号を確認してください。", gps_timeout: "位置情報の取得がタイムアウトしました。再試行してください。", gps_no_support: "この端末は位置情報サービスに対応していません。", gps_searching: "位置情報を検索中...", gps_retrying: "位置情報を再検索中...", gps_revoke_confirm: "位置情報の権限を完全に解除するには、OS設定で権限をオフにする必要があります。\nアプリ設定に移動しますか？", modal_title: "称号履歴",
         name_prompt: "新しいプレイヤー名を入力してください。", sync_req: "同期を要求中...", sync_done: "同期完了", sync_off: "同期解除", sync_off_by_os: "OS設定で健康データの権限が解除されたため無効化されました", sync_revoke_confirm: "健康データの権限を完全に解除するには、OS設定で権限をオフにする必要があります。\nアプリ設定に移動しますか？", exit_hint: "もう一度押すと終了します",
@@ -1814,12 +1820,12 @@ const i18n = {
         offline_banner: "オフラインモード — 一部の機能が制限されます",
 
         // クエストラベル & 設定
-        regular_quest_label: "デイリークエスト",
+        regular_quest_label: "週間クエスト",
         quest_settings_btn: "設定", quest_settings_title: "プランナー自動追加",
-        quest_auto_add_regular: "デイリークエスト 自動追加", quest_auto_add_diy: "DIYクエスト 自動追加",
+        quest_auto_add_regular: "週間クエスト 自動追加", quest_auto_add_diy: "サイドクエスト 自動追加",
 
         // DIYクエスト
-        diy_quest_title: "DIYクエスト", btn_add_diy: "追加",
+        diy_quest_title: "サイドクエスト", btn_add_diy: "追加",
         diy_modal_create: "クエスト作成", diy_modal_edit: "クエスト編集",
         diy_input_title: "タイトル", diy_input_desc: "説明", diy_select_stat: "ステータス選択",
         diy_schedule_label: "周期", diy_schedule_daily: "毎日", diy_schedule_weekly: "毎週",
@@ -1829,13 +1835,13 @@ const i18n = {
         diy_limit_reached_premium: "最大36個まで追加可能です。",
         diy_confirm_delete: "このクエストを削除しますか？",
         diy_duplicate_name: "同じ名前のクエストがすでに存在します。",
-        diy_guide_title: "DIYクエスト ガイド",
+        diy_guide_title: "サイドクエスト ガイド",
 
         // クエスト統計サブタブ
         quest_tab_main: "📜 クエスト", quest_tab_stats: "📊 統計",
         qstats_monthly_title: "月間クエスト統計", qstats_annual_title: "年間クエスト統計",
         qstats_empty: "クエストを完了すると統計が記録されます。",
-        qstats_diy_only: "DIYクエストのみ",
+        qstats_diy_only: "サイドクエストのみ",
         qstats_active_days: "活動日数", qstats_total_completed: "完了クエスト", qstats_avg_rate: "平均達成率", qstats_perfect_days: "全完了日",
         month_names_short: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
 
