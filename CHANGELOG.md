@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.703] - 2026-05-02
+
+### 변경
+- Fix quest stats totals to respect weekly DIY schedule
+
 ## [1.0.702] - 2026-05-01
 
 ### 변경
