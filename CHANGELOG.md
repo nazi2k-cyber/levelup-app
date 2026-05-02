@@ -5,6 +5,46 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.712] - 2026-05-02
+
+### 변경
+- Fix CI ios platform missing after npm prune and guard absent ios/App
+
+## [1.0.711] - 2026-05-02
+
+### 변경
+- Bypass CapacitorCommunityAdmob pod failure in CI iOS build
+
+## [1.0.710] - 2026-05-02
+
+### 변경
+- Work around AdMob pod arm64 simulator compile failure in CI
+
+## [1.0.709] - 2026-05-02
+
+### 변경
+- Improve iOS build diagnostics for xcodebuild exit 65
+
+## [1.0.708] - 2026-05-02
+
+### 변경
+- Build iOS in GitHub Actions cloud by provisioning ios platform
+
+## [1.0.707] - 2026-05-02
+
+### 변경
+- Make iOS PR workflow non-blocking when ios project is absent
+
+## [1.0.706] - 2026-05-02
+
+### 변경
+- Fix iOS workflow for repos without npm build script
+
+## [1.0.705] - 2026-05-02
+
+### 변경
+- Add iOS CI scaffold workflow and secrets checklist
+
 ## [1.0.704] - 2026-05-02
 
 ### 변경
