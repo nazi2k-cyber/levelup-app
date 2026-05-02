@@ -1719,17 +1719,15 @@ async function loadUserDataFromDB(user) {
                 }
             }
         } else {
-            // 신규 유저: Auth 프로필에서 이름/사진 가져오고 Firestore 문서 생성
-            const baseName = user.displayName || getDefaultNewUserName(AppState.currentLang);
+            // 신규 유저: 이메일 최초 로그인과 동일하게 기본 닉네임/기본 이미지로 시작(익명성 보호)
+            const baseName = getDefaultNewUserName(AppState.currentLang);
             if (window.AppLogger) AppLogger.info(`[NewUser] 신규 가입: baseName="${baseName}" (uid: ${user.uid.substring(0, 8)}...)`);
             const uniqueName = await generateUniqueName(baseName, user.uid);
             await claimUsername(uniqueName, user.uid);
             AppState.user.name = uniqueName;
             if (window.AppLogger) AppLogger.info(`[NewUser] 닉네임 확정: "${uniqueName}"`);
-            if (user.photoURL) {
-                AppState.user.photoURL = user.photoURL;
-                window.setProfilePreview(user.photoURL);
-            }
+            AppState.user.photoURL = null;
+            window.setProfilePreview(window.DEFAULT_PROFILE_SVG);
             await saveUserData();
         }
         loadPlayerName();
