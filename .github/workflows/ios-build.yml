@@ -28,8 +28,22 @@ jobs:
       - name: npm 패키지 설치
         run: npm ci
 
-      - name: 웹 빌드
-        run: npm run build
+      - name: 웹 빌드 (스크립트 존재 시)
+        run: |
+          if node -e "const s=require('./package.json').scripts||{}; process.exit(s.build?0:1)"; then
+            npm run build
+          else
+            echo "ℹ️ package.json에 build 스크립트가 없어 웹 빌드를 건너뜁니다."
+          fi
+
+      - name: Capacitor 엔트리포인트 정합성 보정
+        run: |
+          if [ -f "www/app.html" ]; then
+            cp www/app.html www/index.html
+            echo "✅ www/app.html → www/index.html 복사 완료"
+          else
+            echo "ℹ️ www/app.html이 없어 엔트리포인트 복사를 건너뜁니다."
+          fi
 
       - name: iOS 프로젝트 존재 확인
         run: |
