@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.714] - 2026-05-02
+
+### 변경
+- Fix iOS CI AdMob consent enum rename
+
 ## [1.0.713] - 2026-05-02
 
 ### 변경
