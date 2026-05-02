@@ -308,7 +308,12 @@ export function createQuestStatsModule(deps) {
             for (let d = 1; d <= days; d++) labels.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
         }
 
-        if (rangeLabel) rangeLabel.textContent = state.chartRange === 'weekly' ? '이번 주 (일~토)' : '이번 달 (1일~말일)';
+        if (rangeLabel) {
+            const i18nLang = i18n[lang] || {};
+            rangeLabel.textContent = state.chartRange === 'weekly'
+                ? (i18nLang.qstats_range_weekly || '이번 주 (일~토)')
+                : (i18nLang.qstats_range_monthly || '이번 달 (1일~말일)');
+        }
         const series = getChartSeries(history, labels);
         const ranked = series.map((s) => {
             let done = 0, total = 0;
