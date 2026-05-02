@@ -743,17 +743,6 @@
                         <div id="challenge-list"></div>
                     </div>
 
-                    <!-- P4: 일일 보너스 룰렛 -->
-                    <div class="system-card" style="padding:15px; text-align:center;">
-                        <h3 style="margin:0 0 8px 0; font-size:0.95rem; color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</h3>
-                        <div id="roulette-container" style="position:relative; display:inline-block;">
-                            <div class="roulette-arrow"></div>
-                            <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
-                        </div>
-                        <div id="roulette-status" style="font-size:0.7rem; color:var(--neon-gold); margin:8px 0;"></div>
-                        <div id="roulette-timer" style="font-size:0.75rem; color:var(--neon-cyan); margin:4px 0; display:none;"></div>
-                        <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:0 auto;" onclick="window.spinRoulette()">SPIN!</button>
-                    </div>
                 </div>
 
                 <!-- Statistics content -->
@@ -2370,5 +2359,21 @@
     <script src="data.js"></script>
     <script src="firebase-config.js"></script>
     <script type="module" src="app.js"></script>
+
+    <div class="modal-overlay d-none" id="rouletteModal" onclick="if(event.target===this){window.closeRouletteModal?.();}">
+        <div class="modal-content" style="max-width:360px; width:calc(100% - 24px); text-align:center; border-color:var(--neon-purple);">
+            <div class="modal-header" style="margin-bottom:12px;">
+                <span style="color:var(--neon-purple);" data-i18n="roulette_title">일일 보너스 룰렛</span>
+                <button class="modal-close" onclick="window.closeRouletteModal?.()">×</button>
+            </div>
+            <div id="roulette-container" style="position:relative; display:inline-block; margin:0 auto;">
+                <div class="roulette-arrow"></div>
+                <canvas id="roulette-canvas" width="220" height="220" style="border-radius:50%;"></canvas>
+            </div>
+            <div id="roulette-status" style="font-size:0.78rem; color:var(--neon-gold); margin:10px 0 6px;"></div>
+            <div id="roulette-timer" style="font-size:0.75rem; color:var(--neon-cyan); margin:4px 0; display:none;"></div>
+            <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:8px auto 0;" onclick="window.spinRoulette()">SPIN!</button>
+        </div>
+    </div>
 </body>
 </html>

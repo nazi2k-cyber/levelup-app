@@ -2171,6 +2171,7 @@ window.toggleQuest = (i) => {
     if (state[i]) {
         updateStreak();
         if (window.updateChallengeProgress) window.updateChallengeProgress('quest_count');
+        if (window.openRouletteModal) window.openRouletteModal();
     }
 
     updateQuestHistory();
@@ -2288,6 +2289,7 @@ window.toggleDiyQuest = (questId) => {
     if (!wasCompleted) {
         updateStreak();
         if (window.updateChallengeProgress) window.updateChallengeProgress('quest_count');
+        if (window.openRouletteModal) window.openRouletteModal();
     }
 
     updateQuestHistory();

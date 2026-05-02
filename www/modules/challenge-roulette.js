@@ -198,6 +198,21 @@
         }
     }
 
+    function openRouletteModal() {
+        const modal = document.getElementById('rouletteModal');
+        if (!modal) return;
+        modal.classList.remove('d-none');
+        modal.classList.add('d-flex');
+        renderRoulette();
+    }
+
+    function closeRouletteModal() {
+        const modal = document.getElementById('rouletteModal');
+        if (!modal) return;
+        modal.classList.add('d-none');
+        modal.classList.remove('d-flex');
+    }
+
     function drawRouletteWheel(canvas) {
         const ctx = canvas.getContext('2d');
         const w = canvas.width;
@@ -311,6 +326,8 @@
                 }
             }
 
+            closeRouletteModal();
+
             // 캔버스 리셋 (애니메이션 후 각도 유지)
             canvas.style.transition = 'none';
             canvas.style.transform = `rotate(${targetAngle}deg)`;
@@ -346,4 +363,6 @@
     window.renderWeeklyChallenges = renderWeeklyChallenges;
     window.renderRoulette = renderRoulette;
     window.applySpinBonus = applySpinBonus;
+    window.openRouletteModal = openRouletteModal;
+    window.closeRouletteModal = closeRouletteModal;
 })();
