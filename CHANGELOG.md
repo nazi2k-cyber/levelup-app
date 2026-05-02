@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.721] - 2026-05-02
+
+### 변경
+- Fix missing JP/KR localization in fitness, dungeon, and quest stats UI
+
 ## [1.0.720] - 2026-05-02
 
 ### 변경
