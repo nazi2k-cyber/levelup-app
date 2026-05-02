@@ -105,7 +105,7 @@ export function createQuestStatsModule(deps) {
         const refDow = state.selectedDate ? new Date(state.selectedDate + 'T00:00:00').getDay() : new Date().getDay();
         const quests = weeklyQuestData[refDow] || [];
         const selectedCount = state.selectedDailyKeys.length;
-        const baseLabel = { ko: '일반 퀘스트', en: 'General Quest', ja: '一般クエスト' };
+        const baseLabel = { ko: '주간 퀘스트', en: 'Weekly Quests', ja: '週間クエスト' };
         const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
         btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
         btn.style.color = selectedCount > 0 ? 'var(--neon-cyan)' : '';
@@ -136,7 +136,7 @@ export function createQuestStatsModule(deps) {
         wrap.style.display = defs.length > 0 ? 'block' : 'none';
         const selectedCount = state.selectedDiyIds.length;
         const lang = AppState.currentLang;
-        const baseLabel = { ko: 'DIY퀘스트', en: 'DIY Quest', ja: 'DIYクエスト' };
+        const baseLabel = { ko: '사이드 퀘스트', en: 'Side Quests', ja: 'サイドクエスト' };
         const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
         btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
         btn.style.color = selectedCount > 0 ? 'var(--neon-gold)' : '';
@@ -232,7 +232,7 @@ export function createQuestStatsModule(deps) {
 
         if (selectedDaily.length === 0 && selectedDiy.length === 0) {
             series.push({
-                name: state.diyOnly ? 'DIY' : 'ALL',
+                name: state.diyOnly ? ({ ko: '사이드', en: 'SIDE', ja: 'サイド' }[AppState.currentLang] || 'SIDE') : 'ALL',
                 color: '#00d9ff',
                 values: labels.map((k) => {
                     const rec = history[k];

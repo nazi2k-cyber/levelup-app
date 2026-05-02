@@ -719,13 +719,13 @@
                 <div class="quest-tab-content active" id="quest-tab-main">
                     <div class="system-card" style="padding:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="regular_quest_label">일반 퀘스트</span>
+                            <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="regular_quest_label">주간 퀘스트</span>
                             <button class="btn-info-sm" id="btn-weekly-quest-list-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
                         </div>
                         <div class="quest-list-wrapper" id="quest-list-container"></div>
                         <div id="diy-quest-section" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                                <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="diy_quest_title">DIY Quests</span>
+                                <span style="font-size:0.75rem; color:var(--neon-gold); font-weight:bold;" data-i18n="diy_quest_title">사이드 퀘스트</span>
                                 <span style="display:flex; gap:4px; align-items:center;">
                                     <button class="btn-info-sm" id="btn-diy-quest-info">ℹ️ <span data-i18n="btn_quest_info">가이드</span></button>
                                     <button class="btn-info-sm" id="btn-add-diy-quest" onclick="window.showDiyQuestModal()">+ <span data-i18n="btn_add_diy">추가</span></button>
@@ -751,17 +751,17 @@
                     <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:8px;">
                         <!-- 특정 데일리 퀘스트 선택 드롭다운 -->
                         <div id="qstats-daily-dropdown-wrap" style="position:relative; display:inline-block;">
-                            <button id="qstats-daily-dropdown-btn" class="btn-info-sm" onclick="window.toggleQstatsDailyDropdown()" style="font-size:0.72rem; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">일반 퀘스트 ▾</button>
+                            <button id="qstats-daily-dropdown-btn" class="btn-info-sm" onclick="window.toggleQstatsDailyDropdown()" style="font-size:0.72rem; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">주간 퀘스트 ▾</button>
                             <div id="qstats-daily-dropdown-menu" class="d-none qstats-diy-dropdown-menu"></div>
                         </div>
                         <!-- 특정 DIY 퀘스트 선택 드롭다운 -->
                         <div id="qstats-diy-dropdown-wrap" style="position:relative; display:none;">
-                            <button id="qstats-diy-dropdown-btn" class="btn-info-sm" onclick="window.toggleQstatsDiyDropdown()" style="font-size:0.72rem; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-color:var(--neon-gold);">DIY퀘스트 ▾</button>
+                            <button id="qstats-diy-dropdown-btn" class="btn-info-sm" onclick="window.toggleQstatsDiyDropdown()" style="font-size:0.72rem; max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-color:var(--neon-gold);">사이드 퀘스트 ▾</button>
                             <div id="qstats-diy-dropdown-menu" class="d-none qstats-diy-dropdown-menu"></div>
                         </div>
                         <label class="qstats-diy-filter-label" style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.8rem; color:var(--text-sub);">
                             <input type="checkbox" id="qstats-diy-filter" style="accent-color:var(--neon-blue); cursor:pointer;">
-                            <span data-i18n="qstats_diy_only">DIY 퀘스트만</span>
+                            <span data-i18n="qstats_diy_only">사이드 퀘스트만</span>
                         </label>
                     </div>
 
@@ -2157,14 +2157,14 @@
             </div>
             <div style="display:flex; flex-direction:column; gap:16px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.85rem; color:var(--text);" data-i18n="quest_auto_add_regular">일반 퀘스트 자동추가</span>
+                    <span style="font-size:0.85rem; color:var(--text);" data-i18n="quest_auto_add_regular">주간 퀘스트 자동추가</span>
                     <label class="switch">
                         <input type="checkbox" id="toggle-auto-add-regular" onchange="saveQuestSettings()">
                         <span class="slider"></span>
                     </label>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.85rem; color:var(--text);" data-i18n="quest_auto_add_diy">DIY 퀘스트 자동추가</span>
+                    <span style="font-size:0.85rem; color:var(--text);" data-i18n="quest_auto_add_diy">사이드 퀘스트 자동추가</span>
                     <label class="switch">
                         <input type="checkbox" id="toggle-auto-add-diy" onchange="saveQuestSettings()">
                         <span class="slider"></span>

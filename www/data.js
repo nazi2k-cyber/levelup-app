@@ -205,12 +205,12 @@ const i18n = {
         offline_banner: "오프라인 모드 — 일부 기능이 제한됩니다",
 
         // 퀘스트 레이블 & 설정
-        regular_quest_label: "일반 퀘스트",
+        regular_quest_label: "주간 퀘스트",
         quest_settings_btn: "설정", quest_settings_title: "플래너 자동입력",
-        quest_auto_add_regular: "일반 퀘스트 자동추가", quest_auto_add_diy: "DIY 퀘스트 자동추가",
+        quest_auto_add_regular: "주간 퀘스트 자동추가", quest_auto_add_diy: "사이드 퀘스트 자동추가",
 
         // DIY 퀘스트
-        diy_quest_title: "DIY 퀘스트", btn_add_diy: "추가",
+        diy_quest_title: "사이드 퀘스트", btn_add_diy: "추가",
         diy_modal_create: "퀘스트 만들기", diy_modal_edit: "퀘스트 수정",
         diy_input_title: "제목", diy_input_desc: "설명", diy_select_stat: "스탯 선택",
         diy_schedule_label: "주기", diy_schedule_daily: "매일", diy_schedule_weekly: "매주",
@@ -226,7 +226,7 @@ const i18n = {
         quest_tab_main: "📜 퀘스트", quest_tab_stats: "📊 통계",
         qstats_monthly_title: "월간 퀘스트 통계", qstats_annual_title: "연간 퀘스트 통계",
         qstats_empty: "퀘스트를 완료하면 통계가 기록됩니다.",
-        qstats_diy_only: "DIY 퀘스트만",
+        qstats_diy_only: "사이드 퀘스트만",
         qstats_active_days: "활동일", qstats_total_completed: "완료 퀘스트", qstats_avg_rate: "평균 달성률", qstats_perfect_days: "올클리어",
         month_names_short: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
 
@@ -1010,12 +1010,12 @@ const i18n = {
         offline_banner: "Offline Mode — Some features are limited",
 
         // Quest label & settings
-        regular_quest_label: "Daily Quests",
+        regular_quest_label: "Weekly Quests",
         quest_settings_btn: "Settings", quest_settings_title: "Planner Auto-add",
-        quest_auto_add_regular: "Auto-add Daily Quest Tasks", quest_auto_add_diy: "Auto-add DIY Quest Tasks",
+        quest_auto_add_regular: "Auto-add Weekly Quest Tasks", quest_auto_add_diy: "Auto-add Side Quest Tasks",
 
         // DIY Quests
-        diy_quest_title: "DIY Quests", btn_add_diy: "Add",
+        diy_quest_title: "Side Quests", btn_add_diy: "Add",
         diy_modal_create: "Create Quest", diy_modal_edit: "Edit Quest",
         diy_input_title: "Title", diy_input_desc: "Description", diy_select_stat: "Select Stat",
         diy_schedule_label: "Repeat", diy_schedule_daily: "Daily", diy_schedule_weekly: "Weekly",
@@ -1031,7 +1031,7 @@ const i18n = {
         quest_tab_main: "📜 Quests", quest_tab_stats: "📊 Stats",
         qstats_monthly_title: "Monthly Quest Stats", qstats_annual_title: "Annual Quest Stats",
         qstats_empty: "Complete quests to start tracking statistics.",
-        qstats_diy_only: "DIY Quests Only",
+        qstats_diy_only: "Side Quests Only",
         qstats_active_days: "Active Days", qstats_total_completed: "Completed", qstats_avg_rate: "Avg. Rate", qstats_perfect_days: "Perfect Days",
         month_names_short: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
 
@@ -1814,12 +1814,12 @@ const i18n = {
         offline_banner: "オフラインモード — 一部の機能が制限されます",
 
         // クエストラベル & 設定
-        regular_quest_label: "デイリークエスト",
+        regular_quest_label: "週間クエスト",
         quest_settings_btn: "設定", quest_settings_title: "プランナー自動追加",
-        quest_auto_add_regular: "デイリークエスト 自動追加", quest_auto_add_diy: "DIYクエスト 自動追加",
+        quest_auto_add_regular: "週間クエスト 自動追加", quest_auto_add_diy: "サイドクエスト 自動追加",
 
         // DIYクエスト
-        diy_quest_title: "DIYクエスト", btn_add_diy: "追加",
+        diy_quest_title: "サイドクエスト", btn_add_diy: "追加",
         diy_modal_create: "クエスト作成", diy_modal_edit: "クエスト編集",
         diy_input_title: "タイトル", diy_input_desc: "説明", diy_select_stat: "ステータス選択",
         diy_schedule_label: "周期", diy_schedule_daily: "毎日", diy_schedule_weekly: "毎週",
@@ -1835,7 +1835,7 @@ const i18n = {
         quest_tab_main: "📜 クエスト", quest_tab_stats: "📊 統計",
         qstats_monthly_title: "月間クエスト統計", qstats_annual_title: "年間クエスト統計",
         qstats_empty: "クエストを完了すると統計が記録されます。",
-        qstats_diy_only: "DIYクエストのみ",
+        qstats_diy_only: "サイドクエストのみ",
         qstats_active_days: "活動日数", qstats_total_completed: "完了クエスト", qstats_avg_rate: "平均達成率", qstats_perfect_days: "全完了日",
         month_names_short: ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
 
