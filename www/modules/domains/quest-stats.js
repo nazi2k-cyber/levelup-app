@@ -289,6 +289,7 @@ export function createQuestStatsModule(deps) {
         const svg = document.getElementById('qstats-annual-chart');
         const legend = document.getElementById('qstats-chart-legend');
         const rangeLabel = document.getElementById('qstats-chart-range-label');
+        const lang = AppState.currentLang;
         if (!svg) return;
 
         const now = new Date();
