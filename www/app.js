@@ -6575,13 +6575,8 @@ async function showPermissionPrompts() {
         const userAllowed = await permissionGuide.show('health');
         if (userAllowed) {
             try {
-                const result = await healthService.enableHealthSync({
-                    syncToggle: document.getElementById('sync-toggle'),
-                    statusDiv: document.getElementById('sync-status'),
-                    showMsg: false,
-                });
+                const result = await runHealthSyncEnableFlow({ showMsg: true });
                 if (result.ok) {
-                    updateStepCountUI();
                     healthService.syncHealthData({ showMsg: true }).then(() => {
                         if (!AppState.user.stepData || AppState.user.stepData.totalSteps === 0) {
                             setTimeout(() => healthService.syncHealthData({ showMsg: true }), 2000);
@@ -6599,6 +6594,13 @@ async function showPermissionPrompts() {
         gpsToggle: document.getElementById('gps-toggle'),
         statusDiv: document.getElementById('gps-status'),
     });
+
+    // Health Connect 화면 왕복 후 권한 반영을 위해 한 번 더 동기화
+    setTimeout(() => {
+        syncToggleWithOSPermissions().catch((e) => {
+            if (window.AppLogger) AppLogger.warn('[PermPrompt] delayed permission resync failed: ' + (e?.message || e));
+        });
+    }, 1200);
 
     if (window.AppLogger) AppLogger.info('[PermPrompt] 네이티브 권한 확인/요청 완료');
 }
@@ -6633,15 +6635,23 @@ async function toggleGPS() {
     await locationService.enableGps({ gpsToggle, statusDiv });
 }
 
+async function runHealthSyncEnableFlow({ showMsg = true } = {}) {
+    const toggle = document.getElementById('sync-toggle');
+    const statusDiv = document.getElementById('sync-status');
+    const result = await healthService.enableHealthSync({ syncToggle: toggle, statusDiv, showMsg });
+    if (result.ok) {
+        updateStepCountUI();
+        healthService.syncHealthData({ showMsg: true });
+    }
+    return result;
+}
+
 async function toggleHealthSync() {
     const toggle = document.getElementById('sync-toggle');
     const statusDiv = document.getElementById('sync-status');
 
     if (toggle.checked) {
-        const result = await healthService.enableHealthSync({ syncToggle: toggle, statusDiv, showMsg: true });
-        if (result.ok) {
-            healthService.syncHealthData({ showMsg: true });
-        }
+        await runHealthSyncEnableFlow({ showMsg: true });
     } else {
         healthService.disableHealthSync({ syncToggle: toggle, statusDiv, showOsSettingsGuide: true });
     }
@@ -6740,6 +6750,21 @@ async function syncHealthData(showMsg = false) {
     return healthService.syncHealthData({ showMsg });
 }
 
+
+async function openSettingsAndEnableFitnessSync() {
+    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('settings')?.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+    const toggle = document.getElementById('sync-toggle');
+    if (!toggle) return;
+    if (!toggle.checked) {
+        toggle.checked = true;
+    }
+    await runHealthSyncEnableFlow({ showMsg: true });
+}
+window.openSettingsAndEnableFitnessSync = openSettingsAndEnableFitnessSync;
+
 async function openHealthConnectEntryPoint() {
     const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
     try {
@@ -6794,7 +6819,7 @@ function updateStepCountUI() {
                         let result = req2Text;
                         for (const label of myInfoLabels) {
                             if (req2Text.includes(label)) {
-                                result = req2Text.replace(label, `<a href="javascript:void(0)" onclick="document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active'));document.getElementById('settings').classList.add('active');document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));" style="color:inherit;text-decoration:underline;">${label}</a>`);
+                                result = req2Text.replace(label, `<a href="javascript:void(0)" onclick="openSettingsAndEnableFitnessSync()" style="color:inherit;text-decoration:underline;">${label}</a>`);
                                 break;
                             }
                         }

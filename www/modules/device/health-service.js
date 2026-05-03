@@ -81,6 +81,32 @@ export function createHealthService(deps = {}) {
         return true;
     }
 
+
+    async function hasHealthPermissionWithRetry({ retries = 3, delayMs = 300 } = {}) {
+        const HealthConnect = capabilities?.getCapacitor?.()?.Plugins?.HealthConnect;
+        if (!HealthConnect) return false;
+
+        for (let attempt = 0; attempt < retries; attempt += 1) {
+            try {
+                const availability = await HealthConnect.isAvailable();
+                const hasPermission = !!(availability?.available && (availability?.hasActivityRecognition || availability?.hasPermissions));
+                AppLogger?.info?.('[HealthConnect] permission state check: ' + JSON.stringify({
+                    attempt: attempt + 1,
+                    hasPermission,
+                    availability: availability || {},
+                }));
+                if (hasPermission) return true;
+            } catch (e) {
+                AppLogger?.warn?.('[HealthConnect] permission state check failed: ' + (e?.message || e));
+            }
+
+            if (attempt < retries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+        }
+        return false;
+    }
+
     async function requestFitnessScope() {
         if (!capabilities?.supportsHealth?.()) return false;
         const HealthConnect = capabilities?.getCapacitor?.()?.Plugins?.HealthConnect;
@@ -249,7 +275,8 @@ export function createHealthService(deps = {}) {
         }
 
         const granted = await requestFitnessScope();
-        if (!granted) {
+        const confirmed = granted || await hasHealthPermissionWithRetry();
+        if (!confirmed) {
             setToggle(syncToggle, { checked: false });
             setStatus(statusDiv, `<span style="color:var(--neon-red);">${lang.sync_denied || '건강 데이터 권한이 필요합니다.'}</span>`);
             return { ok: false, code: 'denied' };
