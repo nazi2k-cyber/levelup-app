@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.727] - 2026-05-03
+
+### 변경
+- feat: rename color theme label and expand theme options to 7
+
 ## [1.0.726] - 2026-05-03
 
 ### 변경
