@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.747] - 2026-05-03
+
+### 변경
+- Apply theme-based backgrounds to Day1 and social cards
+
 ## [1.0.746] - 2026-05-03
 
 ### 변경
