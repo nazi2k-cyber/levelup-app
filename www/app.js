@@ -3360,6 +3360,7 @@ function changeLanguage(langCode) {
         loadPlayerName();
         if (window.updateReelsResetTimer) window.updateReelsResetTimer(); // i18n 업데이트 후 버튼 쿨다운 상태 재적용
         updateStepCountUI();
+        renderBackgroundThemeTiles();
         refreshSettingsStatusMessages();
         if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();
         if (typeof window.refreshOrmCalcSummary === 'function') window.refreshOrmCalcSummary();
