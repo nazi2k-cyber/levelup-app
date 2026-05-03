@@ -706,12 +706,21 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .qstats-diy-dropdown-menu {
     position: absolute; top: calc(100% + 4px); right: 0; z-index: 200;
     background: var(--card-bg, #1a1a2e); border: 1px solid var(--border-color);
-    border-radius: 6px; min-width: 150px; max-height: 200px; overflow-y: auto;
+    border-radius: 6px; width: min(92vw, 420px); max-width: calc(100vw - 16px);
+    max-height: 200px; overflow-y: auto; overflow-x: hidden;
     box-shadow: 0 4px 16px rgba(0,0,0,0.5);
 }
 .qstats-diy-dd-item {
     padding: 7px 12px; font-size: 0.78rem; color: var(--text-sub); cursor: pointer;
-    border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border-bottom: 1px solid rgba(255,255,255,0.05); white-space: normal; word-break: break-word; color: var(--text-main);
+}
+.qstats-dd-subheader {
+    padding: 4px 12px;
+    font-size: 0.62rem;
+    color: var(--text-main);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    white-space: normal;
+    line-height: 1.25;
 }
 .qstats-diy-dd-item:last-child { border-bottom: none; }
 .qstats-diy-dd-item:hover { background: rgba(0,217,255,0.08); color: var(--text-main); }
