@@ -1,8 +1,6 @@
 name: iOS PR 빌드 검증
 
 on:
-  pull_request:
-    branches: ["main", "develop"]
   workflow_dispatch:
 
 permissions:
