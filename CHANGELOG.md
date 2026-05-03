@@ -5,6 +5,12 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.724] - 2026-05-03
+
+### 변경
+- Fix quest stats dropdown i18n and width for JP text
+- 설정 테마 UX를 원형 선택으로 변경하고 로즈 테마 추가
+
 ## [1.0.723] - 2026-05-03
 
 ### 변경
