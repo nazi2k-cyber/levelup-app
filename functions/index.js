@@ -3617,7 +3617,11 @@ async function getScreeningConfig() {
         textScreeningEnabled: true,
         azureEnabled: false,
         azureTextEnabled: false,
-        notifyOnFlag: true
+        notifyOnFlag: true,
+        plannerSchedulerEnabled: false,
+        plannerSchedulerIntervalMin: 30,
+        profileSchedulerEnabled: false,
+        profileSchedulerIntervalMin: 60,
     };
 
     const keywords = keywordsDoc.exists ? keywordsDoc.data() : {
@@ -4460,6 +4464,36 @@ async function handleGetScreeningStats(request) {
 
     return { total, pending, approved, rejected, autoDeleted, autoHidden, clean, byCategory, bySeverity, azureRateLimited, azureTextRateLimited };
 }
+
+async function runAutoScreenScheduler(type, intervalMin) {
+    const key = `scheduler_${type}`;
+    const stateRef = db.collection("screening_config").doc(key);
+    const now = Date.now();
+    const intervalMs = Math.max(1, Number(intervalMin) || 1) * 60 * 1000;
+    const snap = await stateRef.get();
+    const lastRunAt = snap.exists ? Number(snap.data().lastRunAt || 0) : 0;
+    if (lastRunAt && (now - lastRunAt) < intervalMs) return;
+
+    await stateRef.set({ lastRunAt: now, updatedAt: now }, { merge: true });
+    const mockReq = { auth: { token: { admin: true, email: "scheduler@system.local" }, uid: "scheduler" }, data: { forceRescan: false } };
+    if (type === "planner") await handleBatchScreenPosts(mockReq);
+    if (type === "profile") await handleBatchScreenProfiles(mockReq);
+}
+
+exports.autoScreeningScheduler = onSchedule({
+    schedule: "*/5 * * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3"
+}, async () => {
+    const config = await getScreeningConfig();
+    const s = config.settings || {};
+    if (s.plannerSchedulerEnabled) {
+        await runAutoScreenScheduler("planner", s.plannerSchedulerIntervalMin || 30);
+    }
+    if (s.profileSchedulerEnabled) {
+        await runAutoScreenScheduler("profile", s.profileSchedulerIntervalMin || 60);
+    }
+});
 
 // --- 만료 릴스 사진 정리 (매일 04:00 KST) ---
 exports.cleanupExpiredReelsPhotos = onSchedule({
