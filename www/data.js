@@ -309,6 +309,9 @@ const i18n = {
         med_save: "저장",
         med_guide_title: "사용 방법",
         med_guide_body: "1. 원하는 시간을 선택하세요 (5~30분).<br>2. 시작 버튼을 눌러 명상을 시작하세요.<br>3. 타이머가 끝나면 자동으로 완료됩니다.<br>4. 매일 첫 명상 완료 시 +10P & VIT +0.3 보상!",
+        med_quick_guide_title: "간단 실행 방법",
+        med_collapse_btn: "접기",
+        med_expand_btn: "펼치기",
         med_sessions_today: "오늘",
         med_sound: "종소리", med_sound_preview: "미리듣기",
 
@@ -1117,6 +1120,9 @@ const i18n = {
         med_save: "Save",
         med_guide_title: "How to Use",
         med_guide_body: "1. Choose your duration (5-30 min).<br>2. Tap Start to begin meditating.<br>3. Timer completes automatically.<br>4. First daily meditation earns +10P & VIT +0.3!",
+        med_quick_guide_title: "Quick Guide",
+        med_collapse_btn: "Hide",
+        med_expand_btn: "Show",
         med_sessions_today: "Today",
         med_sound: "Bowl Sound", med_sound_preview: "Preview",
 
@@ -1925,6 +1931,9 @@ const i18n = {
         med_save: "保存",
         med_guide_title: "使い方",
         med_guide_body: "1. 希望の時間を選択してください（5〜30分）。<br>2. 開始ボタンを押して瞑想を始めましょう。<br>3. タイマーが終了すると自動的に完了します。<br>4. 毎日初回の瞑想完了で +10P & VIT +0.3 報酬！",
+        med_quick_guide_title: "クイックガイド",
+        med_collapse_btn: "折りたたむ",
+        med_expand_btn: "開く",
         med_sessions_today: "今日",
         med_sound: "鐘の音", med_sound_preview: "試聴",
 
