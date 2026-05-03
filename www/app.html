@@ -400,7 +400,10 @@
                             <span style="font-size:1.2rem;">📊</span>
                             <h2 data-i18n="radar_title" style="margin:0;">STAT RADAR</h2>
                         </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                        <button class="btn-info-sm" id="btn-bg-theme" type="button">🎨 배경테마</button>
                         <button class="btn-info-sm" id="btn-status-info">ℹ️ <span data-i18n="btn_status_info">가이드</span></button>
+                        </div>
                     </div>
 
                     <div class="radar-chart-container" style="margin-bottom: 5px;">
@@ -2389,5 +2392,20 @@
             <button id="btn-roulette-spin" class="btn-primary" style="max-width:180px; margin:8px auto 0;" onclick="window.spinRoulette()">SPIN!</button>
         </div>
     </div>
+
+
+    <div id="bg-theme-modal" class="modal-overlay d-none">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <span style="font-weight:700; color:var(--neon-blue);">배경테마</span>
+                <button class="modal-close" id="btn-bg-theme-close" type="button">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="font-size:0.72rem; color:var(--text-sub); margin-bottom:10px;">설정 &gt; 색상 테마의 기본 배경색 포함 단색/패턴 30종</div>
+                <div id="bg-theme-grid" class="bg-theme-grid"></div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
