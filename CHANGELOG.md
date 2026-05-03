@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.737] - 2026-05-03
+
+### 변경
+- fix: add Japanese background theme name translations
+
 ## [1.0.736] - 2026-05-03
 
 ### 변경
