@@ -113,15 +113,11 @@ export function createQuestStatsModule(deps) {
 
         const dayNames = { ko:["일","월","화","수","목","금","토"], en:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja:["日","月","火","水","木","金","土"] };
         const selectAllLabel = { ko: '전체', en: 'All', ja: '全体' };
-        const dailyHeaderByLang = {
-            ko: `${(dayNames.ko || dayNames.en)[refDow]}요일 퀘스트 (멀티 선택)`,
-            en: `${(dayNames.en || dayNames.ko)[refDow]} Quests (Multi-select)`,
-            ja: `${(dayNames.ja || dayNames.en)[refDow]}曜日クエスト（複数選択）`,
-        };
+        const dowName = (dayNames[lang] || dayNames.en)[refDow];
         const isAllSelected = !state.dailyAllDeselected && state.selectedDailyKeys.length === 0;
         menu.innerHTML = [
             `<label class="qstats-diy-dd-item" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" ${isAllSelected ? 'checked' : ''} onchange="window.toggleQstatsDailyAll(this.checked)">${selectAllLabel[lang] || selectAllLabel.en}</label>`,
-            `<div class="qstats-dd-subheader">${dailyHeaderByLang[lang] || dailyHeaderByLang.en}</div>`,
+            `<div style="padding:4px 12px; font-size:0.62rem; color:var(--text-sub); border-bottom:1px solid rgba(255,255,255,0.06);">${dowName}요일 퀘스트 (멀티 선택)</div>`,
             ...quests.map((q, i) => {
                 const key = `${refDow}:${i}`;
                 const isItemActive = isAllSelected || state.selectedDailyKeys.includes(key);
