@@ -5,6 +5,21 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.740] - 2026-05-03
+
+### 변경
+- Fix HealthConnect permission promise hanging on first request
+
+## [1.0.739] - 2026-05-03
+
+### 변경
+- Align login fitness consent flow with settings toggle behavior
+
+## [1.0.738] - 2026-05-03
+
+### 변경
+- Fix first-run fitness permission sync race
+
 ## [1.0.737] - 2026-05-03
 
 ### 변경
