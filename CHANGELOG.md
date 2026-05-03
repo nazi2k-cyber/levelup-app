@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.742] - 2026-05-03
+
+### 변경
+- fix: fill missing locale strings and simplify basic theme tiles
+
 ## [1.0.741] - 2026-05-03
 
 ### 변경
