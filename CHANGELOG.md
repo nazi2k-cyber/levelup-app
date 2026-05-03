@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.744] - 2026-05-03
+
+### 변경
+- fix: rerender background theme labels on language change
+
 ## [1.0.743] - 2026-05-03
 
 ### 변경
