@@ -6,6 +6,7 @@
     const MED_CHANNEL_ID = 'meditation-notifications';
     const MED_NOTIF_ID = 7800;
     const MED_PRESETS = [5, 10, 15, 20, 30];
+    const MED_GUIDE_COLLAPSE_KEY = 'med_quick_guide_collapsed';
 
     let audioCtx = null;
 
@@ -411,40 +412,27 @@
     };
 
 
-    window.openMedGuide = function() {
-        const overlay = document.createElement('div');
-        overlay.className = 'med-settings-overlay';
-        overlay.id = 'med-guide-overlay';
-        overlay.innerHTML = `
-            <div class="med-settings-modal">
-                <h3 style="margin:0 0 12px 0; font-size:1rem; color:#00e5a0;">🧘 간단 실행 방법</h3>
-                <div style="font-size:0.78rem; color:var(--text-sub); line-height:1.65;">
-                    <div style="margin-bottom:10px;"><b style="color:#7fffd4;">[마음챙김] - "지금 이 순간의 현존"</b><br>
-                    자세: 허리를 곧게 펴고 앉아 눈을 감거나 시선을 낮춥니다.<br>
-                    방법: 코끝이나 배의 움직임 등 호흡의 감각에 온 신경을 집중합니다.<br>
-                    핵심: 잡념이 떠오르면 판단하지 말고 이름을 붙인 뒤 다시 호흡으로 주의를 돌립니다.<br>
-                    시간: 5~10분으로도 충분히 시작 가능합니다.</div>
-                    <div><b style="color:#7fffd4;">[초월 명상] - "생각 너머의 고요함"</b><br>
-                    자세: 편안하게 의자에 앉아 눈을 감습니다.<br>
-                    방법: 자신만의 만트라를 마음속으로 자연스럽게 반복합니다.<br>
-                    핵심: 만트라를 억지로 붙잡지 말고, 생각이 들면 부드럽게 다시 만트라로 돌아옵니다.<br>
-                    시간: 보통 하루 2번, 각 20분씩 수행합니다.</div>
-                </div>
-                <button onclick="window.closeMedGuide()" style="margin-top:14px; width:100%; padding:10px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid var(--border-color); color:var(--text-sub); cursor:pointer;">확인</button>
-            </div>
-        `;
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) window.closeMedGuide(); });
-        document.body.appendChild(overlay);
-        requestAnimationFrame(() => overlay.classList.add('active'));
+
+
+    function isMedGuideCollapsed() {
+        return localStorage.getItem(MED_GUIDE_COLLAPSE_KEY) === 'true';
+    }
+
+    function updateMedGuideUI() {
+        const lang = i18n[AppState.currentLang] || i18n.ko;
+        const guide = document.getElementById('med-quick-guide-content');
+        const btn = document.getElementById('btn-med-guide-toggle');
+        const collapsed = isMedGuideCollapsed();
+        if (guide) guide.style.display = collapsed ? 'none' : '';
+        if (btn) btn.textContent = collapsed ? (lang.med_expand_btn || '펼치기') : (lang.med_collapse_btn || '접기');
+    }
+
+    window.toggleMedGuideCollapse = function() {
+        const nextCollapsed = !isMedGuideCollapsed();
+        localStorage.setItem(MED_GUIDE_COLLAPSE_KEY, nextCollapsed ? 'true' : 'false');
+        updateMedGuideUI();
     };
 
-    window.closeMedGuide = function() {
-        const overlay = document.getElementById('med-guide-overlay');
-        if (overlay) {
-            overlay.classList.remove('active');
-            setTimeout(() => overlay.remove(), 300);
-        }
-    };
     // Settings modal
     window.openMedSettings = function() {
         const lang = i18n[AppState.currentLang] || i18n.ko;
@@ -559,8 +547,9 @@
         renderPresetChips();
         updateMedUI();
 
-        const guideBtn = document.getElementById('btn-med-guide');
-        if (guideBtn) guideBtn.addEventListener('click', window.openMedGuide);
+        const guideToggleBtn = document.getElementById('btn-med-guide-toggle');
+        if (guideToggleBtn) guideToggleBtn.addEventListener('click', window.toggleMedGuideCollapse);
+        updateMedGuideUI();
 
         const settingsBtn = document.getElementById('btn-med-settings');
         if (settingsBtn) settingsBtn.addEventListener('click', window.openMedSettings);

@@ -456,7 +456,6 @@
                             <h2 style="margin:0; color:#00e5a0;" data-i18n="med_title">명상</h2>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <button class="btn-info-sm" id="btn-med-guide" style="font-size:0.7rem;">❔</button>
                             <span id="med-session-count" style="font-size:0.7rem; color:var(--text-sub);">0</span>
                             <button class="btn-info-sm" id="btn-med-sound" onclick="window.toggleMedSound()" style="font-size:0.7rem;">🔔</button>
                             <button class="btn-info-sm" id="btn-med-settings" style="font-size:0.7rem;">⚙️</button>
@@ -516,10 +515,15 @@
                             <div id="med-preset-btns" style="display:flex; gap:4px; flex-wrap:wrap;"></div>
                         </div>
                     </div>
-                    <div style="margin-top:10px; padding:10px; border:1px solid rgba(0,229,160,0.22); border-radius:10px; background:rgba(0,229,160,0.06); font-size:0.7rem; line-height:1.55; color:var(--text-sub);">
-                        <div style="font-weight:800; color:#7fffd4; margin-bottom:6px;">간단 실행 방법</div>
+                    <div id="med-quick-guide" style="margin-top:10px; padding:10px; border:1px solid rgba(0,229,160,0.22); border-radius:10px; background:rgba(0,229,160,0.06); font-size:0.7rem; line-height:1.55; color:var(--text-sub);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                            <div style="font-weight:800; color:#7fffd4;" data-i18n="med_quick_guide_title">간단 실행 방법</div>
+                            <button class="btn-info-sm" id="btn-med-guide-toggle" style="font-size:0.7rem; min-width:54px;" data-i18n="med_collapse_btn">접기</button>
+                        </div>
+                        <div id="med-quick-guide-content">
                         <div><span style="color:#00e5a0; font-weight:700;">[마음챙김]</span> 지금 이 순간의 현존 · 호흡 감각에 주의를 두고, 잡념은 판단 없이 알아차린 뒤 다시 호흡으로 돌아옵니다. (5~10분)</div>
                         <div style="margin-top:6px;"><span style="color:#00e5a0; font-weight:700;">[초월 명상]</span> 편안히 눈을 감고 만트라를 자연스럽게 반복합니다. 생각이 떠오르면 부드럽게 다시 만트라로 돌아옵니다. (하루 2회, 각 20분)</div>
+                        </div>
                     </div>
                 </div>
 
