@@ -776,11 +776,9 @@ initAppEntryOrchestrator({
 });
 
 function initTheme() {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
-        document.getElementById('theme-toggle').checked = true;
-        document.documentElement.setAttribute('data-theme', 'light');
-    }
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    applyTheme(savedTheme);
+    updateThemePickerUI(savedTheme);
 }
 
 function showEmailLoginFields() {
@@ -939,7 +937,9 @@ function bindEvents() {
     });
     updateLoginLangButtons(AppState.currentLang);
     onboardingDomain.init();
-    document.getElementById('theme-toggle').addEventListener('change', changeTheme);
+    document.querySelectorAll('[data-theme-option]').forEach((btn) => {
+        btn.addEventListener('click', () => changeTheme(btn.dataset.themeOption));
+    });
     document.getElementById('push-toggle').addEventListener('change', bridgeTogglePushNotifications);
     document.getElementById('gps-toggle').addEventListener('change', toggleGPS);
     document.getElementById('sync-toggle').addEventListener('change', toggleHealthSync);
@@ -6402,10 +6402,26 @@ function getTodayKST() {
 
 // --- Reels 기능: modules/reels.js로 분리됨 ---
 
-function changeTheme() {
-    const light = document.getElementById('theme-toggle').checked;
-    document.documentElement.setAttribute('data-theme', light ? 'light' : '');
-    localStorage.setItem('theme', light ? 'light' : 'dark');
+function applyTheme(theme) {
+    const safeTheme = (theme === 'light' || theme === 'rose') ? theme : 'dark';
+    if (safeTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', '');
+    } else {
+        document.documentElement.setAttribute('data-theme', safeTheme);
+    }
+    localStorage.setItem('theme', safeTheme);
+}
+
+function updateThemePickerUI(theme) {
+    document.querySelectorAll('[data-theme-option]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.themeOption === theme);
+    });
+}
+
+function changeTheme(theme) {
+    const safeTheme = (theme === 'light' || theme === 'rose') ? theme : 'dark';
+    applyTheme(safeTheme);
+    updateThemePickerUI(safeTheme);
 }
 
 // --- GPS 및 건강 데이터 설정 ---
