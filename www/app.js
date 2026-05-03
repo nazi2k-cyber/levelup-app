@@ -6750,6 +6750,21 @@ async function syncHealthData(showMsg = false) {
     return healthService.syncHealthData({ showMsg });
 }
 
+
+async function openSettingsAndEnableFitnessSync() {
+    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('settings')?.classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+    const toggle = document.getElementById('sync-toggle');
+    if (!toggle) return;
+    if (!toggle.checked) {
+        toggle.checked = true;
+    }
+    await runHealthSyncEnableFlow({ showMsg: true });
+}
+window.openSettingsAndEnableFitnessSync = openSettingsAndEnableFitnessSync;
+
 async function openHealthConnectEntryPoint() {
     const healthConnectUrl = 'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
     try {
@@ -6804,7 +6819,7 @@ function updateStepCountUI() {
                         let result = req2Text;
                         for (const label of myInfoLabels) {
                             if (req2Text.includes(label)) {
-                                result = req2Text.replace(label, `<a href="javascript:void(0)" onclick="document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active'));document.getElementById('settings').classList.add('active');document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));" style="color:inherit;text-decoration:underline;">${label}</a>`);
+                                result = req2Text.replace(label, `<a href="javascript:void(0)" onclick="openSettingsAndEnableFitnessSync()" style="color:inherit;text-decoration:underline;">${label}</a>`);
                                 break;
                             }
                         }
