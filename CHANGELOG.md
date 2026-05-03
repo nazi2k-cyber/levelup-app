@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.745] - 2026-05-03
+
+### 변경
+- docs: 앱스토어 출시 전략 및 GitHub Private 전환 검토 문서 추가
+
 ## [1.0.744] - 2026-05-03
 
 ### 변경
