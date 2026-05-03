@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.722] - 2026-05-03
+
+### 변경
+- Fix quest trend chart render crash caused by undefined lang
+
 ## [1.0.721] - 2026-05-02
 
 ### 변경
