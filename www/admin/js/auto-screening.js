@@ -136,6 +136,57 @@ function renderDashboard() {
         const force = document.getElementById("chk-planner-force").checked;
         batchScreen(force);
     });
+
+    // 대시보드 진입 시 스케줄러 설정 자동 로드
+    loadSchedulerConfig();
+}
+
+async function loadSchedulerConfig() {
+    const area = document.getElementById("as-scheduler-area");
+    if (!area) return;
+    area.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
+    try {
+        _config = await callAdmin("getScreeningConfig");
+        const s = _config.settings || {};
+        area.innerHTML = `
+            <div style="display:grid; gap:10px;">
+                <label class="as-toggle-row"><input type="checkbox" id="cfg-sch-planner-enabled" ${s.plannerSchedulerEnabled ? "checked" : ""}><span>플래너 스케줄러 활성화</span></label>
+                <div><label class="text-sub text-sm">플래너 주기(분)</label><input id="cfg-sch-planner-min" type="number" min="1" max="1440" value="${Number(s.plannerSchedulerIntervalMin) || 30}" style="margin-left:8px; width:90px;"></div>
+                <label class="as-toggle-row"><input type="checkbox" id="cfg-sch-profile-enabled" ${s.profileSchedulerEnabled ? "checked" : ""}><span>프로필 스케줄러 활성화</span></label>
+                <div><label class="text-sub text-sm">프로필 주기(분)</label><input id="cfg-sch-profile-min" type="number" min="1" max="1440" value="${Number(s.profileSchedulerIntervalMin) || 60}" style="margin-left:8px; width:90px;"></div>
+                <div><button class="btn btn-primary btn-sm" id="btn-save-scheduler">스케줄러 저장</button><span id="scheduler-save-result" style="margin-left:8px;"></span></div>
+            </div>
+        `;
+        document.getElementById("btn-save-scheduler").addEventListener("click", saveSchedulerConfig);
+        tok("AutoScreen", "스케줄러 설정 로드 완료");
+    } catch (e) {
+        terror("AutoScreen", "스케줄러 설정 로드 실패: " + e.message);
+        area.innerHTML = `
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <p class="text-error text-sm" style="margin:0;">스케줄러 로드 실패: ${e.message}</p>
+                <button class="btn btn-outline btn-sm" id="btn-retry-scheduler">다시 시도</button>
+            </div>
+        `;
+        const retryBtn = document.getElementById("btn-retry-scheduler");
+        if (retryBtn) retryBtn.addEventListener("click", loadSchedulerConfig);
+    }
+}
+
+async function saveSchedulerConfig() {
+    const resultEl = document.getElementById("scheduler-save-result");
+    resultEl.innerHTML = '<span class="text-sub text-sm">저장 중...</span>';
+    const settings = {
+        plannerSchedulerEnabled: document.getElementById("cfg-sch-planner-enabled").checked,
+        plannerSchedulerIntervalMin: Math.max(1, Number(document.getElementById("cfg-sch-planner-min").value) || 30),
+        profileSchedulerEnabled: document.getElementById("cfg-sch-profile-enabled").checked,
+        profileSchedulerIntervalMin: Math.max(1, Number(document.getElementById("cfg-sch-profile-min").value) || 60),
+    };
+    try {
+        await callAdmin("updateScreeningConfig", { settings });
+        resultEl.innerHTML = '<span class="text-success text-sm">저장 완료!</span>';
+    } catch (e) {
+        resultEl.innerHTML = `<span class="text-error text-sm">실패: ${e.message}</span>`;
+    }
 }
 
 async function loadSchedulerConfig() {
