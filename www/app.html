@@ -1129,8 +1129,12 @@
                         </select>
                     </div>
                     <div class="setting-row">
-                        <span data-i18n="set_theme">라이트 모드</span>
-                        <label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider"></span></label>
+                        <span data-i18n="set_theme">테마 설정</span>
+                        <div id="theme-picker" class="theme-picker" aria-label="Theme picker">
+                            <button type="button" class="theme-dot active" data-theme-option="dark" title="Dark theme"></button>
+                            <button type="button" class="theme-dot" data-theme-option="light" title="Light theme"></button>
+                            <button type="button" class="theme-dot" data-theme-option="rose" title="Rose theme"></button>
+                        </div>
                     </div>
                     <div id="premium-expiry-row" class="setting-row" style="display:none;">
                         <span data-i18n="set_premium_expiry">프리미엄 사용기간</span>
