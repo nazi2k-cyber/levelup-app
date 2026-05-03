@@ -6468,12 +6468,13 @@ function initBackgroundTheme() {
 }
 function renderBackgroundThemeTiles() {
     const grid = document.getElementById('bg-theme-grid'); if (!grid) return;
+    const lang = i18n[AppState.currentLang] || i18n.ko;
     const basic = BACKGROUND_THEME_OPTIONS.filter((opt) => DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
     const premium = BACKGROUND_THEME_OPTIONS.filter((opt) => !DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
     const renderSection = (title, items) => `
         <div style="grid-column:1 / -1; font-size:0.8rem; color:var(--neon-blue); font-weight:700; margin:8px 2px 4px;">${title}</div>
         ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}"><span class="bg-theme-tile-label">${opt.label}</span></button>`).join('')}`;
-    grid.innerHTML = `${renderSection('기본 (7종)', basic)}${renderSection('프리미엄', premium)}`;
+    grid.innerHTML = `${renderSection(lang.bg_theme_basic || '기본 (7종)', basic)}${renderSection(lang.bg_theme_premium || '프리미엄', premium)}`;
     grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => applyBackgroundTheme(el.dataset.bgTheme)));
     updateBackgroundThemeTileUI(localStorage.getItem('backgroundTheme') || 'default');
 }
