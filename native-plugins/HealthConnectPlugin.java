@@ -171,7 +171,6 @@ public class HealthConnectPlugin extends Plugin {
 
         if (!hasActivityRecognitionPermission()) {
             logInfo("ACTIVITY_RECOGNITION permission missing; requesting runtime permission");
-            call.setKeepAlive(true);
             savedPermissionCall = call;
             pluginRequestPermissions(
                     new String[]{Manifest.permission.ACTIVITY_RECOGNITION},
@@ -190,6 +189,7 @@ public class HealthConnectPlugin extends Plugin {
         if (requestCode == ACTIVITY_RECOGNITION_REQUEST_CODE && savedPermissionCall != null) {
             PluginCall call = savedPermissionCall;
             savedPermissionCall = null;
+            call.setKeepAlive(false);
 
             boolean granted = grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED;
