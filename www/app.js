@@ -28,7 +28,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.741';
+const APP_VERSION = '1.0.743';
 window.__APP_VERSION__ = APP_VERSION;
 if (window.AppLogger) {
     AppLogger.info('[AppStart] 빌드 버전: v' + APP_VERSION);
@@ -6473,10 +6473,10 @@ function renderBackgroundThemeTiles() {
     const basic = BACKGROUND_THEME_OPTIONS.filter((opt) => DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
     const premium = BACKGROUND_THEME_OPTIONS.filter((opt) => !DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
     const getThemeLabel = (themeId) => lang[`bg_theme_name_${themeId.replace(/-/g, '_')}`] || (i18n.ko && i18n.ko[`bg_theme_name_${themeId.replace(/-/g, '_')}`]) || themeId;
-    const renderSection = (title, items) => `
+    const renderSection = (title, items, hideLabels = false) => `
         <div style="grid-column:1 / -1; font-size:0.8rem; color:var(--neon-blue); font-weight:700; margin:8px 2px 4px;">${title}</div>
-        ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}"><span class="bg-theme-tile-label">${getThemeLabel(opt.id)}</span></button>`).join('')}`;
-    grid.innerHTML = `${renderSection(lang.bg_theme_basic || '기본 (7종)', basic)}${renderSection(lang.bg_theme_premium || '프리미엄', premium)}`;
+        ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}">${hideLabels ? '' : `<span class="bg-theme-tile-label">${getThemeLabel(opt.id)}</span>`}</button>`).join('')}`;
+    grid.innerHTML = `${renderSection(lang.bg_theme_basic || '기본 (7종)', basic, true)}${renderSection(lang.bg_theme_premium || '프리미엄', premium)}`;
     grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => applyBackgroundTheme(el.dataset.bgTheme)));
     updateBackgroundThemeTileUI(localStorage.getItem('backgroundTheme') || 'default');
 }
