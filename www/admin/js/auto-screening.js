@@ -84,6 +84,14 @@ function renderDashboard() {
     const el = document.getElementById("as-view-content");
     el.innerHTML = `
         <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px; flex-wrap:wrap;">
+                <h2>스케줄러 생성</h2>
+                <button class="btn btn-outline btn-sm" id="btn-load-scheduler">설정 불러오기</button>
+            </div>
+            <p class="text-sub text-sm mb-8">자동 스크리닝 스케줄러를 주기(n분)로 실행합니다.</p>
+            <div id="as-scheduler-area"></div>
+        </div>
+        <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <h2>스크리닝-프로필</h2>
                 <div style="display:flex; gap:8px; align-items:center;">
@@ -117,6 +125,7 @@ function renderDashboard() {
         </div>
     `;
 
+    document.getElementById("btn-load-scheduler").addEventListener("click", loadSchedulerConfig);
     document.getElementById("btn-refresh-stats-profile").addEventListener("click", () => loadStats("profile"));
     document.getElementById("btn-refresh-stats-planner").addEventListener("click", () => loadStats("planner"));
     document.getElementById("btn-batch-screen-profile").addEventListener("click", () => {
@@ -127,6 +136,44 @@ function renderDashboard() {
         const force = document.getElementById("chk-planner-force").checked;
         batchScreen(force);
     });
+}
+
+async function loadSchedulerConfig() {
+    const area = document.getElementById("as-scheduler-area");
+    area.innerHTML = '<p class="text-sub text-sm">로딩 중...</p>';
+    try {
+        _config = await callAdmin("getScreeningConfig");
+        const s = _config.settings || {};
+        area.innerHTML = `
+            <div style="display:grid; gap:10px;">
+                <label class="as-toggle-row"><input type="checkbox" id="cfg-sch-planner-enabled" ${s.plannerSchedulerEnabled ? "checked" : ""}><span>플래너 스케줄러 활성화</span></label>
+                <div><label class="text-sub text-sm">플래너 주기(분)</label><input id="cfg-sch-planner-min" type="number" min="1" max="1440" value="${Number(s.plannerSchedulerIntervalMin) || 30}" style="margin-left:8px; width:90px;"></div>
+                <label class="as-toggle-row"><input type="checkbox" id="cfg-sch-profile-enabled" ${s.profileSchedulerEnabled ? "checked" : ""}><span>프로필 스케줄러 활성화</span></label>
+                <div><label class="text-sub text-sm">프로필 주기(분)</label><input id="cfg-sch-profile-min" type="number" min="1" max="1440" value="${Number(s.profileSchedulerIntervalMin) || 60}" style="margin-left:8px; width:90px;"></div>
+                <div><button class="btn btn-primary btn-sm" id="btn-save-scheduler">스케줄러 저장</button><span id="scheduler-save-result" style="margin-left:8px;"></span></div>
+            </div>
+        `;
+        document.getElementById("btn-save-scheduler").addEventListener("click", saveSchedulerConfig);
+    } catch (e) {
+        area.innerHTML = `<p class="text-error text-sm">오류: ${e.message}</p>`;
+    }
+}
+
+async function saveSchedulerConfig() {
+    const resultEl = document.getElementById("scheduler-save-result");
+    resultEl.innerHTML = '<span class="text-sub text-sm">저장 중...</span>';
+    const settings = {
+        plannerSchedulerEnabled: document.getElementById("cfg-sch-planner-enabled").checked,
+        plannerSchedulerIntervalMin: Math.max(1, Number(document.getElementById("cfg-sch-planner-min").value) || 30),
+        profileSchedulerEnabled: document.getElementById("cfg-sch-profile-enabled").checked,
+        profileSchedulerIntervalMin: Math.max(1, Number(document.getElementById("cfg-sch-profile-min").value) || 60),
+    };
+    try {
+        await callAdmin("updateScreeningConfig", { settings });
+        resultEl.innerHTML = '<span class="text-success text-sm">저장 완료!</span>';
+    } catch (e) {
+        resultEl.innerHTML = `<span class="text-error text-sm">실패: ${e.message}</span>`;
+    }
 }
 
 async function loadStats(type) {
