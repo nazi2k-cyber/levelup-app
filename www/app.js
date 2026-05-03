@@ -1231,7 +1231,9 @@ async function _doSaveUserData() {
             big5Str: JSON.stringify(AppState.user.big5 || null),
             futureNetworthStr: localStorage.getItem('fnw_consent') ? (localStorage.getItem('future_networth_config') || '') : '',
             schedulePresetsStr: localStorage.getItem('planner_schedule_presets') || '{}',
-            plannerRewardsStr: localStorage.getItem('planner_rewards') || '{}'
+            plannerRewardsStr: localStorage.getItem('planner_rewards') || '{}',
+            theme: localStorage.getItem('theme') || 'dark',
+            backgroundTheme: localStorage.getItem('backgroundTheme') || 'default'
         };
         // Firestore 보안 규칙 크기 제한에 맞춰 클라이언트에서 사전 검증/절삭
         const _strLimits = {
@@ -1291,7 +1293,7 @@ async function _doSaveUserData() {
                     'streakStr','rareTitleStr','hasActiveReels','_profileUploadFailed','privateAccount',
                     'ddaysStr','ddayCaption','lastBonusExpDate','lifeStatusStr',
                     'habitProjectStr','libraryStr','moviesStr','runningCalcHistoryStr','ormCalcHistoryStr',
-                    'big5Str','futureNetworthStr','schedulePresetsStr','questSettingsStr'
+                    'big5Str','futureNetworthStr','schedulePresetsStr','questSettingsStr','theme','backgroundTheme'
                 ]);
                 // 기존 문서의 허용되지 않은 필드
                 const _extraFields = _existingKeys.filter(k => !_allowedFields.has(k));
@@ -1495,6 +1497,11 @@ async function loadUserDataFromDB(user) {
             if(data.privateAccount !== undefined) { AppState.user.privateAccount = data.privateAccount; AppState._privateAccountExplicit = true; }
             if(data.fcmToken !== undefined) AppState.user.fcmToken = data.fcmToken || null;
             // 언어 설정 복원 (로그아웃 시 localStorage.clear() 대응)
+            if (data.theme) {
+                applyTheme(data.theme);
+                updateThemePickerUI(data.theme);
+            }
+            if (data.backgroundTheme) applyBackgroundTheme(data.backgroundTheme);
             if(data.lang) {
                 AppState.currentLang = data.lang;
                 try { localStorage.setItem('lang', data.lang); } catch(e) {}
@@ -3595,16 +3602,12 @@ async function logout() {
     await fbSignOut(auth);
     // 관리자 설정 값 및 테마 설정은 clear 전에 보존
     const _loginLogVisible = localStorage.getItem('loginLogVisible');
-    const _theme = localStorage.getItem('theme');
-    const _backgroundTheme = localStorage.getItem('backgroundTheme');
     const _ratingDone = localStorage.getItem('levelup_rating_done');
     const _ratingAskedTs = localStorage.getItem('levelup_rating_asked_ts');
     const _ratingInstallTs = localStorage.getItem('levelup_install_ts');
     const _ratingSessionCount = localStorage.getItem('levelup_session_count');
     localStorage.clear();
     if (_loginLogVisible !== null) localStorage.setItem('loginLogVisible', _loginLogVisible);
-    if (_theme !== null) localStorage.setItem('theme', _theme);
-    if (_backgroundTheme !== null) localStorage.setItem('backgroundTheme', _backgroundTheme);
     if (_ratingDone !== null) localStorage.setItem('levelup_rating_done', _ratingDone);
     if (_ratingAskedTs !== null) localStorage.setItem('levelup_rating_asked_ts', _ratingAskedTs);
     if (_ratingInstallTs !== null) localStorage.setItem('levelup_install_ts', _ratingInstallTs);
@@ -3645,12 +3648,8 @@ async function deleteMyAccount() {
         if (result.data && result.data.success) {
             AppLogger.info('[Auth] 계정 삭제 완료');
             const _loginLogVisible = localStorage.getItem('loginLogVisible');
-            const _theme = localStorage.getItem('theme');
-            const _backgroundTheme = localStorage.getItem('backgroundTheme');
             localStorage.clear();
             if (_loginLogVisible !== null) localStorage.setItem('loginLogVisible', _loginLogVisible);
-            if (_theme !== null) localStorage.setItem('theme', _theme);
-            if (_backgroundTheme !== null) localStorage.setItem('backgroundTheme', _backgroundTheme);
             alert(t.del_done || "계정이 삭제되었습니다. 이용해 주셔서 감사합니다.");
             window.location.reload();
         }
@@ -6410,14 +6409,17 @@ function getTodayKST() {
 
 // --- Reels 기능: modules/reels.js로 분리됨 ---
 
+const THEME_OPTIONS = ['dark', 'light', 'rose', 'forest', 'sunset', 'violet', 'ocean'];
+
 function applyTheme(theme) {
-    const safeTheme = ['dark', 'light', 'rose', 'forest', 'sunset', 'violet', 'ocean'].includes(theme) ? theme : 'dark';
+    const safeTheme = THEME_OPTIONS.includes(theme) ? theme : 'dark';
     if (safeTheme === 'dark') {
         document.documentElement.setAttribute('data-theme', '');
     } else {
         document.documentElement.setAttribute('data-theme', safeTheme);
     }
     localStorage.setItem('theme', safeTheme);
+    if (auth.currentUser) saveUserData();
 }
 
 function updateThemePickerUI(theme) {
@@ -6427,7 +6429,7 @@ function updateThemePickerUI(theme) {
 }
 
 function changeTheme(theme) {
-    const safeTheme = ['dark', 'light', 'rose', 'forest', 'sunset', 'violet', 'ocean'].includes(theme) ? theme : 'dark';
+    const safeTheme = THEME_OPTIONS.includes(theme) ? theme : 'dark';
     applyTheme(safeTheme);
     updateThemePickerUI(safeTheme);
 }
@@ -6457,6 +6459,7 @@ const BACKGROUND_THEME_OPTIONS = [
     { id:'pearl', label:'펄', bg:'#2e3442' }, { id:'olive', label:'올리브', bg:'#2f3520' }, { id:'cobalt', label:'코발트', bg:'#15254a' },
     { id:'stone', label:'스톤', bg:'#2c2f36' }, { id:'mint', label:'민트', bg:'#183332' }
 ];
+const DEFAULT_BACKGROUND_THEME_IDS = ['default', 'pearl', 'sunset', 'forest', 'violet', 'cobalt', 'midnight'];
 
 function initBackgroundTheme() {
     renderBackgroundThemeTiles();
@@ -6465,7 +6468,12 @@ function initBackgroundTheme() {
 }
 function renderBackgroundThemeTiles() {
     const grid = document.getElementById('bg-theme-grid'); if (!grid) return;
-    grid.innerHTML = BACKGROUND_THEME_OPTIONS.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}"><span class="bg-theme-tile-label">${opt.label}</span></button>`).join('');
+    const basic = BACKGROUND_THEME_OPTIONS.filter((opt) => DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
+    const premium = BACKGROUND_THEME_OPTIONS.filter((opt) => !DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
+    const renderSection = (title, items) => `
+        <div style="grid-column:1 / -1; font-size:0.8rem; color:var(--neon-blue); font-weight:700; margin:8px 2px 4px;">${title}</div>
+        ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}"><span class="bg-theme-tile-label">${opt.label}</span></button>`).join('')}`;
+    grid.innerHTML = `${renderSection('기본 (7종)', basic)}${renderSection('프리미엄', premium)}`;
     grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => applyBackgroundTheme(el.dataset.bgTheme)));
     updateBackgroundThemeTileUI(localStorage.getItem('backgroundTheme') || 'default');
 }
@@ -6476,6 +6484,7 @@ function applyBackgroundTheme(themeId) {
     else document.body.style.removeProperty('background-size');
     localStorage.setItem('backgroundTheme', selected.id);
     updateBackgroundThemeTileUI(selected.id);
+    if (auth.currentUser) saveUserData();
 }
 function updateBackgroundThemeTileUI(themeId) {
     document.querySelectorAll('[data-bg-theme]').forEach((el) => el.classList.toggle('active', el.dataset.bgTheme === themeId));

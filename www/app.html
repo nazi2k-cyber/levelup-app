@@ -401,7 +401,6 @@
                             <h2 data-i18n="radar_title" style="margin:0;">STAT RADAR</h2>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px;">
-                        <button class="btn-info-sm" id="btn-bg-theme" type="button">🎨 배경테마</button>
                         <button class="btn-info-sm" id="btn-status-info">ℹ️ <span data-i18n="btn_status_info">가이드</span></button>
                         </div>
                     </div>
@@ -1139,6 +1138,7 @@
                     </div>
                     <div class="setting-row">
                         <span data-i18n="set_theme">색상 테마</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
                         <div id="theme-picker" class="theme-picker" aria-label="Theme picker">
                             <button type="button" class="theme-dot active" data-theme-option="dark" title="Dark theme"></button>
                             <button type="button" class="theme-dot" data-theme-option="light" title="Light theme"></button>
@@ -1147,6 +1147,8 @@
                             <button type="button" class="theme-dot" data-theme-option="sunset" title="Sunset theme"></button>
                             <button type="button" class="theme-dot" data-theme-option="violet" title="Violet theme"></button>
                             <button type="button" class="theme-dot" data-theme-option="ocean" title="Ocean theme"></button>
+                        </div>
+                        <button class="btn-info-sm" id="btn-bg-theme" type="button">🎨 배경테마</button>
                         </div>
                     </div>
                     <div id="premium-expiry-row" class="setting-row" style="display:none;">
@@ -2401,7 +2403,6 @@
                 <button class="modal-close" id="btn-bg-theme-close" type="button">×</button>
             </div>
             <div class="modal-body">
-                <div style="font-size:0.72rem; color:var(--text-sub); margin-bottom:10px;">설정 &gt; 색상 테마의 기본 배경색 포함 단색/패턴 30종</div>
                 <div id="bg-theme-grid" class="bg-theme-grid"></div>
             </div>
         </div>
