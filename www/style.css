@@ -3525,3 +3525,8 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
     color: var(--text-main);
 }
 [data-theme="light"] .orm-guide-table td { border-bottom-color: rgba(0,0,0,0.06); }
+
+.bg-theme-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }
+.bg-theme-tile { position:relative; height:54px; border-radius:10px; border:1.5px solid var(--border-color); cursor:pointer; }
+.bg-theme-tile.active { outline:2px solid var(--neon-blue); outline-offset:1px; }
+.bg-theme-tile-label { position:absolute; left:6px; bottom:4px; font-size:0.58rem; background:rgba(0,0,0,0.45); color:#fff; padding:1px 4px; border-radius:4px; }
