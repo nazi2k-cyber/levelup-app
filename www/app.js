@@ -6436,28 +6436,28 @@ function changeTheme(theme) {
 
 
 const BACKGROUND_THEME_OPTIONS = [
-    { id:'default', label:'기본', bg:'linear-gradient(180deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1a 100%)' },
-    { id:'midnight', label:'미드나잇', bg:'linear-gradient(180deg, #05070f, #111a2f, #0a1224)' },
-    { id:'navy', label:'네이비', bg:'#0c1f3a' }, { id:'slate', label:'슬레이트', bg:'#1e293b' }, { id:'charcoal', label:'차콜', bg:'#20242f' },
-    { id:'forest', label:'포레스트', bg:'#10251f' }, { id:'moss', label:'모스', bg:'#1d3029' }, { id:'sand', label:'샌드', bg:'#3c3228' },
-    { id:'wine', label:'와인', bg:'#321d2a' }, { id:'violet', label:'바이올렛', bg:'#221a3d' },
-    { id:'carbon', label:'카본', bg:'repeating-linear-gradient(45deg, #111 0 8px, #1a1a1a 8px 16px)' },
-    { id:'grid-blue', label:'블루그리드', bg:'linear-gradient(#0f1b2f,#0f1b2f),linear-gradient(90deg,rgba(0,217,255,.18) 1px,transparent 1px),linear-gradient(rgba(0,217,255,.18) 1px,transparent 1px)', size:'auto,22px 22px,22px 22px' },
-    { id:'grid-gold', label:'골드그리드', bg:'linear-gradient(#231b10,#231b10),linear-gradient(90deg,rgba(255,204,0,.2) 1px,transparent 1px),linear-gradient(rgba(255,204,0,.2) 1px,transparent 1px)', size:'auto,24px 24px,24px 24px' },
-    { id:'dot-cyan', label:'시안도트', bg:'radial-gradient(circle at 1px 1px, rgba(0,217,255,.45) 1px, transparent 0), #081b24', size:'16px 16px' },
-    { id:'dot-rose', label:'로즈도트', bg:'radial-gradient(circle at 1px 1px, rgba(255,92,166,.4) 1px, transparent 0), #22131b', size:'16px 16px' },
-    { id:'diag-purple', label:'퍼플대각', bg:'repeating-linear-gradient(135deg, #1a1430 0 10px, #231d42 10px 20px)' },
-    { id:'diag-teal', label:'틸대각', bg:'repeating-linear-gradient(135deg, #0f2528 0 10px, #133236 10px 20px)' },
-    { id:'stripe-blue', label:'블루스트라이프', bg:'repeating-linear-gradient(90deg, #12223d 0 7px, #0b1830 7px 14px)' },
-    { id:'stripe-red', label:'레드스트라이프', bg:'repeating-linear-gradient(90deg, #301621 0 7px, #241019 7px 14px)' },
-    { id:'honeycomb', label:'허니콤', bg:'radial-gradient(circle at 50% 50%, rgba(0,217,255,.15) 18%, transparent 19%),#101827', size:'22px 22px' },
-    { id:'cross', label:'크로스', bg:'linear-gradient(90deg, transparent 49%, rgba(255,255,255,.12) 50%, transparent 51%),linear-gradient(transparent 49%, rgba(255,255,255,.12) 50%, transparent 51%),#1a1f2e', size:'18px 18px,18px 18px' },
-    { id:'waves', label:'웨이브', bg:'radial-gradient(ellipse at top, rgba(0,217,255,.2), transparent 60%), #0d1526' },
-    { id:'sunset', label:'선셋', bg:'linear-gradient(180deg, #3b1d2e 0%, #4f2b39 50%, #1f1230 100%)' },
-    { id:'aurora', label:'오로라', bg:'linear-gradient(120deg, #112245, #1a3f3e, #291a45)' },
-    { id:'nebula', label:'네뷸라', bg:'radial-gradient(circle at 20% 20%, #2f2a55 0%, #15122c 45%, #090b16 100%)' },
-    { id:'pearl', label:'펄', bg:'#2e3442' }, { id:'olive', label:'올리브', bg:'#2f3520' }, { id:'cobalt', label:'코발트', bg:'#15254a' },
-    { id:'stone', label:'스톤', bg:'#2c2f36' }, { id:'mint', label:'민트', bg:'#183332' }
+    { id:'default', bg:'linear-gradient(180deg, #0a0a14 0%, #1a1a2e 50%, #0f0f1a 100%)' },
+    { id:'midnight', bg:'linear-gradient(180deg, #05070f, #111a2f, #0a1224)' },
+    { id:'navy', bg:'#0c1f3a' }, { id:'slate', bg:'#1e293b' }, { id:'charcoal', bg:'#20242f' },
+    { id:'forest', bg:'#10251f' }, { id:'moss', bg:'#1d3029' }, { id:'sand', bg:'#3c3228' },
+    { id:'wine', bg:'#321d2a' }, { id:'violet', bg:'#221a3d' },
+    { id:'carbon', bg:'repeating-linear-gradient(45deg, #111 0 8px, #1a1a1a 8px 16px)' },
+    { id:'grid-blue', bg:'linear-gradient(#0f1b2f,#0f1b2f),linear-gradient(90deg,rgba(0,217,255,.18) 1px,transparent 1px),linear-gradient(rgba(0,217,255,.18) 1px,transparent 1px)', size:'auto,22px 22px,22px 22px' },
+    { id:'grid-gold', bg:'linear-gradient(#231b10,#231b10),linear-gradient(90deg,rgba(255,204,0,.2) 1px,transparent 1px),linear-gradient(rgba(255,204,0,.2) 1px,transparent 1px)', size:'auto,24px 24px,24px 24px' },
+    { id:'dot-cyan', bg:'radial-gradient(circle at 1px 1px, rgba(0,217,255,.45) 1px, transparent 0), #081b24', size:'16px 16px' },
+    { id:'dot-rose', bg:'radial-gradient(circle at 1px 1px, rgba(255,92,166,.4) 1px, transparent 0), #22131b', size:'16px 16px' },
+    { id:'diag-purple', bg:'repeating-linear-gradient(135deg, #1a1430 0 10px, #231d42 10px 20px)' },
+    { id:'diag-teal', bg:'repeating-linear-gradient(135deg, #0f2528 0 10px, #133236 10px 20px)' },
+    { id:'stripe-blue', bg:'repeating-linear-gradient(90deg, #12223d 0 7px, #0b1830 7px 14px)' },
+    { id:'stripe-red', bg:'repeating-linear-gradient(90deg, #301621 0 7px, #241019 7px 14px)' },
+    { id:'honeycomb', bg:'radial-gradient(circle at 50% 50%, rgba(0,217,255,.15) 18%, transparent 19%),#101827', size:'22px 22px' },
+    { id:'cross', bg:'linear-gradient(90deg, transparent 49%, rgba(255,255,255,.12) 50%, transparent 51%),linear-gradient(transparent 49%, rgba(255,255,255,.12) 50%, transparent 51%),#1a1f2e', size:'18px 18px,18px 18px' },
+    { id:'waves', bg:'radial-gradient(ellipse at top, rgba(0,217,255,.2), transparent 60%), #0d1526' },
+    { id:'sunset', bg:'linear-gradient(180deg, #3b1d2e 0%, #4f2b39 50%, #1f1230 100%)' },
+    { id:'aurora', bg:'linear-gradient(120deg, #112245, #1a3f3e, #291a45)' },
+    { id:'nebula', bg:'radial-gradient(circle at 20% 20%, #2f2a55 0%, #15122c 45%, #090b16 100%)' },
+    { id:'pearl', bg:'#2e3442' }, { id:'olive', bg:'#2f3520' }, { id:'cobalt', bg:'#15254a' },
+    { id:'stone', bg:'#2c2f36' }, { id:'mint', bg:'#183332' }
 ];
 const DEFAULT_BACKGROUND_THEME_IDS = ['default', 'pearl', 'sunset', 'forest', 'violet', 'cobalt', 'midnight'];
 
@@ -6471,9 +6471,10 @@ function renderBackgroundThemeTiles() {
     const lang = i18n[AppState.currentLang] || i18n.ko;
     const basic = BACKGROUND_THEME_OPTIONS.filter((opt) => DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
     const premium = BACKGROUND_THEME_OPTIONS.filter((opt) => !DEFAULT_BACKGROUND_THEME_IDS.includes(opt.id));
+    const getThemeLabel = (themeId) => lang[`bg_theme_name_${themeId.replace(/-/g, '_')}`] || (i18n.ko && i18n.ko[`bg_theme_name_${themeId.replace(/-/g, '_')}`]) || themeId;
     const renderSection = (title, items) => `
         <div style="grid-column:1 / -1; font-size:0.8rem; color:var(--neon-blue); font-weight:700; margin:8px 2px 4px;">${title}</div>
-        ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}"><span class="bg-theme-tile-label">${opt.label}</span></button>`).join('')}`;
+        ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}"><span class="bg-theme-tile-label">${getThemeLabel(opt.id)}</span></button>`).join('')}`;
     grid.innerHTML = `${renderSection(lang.bg_theme_basic || '기본 (7종)', basic)}${renderSection(lang.bg_theme_premium || '프리미엄', premium)}`;
     grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => applyBackgroundTheme(el.dataset.bgTheme)));
     updateBackgroundThemeTileUI(localStorage.getItem('backgroundTheme') || 'default');
