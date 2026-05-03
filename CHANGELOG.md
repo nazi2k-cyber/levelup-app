@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.734] - 2026-05-03
+
+### 변경
+- 명상 카드 간단 실행 방법 접기 토글 추가 및 가이드 모달 제거
+
 ## [1.0.733] - 2026-05-03
 
 ### 변경
