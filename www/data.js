@@ -17,6 +17,7 @@ const i18n = {
         raid_title: "Local Raid", raid_boss: "⚠️ 연합 보스 출현", raid_desc1: "이상 현상이 감지되었습니다.", raid_desc2: "연합 목표를 달성하고 전리품을 획득하세요.", raid_part: "참여 인원: ", raid_btn: "레이드 입장하기", raid_joined: "참여 완료", raid_success: "레이드 완료!", raid_waiting: "던전 출현 대기 중...", raid_time_info: "출현 시간: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 글로벌 랭킹", soc_friend: "👥 팔로잉", soc_follower: "👤 팔로워", sort_tot: "종합스코어", sort_streak: "🔥 출석왕", sort_str: "근력", sort_int: "지능", sort_cha: "매력", sort_vit: "체력", sort_wlth: "재력", sort_agi: "민첩", sort_steps: "🚶 걸음수", sort_books: "📚 독서왕", sort_movies: "🎬 영화광", sort_savings: "💰 저축왕",
         step_title: "오늘의 걸음수", step_unit: "보", step_next_reward: "다음 보상까지 {n}보 남음",
+        step_no_perm: "설정에서 피트니스 동기화를 활성화하세요",
         step_req_title: "걸음수 연동 필수 조건",
         step_req_1: "Health Connect 앱 설치 필요",
         step_req_2: "내 정보 → 피트니스 동기화(Health Connect) 활성화",
@@ -227,6 +228,7 @@ const i18n = {
         // 퀘스트 통계 서브탭
         quest_tab_main: "📜 퀘스트", quest_tab_stats: "📊 통계",
         qstats_monthly_title: "월간 퀘스트 통계", qstats_annual_title: "연간 퀘스트 통계",
+        qstats_trend_title: "퀘스트 추이 차트", qstats_range_weekly: "이번 주 (일~토)", qstats_range_monthly: "이번 달 (1일~말일)",
         qstats_empty: "퀘스트를 완료하면 통계가 기록됩니다.",
         qstats_diy_only: "사이드 퀘스트만",
         qstats_active_days: "활동일", qstats_total_completed: "완료 퀘스트", qstats_avg_rate: "평균 달성률", qstats_perfect_days: "올클리어",
@@ -828,6 +830,7 @@ const i18n = {
         raid_title: "Local Raid", raid_boss: "⚠️ Alliance Boss", raid_desc1: "Anomaly detected.", raid_desc2: "Achieve alliance goals to get loot.", raid_part: "Participants: ", raid_btn: "Enter Raid", raid_joined: "Joined", raid_success: "Raid Success!", raid_waiting: "Waiting for Dungeon...", raid_time_info: "Open Hours: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 Global Rank", soc_friend: "👥 Following", soc_follower: "👤 Followers", sort_tot: "Total", sort_streak: "🔥 Attendance King", sort_str: "STR", sort_int: "INT", sort_cha: "CHA", sort_vit: "VIT", sort_wlth: "WLTH", sort_agi: "AGI", sort_steps: "🚶 Steps", sort_books: "📚 Books Read", sort_movies: "🎬 Cinephile", sort_savings: "💰 Savings King",
         step_title: "Today's Steps", step_unit: "steps", step_next_reward: "{n} steps to next reward",
+        step_no_perm: "Enable fitness sync in Settings",
         step_req_title: "Step Tracking Requirements",
         step_req_1: "Health Connect app required",
         step_req_2: "My Info → Enable Fitness Sync (Health Connect)",
@@ -1034,6 +1037,7 @@ const i18n = {
         // Quest Stats Subtab
         quest_tab_main: "📜 Quests", quest_tab_stats: "📊 Stats",
         qstats_monthly_title: "Monthly Quest Stats", qstats_annual_title: "Annual Quest Stats",
+        qstats_trend_title: "Quest Trend Chart", qstats_range_weekly: "This Week (Sun–Sat)", qstats_range_monthly: "This Month (1st–Last day)",
         qstats_empty: "Complete quests to start tracking statistics.",
         qstats_diy_only: "Side Quests Only",
         qstats_active_days: "Active Days", qstats_total_completed: "Completed", qstats_avg_rate: "Avg. Rate", qstats_perfect_days: "Perfect Days",
@@ -1634,6 +1638,7 @@ const i18n = {
         raid_title: "ローカルレイド", raid_boss: "⚠️ 連合ボス出現", raid_desc1: "異常現象を感知。", raid_desc2: "連合の目標を達成し戦利品を獲得せよ。", raid_part: "参加人数: ", raid_btn: "入場する", raid_joined: "参加完了", raid_success: "レイド成功！", raid_waiting: "ダンジョン出現待機中...", raid_time_info: "出現時間: 06:00~08:00 | 11:30~13:30 | 19:00~21:00",
         soc_global: "🏆 グローバルランク", soc_friend: "👥 フォロー中", soc_follower: "👤 フォロワー", sort_tot: "総合", sort_streak: "🔥 出席王", sort_str: "筋力", sort_int: "知能", sort_cha: "魅力", sort_vit: "体力", sort_wlth: "財力", sort_agi: "敏捷", sort_steps: "🚶 歩数", sort_books: "📚 読書王", sort_movies: "🎬 映画マニア", sort_savings: "💰 貯蓄王",
         step_title: "今日の歩数", step_unit: "歩", step_next_reward: "次の報酬まで{n}歩",
+        step_no_perm: "設定でフィットネス同期を有効にしてください",
         step_req_title: "歩数連動の必須条件",
         step_req_1: "Health Connect アプリが必要",
         step_req_2: "マイ情報 → フィットネス同期（Health Connect）を有効化",
@@ -1840,6 +1845,7 @@ const i18n = {
         // クエスト統計サブタブ
         quest_tab_main: "📜 クエスト", quest_tab_stats: "📊 統計",
         qstats_monthly_title: "月間クエスト統計", qstats_annual_title: "年間クエスト統計",
+        qstats_trend_title: "クエスト推移チャート", qstats_range_weekly: "今週（日〜土）", qstats_range_monthly: "今月（1日〜末日）",
         qstats_empty: "クエストを完了すると統計が記録されます。",
         qstats_diy_only: "サイドクエストのみ",
         qstats_active_days: "活動日数", qstats_total_completed: "完了クエスト", qstats_avg_rate: "平均達成率", qstats_perfect_days: "全完了日",
@@ -2599,9 +2605,9 @@ const raidMissions = {
     },
     vit: {
         stat: "VIT", color: "#00ff66",
-        title: {ko: "생명력 탈취 역장: 피로의 늪", en: "Vitality Drain Field: Swamp of Fatigue", ja: "生命力奪取 역장: 疲労の沼"},
+        title: {ko: "생명력 탈취 역장: 피로의 늪", en: "Vitality Drain Field: Swamp of Fatigue", ja: "生命力奪取力場: 疲労の沼"},
         desc1: {ko: "주변 헌터들의 생명력을 서서히 흡수하는 만성 피로 구역입니다.", en: "Zone absorbing hunters' vitality.", ja: "ハンターの生命力を吸収する力場。"},
-        desc2: {ko: "물 2리터 마시기, 영양제 섭취, 또는 7시간 수면 기록을 시스템에 증명하여 역장을 정화하십시오.", en: "Drink 2L water, take vitamins, or sleep 7h.", ja: "水2L、サプリ、または7時間睡眠を証明せよ。"},
+        desc2: {ko: "물 2리터 마시기, 영양제 섭취, 또는 7시간 수면 기록을 시스템에 증명하여 역장을 정화하십시오.", en: "Drink 2L water, take vitamins, or sleep 7h.", ja: "水2L、サプリ、または7時間睡眠を証明して力場を浄化せよ。"},
         actionText: {ko: "회복 데이터 증명", en: "Prove Recovery Data", ja: "回復データ証明"}
     },
     wlth: {
