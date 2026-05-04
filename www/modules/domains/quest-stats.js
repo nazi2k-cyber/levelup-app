@@ -336,11 +336,17 @@ export function createQuestStatsModule(deps) {
         const chartW = W - padding.left - padding.right;
         const xFromRate = (rate) => padding.left + (Math.max(0, Math.min(100, rate)) / 100) * chartW;
 
+        const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+        const gridStroke = isLightTheme ? 'rgba(15,23,42,0.2)' : 'rgba(255,255,255,0.12)';
+        const axisText = isLightTheme ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.55)';
+        const barBg = isLightTheme ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.07)';
+        const labelText = isLightTheme ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.85)';
+
         let svgContent = '';
         [0, 25, 50, 75, 100].forEach((val) => {
             const x = xFromRate(val);
-            svgContent += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${H - padding.bottom}" stroke="rgba(255,255,255,0.12)" stroke-width="0.7"/>`;
-            svgContent += `<text x="${x}" y="${H - 6}" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="8">${val}%</text>`;
+            svgContent += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${H - padding.bottom}" stroke="${gridStroke}" stroke-width="0.7"/>`;
+            svgContent += `<text x="${x}" y="${H - 6}" text-anchor="middle" fill="${axisText}" font-size="8">${val}%</text>`;
         });
 
         ranked.forEach((s, idx) => {
@@ -348,10 +354,10 @@ export function createQuestStatsModule(deps) {
             const width = Math.max(0, xFromRate(s.rate) - padding.left);
             const safeName = String(s.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const shortName = safeName.length > 10 ? `${safeName.slice(0, 10)}…` : safeName;
-            svgContent += `<rect x="${padding.left}" y="${y}" width="${chartW}" height="${barHeight}" rx="6" ry="6" fill="rgba(255,255,255,0.07)"/>`;
+            svgContent += `<rect x="${padding.left}" y="${y}" width="${chartW}" height="${barHeight}" rx="6" ry="6" fill="${barBg}"/>`;
             svgContent += `<rect x="${padding.left}" y="${y}" width="${width}" height="${barHeight}" rx="6" ry="6" fill="${s.color}"/>`;
-            svgContent += `<text x="${padding.left - 6}" y="${y + 12}" text-anchor="end" fill="rgba(255,255,255,0.85)" font-size="8">${shortName}</text>`;
-            svgContent += `<text x="${Math.min(padding.left + width + 4, W - padding.right + 4)}" y="${y + 12}" fill="rgba(255,255,255,0.85)" font-size="8">${s.rate}%</text>`;
+            svgContent += `<text x="${padding.left - 6}" y="${y + 12}" text-anchor="end" fill="${labelText}" font-size="8">${shortName}</text>`;
+            svgContent += `<text x="${Math.min(padding.left + width + 4, W - padding.right + 4)}" y="${y + 12}" fill="${labelText}" font-size="8">${s.rate}%</text>`;
         });
 
         svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
