@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.756] - 2026-05-04
+
+### 변경
+- planner: allow deleting all priority tasks except #1 slot
+
 ## [1.0.755] - 2026-05-04
 
 ### 변경
