@@ -140,17 +140,36 @@
         return Math.max(0, Math.min(config.totalDays, elapsedDaysRaw));
     }
 
+
+
+    function getHabitCalendarDate(config, day) {
+        const start = new Date(config.startDate);
+        start.setHours(0, 0, 0, 0);
+        const targetDate = new Date(start);
+        targetDate.setDate(start.getDate() + day - 1);
+        return targetDate;
+    }
+
+    function formatHabitDateLabel(dateObj) {
+        const month = dateObj.getMonth() + 1;
+        const day = dateObj.getDate();
+        return `${month}.${day}`;
+    }
+
     function buildArrowRow(rowDays, reverse, stageType, stageLabel, config, elapsedDays, _t, toggleHTML) {
         const items = rowDays.map((day) => {
             const checked = !!config.checks[String(day)];
             const shouldFill = day <= elapsedDays;
+            const calendarDate = getHabitCalendarDate(config, day);
+            const dayTitle = (_t.habit_day_title || 'Day {day}').replace('{day}', day);
+            const dateTitle = formatHabitDateLabel(calendarDate);
             const fillColor = shouldFill ? HABIT_STAGE_COLORS[stageType] : 'rgba(255,255,255,0.06)';
             return `<button class="habit-day-dot ${checked ? 'checked' : ''} ${shouldFill ? 'elapsed' : ''}"
                         type="button"
                         data-day="${day}"
-                        title="${(_t.habit_day_title || 'Day {day}').replace('{day}', day)}"
+                        title="${dayTitle} (${dateTitle})"
                         style="background:${fillColor};"
-                    >${checked ? '✔' : day}</button>`;
+                    >${checked ? '✔' : formatHabitDateLabel(calendarDate)}</button>`;
         }).join('');
 
         return `
@@ -347,8 +366,8 @@
                     return;
                 }
                 const elapsedDays = getHabitElapsedDays(cfg);
-                if (day > elapsedDays) {
-                    alert(_t.habit_future_check_error || '미래 날짜는 체크할 수 없습니다.');
+                if (day !== elapsedDays) {
+                    alert(_t.habit_today_only_check_error || '오늘 날짜만 체크할 수 있습니다.');
                     return;
                 }
                 const wasChecked = !!cfg.checks[String(day)];
