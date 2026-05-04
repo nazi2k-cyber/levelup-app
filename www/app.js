@@ -3136,17 +3136,19 @@ window.completeDungeon = () => {
     const lang = AppState.currentLang;
     alert(`[SYSTEM] ${i18n[lang]?.boss_defeated || 'Boss Defeated!'}\n+${pts} P\n${target.toUpperCase()} +${statInc}`);
 
-    // ★ 보상형 전면 광고 — 던전 클리어 추가 보상 (일일 제한)
+    // ★ 보상형 전면 광고 — 레이드 수행 종료 후 팝업 노출 (일 1회)
     if (window.AdManager
         && window.AdManager.isAdExposureAllowed?.()
         && window.AdManager.isRewardedInterstitialReady()
         && isNativePlatform
         && window.AdManager.getRiDungeonCountToday() < window.AdManager.RI_DUNGEON_DAILY_MAX) {
-        const watchAd = confirm(i18n[lang].ri_dungeon_prompt || '광고를 시청하면 추가 보상을 받을 수 있습니다. 시청하시겠습니까?');
-        if (watchAd) {
-            window.AdManager.incrementRiDungeonCount();
-            window.AdManager.showRewardedInterstitial('dungeon');
-        }
+        setTimeout(() => {
+            const watchAd = confirm(i18n[lang].ri_dungeon_prompt || '레이드 수행이 종료되었습니다. 광고를 시청하면 추가 보상을 받을 수 있습니다. 시청하시겠습니까?');
+            if (watchAd) {
+                window.AdManager.incrementRiDungeonCount();
+                window.AdManager.showRewardedInterstitial('dungeon');
+            }
+        }, 200);
     }
 };
 
