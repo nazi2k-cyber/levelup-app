@@ -6916,7 +6916,10 @@ function updateStepCountUI() {
     const remaining = 1000 - (totalSteps % 1000);
     const rewardMsg = lang.step_reward_info || '보상: +10P, STR +0.5';
     const nextMsg = (lang.step_next_reward || '다음 보상까지 {n}보 남음').replace('{n}', remaining);
-    infoEl.innerHTML = `<span style="color:var(--neon-blue);">${rewardMsg}</span> <span style="color:var(--neon-gold);">${nextMsg}</span>`;
+    infoEl.innerHTML = `
+        <span style="color:var(--neon-blue);">${rewardMsg}</span>
+        <span style="display:block; color:var(--neon-gold); margin-top:2px;">${nextMsg}</span>
+    `;
     infoEl.style.color = '';
 }
 
