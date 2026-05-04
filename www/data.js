@@ -257,7 +257,7 @@ const i18n = {
         // 피트니스 동기화
         sync_complete_msg: "동기화 완료 ({source})", sync_reward_msg: "추가 보상: +{points}P, STR +{str}",
         sync_no_steps: "걸음 수 기록이 없습니다. (0보)", sync_next_reward: "다음 보상까지 {n}보 남음",
-        step_reward_info: "Reward: +10P, STR +0.5",
+        step_reward_info: "보상: +10P, STR +0.5",
         fitness_needs_google_signin: "피트니스 동기화를 사용하려면 Google 계정 로그인이 필요합니다.\n계속하시겠습니까?",
         fitness_email_disabled: "이메일 로그인 사용자는 피트니스 동기화를 사용할 수 없습니다. Google 계정으로 로그인해주세요.",
         fitness_unsupported_web: "웹 환경에서는 피트니스 동기화를 사용할 수 없습니다. Android 앱에서 실행해주세요.",
@@ -1071,6 +1071,7 @@ const i18n = {
         // Fitness Sync
         sync_complete_msg: "Sync complete ({source}): {steps} steps total", sync_reward_msg: "Bonus: +{points}P, STR +{str}",
         sync_no_steps: "No step data recorded. (0 steps)", sync_next_reward: "{n} steps to next reward",
+        step_reward_info: "Reward: +10P, STR +0.5",
         fitness_needs_google_signin: "Fitness sync requires signing in with a Google account.\nWould you like to continue?",
         fitness_email_disabled: "Fitness sync is not available for email login users. Please sign in with a Google account.",
         fitness_unsupported_web: "Fitness sync is unavailable on web. Please run the Android app.",
@@ -1884,6 +1885,7 @@ const i18n = {
         // フィットネス同期
         sync_complete_msg: "同期完了 ({source}): 合計 {steps}歩", sync_reward_msg: "追加報酬: +{points}P, STR +{str}",
         sync_no_steps: "歩数記録がありません。(0歩)", sync_next_reward: "次の報酬まで {n}歩",
+        step_reward_info: "報酬: +10P, STR +0.5",
         fitness_needs_google_signin: "フィットネス同期を利用するには、Googleアカウントでのログインが必要です。\n続行しますか？",
         fitness_email_disabled: "メールログインユーザーはフィットネス同期を利用できません。Googleアカウントでログインしてください。",
         fitness_unsupported_web: "Web環境ではフィットネス同期を利用できません。Androidアプリで実行してください。",
