@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.752] - 2026-05-04
+
+### 변경
+- fix: use rewarded interstitial for premium background unlock
+
 ## [1.0.751] - 2026-05-04
 
 ### 변경
