@@ -890,7 +890,7 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .habit-arrow-row.reverse { flex-direction: row-reverse; }
 .habit-arrow-body {
     flex: 1; min-height: 40px; border: 1px solid var(--border-color); border-radius: 8px;
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(22px, 1fr)); gap: 4px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); gap: 4px;
     padding: 4px; background: rgba(255,255,255,0.03);
 }
 .habit-arrow-head {
@@ -910,9 +910,9 @@ nav.nav-reorder-mode { border-top-color: var(--neon-blue); }
 .habit-arrow-row-wrap.transition .habit-arrow-title { color: #ffd86a; }
 .habit-arrow-row-wrap.automation .habit-arrow-title { color: #77ecff; }
 .habit-day-dot {
-    border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.6rem; min-height: 22px;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; font-size: 0.62rem; min-height: 28px;
     color: var(--text-main); background: rgba(255,255,255,0.04); cursor: pointer; line-height: 1;
-    display: flex; align-items: center; justify-content: center; padding: 0;
+    display: flex; align-items: center; justify-content: center; padding: 2px 1px;
 }
 .habit-day-dot.checked { border-color: var(--neon-blue); color: #fff; font-weight: 700; }
 .habit-day-dot.elapsed { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
