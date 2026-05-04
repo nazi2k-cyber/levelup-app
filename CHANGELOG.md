@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.758] - 2026-05-04
+
+### 변경
+- Adjust bottom nav default order
+
 ## [1.0.757] - 2026-05-04
 
 ### 변경
