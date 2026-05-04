@@ -5532,8 +5532,9 @@ let _monthlyCalendarUnlocked = false; // 오늘 보상형 광고 시청 완료 �
 let plannerPhotoData = null; // base64 or URL
 let _plannerPhotoBase64 = null; // canvas export용 base64 원본 보존 (URL 교체 후에도 유지)
 let _plannerPhotoCompressing = false;
-// plannerTasks: [{text, ranked, rankOrder}, ...] (기본 6개 슬롯, 생성 순으로 자동 번호)
-let plannerTasks = Array(6).fill(null).map((_, i) => ({ text: '', ranked: true, rankOrder: i + 1 }));
+// plannerTasks: [{text, ranked, rankOrder}, ...] (최소 1개 슬롯 유지, 생성 순으로 자동 번호)
+const MIN_PLANNER_TASK_SLOTS = 1;
+let plannerTasks = Array(MIN_PLANNER_TASK_SLOTS).fill(null).map((_, i) => ({ text: '', ranked: true, rankOrder: i + 1 }));
 // fill mode: 칩 클릭 후 슬롯 클릭으로 채우기 (DnD 대체)
 let timeboxFillTask = null;
 
@@ -5868,7 +5869,7 @@ window.addPlannerTask = function() {
 };
 
 window.removeTask = function(idx) {
-    if (idx < 6) {
+    if (idx < MIN_PLANNER_TASK_SLOTS) {
         plannerTasks[idx] = { text: '', ranked: true, rankOrder: idx + 1 };
     } else {
         plannerTasks.splice(idx, 1);
@@ -5901,7 +5902,7 @@ window.copyPrevDayTasks = function(checked) {
     plannerTasks = prevEntry.tasks.map(t => ({ text: t.text || '', ranked: true, rankOrder: t.rankOrder || 0 }));
     plannerTasks.sort((a, b) => (a.rankOrder || 999) - (b.rankOrder || 999));
     plannerTasks.forEach((t, i) => { t.rankOrder = i + 1; });
-    while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
+    while (plannerTasks.length < MIN_PLANNER_TASK_SLOTS) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
     renderPlannerTasks();
 };
 
@@ -6160,7 +6161,7 @@ function loadPlannerForDate(dateStr) {
         });
         plannerTasks.sort((a, b) => a.rankOrder - b.rankOrder);
         plannerTasks.forEach((t, i) => { t.rankOrder = i + 1; });
-        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
+        while (plannerTasks.length < MIN_PLANNER_TASK_SLOTS) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
     } else if (saved && (saved.priorities || saved.brainDump)) {
         // 구 형식 마이그레이션: priorities(3개) + brainDump 텍스트
         plannerTasks = [];
@@ -6174,9 +6175,9 @@ function loadPlannerForDate(dateStr) {
                 if (trimmed) plannerTasks.push({ text: trimmed, ranked: true, rankOrder: plannerTasks.length + 1 });
             });
         }
-        while (plannerTasks.length < 6) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
+        while (plannerTasks.length < MIN_PLANNER_TASK_SLOTS) plannerTasks.push({ text: '', ranked: true, rankOrder: plannerTasks.length + 1 });
     } else {
-        plannerTasks = Array(6).fill(null).map((_, i) => ({ text: '', ranked: true, rankOrder: i + 1 }));
+        plannerTasks = Array(MIN_PLANNER_TASK_SLOTS).fill(null).map((_, i) => ({ text: '', ranked: true, rankOrder: i + 1 }));
     }
 
     // 퀘스트 자동추가 (오늘 날짜만, 설정에 따라)
