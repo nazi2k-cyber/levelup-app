@@ -5473,8 +5473,16 @@ function applyRewardedInterstitialBonus(context) {
         updatePointUI();
         alert(`${i18n[lang].ri_dungeon_bonus || '추가 보상!'}\n+${bonusPts} P\n${target.toUpperCase()} +${bonusStat}`);
         try { fbLogEvent(analytics, 'ri_ad_dungeon_bonus', { pts: bonusPts, stat: target }); } catch {}
+    } else if (context === 'premiumBackgroundTheme') {
+        if (!_pendingPremiumBackgroundThemeId) return;
+        localStorage.setItem(PREMIUM_BG_REWARD_KEY, _getKstDateString());
+        applyBackgroundTheme(_pendingPremiumBackgroundThemeId);
+        _pendingPremiumBackgroundThemeId = null;
+        alert((i18n[lang] && i18n[lang].bg_theme_rewarded_interstitial_success) || '프리미엄 배경 적용 완료! 오늘은 광고를 다시 보지 않아도 됩니다.');
+        try { fbLogEvent(analytics, 'ri_ad_premium_bg_theme_unlocked'); } catch {}
     }
 }
+
 
 async function applyBonusExpReward() {
     const lang = AppState.currentLang;
@@ -6461,6 +6469,20 @@ const BACKGROUND_THEME_OPTIONS = [
     { id:'stone', bg:'#2c2f36' }, { id:'mint', bg:'#183332' }
 ];
 const DEFAULT_BACKGROUND_THEME_IDS = ['default', 'pearl', 'sunset', 'forest', 'violet', 'cobalt', 'midnight'];
+const PREMIUM_BG_REWARD_KEY = 'premiumBgThemeRewardedAt';
+let _pendingPremiumBackgroundThemeId = null;
+
+function _getKstDateString() {
+    const now = new Date();
+    const kst = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+    return `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, '0')}-${String(kst.getDate()).padStart(2, '0')}`;
+}
+function _isPremiumBackgroundTheme(themeId) {
+    return !DEFAULT_BACKGROUND_THEME_IDS.includes(themeId);
+}
+function _isPremiumBackgroundRewardAvailableToday() {
+    return localStorage.getItem(PREMIUM_BG_REWARD_KEY) !== _getKstDateString();
+}
 
 function initBackgroundTheme() {
     renderBackgroundThemeTiles();
@@ -6477,8 +6499,29 @@ function renderBackgroundThemeTiles() {
         <div style="grid-column:1 / -1; font-size:0.8rem; color:var(--neon-blue); font-weight:700; margin:8px 2px 4px;">${title}</div>
         ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}">${hideLabels ? '' : `<span class="bg-theme-tile-label">${getThemeLabel(opt.id)}</span>`}</button>`).join('')}`;
     grid.innerHTML = `${renderSection(lang.bg_theme_basic || '기본 (7종)', basic, true)}${renderSection(lang.bg_theme_premium || '프리미엄', premium)}`;
-    grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => applyBackgroundTheme(el.dataset.bgTheme)));
+    grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => handleBackgroundThemeSelection(el.dataset.bgTheme)));
     updateBackgroundThemeTileUI(localStorage.getItem('backgroundTheme') || 'default');
+}
+async function handleBackgroundThemeSelection(themeId) {
+    if (!_isPremiumBackgroundTheme(themeId)) {
+        applyBackgroundTheme(themeId);
+        return;
+    }
+    if (_isPremiumBackgroundRewardAvailableToday()) {
+        const lang = AppState.currentLang;
+        const ask = confirm((i18n[lang] && i18n[lang].bg_theme_rewarded_interstitial_confirm) || '프리미엄 배경은 오늘 1회 보상형 광고 시청 후 적용할 수 있습니다. 광고를 시청할까요?');
+        if (!ask) return;
+
+        _pendingPremiumBackgroundThemeId = themeId;
+        const adShown = await window.AdManager?.showRewardedInterstitial('premiumBackgroundTheme');
+        const isNoAdsUser = AppState?.user?.subscription?.noAds === true || AppState?.user?.isAdmin === true;
+        if (!adShown && !isNoAdsUser) {
+            _pendingPremiumBackgroundThemeId = null;
+            alert((i18n[lang] && i18n[lang].bg_theme_rewarded_interstitial_unavailable) || '광고를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        }
+        return;
+    }
+    applyBackgroundTheme(themeId);
 }
 function applyBackgroundTheme(themeId) {
     const selected = BACKGROUND_THEME_OPTIONS.find((opt) => opt.id === themeId) || BACKGROUND_THEME_OPTIONS[0];
