@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.755] - 2026-05-04
+
+### 변경
+- fix: 라이트 테마에서 퀘스트 추이 차트 가시성 개선
+
 ## [1.0.754] - 2026-05-04
 
 ### 변경
