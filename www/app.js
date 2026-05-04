@@ -6461,6 +6461,19 @@ const BACKGROUND_THEME_OPTIONS = [
     { id:'stone', bg:'#2c2f36' }, { id:'mint', bg:'#183332' }
 ];
 const DEFAULT_BACKGROUND_THEME_IDS = ['default', 'pearl', 'sunset', 'forest', 'violet', 'cobalt', 'midnight'];
+const PREMIUM_BG_REWARD_KEY = 'premiumBgThemeRewardedAt';
+
+function _getKstDateString() {
+    const now = new Date();
+    const kst = new Date(now.getTime() + (9 * 60 * 60 * 1000) - (now.getTimezoneOffset() * 60 * 1000));
+    return `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, '0')}-${String(kst.getDate()).padStart(2, '0')}`;
+}
+function _isPremiumBackgroundTheme(themeId) {
+    return !DEFAULT_BACKGROUND_THEME_IDS.includes(themeId);
+}
+function _isPremiumBackgroundRewardAvailableToday() {
+    return localStorage.getItem(PREMIUM_BG_REWARD_KEY) !== _getKstDateString();
+}
 
 function initBackgroundTheme() {
     renderBackgroundThemeTiles();
@@ -6477,8 +6490,30 @@ function renderBackgroundThemeTiles() {
         <div style="grid-column:1 / -1; font-size:0.8rem; color:var(--neon-blue); font-weight:700; margin:8px 2px 4px;">${title}</div>
         ${items.map((opt) => `<button type="button" class="bg-theme-tile" data-bg-theme="${opt.id}" style="background:${opt.bg};${opt.size ? `background-size:${opt.size};` : ''}">${hideLabels ? '' : `<span class="bg-theme-tile-label">${getThemeLabel(opt.id)}</span>`}</button>`).join('')}`;
     grid.innerHTML = `${renderSection(lang.bg_theme_basic || '기본 (7종)', basic, true)}${renderSection(lang.bg_theme_premium || '프리미엄', premium)}`;
-    grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => applyBackgroundTheme(el.dataset.bgTheme)));
+    grid.querySelectorAll('[data-bg-theme]').forEach((el) => el.addEventListener('click', () => handleBackgroundThemeSelection(el.dataset.bgTheme)));
     updateBackgroundThemeTileUI(localStorage.getItem('backgroundTheme') || 'default');
+}
+async function handleBackgroundThemeSelection(themeId) {
+    if (!_isPremiumBackgroundTheme(themeId)) {
+        applyBackgroundTheme(themeId);
+        return;
+    }
+    if (_isPremiumBackgroundRewardAvailableToday()) {
+        const adShown = await window.AdManager?.showRewarded({
+            context: 'premiumBackgroundTheme',
+            onSuccess: () => {
+                localStorage.setItem(PREMIUM_BG_REWARD_KEY, _getKstDateString());
+                applyBackgroundTheme(themeId);
+                alert('프리미엄 배경 적용 완료! 오늘은 광고를 다시 보지 않아도 됩니다.');
+            },
+            onFail: () => {
+                alert('광고 시청 완료 시 프리미엄 배경을 적용할 수 있습니다.');
+            }
+        });
+        if (!adShown) alert('광고를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        return;
+    }
+    applyBackgroundTheme(themeId);
 }
 function applyBackgroundTheme(themeId) {
     const selected = BACKGROUND_THEME_OPTIONS.find((opt) => opt.id === themeId) || BACKGROUND_THEME_OPTIONS[0];
