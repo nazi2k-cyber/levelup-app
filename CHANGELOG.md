@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.762] - 2026-05-04
+
+### 변경
+- fix(i18n): add step reward label for en/ja locales
+
 ## [1.0.761] - 2026-05-04
 
 ### 변경
