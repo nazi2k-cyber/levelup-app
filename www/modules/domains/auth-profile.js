@@ -40,10 +40,16 @@ export function createAuthProfileModule(deps) {
     } = deps;
 
     let initializedUid = null;
+    let logoutUiTimer = null;
+    const LOGOUT_UI_DELAY_MS = 800;
 
     async function handleAuthStateChanged(user) {
         const AppState = getAppState();
         if (user) {
+            if (logoutUiTimer) {
+                clearTimeout(logoutUiTimer);
+                logoutUiTimer = null;
+            }
             if (initializedUid === user.uid) return;
 
             const isEmailUser = user.providerData.some((p) => p.providerId === 'password');
@@ -165,18 +171,28 @@ export function createAuthProfileModule(deps) {
             return;
         }
 
-        AppLogger.info('[Auth] 로그아웃 상태');
-        initializedUid = null;
-        AppState.user.isAdmin = false;
-        document.getElementById('login-screen').classList.remove('d-none');
-        document.getElementById('app-container').classList.add('d-none');
-        const loginPanel = document.getElementById('login-log-panel');
-        if (loginPanel) {
-            const cachedVal = localStorage.getItem('loginLogVisible');
-            const showLoginLog = cachedVal === '1';
-            AppLogger.info('[Config] 로그아웃 시 초기화면 로그 패널: localStorage=' + cachedVal + ', display=' + (showLoginLog ? 'flex' : 'none'));
-            loginPanel.style.display = showLoginLog ? 'flex' : 'none';
-        }
+        if (logoutUiTimer) clearTimeout(logoutUiTimer);
+        logoutUiTimer = setTimeout(() => {
+            const latestUser = auth.currentUser;
+            if (latestUser) {
+                AppLogger.info('[Auth] 로그아웃 UI 전환 취소: 사용자 세션 복구 감지');
+                return;
+            }
+
+            AppLogger.info('[Auth] 로그아웃 상태');
+            initializedUid = null;
+            AppState.user.isAdmin = false;
+            document.getElementById('login-screen').classList.remove('d-none');
+            document.getElementById('app-container').classList.add('d-none');
+            const loginPanel = document.getElementById('login-log-panel');
+            if (loginPanel) {
+                const cachedVal = localStorage.getItem('loginLogVisible');
+                const showLoginLog = cachedVal === '1';
+                AppLogger.info('[Config] 로그아웃 시 초기화면 로그 패널: localStorage=' + cachedVal + ', display=' + (showLoginLog ? 'flex' : 'none'));
+                loginPanel.style.display = showLoginLog ? 'flex' : 'none';
+            }
+            logoutUiTimer = null;
+        }, LOGOUT_UI_DELAY_MS);
     }
 
     function openProfileStatsModal(userId) {
