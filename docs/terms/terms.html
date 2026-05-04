@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>소비자 약관 - BRAVECAT STUDIOS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Pretendard', -apple-system, sans-serif; background: #1a1a1a; color: #e0e0e0; line-height: 1.7; padding: 20px; padding-top: env(safe-area-inset-top); }
+        .legal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .back-btn { background: none; border: none; color: #aaa; font-size: 1.5rem; cursor: pointer; padding: 0 8px; }
+        .legal-title { font-size: 1.3rem; font-weight: 800; color: #ffffff; }
+        .legal-date { font-size: 0.75rem; color: #888; margin-bottom: 24px; }
+        h2 { font-size: 1rem; font-weight: 700; color: #00d9ff; margin: 24px 0 12px 0; }
+        h3 { font-size: 0.9rem; font-weight: 600; color: #ffffff; margin: 16px 0 8px 0; }
+        p, li { font-size: 0.85rem; color: #ccc; margin-bottom: 8px; }
+        ul, ol { padding-left: 20px; margin-bottom: 12px; }
+        .section { margin-bottom: 20px; }
+        a { color: #00d9ff; text-decoration: underline; }
+        .brand { font-weight: 700; color: #ffffff; }
+        .lang-switch { text-align: center; margin-bottom: 20px; }
+        .lang-switch button { background: none; border: 1px solid rgba(255,255,255,0.15); color: #888; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; cursor: pointer; margin: 0 2px; }
+        .lang-switch button.active { border-color: #00d9ff; color: #00d9ff; }
+        .content-block { display: none; }
+        .content-block.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="lang-switch">
+        <button onclick="setLang('ko')" id="lang-ko" class="active">한국어</button>
+        <button onclick="setLang('en')" id="lang-en">English</button>
+        <button onclick="setLang('ja')" id="lang-ja">日本語</button>
+    </div>
+
+    <div class="legal-header">
+        <button class="back-btn" onclick="history.back()">←</button>
+        <span class="legal-title" id="page-title">소비자 약관</span>
+    </div>
+    <div class="legal-date" id="page-date">시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 30일</div>
+
+    <!-- 한국어 -->
+    <div class="content-block active" id="content-ko">
+
+    <div class="section">
+        <p>본 소비자 약관(이하 "약관")은 <span class="brand">BRAVECAT STUDIOS</span>(이하 "회사")이 제공하는 <span class="brand">LEVEL UP: REBOOT</span> 모바일 애플리케이션(이하 "서비스")의 이용 조건을 규정합니다. 서비스를 이용함으로써 본 약관에 동의하는 것으로 간주됩니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>1. 서비스 개요</h2>
+        <p>LEVEL UP: REBOOT는 일상 생활의 자기계발 활동을 게임화(Gamification)하여 사용자의 동기 부여와 습관 형성을 돕는 모바일 애플리케이션이자 습관형성 프로젝트입니다.</p>
+        <ul>
+            <li>일일 퀘스트 시스템을 통한 자기계발 목표 관리</li>
+            <li>능력치(스탯) 시스템을 통한 성장 시각화</li>
+            <li>소셜 기능을 통한 커뮤니티 참여</li>
+            <li>글로벌 던전 레이드 시스템을 통한 협력 콘텐츠</li>
+            <li>Day1 피드를 통한 24시간 활동 공유</li>
+            <li>플래너(월간 캘린더, 주간 시간표, DIY 퀘스트) 및 무드 트래킹을 통한 일일 관리</li>
+            <li>습관형성 프로젝트(루틴 생성·편집, 반복 요일/횟수 설정, 완료 체크, 연속 달성(Streak) 및 달성률 통계)를 통한 장기 습관 구축</li>
+            <li>주간 도전과제 시스템 및 일일 보너스 룰렛</li>
+            <li>Life Status(생명 상태) 기능을 통한 기대수명 시각화</li>
+            <li>D-Day 목표 관리 기능</li>
+            <li>러닝 계산기(마일리지, 트레드밀) 및 1RM 계산기를 통한 운동 기록 관리</li>
+            <li>태스크 체크리스트를 통한 일일 할 일 관리</li>
+            <li>내 서재 기능을 통한 독서 기록 관리 (ISBN 바코드 스캔)</li>
+            <li>내 영화 기능을 통한 영화 감상 기록 관리</li>
+            <li>Big5 성격검사를 통한 자기 이해 및 성격 유형 분석</li>
+            <li>LinkedIn 프로필 연동을 통한 커리어 정보 표시</li>
+            <li>미래 순자산 시뮬레이터를 통한 장기 재무 목표 관리</li>
+            <li>푸시 알림을 통한 퀘스트/레이드/서비스 알림</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>2. 계정 및 이용 자격</h2>
+        <h3>2.1 이용 자격</h3>
+        <p>서비스를 이용하려면 만 18세 이상이어야 합니다. 만 18세 미만의 미성년자는 법정대리인의 동의 없이 서비스에 가입하거나 이용할 수 없습니다.</p>
+        <h3>2.2 계정 관리</h3>
+        <p>사용자는 본인의 계정 정보(이메일, 비밀번호 등)를 안전하게 관리할 책임이 있으며, 계정을 통해 발생하는 모든 활동에 대한 책임은 사용자 본인에게 있습니다.</p>
+        <h3>2.3 계정 생성</h3>
+        <p>계정은 이메일/비밀번호 또는 Google OAuth를 통해 생성할 수 있습니다. 하나의 자연인은 하나의 계정만 생성하여야 하며, 중복 계정 생성은 금지됩니다. 사용자는 닉네임, 프로필 사진을 필수 프로필 정보로 설정할 수 있으며, 인스타그램 ID 및 LinkedIn 프로필 URL은 선택 항목으로 입력할 수 있습니다. 선택 항목은 미입력 시 프로필에 표시되지 않으며, 언제든지 삭제할 수 있습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>3. 서비스 이용</h2>
+        <h3>3.1 무료 서비스</h3>
+        <p>서비스의 기본 기능은 광고 기반으로 무료 제공됩니다. 서비스 내에 Google AdMob를 통한 배너 광고, 네이티브 광고, 보상형 광고가 표시될 수 있습니다. 보상형 광고는 특정 기능(플래너 열람, 계산기 사용, 상태창 확인 등)에 접근하기 위해 시청이 필요할 수 있습니다. 회사는 향후 유료 기능이나 구독 서비스를 도입할 수 있으며, 이 경우 사전에 고지합니다.</p>
+        <h3>3.2 서비스 변경 및 중단</h3>
+        <p>회사는 운영상 또는 기술상의 필요에 따라 서비스의 전부 또는 일부를 변경하거나 중단할 수 있습니다. 중대한 변경 사항은 서비스 내 공지 또는 이메일을 통해 사전 고지합니다.</p>
+        <h3>3.3 콘텐츠 소유권</h3>
+        <p>사용자가 서비스에 업로드한 콘텐츠(프로필 사진, Day1 피드 사진, 닉네임 등)의 소유권은 사용자에게 있으나, 서비스 운영에 필요한 범위 내에서 회사가 이를 이용할 수 있는 라이선스를 부여합니다.</p>
+        <h3>3.4 Day1 피드</h3>
+        <p>Day1 피드에 게시된 콘텐츠(사진, 캡션)는 게시 후 24시간이 경과하면 자동으로 삭제됩니다. 1일 1회 게시가 가능하며, 매일 00:00(KST)에 초기화됩니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>4. 건강 및 면책 사항</h2>
+        <h3>4.1 건강 관련 면책</h3>
+        <p>본 서비스는 건강 보조 및 동기 부여 목적으로만 제공됩니다. 의학적 조언, 진단, 치료를 대체하지 않습니다.</p>
+        <h3>4.2 운동 및 신체 활동</h3>
+        <p>퀘스트 수행 중 발생하는 신체적 부상이나 손해에 대해 회사는 일절 책임지지 않습니다. 사용자는 자신의 신체 상태를 고려하여 안전하게 활동해야 합니다.</p>
+        <h3>4.3 Health Connect 연동</h3>
+        <p>Health Connect와의 데이터 동기화 기능은 사용자의 선택에 따라 활성화됩니다. 동기화된 건강 데이터의 정확성에 대해 회사는 보증하지 않습니다. 이메일 로그인 사용자는 피트니스 동기화 기능을 이용할 수 없습니다.</p>
+        <h3>4.4 Life Status(생명 상태) 기능</h3>
+        <p>Life Status 기능은 사용자가 입력한 생년월일과 기대수명 정보를 기반으로 남은 생애를 시각적으로 표시합니다. 이 기능은 동기 부여 목적으로만 제공되며, 의학적·과학적 정확성을 보증하지 않습니다. 사용자는 별도의 개인정보 수집 및 이용 동의를 거친 후 이 기능을 활성화할 수 있습니다.</p>
+        <h3>4.5 러닝 계산기 및 1RM 계산기</h3>
+        <p>러닝 계산기와 1RM 계산기는 사용자의 운동 기록 관리를 돕기 위한 참고용 도구입니다. 계산 결과의 정확성에 대해 회사는 보증하지 않으며, 운동 전 전문가의 조언을 받을 것을 권장합니다.</p>
+        <h3>4.6 내 서재 (My Library)</h3>
+        <p>내 서재 기능은 사용자가 읽은 책을 기록하고 관리할 수 있는 독서 추적 도구입니다. ISBN 바코드 스캔(카메라) 또는 직접 검색을 통해 도서를 등록할 수 있습니다. 카메라 접근 권한은 ISBN 바코드 스캔 목적으로만 사용되며, 사용자의 명시적 동의 하에 활성화됩니다. 설정에서 언제든지 카메라 권한을 비활성화할 수 있습니다. 등록된 도서 정보(제목, 저자, 출판사, 표지 이미지 등)는 외부 도서 API를 통해 조회되며, 회사는 해당 정보의 정확성을 보증하지 않습니다. 보상형 광고를 시청하여 독서 보상을 획득할 수 있습니다.</p>
+        <h3>4.7 내 영화 (My Movies)</h3>
+        <p>내 영화 기능은 사용자가 감상한 영화를 기록하고 관리할 수 있는 영화 추적 도구입니다. KOBIS(영화진흥위원회) 및 KMDb(한국영화데이터베이스) API를 통해 영화를 검색하고 등록할 수 있습니다. 영화 정보(제목, 감독, 장르, 개봉연도, 포스터 등)는 외부 API를 통해 제공되며, 회사는 해당 정보의 정확성이나 완전성을 보증하지 않습니다. 보상형 광고를 시청하여 감상 보상을 획득할 수 있습니다.</p>
+        <h3>4.8 Big5 성격검사</h3>
+        <p>본 서비스의 Big5 성격검사는 개방성·성실성·외향성·친화성·신경증의 5가지 특성을 바탕으로 자기 이해와 동기 부여를 돕기 위한 목적으로만 제공됩니다. 해당 검사 결과는 심리학적·임상적 전문 진단을 대체하지 않으며, 학술적·과학적 정확성을 보증하지 않습니다. 사용자는 별도의 개인정보 수집 및 이용 동의를 거친 후 검사를 진행할 수 있으며, 정신 건강 관련 문제는 전문 상담가의 조언을 받을 것을 권장합니다.</p>
+        <h3>4.9 미래 순자산 시뮬레이터</h3>
+        <p>미래 순자산 시뮬레이터는 연소득, 현재 자산/부채, 물가상승률, 지출 비율, 목돈 지출 계획 등을 입력하여 장기적인 순자산을 예측하는 참고용 재무 도구입니다. 계산 결과는 동기 부여 및 재무 계획 수립을 위한 참고 목적으로만 제공되며, 회사는 해당 수치의 정확성 또는 실현 가능성을 보증하지 않습니다. 본 기능은 전문적인 재무·투자 조언을 대체하지 않으며, 중요한 재무 결정 전에는 전문 금융 전문가의 조언을 받을 것을 권장합니다. 사용자는 별도의 개인정보 수집 및 이용 동의를 거친 후 재무 정보를 서버에 저장하고 소셜탭 저축왕 순위에 공개할 수 있습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>5. 위치 정보</h2>
+        <p>던전/레이드 기능을 위해 사용자의 위치 정보를 수집할 수 있습니다. 위치 정보 수집은 사용자의 명시적 동의 하에만 이루어지며, 설정에서 언제든지 비활성화할 수 있습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>6. 광고</h2>
+        <p>서비스에는 Google AdMob를 통한 광고가 표시됩니다. 광고 유형은 배너 광고, 네이티브 광고, 보상형 광고를 포함합니다. 보상형 광고는 사용자가 자발적으로 시청하여 특정 기능(플래너 열람, 계산기 접근 등)을 이용하거나 게임 내 보상을 획득하는 방식입니다. 광고는 서비스 운영 비용을 충당하기 위해 제공되며, 광고 내용은 회사가 직접 제작하지 않습니다. EU/EEA 지역 사용자에게는 GDPR에 따른 광고 동의 양식(UMP)이 표시됩니다. 광고를 통해 연결되는 제3자 웹사이트나 서비스에 대해 회사는 책임을 지지 않습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>7. 푸시 알림</h2>
+        <p>서비스는 Firebase Cloud Messaging(FCM)을 통해 푸시 알림을 제공합니다. 푸시 알림은 퀘스트 알림, 레이드 알림, 스트릭 알림, 서비스 공지 등의 목적으로 발송되며, 사용자의 언어 설정에 따라 해당 언어로 발송됩니다. 사용자는 앱 내 설정에서 언제든지 푸시 알림을 비활성화할 수 있습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>8. 저작권 및 지적재산권</h2>
+        <h3>8.1 회사의 저작권</h3>
+        <p>서비스 내 모든 콘텐츠(디자인, 텍스트, 이미지, 아이콘, UI/UX, 게임 시스템, 퀘스트 데이터 등)에 대한 저작권 및 지적재산권은 <span class="brand">BRAVECAT STUDIOS</span>에 귀속됩니다. 서비스의 무단 복제, 배포, 변형, 역설계는 엄격히 금지됩니다.</p>
+        <h3>8.2 사용자 콘텐츠</h3>
+        <p>사용자가 업로드한 콘텐츠(Day1 피드 사진, 프로필 사진 등)의 저작권은 해당 사용자에게 귀속됩니다. 다만, 사용자는 서비스 운영에 필요한 범위 내에서 회사가 해당 콘텐츠를 이용할 수 있도록 비독점적 라이선스를 부여합니다.</p>
+        <h3>8.3 저작권 침해 금지</h3>
+        <p>사용자는 제3자의 저작권을 침해하는 콘텐츠를 서비스에 업로드해서는 안 됩니다. 저작권 침해가 확인되는 경우, 해당 콘텐츠는 삭제되며 계정 제재가 이루어질 수 있습니다.</p>
+        <h3>8.4 저작권 침해 신고</h3>
+        <p>제3자의 저작권을 침해하는 콘텐츠를 발견한 경우, <a href="mailto:copyright@bravecat.studio">copyright@bravecat.studio</a>로 다음 정보를 포함하여 신고해 주시기 바랍니다:</p>
+        <ul>
+            <li>침해되었다고 주장하는 저작물의 설명</li>
+            <li>침해 콘텐츠의 위치(스크린샷 등)</li>
+            <li>신고자의 연락처 정보</li>
+            <li>저작권자임을 증명할 수 있는 자료</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>9. 금지 행위</h2>
+        <p>사용자는 다음 행위를 하여서는 안 됩니다:</p>
+        <ul>
+            <li>서비스의 정상적인 운영을 방해하는 행위</li>
+            <li>다른 사용자의 개인정보를 무단으로 수집하거나 이용하는 행위</li>
+            <li>자동화된 수단(봇, 스크립트 등)을 이용한 부정 이용</li>
+            <li>서비스 데이터를 임의로 조작하거나 변조하는 행위</li>
+            <li>타인을 사칭하거나 허위 정보를 제공하는 행위</li>
+            <li>불쾌하거나 유해한 콘텐츠를 게시하는 행위</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>10. 계정 정지 및 해지</h2>
+        <p>회사는 사용자가 본 약관을 위반한 경우, 사전 통지 없이 서비스 이용을 제한하거나 계정을 정지 또는 삭제할 수 있습니다. 사용자는 설정 메뉴의 로그아웃 기능을 통해 언제든지 서비스 이용을 중단할 수 있습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>11. 책임 제한</h2>
+        <p>회사는 서비스를 "있는 그대로(AS IS)" 제공하며, 서비스의 완전성, 정확성, 신뢰성에 대해 명시적 또는 묵시적 보증을 하지 않습니다. 관련 법률이 허용하는 범위 내에서, 서비스 이용으로 인한 직접적, 간접적, 우발적, 결과적 손해에 대해 회사는 책임을 지지 않습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>12. 약관 변경</h2>
+        <p>회사는 필요한 경우 약관을 변경할 수 있으며, 변경된 약관은 서비스 내 공지를 통해 고지합니다. 변경된 약관에 동의하지 않는 경우, 사용자는 서비스 이용을 중단하고 계정을 삭제할 수 있습니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>13. 준거법 및 분쟁 해결</h2>
+        <p>본 약관은 대한민국 법률에 따라 해석되며, 서비스 이용과 관련한 분쟁은 서울중앙지방법원을 제1심 관할 법원으로 합니다.</p>
+    </div>
+
+    <div class="section">
+        <h2>14. 문의</h2>
+        <p>본 약관에 대한 문의 사항은 아래로 연락해 주시기 바랍니다.</p>
+        <p><span class="brand">BRAVECAT STUDIOS</span><br>이메일: <a href="mailto:support@bravecat.studio">support@bravecat.studio</a></p>
+    </div>
+
+    <div class="section">
+        <h2>15. 보안 취약점 신고</h2>
+        <p>서비스에서 보안 취약점을 발견하신 경우, 아래 이메일로 신고해 주시기 바랍니다. 악의적 목적이 없는 선의의 보안 연구자 분들의 신고를 환영하며, 접수된 내용은 책임 있게 검토하고 처리합니다.</p>
+        <p>보안 신고 이메일: <a href="mailto:bug@bravecat.studio">bug@bravecat.studio</a></p>
+        <p>신고 시 아래 내용을 포함해 주시면 빠른 검토가 가능합니다:</p>
+        <ul>
+            <li>취약점의 유형 및 발생 위치</li>
+            <li>취약점 재현 방법 (단계별 설명)</li>
+            <li>관련 스크린샷 또는 동영상 (선택)</li>
+            <li>잠재적 영향도 및 심각도 판단</li>
+        </ul>
+        <p>회사는 신고된 취약점을 검토하고 적절한 조치를 취합니다. 신고 내용은 제3자에게 무단 공개되지 않으며, 서비스 보안 개선에 활용됩니다.</p>
+    </div>
+
+    </div><!-- /content-ko -->
+
+    <!-- English -->
+    <div class="content-block" id="content-en">
+
+    <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+        <p style="color:#ffaa00;font-size:0.8rem;margin:0;">This is a translation provided for reference purposes only. In the event of any discrepancy between this translation and the Korean original, the Korean version shall prevail.</p>
+    </div>
+
+    <div class="section">
+        <p>These Terms of Service ("Terms") set forth the conditions of use for the <span class="brand">LEVEL UP: REBOOT</span> mobile application ("Service") provided by <span class="brand">BRAVECAT STUDIOS</span> ("Company"). By using the Service, you are deemed to have agreed to these Terms.</p>
+    </div>
+
+    <div class="section">
+        <h2>1. Service Overview</h2>
+        <p>LEVEL UP: REBOOT is a mobile application and habit-building project that gamifies daily self-improvement activities to help motivate users and build habits.</p>
+        <ul>
+            <li>Daily quest system for self-improvement goal management</li>
+            <li>Stat system for growth visualization</li>
+            <li>Social features for community participation</li>
+            <li>Global dungeon raid system for cooperative content</li>
+            <li>Day1 feed for 24-hour activity sharing</li>
+            <li>Planner (monthly calendar, weekly timetable, DIY quests) and mood tracking for daily management</li>
+            <li>Habit-building project features (routine creation/editing, repeat schedule setup, completion check-ins, streak and completion-rate stats) for long-term habit development</li>
+            <li>Weekly challenges and daily bonus roulette</li>
+            <li>Life Status feature for life expectancy visualization</li>
+            <li>D-Day goal management</li>
+            <li>Running calculator (mileage, treadmill) and 1RM calculator for exercise record management</li>
+            <li>Task checklist for daily to-do management</li>
+            <li>My Library feature for reading record management (ISBN barcode scanning)</li>
+            <li>My Movies feature for movie viewing record management</li>
+            <li>Big Five (Big5) Personality Test for self-understanding and personality type analysis</li>
+            <li>LinkedIn profile integration for career information display</li>
+            <li>Future Net Worth simulator for long-term financial goal management</li>
+            <li>Push notifications for quest/raid/service alerts</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>2. Account and Eligibility</h2>
+        <h3>2.1 Eligibility</h3>
+        <p>You must be at least 18 years old to use the Service. Minors under 18 may not sign up for or use the Service without the consent of a legal guardian.</p>
+        <h3>2.2 Account Management</h3>
+        <p>Users are responsible for securely managing their account information (email, password, etc.) and are responsible for all activities conducted through their account.</p>
+        <h3>2.3 Account Creation</h3>
+        <p>Accounts can be created via email/password or Google OAuth. Each individual may only create one account; creating duplicate accounts is prohibited. Users may set a nickname and profile photo as required profile information. Instagram ID and LinkedIn profile URL are optional fields — they will not be displayed on the profile if left blank and can be removed at any time.</p>
+    </div>
+
+    <div class="section">
+        <h2>3. Service Usage</h2>
+        <h3>3.1 Free Service</h3>
+        <p>The basic features of the Service are provided free of charge on an ad-supported basis. Banner ads, native ads, and rewarded ads may be displayed through Google AdMob. Viewing rewarded ads may be required to access certain features (planner, calculators, stat window, etc.). The Company may introduce paid features or subscription services in the future, with prior notice.</p>
+        <h3>3.2 Service Changes and Discontinuation</h3>
+        <p>The Company may modify or discontinue all or part of the Service as operationally or technically necessary. Significant changes will be communicated in advance through in-app announcements or email.</p>
+        <h3>3.3 Content Ownership</h3>
+        <p>Ownership of content uploaded by users (profile photos, Day1 feed photos, nicknames, etc.) remains with the user, but users grant the Company a license to use such content within the scope necessary for Service operation.</p>
+        <h3>3.4 Day1 Feed</h3>
+        <p>Content posted on the Day1 feed (photos, captions) is automatically deleted 24 hours after posting. One post per day is allowed, resetting daily at 00:00 (KST).</p>
+    </div>
+
+    <div class="section">
+        <h2>4. Health and Disclaimer</h2>
+        <h3>4.1 Health Disclaimer</h3>
+        <p>The Service is provided solely for health assistance and motivational purposes. It does not replace medical advice, diagnosis, or treatment.</p>
+        <h3>4.2 Exercise and Physical Activity</h3>
+        <p>The Company accepts no responsibility for physical injury or damage occurring during quest performance. Users should exercise safely considering their physical condition.</p>
+        <h3>4.3 Health Connect Integration</h3>
+        <p>Data synchronization with Health Connect is activated at the user's discretion. The Company does not guarantee the accuracy of synchronized health data. Email login users cannot use fitness synchronization.</p>
+        <h3>4.4 Life Status Feature</h3>
+        <p>The Life Status feature visually displays remaining lifespan based on the user's date of birth and expected lifespan. This feature is provided for motivational purposes only and does not guarantee medical or scientific accuracy. Users may activate this feature after providing separate consent for personal information collection and use.</p>
+        <h3>4.5 Running Calculator and 1RM Calculator</h3>
+        <p>The running calculator and 1RM calculator are reference tools to assist with exercise record management. The Company does not guarantee the accuracy of calculation results and recommends consulting a professional before exercising.</p>
+        <h3>4.6 My Library</h3>
+        <p>The My Library feature is a reading tracker that allows users to record and manage books they have read. Books can be registered via ISBN barcode scanning (camera) or manual search. Camera access is used solely for ISBN barcode scanning and is activated only with the user's explicit consent. Camera permissions can be disabled at any time in settings. Book information (title, author, publisher, cover image, etc.) is retrieved through external book APIs, and the Company does not guarantee the accuracy of such information. Users may earn reading rewards by watching rewarded ads.</p>
+        <h3>4.7 My Movies</h3>
+        <p>The My Movies feature is a movie tracker that allows users to record and manage movies they have watched. Movies can be searched and registered through the KOBIS (Korean Film Council) and KMDb (Korean Movie Database) APIs. Movie information (title, director, genre, release year, poster, etc.) is provided through external APIs, and the Company does not guarantee the accuracy or completeness of such information. Users may earn viewing rewards by watching rewarded ads.</p>
+        <h3>4.8 Big Five (Big5) Personality Test</h3>
+        <p>The Big Five Personality Test in this Service is provided solely for the purpose of self-understanding and motivation, based on five personality traits: Openness, Conscientiousness, Extraversion, Agreeableness, and Neuroticism. The test results do not replace professional psychological or clinical diagnosis, and the Company does not guarantee their academic or scientific accuracy. Users may take the test only after providing separate consent for personal information collection and use. For mental health concerns, consulting a qualified professional is strongly recommended.</p>
+        <h3>4.9 Future Net Worth Simulator</h3>
+        <p>The Future Net Worth Simulator is a reference financial tool that allows users to project long-term net worth by entering annual income, current assets/liabilities, inflation rate, expense ratio, and lump-sum expense plans. The results are provided solely for motivational purposes and financial planning reference. The Company does not guarantee the accuracy or achievability of any projected figures. This tool does not replace professional financial or investment advice; users are encouraged to consult a qualified financial professional before making significant financial decisions. Users may store their financial data on the server and have it appear in the Social tab's Savings Ranking after providing separate consent for personal information collection and use.</p>
+    </div>
+
+    <div class="section">
+        <h2>5. Location Information</h2>
+        <p>Location information may be collected for dungeon/raid features. Location data collection occurs only with the user's explicit consent and can be disabled at any time in settings.</p>
+    </div>
+
+    <div class="section">
+        <h2>6. Advertising</h2>
+        <p>The Service displays advertisements through Google AdMob, including banner ads, native ads, and rewarded ads. Rewarded ads allow users to voluntarily watch ads to access certain features (planner, calculators, etc.) or obtain in-game rewards. Ads are provided to cover Service operating costs and are not produced by the Company. For EU/EEA users, a GDPR consent form (UMP) is displayed. The Company is not responsible for third-party websites or services accessed through advertisements.</p>
+    </div>
+
+    <div class="section">
+        <h2>7. Push Notifications</h2>
+        <p>The Service provides push notifications through Firebase Cloud Messaging (FCM). Push notifications are sent for quest alerts, raid alerts, streak alerts, service announcements, etc., in the user's selected language. Users can disable push notifications at any time in app settings.</p>
+    </div>
+
+    <div class="section">
+        <h2>8. Copyright and Intellectual Property</h2>
+        <h3>8.1 Company Copyright</h3>
+        <p>Copyright and intellectual property rights for all content in the Service (design, text, images, icons, UI/UX, game systems, quest data, etc.) belong to <span class="brand">BRAVECAT STUDIOS</span>. Unauthorized reproduction, distribution, modification, or reverse engineering of the Service is strictly prohibited.</p>
+        <h3>8.2 User Content</h3>
+        <p>Copyright for content uploaded by users (Day1 feed photos, profile photos, etc.) belongs to the respective user. However, users grant the Company a non-exclusive license to use such content within the scope necessary for Service operation.</p>
+        <h3>8.3 Copyright Infringement Prohibition</h3>
+        <p>Users must not upload content that infringes third-party copyrights. If copyright infringement is confirmed, the content will be removed and the account may be sanctioned.</p>
+        <h3>8.4 Copyright Infringement Reports</h3>
+        <p>If you discover content that infringes third-party copyrights, please report it to <a href="mailto:copyright@bravecat.studio">copyright@bravecat.studio</a> with the following information:</p>
+        <ul>
+            <li>Description of the copyrighted work claimed to be infringed</li>
+            <li>Location of the infringing content (screenshots, etc.)</li>
+            <li>Contact information of the reporter</li>
+            <li>Documentation proving copyright ownership</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>9. Prohibited Actions</h2>
+        <p>Users must not engage in the following actions:</p>
+        <ul>
+            <li>Actions that interfere with the normal operation of the Service</li>
+            <li>Unauthorized collection or use of other users' personal information</li>
+            <li>Fraudulent use through automated means (bots, scripts, etc.)</li>
+            <li>Arbitrary manipulation or falsification of Service data</li>
+            <li>Impersonating others or providing false information</li>
+            <li>Posting offensive or harmful content</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>10. Account Suspension and Termination</h2>
+        <p>The Company may restrict, suspend, or delete accounts without prior notice if users violate these Terms. Users may discontinue use of the Service at any time through the logout function in the settings menu.</p>
+    </div>
+
+    <div class="section">
+        <h2>11. Limitation of Liability</h2>
+        <p>The Company provides the Service "AS IS" and makes no express or implied warranties regarding the completeness, accuracy, or reliability of the Service. To the extent permitted by applicable law, the Company shall not be liable for any direct, indirect, incidental, or consequential damages arising from use of the Service.</p>
+    </div>
+
+    <div class="section">
+        <h2>12. Changes to Terms</h2>
+        <p>The Company may modify these Terms as necessary, and changes will be communicated through in-app announcements. If you do not agree with the modified Terms, you may discontinue use of the Service and delete your account.</p>
+    </div>
+
+    <div class="section">
+        <h2>13. Governing Law and Dispute Resolution</h2>
+        <p>These Terms are governed by the laws of the Republic of Korea, and the Seoul Central District Court shall have jurisdiction as the court of first instance for disputes related to use of the Service.</p>
+    </div>
+
+    <div class="section">
+        <h2>14. Contact</h2>
+        <p>For inquiries regarding these Terms, please contact us at:</p>
+        <p><span class="brand">BRAVECAT STUDIOS</span><br>Email: <a href="mailto:support@bravecat.studio">support@bravecat.studio</a></p>
+    </div>
+
+    <div class="section">
+        <h2>15. Security Vulnerability Reports</h2>
+        <p>If you discover a security vulnerability in the Service, please report it to the address below. We welcome responsible disclosure from good-faith security researchers and will review all submissions carefully.</p>
+        <p>Security report email: <a href="mailto:bug@bravecat.studio">bug@bravecat.studio</a></p>
+        <p>Including the following information will help us review your report promptly:</p>
+        <ul>
+            <li>Type and location of the vulnerability</li>
+            <li>Steps to reproduce the vulnerability</li>
+            <li>Relevant screenshots or screen recordings (optional)</li>
+            <li>Potential impact and severity assessment</li>
+        </ul>
+        <p>The Company will review reported vulnerabilities and take appropriate action. Report contents will not be disclosed to third parties without consent and will be used solely to improve Service security.</p>
+    </div>
+
+    </div><!-- /content-en -->
+
+    <!-- 日本語 -->
+    <div class="content-block" id="content-ja">
+
+    <div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);border-radius:8px;padding:12px;margin-bottom:16px;">
+        <p style="color:#ffaa00;font-size:0.8rem;margin:0;">この文書は参考のために翻訳されたものです。本翻訳と韓国語原文との間に齟齬がある場合は、韓国語版が優先されます。</p>
+    </div>
+
+    <div class="section">
+        <p>本利用規約（以下「規約」）は、<span class="brand">BRAVECAT STUDIOS</span>（以下「会社」）が提供する<span class="brand">LEVEL UP: REBOOT</span>モバイルアプリケーション（以下「サービス」）の利用条件を定めます。サービスを利用することにより、本規約に同意したものとみなされます。</p>
+    </div>
+
+    <div class="section">
+        <h2>1. サービス概要</h2>
+        <p>LEVEL UP: REBOOTは、日常の自己啓発活動をゲーミフィケーションし、ユーザーのモチベーションと習慣形成を支援するモバイルアプリケーションであり、習慣形成プロジェクトです。</p>
+        <ul>
+            <li>デイリークエストシステムによる自己啓発目標管理</li>
+            <li>ステータスシステムによる成長の可視化</li>
+            <li>ソーシャル機能によるコミュニティ参加</li>
+            <li>グローバルダンジョンレイドシステムによる協力コンテンツ</li>
+            <li>Day1フィードによる24時間活動共有</li>
+            <li>プランナー（月間カレンダー、週間タイムテーブル、DIYクエスト）とムードトラッキングによる日常管理</li>
+            <li>習慣形成プロジェクト（ルーティン作成・編集、繰り返し曜日/回数設定、完了チェック、連続達成（Streak）と達成率統計）による長期習慣構築</li>
+            <li>ウィークリーチャレンジとデイリーボーナスルーレット</li>
+            <li>Life Status（生命状態）機能による期待寿命の可視化</li>
+            <li>D-Day目標管理機能</li>
+            <li>ランニング計算機（マイレージ、トレッドミル）と1RM計算機による運動記録管理</li>
+            <li>タスクチェックリストによるデイリーTo-Do管理</li>
+            <li>マイ書斎機能による読書記録管理（ISBNバーコードスキャン）</li>
+            <li>マイ映画機能による映画鑑賞記録管理</li>
+            <li>Big5性格検査による自己理解および性格タイプ分析</li>
+            <li>LinkedInプロフィール連携によるキャリア情報表示</li>
+            <li>未来純資産シミュレーターによる長期財務目標管理</li>
+            <li>プッシュ通知によるクエスト/レイド/サービスアラート</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>2. アカウントと利用資格</h2>
+        <h3>2.1 利用資格</h3>
+        <p>サービスを利用するには18歳以上である必要があります。18歳未満の未成年者は、法定代理人の同意なくサービスに登録または利用することはできません。</p>
+        <h3>2.2 アカウント管理</h3>
+        <p>ユーザーは自身のアカウント情報（メール、パスワード等）を安全に管理する責任があり、アカウントを通じて行われるすべての活動に対する責任はユーザー本人にあります。</p>
+        <h3>2.3 アカウント作成</h3>
+        <p>アカウントはメール/パスワードまたはGoogle OAuthを通じて作成できます。一人につき一つのアカウントのみ作成可能であり、重複アカウントの作成は禁止されています。ユーザーはニックネームとプロフィール写真を必須プロフィール情報として設定できます。Instagram IDおよびLinkedInプロフィールURLは任意項目であり、未入力の場合はプロフィールに表示されず、いつでも削除することができます。</p>
+    </div>
+
+    <div class="section">
+        <h2>3. サービス利用</h2>
+        <h3>3.1 無料サービス</h3>
+        <p>サービスの基本機能は広告ベースで無料提供されます。Google AdMobによるバナー広告、ネイティブ広告、リワード広告が表示される場合があります。特定機能（プランナー閲覧、計算機使用、ステータス画面確認等）へのアクセスにはリワード広告の視聴が必要な場合があります。会社は今後、有料機能やサブスクリプションサービスを導入する可能性があり、その場合は事前に告知します。</p>
+        <h3>3.2 サービスの変更および中断</h3>
+        <p>会社は運営上または技術上の必要に応じて、サービスの全部または一部を変更または中断できます。重大な変更事項はサービス内のお知らせまたはメールにて事前に告知します。</p>
+        <h3>3.3 コンテンツの所有権</h3>
+        <p>ユーザーがサービスにアップロードしたコンテンツ（プロフィール写真、Day1フィード写真、ニックネーム等）の所有権はユーザーにありますが、サービス運営に必要な範囲内で会社がそれを利用できるライセンスを付与します。</p>
+        <h3>3.4 Day1フィード</h3>
+        <p>Day1フィードに投稿されたコンテンツ（写真、キャプション）は投稿後24時間経過すると自動的に削除されます。1日1回の投稿が可能で、毎日00:00（KST）にリセットされます。</p>
+    </div>
+
+    <div class="section">
+        <h2>4. 健康および免責事項</h2>
+        <h3>4.1 健康関連免責</h3>
+        <p>本サービスは健康補助およびモチベーション目的でのみ提供されます。医学的助言、診断、治療に代わるものではありません。</p>
+        <h3>4.2 運動および身体活動</h3>
+        <p>クエスト遂行中に発生する身体的傷害や損害について、会社は一切責任を負いません。ユーザーは自身の身体状態を考慮し、安全に活動する必要があります。</p>
+        <h3>4.3 Health Connect連携</h3>
+        <p>Health Connectとのデータ同期機能は、ユーザーの選択により有効化されます。同期された健康データの正確性について会社は保証しません。メールログインユーザーはフィットネス同期機能を利用できません。</p>
+        <h3>4.4 Life Status（生命状態）機能</h3>
+        <p>Life Status機能は、ユーザーが入力した生年月日と期待寿命の情報に基づいて残りの生涯を視覚的に表示します。この機能はモチベーション目的でのみ提供され、医学的・科学的正確性を保証しません。ユーザーは別途の個人情報収集および利用同意を経た後にこの機能を有効化できます。</p>
+        <h3>4.5 ランニング計算機および1RM計算機</h3>
+        <p>ランニング計算機と1RM計算機は、ユーザーの運動記録管理を支援するための参考用ツールです。計算結果の正確性について会社は保証せず、運動前に専門家の助言を受けることを推奨します。</p>
+        <h3>4.6 マイ書斎（My Library）</h3>
+        <p>マイ書斎機能は、ユーザーが読んだ本を記録・管理できる読書トラッキングツールです。ISBNバーコードスキャン（カメラ）または手動検索により書籍を登録できます。カメラアクセスはISBNバーコードスキャンの目的でのみ使用され、ユーザーの明示的な同意のもとで有効化されます。設定でいつでもカメラ権限を無効にできます。登録された書籍情報（タイトル、著者、出版社、表紙画像等）は外部図書APIを通じて取得されますが、会社は当該情報の正確性を保証しません。リワード広告を視聴して読書報酬を獲得できます。</p>
+        <h3>4.7 マイ映画（My Movies）</h3>
+        <p>マイ映画機能は、ユーザーが鑑賞した映画を記録・管理できる映画トラッキングツールです。KOBIS（韓国映画振興委員会）およびKMDb（韓国映画データベース）APIを通じて映画を検索・登録できます。映画情報（タイトル、監督、ジャンル、公開年、ポスター等）は外部APIを通じて提供されますが、会社は当該情報の正確性や完全性を保証しません。リワード広告を視聴して鑑賞報酬を獲得できます。</p>
+        <h3>4.8 Big5性格検査</h3>
+        <p>本サービスのBig5性格検査は、開放性・誠実性・外向性・協調性・神経症傾向の5つの特性に基づき、自己理解とモチベーション向上を目的としてのみ提供されます。検査結果は心理学的・臨床的な専門診断に代わるものではなく、学術的・科学的正確性を保証しません。ユーザーは別途の個人情報収集および利用同意を経た後に検査を受けることができます。精神的健康に関する問題については、専門家への相談を強くお勧めします。</p>
+        <h3>4.9 未来純資産シミュレーター</h3>
+        <p>未来純資産シミュレーターは、年収、現在の資産・負債、インフレ率、支出比率、まとまった支出計画を入力することで、長期的な純資産を予測する参考用財務ツールです。計算結果はモチベーション向上および財務計画の参考目的でのみ提供され、会社は当該数値の正確性または実現可能性を保証しません。本機能は専門的な財務・投資アドバイスに代わるものではなく、重要な財務上の決定をする前には専門の金融アドバイザーへの相談を推奨します。ユーザーは別途の個人情報収集および利用同意を経た後、財務情報をサーバーに保存し、ソーシャルタブの貯蓄王ランキングに公開することができます。</p>
+    </div>
+
+    <div class="section">
+        <h2>5. 位置情報</h2>
+        <p>ダンジョン/レイド機能のためにユーザーの位置情報を収集する場合があります。位置情報の収集はユーザーの明示的な同意のもとでのみ行われ、設定でいつでも無効にできます。</p>
+    </div>
+
+    <div class="section">
+        <h2>6. 広告</h2>
+        <p>サービスにはGoogle AdMobによる広告が表示されます。広告の種類にはバナー広告、ネイティブ広告、リワード広告が含まれます。リワード広告はユーザーが自発的に視聴して特定機能（プランナー閲覧、計算機アクセス等）を利用したり、ゲーム内報酬を獲得する方式です。広告はサービス運営費用を賄うために提供され、広告内容は会社が直接制作したものではありません。EU/EEA地域のユーザーにはGDPRに基づく広告同意フォーム（UMP）が表示されます。広告を通じてアクセスする第三者のウェブサイトやサービスについて会社は責任を負いません。</p>
+    </div>
+
+    <div class="section">
+        <h2>7. プッシュ通知</h2>
+        <p>サービスはFirebase Cloud Messaging（FCM）を通じてプッシュ通知を提供します。プッシュ通知はクエスト通知、レイド通知、ストリーク通知、サービスお知らせ等の目的で送信され、ユーザーの言語設定に応じた言語で送信されます。ユーザーはアプリ内設定でいつでもプッシュ通知を無効にできます。</p>
+    </div>
+
+    <div class="section">
+        <h2>8. 著作権および知的財産権</h2>
+        <h3>8.1 会社の著作権</h3>
+        <p>サービス内のすべてのコンテンツ（デザイン、テキスト、画像、アイコン、UI/UX、ゲームシステム、クエストデータ等）に対する著作権および知的財産権は<span class="brand">BRAVECAT STUDIOS</span>に帰属します。サービスの無断複製、配布、改変、リバースエンジニアリングは厳禁です。</p>
+        <h3>8.2 ユーザーコンテンツ</h3>
+        <p>ユーザーがアップロードしたコンテンツ（Day1フィード写真、プロフィール写真等）の著作権は当該ユーザーに帰属します。ただし、ユーザーはサービス運営に必要な範囲内で会社が当該コンテンツを利用できる非独占的ライセンスを付与します。</p>
+        <h3>8.3 著作権侵害の禁止</h3>
+        <p>ユーザーは第三者の著作権を侵害するコンテンツをサービスにアップロードしてはなりません。著作権侵害が確認された場合、当該コンテンツは削除され、アカウント制裁が行われる場合があります。</p>
+        <h3>8.4 著作権侵害の報告</h3>
+        <p>第三者の著作権を侵害するコンテンツを発見した場合、<a href="mailto:copyright@bravecat.studio">copyright@bravecat.studio</a>まで以下の情報を含めてご報告ください：</p>
+        <ul>
+            <li>侵害されたと主張する著作物の説明</li>
+            <li>侵害コンテンツの場所（スクリーンショット等）</li>
+            <li>報告者の連絡先情報</li>
+            <li>著作権者であることを証明する資料</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>9. 禁止行為</h2>
+        <p>ユーザーは以下の行為をしてはなりません：</p>
+        <ul>
+            <li>サービスの正常な運営を妨害する行為</li>
+            <li>他のユーザーの個人情報を無断で収集または利用する行為</li>
+            <li>自動化された手段（ボット、スクリプト等）による不正利用</li>
+            <li>サービスデータの恣意的な操作または改ざん</li>
+            <li>他人になりすましたり虚偽の情報を提供する行為</li>
+            <li>不快または有害なコンテンツを投稿する行為</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>10. アカウントの停止および解除</h2>
+        <p>会社は、ユーザーが本規約に違反した場合、事前通知なくサービス利用を制限したり、アカウントを停止または削除できます。ユーザーは設定メニューのログアウト機能を通じていつでもサービスの利用を中断できます。</p>
+    </div>
+
+    <div class="section">
+        <h2>11. 責任の制限</h2>
+        <p>会社はサービスを「現状のまま（AS IS）」提供し、サービスの完全性、正確性、信頼性について明示的または黙示的な保証をしません。関連法令が許容する範囲内で、サービスの利用により生じた直接的、間接的、偶発的、結果的損害について会社は責任を負いません。</p>
+    </div>
+
+    <div class="section">
+        <h2>12. 規約の変更</h2>
+        <p>会社は必要に応じて規約を変更でき、変更された規約はサービス内のお知らせを通じて告知します。変更された規約に同意しない場合、ユーザーはサービスの利用を中断し、アカウントを削除できます。</p>
+    </div>
+
+    <div class="section">
+        <h2>13. 準拠法および紛争解決</h2>
+        <p>本規約は大韓民国の法律に従って解釈され、サービスの利用に関する紛争はソウル中央地方裁判所を第一審の管轄裁判所とします。</p>
+    </div>
+
+    <div class="section">
+        <h2>14. お問い合わせ</h2>
+        <p>本規約に関するお問い合わせは、以下までご連絡ください。</p>
+        <p><span class="brand">BRAVECAT STUDIOS</span><br>メール: <a href="mailto:support@bravecat.studio">support@bravecat.studio</a></p>
+    </div>
+
+    <div class="section">
+        <h2>15. セキュリティ脆弱性の報告</h2>
+        <p>サービスでセキュリティ上の脆弱性を発見した場合は、以下のアドレスまでご報告ください。善意のセキュリティ研究者による責任ある開示を歓迎し、すべての申告を誠実に審査します。</p>
+        <p>セキュリティ報告用メール: <a href="mailto:bug@bravecat.studio">bug@bravecat.studio</a></p>
+        <p>以下の情報を含めていただくと、迅速に対応できます：</p>
+        <ul>
+            <li>脆弱性の種類と発生箇所</li>
+            <li>脆弱性の再現手順</li>
+            <li>関連するスクリーンショットまたは動画（任意）</li>
+            <li>潜在的な影響度および深刻度の評価</li>
+        </ul>
+        <p>会社は報告された脆弱性を審査し、適切な措置を講じます。報告内容は同意なく第三者に開示されることはなく、サービスのセキュリティ改善にのみ活用されます。</p>
+    </div>
+
+    </div><!-- /content-ja -->
+
+    <div class="section" style="margin-top: 32px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <p style="font-size: 0.75rem; color: #666;">본 약관의 한국어 원문이 법적 효력을 가지며, 영어 또는 일본어 번역본은 참고용으로만 제공됩니다. 번역본과 한국어 원문 사이에 차이가 있는 경우, 한국어 원문이 우선합니다.</p>
+        <p style="font-size: 0.75rem; color: #666;">The Korean original of these Terms is legally binding. English or Japanese translations are provided for reference purposes only. In case of any discrepancy, the Korean version shall prevail.</p>
+    </div>
+    <script>
+        const TITLES = {
+            ko: { title: '소비자 약관', date: '시행일: 2025년 3월 1일 | 최종 수정: 2026년 4월 27일' },
+            en: { title: 'Terms of Service', date: 'Effective: March 1, 2025 | Last updated: April 27, 2026' },
+            ja: { title: '利用規約', date: '施行日: 2025年3月1日 | 最終更新: 2026年4月27日' }
+        };
+        function setLang(lang) {
+            var t = TITLES[lang] || TITLES.ko;
+            document.getElementById('page-title').textContent = t.title;
+            document.getElementById('page-date').textContent = t.date;
+            document.querySelectorAll('.content-block').forEach(function(el) { el.classList.remove('active'); });
+            var content = document.getElementById('content-' + lang);
+            if (content) content.classList.add('active');
+            document.querySelectorAll('.lang-switch button').forEach(function(b) { b.classList.remove('active'); });
+            var btn = document.getElementById('lang-' + lang);
+            if (btn) btn.classList.add('active');
+            document.documentElement.lang = lang;
+            document.title = t.title + ' - BRAVECAT STUDIOS';
+        }
+        var browserLang = (navigator.language || 'ko').substring(0, 2);
+        if (['ko', 'en', 'ja'].indexOf(browserLang) !== -1) setLang(browserLang);
+    </script>
+</body>
+</html>
