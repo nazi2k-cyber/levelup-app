@@ -2720,6 +2720,8 @@ window.syncGlobalDungeon = async () => {
                                 hasContributed: !!dng.hasContributed,
                                 hasProximityBonus: !!dng.hasProximityBonus,
                                 statValue: Number(stats[AppState.dungeon.targetStat]) || 0,
+                                hasEntryBonus: !!dng.hasEntryBonus,
+                                joinedAt: Number(dng.joinedAt) || 0,
                                 isMe
                             });
                         }
@@ -2746,7 +2748,12 @@ window.syncGlobalDungeon = async () => {
         AppState.dungeon.bossDamageDealt = totalDamage;
         AppState.dungeon.globalParticipants = realParticipants;
         AppState.dungeon.globalProgress = Math.min(100, (totalDamage / scaledHP) * 100);
-        AppState.dungeon.raidParticipants = participants.sort((a, b) => (b.hasProximityBonus - a.hasProximityBonus) || (b.hasContributed - a.hasContributed) || (b.statValue - a.statValue));
+        // 정렬 우선순위: 근접 > 보너스 > 선착순
+        AppState.dungeon.raidParticipants = participants.sort((a, b) =>
+            (b.hasProximityBonus - a.hasProximityBonus)
+            || (b.hasEntryBonus - a.hasEntryBonus)
+            || ((a.joinedAt || 0) - (b.joinedAt || 0))
+        );
 
         // HP 감소 시 애니메이션 트리거
         if (totalDamage > prevDmg && document.getElementById('dungeon').classList.contains('active')) {
@@ -2809,6 +2816,9 @@ function updateDungeonStatus() {
         AppState.dungeon.hasContributed = false;
         AppState.dungeon.isCleared = false;
         AppState.dungeon.hasProximityBonus = false;
+        AppState.dungeon.hasEntryBonus = false;
+        AppState.dungeon.contributionLimit = 1;
+        AppState.dungeon.contributionUsed = 0;
 
         AppState.dungeon.globalParticipants = 0;
         AppState.dungeon.globalProgress = 0;
@@ -2840,7 +2850,7 @@ function renderRaidParticipants(participants) {
                 <div>
                     ${titleBadgeHTML}
                     <div style="font-size:0.8rem; display:flex; align-items:center; flex-wrap:wrap; gap:2px;">
-                        ${sanitizeText(u.name)} ${u.hasProximityBonus ? `<span class="melee-bonus-badge">⚔️ 근접 보너스</span>` : ''} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''} ${u.linkedinId ? `<button onclick="window.openLinkedInProfile('${sanitizeLinkedInId(u.linkedinId)}')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>` : ''}
+                        ${sanitizeText(u.name)} ${u.hasProximityBonus ? `<span class="melee-bonus-badge">⚔️ 근접</span>` : ''} ${u.hasEntryBonus ? `<span class="melee-bonus-badge" style="margin-left:2px;">🎁 보너스</span>` : ''} ${u.instaId ? `<button onclick="window.open('https://instagram.com/${sanitizeInstaId(u.instaId)}', '_blank')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${instaSvg}</button>` : ''} ${u.linkedinId ? `<button onclick="window.openLinkedInProfile('${sanitizeLinkedInId(u.linkedinId)}')" style="background:none; border:none; padding:0; margin-left:4px; cursor:pointer; display:inline-flex;">${linkedinSvg}</button>` : ''}
                     </div>
                 </div>
             </div>
@@ -3050,7 +3060,20 @@ window.joinDungeon = async () => {
         } catch (e) { /* GPS 실패해도 입장은 허용 */ }
     }
 
+    const hasAskedEntryKey = `${getKSTDateStr(new Date())}_${AppState.dungeon.slot}`;
+    if (AppState.dungeon.entryBonusAskKey !== hasAskedEntryKey) {
+        const lang = AppState.currentLang;
+        const askBonus = confirm(i18n[lang]?.ri_dungeon_prompt || '최초 입장 보너스를 위해 광고를 시청하시겠습니까? 수락 시 기여 2회가 적용됩니다.');
+        AppState.dungeon.entryBonusAskKey = hasAskedEntryKey;
+        AppState.dungeon.hasEntryBonus = !!askBonus;
+        AppState.dungeon.contributionLimit = askBonus ? 2 : 1;
+        if (askBonus && window.AdManager?.isRewardedInterstitialReady?.() && window.AdManager?.isAdExposureAllowed?.() && isNative) {
+            try { await window.AdManager.showRewardedInterstitial('dungeon_entry'); } catch(e) {}
+        }
+    }
+
     AppState.dungeon.isJoined = true;
+    AppState.dungeon.joinedAt = Date.now();
     if (!AppState.dungeon.bossMaxHP) {
         AppState.dungeon.bossMaxHP = isBossRush() ? 10 : 5;
         AppState.dungeon.bossDamageDealt = 0;
@@ -3070,13 +3093,16 @@ window.joinDungeon = async () => {
 };
 
 window.simulateRaidAction = async () => {
-    if (AppState.dungeon.hasContributed || AppState.dungeon.globalProgress >= 100) return;
+    const limit = Math.max(1, Number(AppState.dungeon.contributionLimit) || 1);
+    const used = Math.max(0, Number(AppState.dungeon.contributionUsed) || 0);
+    if (used >= limit || AppState.dungeon.globalProgress >= 100) return;
 
     const btn = document.getElementById('btn-raid-action');
     btn.innerText = `데이터 전송 중...`;
     btn.disabled = true;
 
-    AppState.dungeon.hasContributed = true;
+    AppState.dungeon.contributionUsed = used + 1;
+    AppState.dungeon.hasContributed = AppState.dungeon.contributionUsed >= limit;
     // 로컬 상태 즉시 반영 (서버 sync 전 UI 업데이트)
     AppState.dungeon.bossDamageDealt = (AppState.dungeon.bossDamageDealt || 0) + 1;
     const bossMaxHP = AppState.dungeon.bossMaxHP || 5;
