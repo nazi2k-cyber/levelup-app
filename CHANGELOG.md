@@ -5,6 +5,16 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.750] - 2026-05-03
+
+### 변경
+- Handle /terms URLs via docs 404 redirect to www
+
+## [1.0.749] - 2026-05-03
+
+### 변경
+- Remove duplicated docs terms and sync workflow
+
 ## [1.0.748] - 2026-05-03
 
 ### 변경
