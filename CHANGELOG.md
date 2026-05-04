@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.753] - 2026-05-04
+
+### 변경
+- Adjust dungeon raid rewarded interstitial to once daily after completion popup
+
 ## [1.0.752] - 2026-05-04
 
 ### 변경
