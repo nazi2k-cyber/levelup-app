@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.757] - 2026-05-04
+
+### 변경
+- 던전 최초 입장 보너스 선택 및 참여자 정렬 개선
+
 ## [1.0.756] - 2026-05-04
 
 ### 변경
