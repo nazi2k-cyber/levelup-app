@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.776] - 2026-05-05
+
+### 변경
+- debug: 스케줄러 저장/로드 상세 로그 및 Firestore 원본 디버그 뷰 추가
+
 ## [1.0.775] - 2026-05-05
 
 ### 변경
