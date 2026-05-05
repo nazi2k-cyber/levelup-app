@@ -52,6 +52,7 @@ const authReady = setPersistence(auth, browserLocalPersistence)
 const db = getFirestore(app);
 const functions = getFunctions(app, "asia-northeast3");
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
 
 export {
     app, auth, db, functions, provider, firebaseConfig, authReady,

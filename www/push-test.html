@@ -1127,6 +1127,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const functions = getFunctions(app, "asia-northeast3");
 const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
 tok("Init", "Firebase initialized (project: " + firebaseConfig.projectId + ", region: asia-northeast3)");
 
 async function syncClaimsFromServer(user) {
