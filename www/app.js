@@ -28,7 +28,7 @@ if (!self.__FIREBASE_CONFIG) {
     console.error('[App] firebase-config.js가 로드되지 않았습니다. npm run generate-config를 실행하세요.');
 }
 const firebaseConfig = self.__FIREBASE_CONFIG;
-const APP_VERSION = '1.0.767';
+const APP_VERSION = '1.0.773';
 window.__APP_VERSION__ = APP_VERSION;
 if (window.AppLogger) {
     AppLogger.info('[AppStart] 빌드 버전: v' + APP_VERSION);
@@ -899,6 +899,7 @@ function bindEvents() {
     document.getElementById('btn-dungeon-info').addEventListener('click', openDungeonInfoModal);
     document.getElementById('btn-planner-info').addEventListener('click', openPlannerInfoModal);
     document.getElementById('btn-day1-info').addEventListener('click', openDay1InfoModal);
+    document.getElementById('btn-social-info').addEventListener('click', openSocialGuideModal);
     document.getElementById('btn-settings-push-guide').addEventListener('click', () => openSettingsGuideModal('push'));
     document.getElementById('btn-settings-gps-guide').addEventListener('click', () => openSettingsGuideModal('gps'));
     document.getElementById('btn-settings-fitness-guide').addEventListener('click', () => openSettingsGuideModal('fitness'));
@@ -4925,8 +4926,32 @@ function openDay1InfoModal() {
         <div style="background:rgba(255,60,60,0.06); border:1px solid var(--neon-red); padding:10px; border-radius:8px; margin-bottom:8px;">
             <div style="font-weight:bold; color:var(--neon-red); margin-bottom:4px;">⏰ ${l.day1_guide_auto_delete || ''}</div>
         </div>
-        <div style="background:rgba(180,0,255,0.06); border:1px solid rgba(180,0,255,0.3); padding:10px; border-radius:8px;">
+        <div style="background:rgba(180,0,255,0.06); border:1px solid rgba(180,0,255,0.3); padding:10px; border-radius:8px; margin-bottom:8px;">
             <div style="font-size:0.75rem; color:var(--text-sub);">${l.day1_guide_cooldown || ''}</div>
+        </div>
+        <div style="background:rgba(255,82,82,0.06); border:1px solid rgba(255,82,82,0.35); padding:10px; border-radius:8px;">
+            <div style="font-size:0.75rem; color:#ff8a80; line-height:1.6;">${l.day1_guide_report_policy || ''}</div>
+        </div>
+    `;
+
+    const m = document.getElementById('infoModal');
+    m.classList.remove('d-none');
+    m.classList.add('d-flex');
+}
+
+// --- ★ 소셜 가이드 모달 ★ ---
+function openSocialGuideModal() {
+    const lang = AppState.currentLang;
+    const l = i18n[lang];
+    document.getElementById('info-modal-title').innerText = l.social_guide_title || 'Social Guide';
+    const body = document.getElementById('info-modal-body');
+    body.innerHTML = `
+        <div style="background:rgba(255,220,0,0.06); border:1px solid var(--neon-gold); padding:12px; border-radius:8px; margin-bottom:10px;">
+            <div style="font-weight:bold; color:var(--neon-gold); margin-bottom:8px;">🏆 ${l.social_guide_title || 'Social Guide'}</div>
+            <p style="font-size:0.8rem; color:var(--text-sub); line-height:1.6; margin:0;">${l.social_guide_ranking_desc || ''}</p>
+        </div>
+        <div style="background:rgba(255,82,82,0.06); border:1px solid rgba(255,82,82,0.35); padding:10px; border-radius:8px;">
+            <div style="font-size:0.75rem; color:#ff8a80; line-height:1.6;">${l.social_guide_report_policy || ''}</div>
         </div>
     `;
 

@@ -4,7 +4,7 @@ import { tlog, tok, terror } from "./log-panel.js";
 
 let _container = null;
 let _reports = [];
-let _processedPostIds = new Set();
+let _processedPostIds = new Map(); // postId → "deleted" | "dismissed"
 let _applyFilters = null;
 
 const ping = httpsCallable(functions, "ping");
@@ -47,7 +47,8 @@ function render() {
                     <select id="rpt-processed-filter" style="padding:4px 8px; font-size:0.8rem; min-width:180px;">
                         <option value="">전체 처리 상태</option>
                         <option value="pending">미처리</option>
-                        <option value="done">처리 완료</option>
+                        <option value="deleted">삭제처리</option>
+                        <option value="dismissed">신고기각</option>
                     </select>
                 </div>
             </div>
@@ -89,7 +90,9 @@ async function loadReports() {
     try {
         const result = await callAdmin("screeningListReports");
         _reports = result.reports || [];
-        _processedPostIds = new Set(_reports.filter(r => r.processed).map(r => r.postId));
+        _processedPostIds = new Map(
+            _reports.filter(r => r.processed).map(r => [r.postId, r.processedAction || "deleted"])
+        );
         tok("Reports", `${_reports.length}개 신고 조회 완료`);
         countEl.textContent = `총 ${_reports.length}개`;
 
@@ -127,8 +130,8 @@ async function loadReports() {
             }
             if (processedFilter === "pending") {
                 filtered = filtered.filter(r => !_processedPostIds.has(r.postId));
-            } else if (processedFilter === "done") {
-                filtered = filtered.filter(r => _processedPostIds.has(r.postId));
+            } else if (processedFilter === "deleted" || processedFilter === "dismissed") {
+                filtered = filtered.filter(r => _processedPostIds.get(r.postId) === processedFilter);
             }
             listEl.innerHTML = renderReportTable(filtered);
             countEl.textContent = `총 ${_reports.length}개 / 필터: ${filtered.length}개`;
@@ -176,9 +179,14 @@ function renderReportTable(reports) {
               + ((r.reporters[r.reporters.length - 1].reason || "").length > 15 ? "..." : "")
             : '—';
 
-        const isProcessed = _processedPostIds.has(r.postId);
+        const processedAction = _processedPostIds.get(r.postId);
+        const isProcessed = processedAction !== undefined;
         const processedStyle = isProcessed ? ' opacity:0.5;' : '';
-        const processedBadge = isProcessed ? '<span class="badge badge-ok" style="margin-left:4px;font-size:0.7rem;">처리완료</span>' : '';
+        const processedBadge = isProcessed
+            ? (processedAction === 'dismissed'
+                ? '<span class="badge badge-ok" style="margin-left:4px;font-size:0.7rem;">신고기각</span>'
+                : '<span class="badge badge-fail" style="margin-left:4px;font-size:0.7rem;">삭제처리</span>')
+            : '';
 
         html += `<tr class="rpt-row" data-post-id="${escHtml(r.postId)}" style="cursor:pointer;${processedStyle}">
             <td>${thumbHtml}</td>
@@ -278,7 +286,8 @@ async function deleteReportedPost(sendNotification = false) {
         tok("Reports", `포스트 삭제 완료: ${_selectedReport.postId}`);
         resultEl.innerHTML = `<p class="text-success text-sm">포스트 삭제 완료! (삭제 안내 발송 완료)</p>`;
 
-        _processedPostIds.add(_selectedReport.postId);
+        _processedPostIds.set(_selectedReport.postId, "deleted");
+        _reports = _reports.filter(r => r.postId !== _selectedReport.postId);
         if (_applyFilters) _applyFilters();
         else { document.getElementById("rpt-list").innerHTML = renderReportTable(_reports); bindReportClicks(); }
 
@@ -303,7 +312,8 @@ async function dismissReport() {
         tok("Reports", `신고 기각 완료: ${_selectedReport.postId}`);
         resultEl.innerHTML = '<p class="text-success text-sm">신고 기각 완료!</p>';
 
-        _processedPostIds.add(_selectedReport.postId);
+        _processedPostIds.set(_selectedReport.postId, "dismissed");
+        _reports = _reports.filter(r => r.postId !== _selectedReport.postId);
         if (_applyFilters) _applyFilters();
         else { document.getElementById("rpt-list").innerHTML = renderReportTable(_reports); bindReportClicks(); }
 

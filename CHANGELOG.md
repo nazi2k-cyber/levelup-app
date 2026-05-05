@@ -5,6 +5,36 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.773] - 2026-05-05
+
+### 변경
+- admin: rename 신고 누적→삭제 누적, split 처리완료 filter into 삭제처리/신고기각
+
+## [1.0.772] - 2026-05-05
+
+### 변경
+- Differentiate 삭제처리/신고기각 badges; hide report warning on dismiss
+
+## [1.0.771] - 2026-05-05
+
+### 변경
+- Fix dismissed reports lingering in list; add suspension count filter
+
+## [1.0.770] - 2026-05-05
+
+### 변경
+- Adjust social header guide button position
+
+## [1.0.769] - 2026-05-05
+
+### 변경
+- Add suspension tracking: auto-suspend/delete, dismiss deduction, social/Day1 guide
+
+## [1.0.768] - 2026-05-05
+
+### 변경
+- fix: 자동 스크리닝 대시보드 스케줄러 생성 작동오류 수정
+
 ## [1.0.767] - 2026-05-05
 
 ### 변경

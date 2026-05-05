@@ -141,13 +141,16 @@ async function loadUsers() {
                 <input type="checkbox" id="um-filter-reported"> <span style="color:#ff5252;">신고 유저만 보기</span>
             </label>
             <label class="text-sm" style="display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <input type="checkbox" id="um-filter-total-reported"> <span style="color:#ff5252;">신고 누적 3회 이상</span>
+                <input type="checkbox" id="um-filter-total-reported"> <span style="color:#ff5252;">삭제 누적 3회 이상</span>
+            </label>
+            <label class="text-sm" style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="checkbox" id="um-filter-suspension-count"> <span style="color:#ff8a80;">정지 누적 3회 이상</span>
             </label>
             <select id="um-sort" style="padding:4px 8px; font-size:0.8rem;">
                 <option value="name">이름순</option>
                 <option value="level-desc">레벨 내림차순</option>
                 <option value="report-desc">신고 내림차순</option>
-                <option value="total-report-desc">신고 누적 내림차순</option>
+                <option value="total-report-desc">삭제 누적 내림차순</option>
             </select>
         </div>`;
         html += '<div id="um-table-wrap">';
@@ -159,6 +162,7 @@ async function loadUsers() {
             const q = (document.getElementById("um-search").value || "").toLowerCase();
             const reportedOnly = document.getElementById("um-filter-reported").checked;
             const totalReportedOnly = document.getElementById("um-filter-total-reported").checked;
+            const suspensionCountOnly = document.getElementById("um-filter-suspension-count").checked;
             const sortBy = document.getElementById("um-sort").value;
             let filtered = _users;
             if (q) {
@@ -172,7 +176,10 @@ async function loadUsers() {
                 filtered = filtered.filter(u => (u.reportCount || 0) > 0);
             }
             if (totalReportedOnly) {
-                filtered = filtered.filter(u => (u.totalReportCount || 0) >= 3);
+                filtered = filtered.filter(u => (u.adminDeleteCount || 0) >= 3);
+            }
+            if (suspensionCountOnly) {
+                filtered = filtered.filter(u => (u.suspensionCount || 0) >= 3);
             }
             // 정렬
             filtered = [...filtered];
@@ -181,7 +188,7 @@ async function loadUsers() {
             } else if (sortBy === "report-desc") {
                 filtered.sort((a, b) => (b.reportCount || 0) - (a.reportCount || 0));
             } else if (sortBy === "total-report-desc") {
-                filtered.sort((a, b) => (b.totalReportCount || 0) - (a.totalReportCount || 0));
+                filtered.sort((a, b) => (b.adminDeleteCount || 0) - (a.adminDeleteCount || 0));
             } else {
                 filtered.sort((a, b) => a.displayName.localeCompare(b.displayName));
             }
@@ -192,6 +199,7 @@ async function loadUsers() {
         document.getElementById("um-search").addEventListener("input", applyUserFilters);
         document.getElementById("um-filter-reported").addEventListener("change", applyUserFilters);
         document.getElementById("um-filter-total-reported").addEventListener("change", applyUserFilters);
+        document.getElementById("um-filter-suspension-count").addEventListener("change", applyUserFilters);
         document.getElementById("um-sort").addEventListener("change", applyUserFilters);
 
         bindRowClicks();
@@ -203,7 +211,7 @@ async function loadUsers() {
 
 function renderUserTable(users) {
     let html = `<table>
-        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>신고</th><th>신고 누적</th><th>상태</th><th>UID</th></tr></thead>
+        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>신고</th><th>삭제 누적</th><th>정지</th><th>정지 누적</th><th>상태</th><th>UID</th></tr></thead>
         <tbody>`;
     for (const u of users) {
         const statusBadge = u.disabled
@@ -213,24 +221,44 @@ function renderUserTable(users) {
         const reportBadge = rc > 0
             ? (rc >= 3 ? `<span class="badge badge-fail">${rc}건</span>` : `<span class="badge badge-warn">${rc}건</span>`)
             : '<span class="text-sub">—</span>';
-        const trc = u.totalReportCount || 0;
-        const totalBadge = trc >= 3
-            ? `<span class="badge badge-fail">${trc}건</span>`
-            : trc > 0
-                ? `<span class="badge badge-warn">${trc}건</span>`
-                : '<span class="text-sub">0건</span>';
-        html += `<tr class="um-row${rc > 0 || trc > 0 ? ' ps-reported' : ''}" data-uid="${u.uid}" style="cursor:pointer;">
+        const adc = u.adminDeleteCount || 0;
+        const totalBadge = adc >= 4
+            ? `<span class="badge badge-fail">${adc}회</span>`
+            : adc >= 3
+                ? `<span class="badge badge-warn">${adc}회</span>`
+                : adc > 0
+                    ? `<span class="badge badge-info">${adc}회</span>`
+                    : '<span class="text-sub">—</span>';
+        const suspBadge = buildSuspensionBadge(u);
+        const sc = u.suspensionCount || 0;
+        const suspCountBadge = sc >= 4
+            ? `<span class="badge badge-fail">${sc}회</span>`
+            : sc >= 3
+                ? `<span class="badge badge-warn">${sc}회</span>`
+                : sc > 0
+                    ? `<span class="badge badge-info">${sc}회</span>`
+                    : '<span class="text-sub">—</span>';
+        html += `<tr class="um-row${rc > 0 || adc > 0 ? ' ps-reported' : ''}" data-uid="${u.uid}" style="cursor:pointer;">
             <td>${escHtml(u.displayName)}</td>
             <td class="text-sub">${escHtml(u.email || "—")}</td>
             <td>Lv.${u.level}</td>
             <td>${reportBadge}</td>
             <td>${totalBadge}</td>
+            <td>${suspBadge}</td>
+            <td>${suspCountBadge}</td>
             <td>${statusBadge}</td>
             <td class="text-sub text-sm">${u.uid.substring(0, 12)}...</td>
         </tr>`;
     }
     html += '</tbody></table>';
     return html;
+}
+
+function buildSuspensionBadge(u) {
+    if (!u.suspendedUntil) return '<span class="text-sub">—</span>';
+    const remaining = Math.ceil((u.suspendedUntil - Date.now()) / (1000 * 60 * 60 * 24));
+    if (remaining <= 0) return '<span class="badge badge-ok">해제</span>';
+    return `<span class="badge badge-warn">D-${remaining}</span>`;
 }
 
 function bindRowClicks() {
@@ -250,6 +278,18 @@ function selectUser(uid) {
     const rcColor = rc >= 3 ? 'text-error' : rc > 0 ? 'text-warning' : 'text-success';
     const trc = user.totalReportCount || 0;
     const trcColor = trc >= 3 ? 'text-error' : trc > 0 ? 'text-warning' : 'text-sub';
+    const sc = user.suspensionCount || 0;
+    const scColor = sc >= 4 ? 'text-error' : sc >= 3 ? 'text-warning' : sc > 0 ? 'text-warning' : 'text-sub';
+    const adc = user.adminDeleteCount || 0;
+    const adcColor = adc >= 3 ? 'text-error' : adc >= 2 ? 'text-warning' : 'text-sub';
+    let suspStatus = user.disabled ? '<span class="text-error">정지 중</span>' : '<span class="text-success">활성</span>';
+    if (user.suspendedUntil) {
+        const remaining = Math.ceil((user.suspendedUntil - Date.now()) / (1000 * 60 * 60 * 24));
+        const endDate = new Date(user.suspendedUntil).toLocaleDateString('ko-KR');
+        suspStatus = remaining > 0
+            ? `<span class="text-error">정지 중 (D-${remaining}, ${endDate})</span>`
+            : `<span class="text-warning">정지 만료됨</span>`;
+    }
     document.getElementById("um-detail-info").innerHTML = `
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-value text-sm">${escHtml(user.displayName)}</div><div class="stat-label">이름</div></div>
@@ -257,7 +297,10 @@ function selectUser(uid) {
             <div class="stat-card"><div class="stat-value">Lv.${user.level}</div><div class="stat-label">레벨</div></div>
             <div class="stat-card"><div class="stat-value text-sm ${rcColor}">${rc}건</div><div class="stat-label">현재 신고</div></div>
             <div class="stat-card"><div class="stat-value text-sm ${trcColor}">${trc}건</div><div class="stat-label">신고 누적 (전체)</div></div>
-            <div class="stat-card"><div class="stat-value text-sm">${user.disabled ? '<span class="text-error">중지됨</span>' : '<span class="text-success">활성</span>'}</div><div class="stat-label">상태</div></div>
+            <div class="stat-card"><div class="stat-value text-sm ${adcColor}">${adc}회</div><div class="stat-label">삭제 누적 (현재)</div></div>
+            <div class="stat-card"><div class="stat-value text-sm ${scColor}">${sc}회</div><div class="stat-label">정지 누적</div></div>
+            <div class="stat-card"><div class="stat-value text-sm">${suspStatus}</div><div class="stat-label">정지 상태</div></div>
+            <div class="stat-card"><div class="stat-value text-sm">${user.disabled ? '<span class="text-error">중지됨</span>' : '<span class="text-success">활성</span>'}</div><div class="stat-label">계정 상태</div></div>
         </div>
         <p class="text-sub text-sm">UID: ${uid}</p>
     `;

@@ -201,6 +201,7 @@
     function getTypeIcon(type) {
         const icons = {
             'post_deleted': '⚠️', 'account_warning': '🚨',
+            'account_suspended': '🚫', 'account_deleted': '⛔',
             'raid_start': '⚔️', 'raid_end': '⚔️', 'raid_alert': '⚔️',
             'daily_reminder': '📅', 'quest_reminder': '📜',
             'streak_warning': '🔥', 'streak_broken': '💔',
