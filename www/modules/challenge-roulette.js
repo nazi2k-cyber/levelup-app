@@ -201,6 +201,11 @@
     function openRouletteModal() {
         const modal = document.getElementById('rouletteModal');
         if (!modal) return;
+        const today = window.getTodayKST();
+        // 룰렛 "노출"은 유저당 1일 1회만 허용 (퀘스트별 중복 노출 방지)
+        if (localStorage.getItem('roulette_exposure_date') === today) return;
+        localStorage.setItem('roulette_exposure_date', today);
+        if (typeof window.saveUserData === 'function') window.saveUserData();
         modal.classList.remove('d-none');
         modal.classList.add('d-flex');
         renderRoulette();
