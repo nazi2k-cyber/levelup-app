@@ -204,10 +204,11 @@ async function saveSchedulerConfig() {
     try {
         const result = await callAdmin("updateScreeningConfig", { settings, resetScheduler });
         tlog("Scheduler[Save]", `백엔드 응답 원본: ${JSON.stringify(result)}`);
+        if (result?.receivedSettings) tlog("Scheduler[Save]", `백엔드 수신 확인: ${JSON.stringify(result.receivedSettings)}`);
 
         const verified = result?.savedSettings;
         if (verified) {
-            tlog("Scheduler[Save]", `savedSettings 검증값: plannerEnabled=${JSON.stringify(verified.plannerSchedulerEnabled)} (${typeof verified.plannerSchedulerEnabled}), profileEnabled=${JSON.stringify(verified.profileSchedulerEnabled)} (${typeof verified.profileSchedulerEnabled})`);
+            tlog("Scheduler[Save]", `savedSettings 검증값: plannerEnabled=${JSON.stringify(verified.plannerSchedulerEnabled)} (${typeof verified.plannerSchedulerEnabled}), profileEnabled=${JSON.stringify(verified.profileSchedulerEnabled)} (${typeof verified.profileSchedulerEnabled}), 전체키: ${Object.keys(verified).join(",")}`);
             const plannerChk = document.getElementById("cfg-sch-planner-enabled");
             const profileChk = document.getElementById("cfg-sch-profile-enabled");
             const plannerMin = document.getElementById("cfg-sch-planner-min");
