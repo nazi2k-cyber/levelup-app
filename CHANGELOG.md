@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.765] - 2026-05-05
+
+### 변경
+- Add i18n translations for habit expand/collapse labels
+
 ## [1.0.764] - 2026-05-05
 
 ### 변경
