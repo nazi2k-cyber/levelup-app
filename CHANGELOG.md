@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.782] - 2026-05-05
+
+### 변경
+- fix: harden auto-screening scheduler form state read
+
 ## [1.0.781] - 2026-05-05
 
 ### 변경
