@@ -4503,8 +4503,44 @@ async function handleUpdateScreeningConfig(request) {
     console.log(`[updateScreeningConfig] received settings=${JSON.stringify(settings)}, resetScheduler=${resetScheduler}, admin=${adminEmail}`);
 
     if (settings) {
-        await db.collection("screening_config").doc("settings").set(settings, { merge: true });
-        console.log(`[updateScreeningConfig] set() completed for settings`);
+        // Use separate update() for scheduler-specific fields to guarantee atomicity
+        // and leave other fields (imageScreeningEnabled etc.) untouched.
+        const schedulerFields = {
+            plannerSchedulerEnabled:    settings.plannerSchedulerEnabled,
+            plannerSchedulerIntervalMin: settings.plannerSchedulerIntervalMin,
+            profileSchedulerEnabled:    settings.profileSchedulerEnabled,
+            profileSchedulerIntervalMin: settings.profileSchedulerIntervalMin,
+        };
+        const hasSchedulerFields = Object.values(schedulerFields)
+            .some(v => v !== undefined);
+
+        const nonSchedulerFields = Object.fromEntries(
+            Object.entries(settings).filter(([k]) => !k.startsWith("planner") && !k.startsWith("profile"))
+        );
+
+        // Write non-scheduler fields (config form saves) with merge
+        if (Object.keys(nonSchedulerFields).length) {
+            await db.collection("screening_config").doc("settings")
+                .set(nonSchedulerFields, { merge: true });
+            console.log(`[updateScreeningConfig] set() non-scheduler fields: ${Object.keys(nonSchedulerFields).join(",")}`);
+        }
+
+        // Write scheduler fields explicitly with update()
+        if (hasSchedulerFields) {
+            const schedulerUpdate = {
+                ...schedulerFields,
+                _schedulerUpdatedAt: Date.now(),
+                _schedulerUpdatedBy: adminEmail,
+            };
+            try {
+                await db.collection("screening_config").doc("settings").update(schedulerUpdate);
+            } catch (updateErr) {
+                // Document might not exist yet — fall back to set with merge
+                await db.collection("screening_config").doc("settings")
+                    .set(schedulerUpdate, { merge: true });
+            }
+            console.log(`[updateScreeningConfig] update() scheduler fields: plannerEnabled=${schedulerFields.plannerSchedulerEnabled}, profileEnabled=${schedulerFields.profileSchedulerEnabled}`);
+        }
     }
     if (keywords) {
         await db.collection("screening_config").doc("keywords").set(keywords, { merge: true });
