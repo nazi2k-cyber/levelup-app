@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.783] - 2026-05-05
+
+### 변경
+- fix(admob): backoff ad preload failures and gate consent misconfig
+
 ## [1.0.782] - 2026-05-05
 
 ### 변경
