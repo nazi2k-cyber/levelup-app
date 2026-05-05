@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.779] - 2026-05-05
+
+### 변경
+- debug: 저장 직후 Firestore 확인 결과를 UI에 인라인 표시
+
 ## [1.0.778] - 2026-05-05
 
 ### 변경
