@@ -4494,54 +4494,102 @@ async function handleGetScreeningConfig(request) {
 
 // ─── 자동 스크리닝: 핸들러 — 설정 업데이트 ───
 
+// Whitelisted, type-coerced settings patch builder.
+// - Keys absent from input are OMITTED from output (Firestore merge preserves stored value).
+// - Booleans coerced explicitly so "false"/"0"/0/null all collapse to false.
+// - Integers floor + clamp [min,max], NaN → default.
+// - Unknown keys silently dropped.
+function buildCleanSettingsPatch(raw) {
+    if (!raw || typeof raw !== "object") return {};
+    const out = {};
+    const BOOL_KEYS = [
+        "plannerSchedulerEnabled",
+        "profileSchedulerEnabled",
+        "imageScreeningEnabled",
+        "textScreeningEnabled",
+        "azureEnabled",
+        "azureTextEnabled",
+        "notifyOnFlag",
+    ];
+    const INT_KEYS = {
+        plannerSchedulerIntervalMin: { min: 5, max: 1440, def: 30 },
+        profileSchedulerIntervalMin: { min: 5, max: 1440, def: 60 },
+    };
+    const STR_KEYS = ["autoDeleteThreshold", "autoHideThreshold"];
+
+    for (const k of BOOL_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(raw, k)) {
+            const v = raw[k];
+            out[k] = (v === "false" || v === "0" || v === 0 || v === null) ? false : Boolean(v);
+        }
+    }
+    for (const [k, cfg] of Object.entries(INT_KEYS)) {
+        if (Object.prototype.hasOwnProperty.call(raw, k)) {
+            const n = Number(raw[k]);
+            out[k] = Number.isFinite(n)
+                ? Math.min(cfg.max, Math.max(cfg.min, Math.floor(n)))
+                : cfg.def;
+        }
+    }
+    for (const k of STR_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(raw, k) && typeof raw[k] === "string" && raw[k].length) {
+            out[k] = raw[k];
+        }
+    }
+    return out;
+}
+
 async function handleUpdateScreeningConfig(request) {
     await assertAdmin(request);
 
     const { settings, keywords, resetScheduler } = request.data || {};
-
     const adminEmail = request.auth.token.email || request.auth.uid;
-    console.log(`[updateScreeningConfig] received settings=${JSON.stringify(settings)}, resetScheduler=${resetScheduler}, admin=${adminEmail}`);
 
     if (settings) {
-        // Use separate update() for scheduler-specific fields to guarantee atomicity
-        // and leave other fields (imageScreeningEnabled etc.) untouched.
-        const schedulerFields = {
-            plannerSchedulerEnabled:    settings.plannerSchedulerEnabled,
-            plannerSchedulerIntervalMin: settings.plannerSchedulerIntervalMin,
-            profileSchedulerEnabled:    settings.profileSchedulerEnabled,
-            profileSchedulerIntervalMin: settings.profileSchedulerIntervalMin,
-        };
-        const hasSchedulerFields = Object.values(schedulerFields)
-            .some(v => v !== undefined);
-
-        const nonSchedulerFields = Object.fromEntries(
-            Object.entries(settings).filter(([k]) => !k.startsWith("planner") && !k.startsWith("profile"))
+        const typeMap = Object.fromEntries(
+            Object.entries(settings).map(([k, v]) => [k, `${typeof v}:${JSON.stringify(v)}`])
         );
-
-        // Write non-scheduler fields (config form saves) with merge
-        if (Object.keys(nonSchedulerFields).length) {
-            await db.collection("screening_config").doc("settings")
-                .set(nonSchedulerFields, { merge: true });
-            console.log(`[updateScreeningConfig] set() non-scheduler fields: ${Object.keys(nonSchedulerFields).join(",")}`);
-        }
-
-        // Write scheduler fields explicitly with update()
-        if (hasSchedulerFields) {
-            const schedulerUpdate = {
-                ...schedulerFields,
-                _schedulerUpdatedAt: Date.now(),
-                _schedulerUpdatedBy: adminEmail,
-            };
-            try {
-                await db.collection("screening_config").doc("settings").update(schedulerUpdate);
-            } catch (updateErr) {
-                // Document might not exist yet — fall back to set with merge
-                await db.collection("screening_config").doc("settings")
-                    .set(schedulerUpdate, { merge: true });
-            }
-            console.log(`[updateScreeningConfig] update() scheduler fields: plannerEnabled=${schedulerFields.plannerSchedulerEnabled}, profileEnabled=${schedulerFields.profileSchedulerEnabled}`);
-        }
+        console.log(`[updateScreeningConfig] admin=${adminEmail} rawSettings types=${JSON.stringify(typeMap)} resetScheduler=${resetScheduler}`);
     }
+
+    let beforeSettings = null;
+    let afterSettings = null;
+    let cleanPatch = null;
+
+    if (settings) {
+        cleanPatch = buildCleanSettingsPatch(settings);
+        cleanPatch._schedulerUpdatedAt = Date.now();
+        cleanPatch._schedulerUpdatedBy = adminEmail;
+
+        const ref = db.collection("screening_config").doc("settings");
+        const beforeSnap = await ref.get();
+        beforeSettings = beforeSnap.exists ? beforeSnap.data() : null;
+
+        console.log(`[updateScreeningConfig] cleanPatch=${JSON.stringify(cleanPatch)}`);
+        console.log(`[updateScreeningConfig] before plannerEnabled=${beforeSettings?.plannerSchedulerEnabled} profileEnabled=${beforeSettings?.profileSchedulerEnabled}`);
+
+        // Single atomic write — set with merge handles both create and update
+        // and never receives undefined values (buildCleanSettingsPatch omits absent keys).
+        await ref.set(cleanPatch, { merge: true });
+
+        // Re-read for verification (Firestore Admin SDK is read-after-write consistent).
+        const afterSnap = await ref.get();
+        afterSettings = afterSnap.exists ? afterSnap.data() : null;
+
+        const diff = [];
+        for (const [k, v] of Object.entries(cleanPatch)) {
+            if (afterSettings?.[k] !== v) {
+                diff.push({ key: k, expected: v, actual: afterSettings?.[k] });
+            }
+        }
+        if (diff.length) {
+            console.error(`[updateScreeningConfig] WRITE-VERIFY MISMATCH admin=${adminEmail} diff=${JSON.stringify(diff)}`);
+        } else {
+            console.log(`[updateScreeningConfig] write-verify OK: ${Object.keys(cleanPatch).length} keys persisted`);
+        }
+        console.log(`[updateScreeningConfig] after plannerEnabled=${afterSettings?.plannerSchedulerEnabled} profileEnabled=${afterSettings?.profileSchedulerEnabled}`);
+    }
+
     if (keywords) {
         await db.collection("screening_config").doc("keywords").set(keywords, { merge: true });
     }
@@ -4555,13 +4603,16 @@ async function handleUpdateScreeningConfig(request) {
         ]);
     }
 
-    // Read back to verify persistence and return verified state to client
-    const verifiedDoc = await db.collection("screening_config").doc("settings").get();
-    const savedSettings = verifiedDoc.exists ? verifiedDoc.data() : null;
-
-    console.log(`[updateScreeningConfig] read-back: plannerEnabled=${savedSettings?.plannerSchedulerEnabled}, profileEnabled=${savedSettings?.profileSchedulerEnabled}, keys=${Object.keys(savedSettings||{}).join(",")}`);
-
-    return { success: true, savedSettings, receivedSettings: settings };
+    return {
+        success: true,
+        receivedSettings: settings || null,
+        cleanPatch,
+        savedSettings: afterSettings,
+        beforeSettings,
+        verifyOk: cleanPatch
+            ? Object.entries(cleanPatch).every(([k, v]) => afterSettings?.[k] === v)
+            : true,
+    };
 }
 
 // ─── 자동 스크리닝: 핸들러 — 스크리닝 통계 ───

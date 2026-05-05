@@ -200,54 +200,77 @@ async function loadSchedulerConfig() {
 
 async function saveSchedulerConfig() {
     const resultEl = document.getElementById("scheduler-save-result");
+    const btn = document.getElementById("btn-save-scheduler");
+    if (btn?.disabled) return;
+    if (btn) btn.disabled = true;
     resultEl.innerHTML = '<span class="text-sub text-sm">저장 중...</span>';
-    const resetScheduler = document.getElementById("cfg-sch-reset-timer")?.checked || false;
-    const settings = {
-        plannerSchedulerEnabled: document.getElementById("cfg-sch-planner-enabled").checked,
-        plannerSchedulerIntervalMin: Math.max(5, Number(document.getElementById("cfg-sch-planner-min").value) || 30),
-        profileSchedulerEnabled: document.getElementById("cfg-sch-profile-enabled").checked,
-        profileSchedulerIntervalMin: Math.max(5, Number(document.getElementById("cfg-sch-profile-min").value) || 60),
+
+    const resetScheduler = !!document.getElementById("cfg-sch-reset-timer")?.checked;
+    const clampInt = (raw, def) => {
+        const n = Math.floor(Number(raw));
+        return Number.isFinite(n) ? Math.max(5, Math.min(1440, n)) : def;
     };
-    tlog("Scheduler[Save]", `전송할 settings: ${JSON.stringify(settings)}, resetScheduler=${resetScheduler}`);
+    const settings = {
+        plannerSchedulerEnabled: !!document.getElementById("cfg-sch-planner-enabled").checked,
+        plannerSchedulerIntervalMin: clampInt(document.getElementById("cfg-sch-planner-min").value, 30),
+        profileSchedulerEnabled: !!document.getElementById("cfg-sch-profile-enabled").checked,
+        profileSchedulerIntervalMin: clampInt(document.getElementById("cfg-sch-profile-min").value, 60),
+    };
+    tlog("Scheduler[Save]", `payload=${JSON.stringify(settings)} reset=${resetScheduler}`);
+
     try {
         const result = await callAdmin("updateScreeningConfig", { settings, resetScheduler });
-        tlog("Scheduler[Save]", `백엔드 응답 원본: ${JSON.stringify(result)}`);
-        if (result?.receivedSettings) tlog("Scheduler[Save]", `백엔드 수신 확인: ${JSON.stringify(result.receivedSettings)}`);
+        tlog("Scheduler[Save]", `response=${JSON.stringify(result)}`);
 
         const verified = result?.savedSettings;
-        if (verified) {
-            tlog("Scheduler[Save]", `savedSettings: plannerEnabled=${JSON.stringify(verified.plannerSchedulerEnabled)} (${typeof verified.plannerSchedulerEnabled}), profileEnabled=${JSON.stringify(verified.profileSchedulerEnabled)}, 키: ${Object.keys(verified).join(",")}`);
-            const plannerChk = document.getElementById("cfg-sch-planner-enabled");
-            const profileChk = document.getElementById("cfg-sch-profile-enabled");
-            const plannerMin = document.getElementById("cfg-sch-planner-min");
-            const profileMin = document.getElementById("cfg-sch-profile-min");
-            if (plannerChk) { plannerChk.checked = !!verified.plannerSchedulerEnabled; tlog("Scheduler[Save]", `DOM plannerChk.checked → ${plannerChk.checked}`); }
-            if (profileChk) { profileChk.checked = !!verified.profileSchedulerEnabled; tlog("Scheduler[Save]", `DOM profileChk.checked → ${profileChk.checked}`); }
-            if (plannerMin && verified.plannerSchedulerIntervalMin) plannerMin.value = verified.plannerSchedulerIntervalMin;
-            if (profileMin && verified.profileSchedulerIntervalMin) profileMin.value = verified.profileSchedulerIntervalMin;
+        const verifyOk = result?.verifyOk;
+        const statusEl2 = document.getElementById("as-scheduler-status");
 
-            // Show inline save result with full Firestore read-back so user can see
-            // exactly what was persisted without waiting for the 2s reload.
+        if (verified) {
             const plannerOk = !!verified.plannerSchedulerEnabled;
             const profileOk = !!verified.profileSchedulerEnabled;
             const updatedAt = verified._schedulerUpdatedAt
                 ? new Date(verified._schedulerUpdatedAt).toLocaleTimeString("ko-KR")
                 : null;
             const saveMsg = `플래너=${plannerOk ? "✅활성" : "❌비활성"} 프로필=${profileOk ? "✅활성" : "❌비활성"}${updatedAt ? ` · 저장시각=${updatedAt}` : ""}`;
-            resultEl.innerHTML = `<span class="text-success text-sm">저장 완료!</span>`;
-            const statusEl2 = document.getElementById("as-scheduler-status");
-            if (statusEl2) {
-                statusEl2.innerHTML = `<span class="text-success text-sm">✅ 저장 완료!</span> <span class="text-sub text-sm">${saveMsg}</span>`;
+
+            if (verifyOk === false) {
+                const diffStr = result?.cleanPatch
+                    ? Object.entries(result.cleanPatch)
+                        .filter(([k, v]) => verified[k] !== v)
+                        .map(([k, v]) => `${k}: 기대=${JSON.stringify(v)} 실제=${JSON.stringify(verified[k])}`)
+                        .join(", ")
+                    : "(diff 정보 없음)";
+                terror("Scheduler[Save]", `verify 실패: ${diffStr}`);
+                resultEl.innerHTML = `<span class="text-error text-sm">⚠ 저장 검증 실패</span>`;
+                if (statusEl2) {
+                    statusEl2.innerHTML = `<span class="text-error text-sm">⚠ 저장 검증 실패! Firestore 값이 일치하지 않습니다.</span> <span class="text-sub text-sm">${saveMsg} · 차이: ${diffStr}</span>`;
+                }
+            } else {
+                resultEl.innerHTML = `<span class="text-success text-sm">저장 완료!</span>`;
+                if (statusEl2) {
+                    statusEl2.innerHTML = `<span class="text-success text-sm">✅ 저장 완료!</span> <span class="text-sub text-sm">${saveMsg}</span>`;
+                }
             }
+
+            const plannerChk = document.getElementById("cfg-sch-planner-enabled");
+            const profileChk = document.getElementById("cfg-sch-profile-enabled");
+            const plannerMin = document.getElementById("cfg-sch-planner-min");
+            const profileMin = document.getElementById("cfg-sch-profile-min");
+            if (plannerChk) plannerChk.checked = plannerOk;
+            if (profileChk) profileChk.checked = profileOk;
+            if (plannerMin && verified.plannerSchedulerIntervalMin) plannerMin.value = verified.plannerSchedulerIntervalMin;
+            if (profileMin && verified.profileSchedulerIntervalMin) profileMin.value = verified.profileSchedulerIntervalMin;
         } else {
-            twarn("Scheduler[Save]", `savedSettings 없음 (구버전 함수 배포됨) — result: ${JSON.stringify(result)}`);
-            resultEl.innerHTML = '<span class="text-success text-sm">저장 완료! (savedSettings 없음 — 구버전)</span>';
+            twarn("Scheduler[Save]", `savedSettings 없음 — 백엔드 재배포 필요`);
+            resultEl.innerHTML = '<span class="text-error text-sm">서버 응답에 savedSettings 없음 — 백엔드 재배포 필요</span>';
         }
-        // Reload after 3s to refresh status display
         setTimeout(() => loadSchedulerConfig(), 3000);
     } catch (e) {
         terror("Scheduler[Save]", `실패: ${e.message}`);
         resultEl.innerHTML = `<span class="text-error text-sm">실패: ${e.message}</span>`;
+    } finally {
+        if (btn) btn.disabled = false;
     }
 }
 
