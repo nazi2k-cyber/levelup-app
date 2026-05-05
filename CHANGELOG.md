@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.773] - 2026-05-05
+
+### 변경
+- admin: rename 신고 누적→삭제 누적, split 처리완료 filter into 삭제처리/신고기각
+
 ## [1.0.772] - 2026-05-05
 
 ### 변경
