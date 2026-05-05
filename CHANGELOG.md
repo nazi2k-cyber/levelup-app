@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.784] - 2026-05-05
+
+### 변경
+- fix: limit daily roulette modal exposure to once per user
+
 ## [1.0.783] - 2026-05-05
 
 ### 변경
