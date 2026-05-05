@@ -1212,6 +1212,7 @@ async function _doSaveUserData() {
             streakStr: JSON.stringify(AppState.user.streak ?? {}),
             diaryStr: getCleanDiaryStrForFirestore(),
             lastRouletteDate: localStorage.getItem('roulette_date') || '',
+            lastRouletteExposureDate: localStorage.getItem('roulette_exposure_date') || '',
             lastBonusExpDate: localStorage.getItem(`bonus_exp_date_${auth.currentUser ? auth.currentUser.uid : '_anon'}`) || '',
             lastReelsPostTs: normalizedLastReelsPostTs,
             diyQuestsStr: JSON.stringify(AppState.diyQuests ?? []),
@@ -1631,6 +1632,9 @@ async function loadUserDataFromDB(user) {
             // 룰렛 스핀 날짜 복원 (로그아웃 시 localStorage.clear() 대응)
             if (data.lastRouletteDate) {
                 localStorage.setItem('roulette_date', data.lastRouletteDate);
+            }
+            if (data.lastRouletteExposureDate) {
+                localStorage.setItem('roulette_exposure_date', data.lastRouletteExposureDate);
             }
             // 보너스 EXP 수령 날짜 복원
             if (data.lastBonusExpDate) {
