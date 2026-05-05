@@ -539,6 +539,12 @@
     }
 
     // DOMContentLoaded 안전 처리
+    window.refreshMeditationUI = function() {
+        renderPresetChips();
+        updateMedUI();
+        updateMedGuideUI();
+    };
+
     function initMeditation() {
         const settings = getMedSettings();
         medState.secondsLeft = settings.durationMin * 60;

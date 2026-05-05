@@ -1609,6 +1609,7 @@ async function loadUserDataFromDB(user) {
             // 계산기 상태창 메인 데이터 갱신 (Firebase 복원 후)
             if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();
             if (typeof window.refreshOrmCalcSummary === 'function') window.refreshOrmCalcSummary();
+            if (typeof window.refreshMeditationUI === 'function') window.refreshMeditationUI();
             // 스트릭 계산 및 스탯 감소
             applyStreakAndDecay();
             if(data.diaryStr) {
@@ -3392,6 +3393,7 @@ function changeLanguage(langCode) {
         refreshSettingsStatusMessages();
         if (typeof window.refreshRunningCalcSummary === 'function') window.refreshRunningCalcSummary();
         if (typeof window.refreshOrmCalcSummary === 'function') window.refreshOrmCalcSummary();
+        if (typeof window.refreshMeditationUI === 'function') window.refreshMeditationUI();
         window._reelsFeedLastKey = null; // 언어 변경 시 리렌더 강제
         if (window.renderReelsFeed) window.renderReelsFeed();
         if (window.renderBig5Card) window.renderBig5Card();
