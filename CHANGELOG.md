@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.777] - 2026-05-05
+
+### 변경
+- fix+debug: getScreeningConfig 기본값 병합, updateScreeningConfig 수신 필드 응답 포함
+
 ## [1.0.776] - 2026-05-05
 
 ### 변경
