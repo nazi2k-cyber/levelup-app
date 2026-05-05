@@ -1318,7 +1318,8 @@ async function loadReportStatus(postId) {
             const uid = auth.currentUser?.uid;
             const reporters = data.reporters || [];
 
-            if (reporters.length > 0) {
+            // 기각(dismissed) 처리된 신고는 경고 배너 표시 안 함
+            if (reporters.length > 0 && !data.processed) {
                 const warningEl = document.querySelector(`[data-report-warning="${postId}"]`);
                 if (warningEl) warningEl.style.display = 'flex';
             }
