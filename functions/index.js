@@ -3692,7 +3692,9 @@ async function getScreeningConfig() {
     const settingsDoc = await db.collection("screening_config").doc("settings").get();
     const keywordsDoc = await db.collection("screening_config").doc("keywords").get();
 
-    const settings = settingsDoc.exists ? settingsDoc.data() : {
+    // Merge document data with defaults so fields added later (e.g. scheduler)
+    // are never undefined even when the document predates them.
+    const settingsDefaults = {
         autoDeleteThreshold: "high",
         autoHideThreshold: "medium",
         imageScreeningEnabled: false,
@@ -3705,6 +3707,7 @@ async function getScreeningConfig() {
         profileSchedulerEnabled: false,
         profileSchedulerIntervalMin: 60,
     };
+    const settings = { ...settingsDefaults, ...(settingsDoc.exists ? settingsDoc.data() : {}) };
 
     const keywords = keywordsDoc.exists ? keywordsDoc.data() : {
         categories: DEFAULT_SCREENING_KEYWORDS
@@ -4496,8 +4499,12 @@ async function handleUpdateScreeningConfig(request) {
 
     const { settings, keywords, resetScheduler } = request.data || {};
 
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    console.log(`[updateScreeningConfig] received settings=${JSON.stringify(settings)}, resetScheduler=${resetScheduler}, admin=${adminEmail}`);
+
     if (settings) {
         await db.collection("screening_config").doc("settings").set(settings, { merge: true });
+        console.log(`[updateScreeningConfig] set() completed for settings`);
     }
     if (keywords) {
         await db.collection("screening_config").doc("keywords").set(keywords, { merge: true });
@@ -4516,10 +4523,9 @@ async function handleUpdateScreeningConfig(request) {
     const verifiedDoc = await db.collection("screening_config").doc("settings").get();
     const savedSettings = verifiedDoc.exists ? verifiedDoc.data() : null;
 
-    const adminEmail = request.auth.token.email || request.auth.uid;
-    console.log(`[updateScreeningConfig] Admin ${adminEmail}: plannerEnabled=${savedSettings?.plannerSchedulerEnabled}, profileEnabled=${savedSettings?.profileSchedulerEnabled}${resetScheduler ? " (timer reset)" : ""}`);
+    console.log(`[updateScreeningConfig] read-back: plannerEnabled=${savedSettings?.plannerSchedulerEnabled}, profileEnabled=${savedSettings?.profileSchedulerEnabled}, keys=${Object.keys(savedSettings||{}).join(",")}`);
 
-    return { success: true, savedSettings };
+    return { success: true, savedSettings, receivedSettings: settings };
 }
 
 // ─── 자동 스크리닝: 핸들러 — 스크리닝 통계 ───
