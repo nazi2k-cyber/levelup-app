@@ -279,6 +279,7 @@ async function deleteReportedPost(sendNotification = false) {
         resultEl.innerHTML = `<p class="text-success text-sm">포스트 삭제 완료! (삭제 안내 발송 완료)</p>`;
 
         _processedPostIds.add(_selectedReport.postId);
+        _reports = _reports.filter(r => r.postId !== _selectedReport.postId);
         if (_applyFilters) _applyFilters();
         else { document.getElementById("rpt-list").innerHTML = renderReportTable(_reports); bindReportClicks(); }
 
@@ -304,6 +305,7 @@ async function dismissReport() {
         resultEl.innerHTML = '<p class="text-success text-sm">신고 기각 완료!</p>';
 
         _processedPostIds.add(_selectedReport.postId);
+        _reports = _reports.filter(r => r.postId !== _selectedReport.postId);
         if (_applyFilters) _applyFilters();
         else { document.getElementById("rpt-list").innerHTML = renderReportTable(_reports); bindReportClicks(); }
 
