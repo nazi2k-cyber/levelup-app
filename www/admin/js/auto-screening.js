@@ -208,7 +208,7 @@ async function saveSchedulerConfig() {
 
         const verified = result?.savedSettings;
         if (verified) {
-            tlog("Scheduler[Save]", `savedSettings 검증값: plannerEnabled=${JSON.stringify(verified.plannerSchedulerEnabled)} (${typeof verified.plannerSchedulerEnabled}), profileEnabled=${JSON.stringify(verified.profileSchedulerEnabled)} (${typeof verified.profileSchedulerEnabled}), 전체키: ${Object.keys(verified).join(",")}`);
+            tlog("Scheduler[Save]", `savedSettings: plannerEnabled=${JSON.stringify(verified.plannerSchedulerEnabled)} (${typeof verified.plannerSchedulerEnabled}), profileEnabled=${JSON.stringify(verified.profileSchedulerEnabled)}, 키: ${Object.keys(verified).join(",")}`);
             const plannerChk = document.getElementById("cfg-sch-planner-enabled");
             const profileChk = document.getElementById("cfg-sch-profile-enabled");
             const plannerMin = document.getElementById("cfg-sch-planner-min");
@@ -217,12 +217,26 @@ async function saveSchedulerConfig() {
             if (profileChk) { profileChk.checked = !!verified.profileSchedulerEnabled; tlog("Scheduler[Save]", `DOM profileChk.checked → ${profileChk.checked}`); }
             if (plannerMin && verified.plannerSchedulerIntervalMin) plannerMin.value = verified.plannerSchedulerIntervalMin;
             if (profileMin && verified.profileSchedulerIntervalMin) profileMin.value = verified.profileSchedulerIntervalMin;
+
+            // Show inline save result with full Firestore read-back so user can see
+            // exactly what was persisted without waiting for the 2s reload.
+            const plannerOk = !!verified.plannerSchedulerEnabled;
+            const profileOk = !!verified.profileSchedulerEnabled;
+            const updatedAt = verified._schedulerUpdatedAt
+                ? new Date(verified._schedulerUpdatedAt).toLocaleTimeString("ko-KR")
+                : null;
+            resultEl.innerHTML = `
+                <span class="text-success text-sm">저장 완료!</span>
+                <span class="text-sub text-sm" style="margin-left:8px;">
+                    [Firestore 확인] 플래너=${plannerOk ? "✅활성" : "❌비활성"} 프로필=${profileOk ? "✅활성" : "❌비활성"}
+                    ${updatedAt ? `· 저장시각=${updatedAt}` : "· (구버전 함수 — _schedulerUpdatedAt 없음)"}
+                </span>`;
         } else {
-            twarn("Scheduler[Save]", `savedSettings 없음 — result: ${JSON.stringify(result)}`);
+            twarn("Scheduler[Save]", `savedSettings 없음 (구버전 함수 배포됨) — result: ${JSON.stringify(result)}`);
+            resultEl.innerHTML = '<span class="text-success text-sm">저장 완료! (savedSettings 없음 — 구버전)</span>';
         }
-        resultEl.innerHTML = '<span class="text-success text-sm">저장 완료!</span>';
-        // Full reload after 2s to update lastRunAt status display
-        setTimeout(() => loadSchedulerConfig(), 2000);
+        // Reload after 3s to refresh status display
+        setTimeout(() => loadSchedulerConfig(), 3000);
     } catch (e) {
         terror("Scheduler[Save]", `실패: ${e.message}`);
         resultEl.innerHTML = `<span class="text-error text-sm">실패: ${e.message}</span>`;
