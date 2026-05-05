@@ -4392,7 +4392,19 @@ async function handleReviewScreenedPost(request) {
 async function handleGetScreeningConfig(request) {
     await assertAdmin(request);
     const config = await getScreeningConfig();
-    return config;
+
+    const [plannerSnap, profileSnap] = await Promise.all([
+        db.collection("screening_config").doc("scheduler_planner").get(),
+        db.collection("screening_config").doc("scheduler_profile").get(),
+    ]);
+
+    return {
+        ...config,
+        schedulerState: {
+            plannerLastRunAt: plannerSnap.exists ? (plannerSnap.data().lastRunAt || null) : null,
+            profileLastRunAt: profileSnap.exists ? (profileSnap.data().lastRunAt || null) : null,
+        }
+    };
 }
 
 // ─── 자동 스크리닝: 핸들러 — 설정 업데이트 ───
@@ -4400,7 +4412,7 @@ async function handleGetScreeningConfig(request) {
 async function handleUpdateScreeningConfig(request) {
     await assertAdmin(request);
 
-    const { settings, keywords } = request.data || {};
+    const { settings, keywords, resetScheduler } = request.data || {};
 
     if (settings) {
         await db.collection("screening_config").doc("settings").set(settings, { merge: true });
@@ -4409,8 +4421,17 @@ async function handleUpdateScreeningConfig(request) {
         await db.collection("screening_config").doc("keywords").set(keywords, { merge: true });
     }
 
+    if (resetScheduler) {
+        await Promise.all([
+            db.collection("screening_config").doc("scheduler_planner")
+                .set({ lastRunAt: 0, updatedAt: Date.now() }, { merge: true }),
+            db.collection("screening_config").doc("scheduler_profile")
+                .set({ lastRunAt: 0, updatedAt: Date.now() }, { merge: true }),
+        ]);
+    }
+
     const adminEmail = request.auth.token.email || request.auth.uid;
-    console.log(`[updateScreeningConfig] Admin ${adminEmail} updated screening config`);
+    console.log(`[updateScreeningConfig] Admin ${adminEmail} updated screening config${resetScheduler ? " (scheduler timer reset)" : ""}`);
 
     return { success: true };
 }
