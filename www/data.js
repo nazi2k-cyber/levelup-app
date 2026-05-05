@@ -314,6 +314,8 @@ const i18n = {
         med_quick_guide_tm: "<span style=\"color:#00e5a0; font-weight:700;\">[초월 명상]</span> 편안히 눈을 감고 만트라를 자연스럽게 반복합니다. 생각이 떠오르면 부드럽게 다시 만트라로 돌아옵니다. (하루 2회, 각 20분)",
         med_collapse_btn: "접기",
         med_expand_btn: "펼치기",
+        habit_collapse_btn: "접기",
+        habit_expand_btn: "펼치기",
         med_sessions_today: "오늘",
         med_sound: "종소리", med_sound_preview: "미리듣기",
 
@@ -1128,6 +1130,8 @@ const i18n = {
         med_quick_guide_tm: "<span style=\"color:#00e5a0; font-weight:700;\">[Transcendental Meditation]</span> Close your eyes comfortably and repeat your mantra naturally. If thoughts appear, gently return to the mantra. (Twice daily, 20 min each)",
         med_collapse_btn: "Hide",
         med_expand_btn: "Show",
+        habit_collapse_btn: "Hide",
+        habit_expand_btn: "Show",
         med_sessions_today: "Today",
         med_sound: "Bowl Sound", med_sound_preview: "Preview",
 
@@ -1942,6 +1946,8 @@ const i18n = {
         med_quick_guide_tm: "<span style=\"color:#00e5a0; font-weight:700;\">[超越瞑想]</span> 楽に目を閉じてマントラを自然に繰り返します。思考が浮かんだら、やさしくマントラに戻ります。（1日2回、各20分）",
         med_collapse_btn: "折りたたむ",
         med_expand_btn: "開く",
+        habit_collapse_btn: "折りたたむ",
+        habit_expand_btn: "開く",
         med_sessions_today: "今日",
         med_sound: "鐘の音", med_sound_preview: "試聴",
 
