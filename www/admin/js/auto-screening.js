@@ -84,11 +84,12 @@ function renderDashboard() {
     const el = document.getElementById("as-view-content");
     el.innerHTML = `
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:8px; flex-wrap:wrap;">
                 <h2>스케줄러 생성</h2>
                 <button class="btn btn-outline btn-sm" id="btn-load-scheduler">새로고침</button>
             </div>
             <p class="text-sub text-sm mb-8">자동 스크리닝 스케줄러를 주기(n분)로 실행합니다.</p>
+            <div id="as-scheduler-status" style="margin-bottom:8px;"></div>
             <div id="as-scheduler-area"><p class="text-sub text-sm">로딩 중...</p></div>
         </div>
         <div class="card">
@@ -151,6 +152,13 @@ async function loadSchedulerConfig() {
         tlog("Scheduler[Load]", `Firestore settings 원본: plannerEnabled=${JSON.stringify(s.plannerSchedulerEnabled)} (${typeof s.plannerSchedulerEnabled}), profileEnabled=${JSON.stringify(s.profileSchedulerEnabled)} (${typeof s.profileSchedulerEnabled}), plannerMin=${s.plannerSchedulerIntervalMin}, profileMin=${s.profileSchedulerIntervalMin}`);
         tlog("Scheduler[Load]", `schedulerState: plannerLastRunAt=${state.plannerLastRunAt}, profileLastRunAt=${state.profileLastRunAt}`);
         tlog("Scheduler[Load]", `전체 settings 키: ${Object.keys(s).join(", ")}`);
+
+        const statusEl = document.getElementById("as-scheduler-status");
+        if (statusEl) {
+            const pi = s.plannerSchedulerEnabled ? "✅" : "❌";
+            const ri = s.profileSchedulerEnabled ? "✅" : "❌";
+            statusEl.innerHTML = `<span class="text-sub text-sm">[Firestore] 플래너=${pi}${s.plannerSchedulerEnabled ? "활성" : "비활성"} · 프로필=${ri}${s.profileSchedulerEnabled ? "활성" : "비활성"}</span>`;
+        }
 
         const fmtTime = ts => ts ? new Date(ts).toLocaleString("ko-KR") : "실행 기록 없음";
         const plannerStatus = s.plannerSchedulerEnabled
@@ -225,12 +233,12 @@ async function saveSchedulerConfig() {
             const updatedAt = verified._schedulerUpdatedAt
                 ? new Date(verified._schedulerUpdatedAt).toLocaleTimeString("ko-KR")
                 : null;
-            resultEl.innerHTML = `
-                <span class="text-success text-sm">저장 완료!</span>
-                <span class="text-sub text-sm" style="margin-left:8px;">
-                    [Firestore 확인] 플래너=${plannerOk ? "✅활성" : "❌비활성"} 프로필=${profileOk ? "✅활성" : "❌비활성"}
-                    ${updatedAt ? `· 저장시각=${updatedAt}` : "· (구버전 함수 — _schedulerUpdatedAt 없음)"}
-                </span>`;
+            const saveMsg = `플래너=${plannerOk ? "✅활성" : "❌비활성"} 프로필=${profileOk ? "✅활성" : "❌비활성"}${updatedAt ? ` · 저장시각=${updatedAt}` : ""}`;
+            resultEl.innerHTML = `<span class="text-success text-sm">저장 완료!</span>`;
+            const statusEl2 = document.getElementById("as-scheduler-status");
+            if (statusEl2) {
+                statusEl2.innerHTML = `<span class="text-success text-sm">✅ 저장 완료!</span> <span class="text-sub text-sm">${saveMsg}</span>`;
+            }
         } else {
             twarn("Scheduler[Save]", `savedSettings 없음 (구버전 함수 배포됨) — result: ${JSON.stringify(result)}`);
             resultEl.innerHTML = '<span class="text-success text-sm">저장 완료! (savedSettings 없음 — 구버전)</span>';
