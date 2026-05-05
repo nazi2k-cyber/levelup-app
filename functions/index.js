@@ -797,11 +797,11 @@ async function handleSendAnnouncement(request) {
 async function handleSendUserWarning(request) {
     await assertAdmin(request);
     const callerEmail = request.auth?.token?.email;
-    const { uid, type, reportCount } = request.data || {};
+    const { uid, type, reportCount, suspendedUntil } = request.data || {};
 
     if (!uid) throw new HttpsError("invalid-argument", "uid는 필수입니다.");
-    if (!["post_deleted", "account_warning"].includes(type)) {
-        throw new HttpsError("invalid-argument", "type은 post_deleted 또는 account_warning이어야 합니다.");
+    if (!["post_deleted", "account_warning", "account_suspended", "account_deleted"].includes(type)) {
+        throw new HttpsError("invalid-argument", "유효하지 않은 알림 타입입니다.");
     }
 
     const userDoc = await db.collection("users").doc(uid).get();
@@ -811,9 +811,12 @@ async function handleSendUserWarning(request) {
     const lang = userData.lang || "ko";
     const baseMsg = getLocalizedMessage(type, lang);
     const notifTitle = baseMsg.title;
-    const notifBody = (type === "post_deleted" && reportCount != null)
-        ? buildPostDeletedBody(lang, reportCount)
-        : baseMsg.body;
+    let notifBody = baseMsg.body;
+    if (type === "post_deleted" && reportCount != null) {
+        notifBody = buildPostDeletedBody(lang, reportCount);
+    } else if (type === "account_suspended" && suspendedUntil != null) {
+        notifBody = buildAccountSuspendedBody(lang, suspendedUntil);
+    }
 
     await writeUserNotification(uid, { type, title: notifTitle, body: notifBody });
 
@@ -977,7 +980,10 @@ async function handleAdminListUsers(request) {
             email,
             level: data.level || 1,
             disabled: false,
-            totalReportCount: data.totalReportCount || 0
+            totalReportCount: data.totalReportCount || 0,
+            adminDeleteCount: data.adminDeleteCount || 0,
+            suspensionCount: data.suspensionCount || 0,
+            suspendedUntil: data.suspendedUntil || null
         });
     }
 
@@ -2493,6 +2499,16 @@ const MESSAGES = {
         en: { title: "🚨 Account Warning", body: "Your account may be suspended due to multiple reports. Please follow community guidelines." },
         ja: { title: "🚨 アカウント警告", body: "複数の報告によりアカウントが停止される可能性があります。ガイドラインを遵守してください。" }
     },
+    account_suspended: {
+        ko: { title: "🚫 계정 정지 안내", body: "신고 누적으로 인해 계정이 7일간 정지되었습니다. 커뮤니티 가이드라인을 준수해 주세요." },
+        en: { title: "🚫 Account Suspended", body: "Your account has been suspended for 7 days due to accumulated reports. Please follow community guidelines." },
+        ja: { title: "🚫 アカウント停止のお知らせ", body: "報告累積によりアカウントが7日間停止されました。コミュニティガイドラインを遵守してください。" }
+    },
+    account_deleted: {
+        ko: { title: "⛔ 계정 삭제 안내", body: "반복적인 커뮤니티 가이드라인 위반으로 계정이 영구 삭제되었습니다." },
+        en: { title: "⛔ Account Deleted", body: "Your account has been permanently deleted due to repeated community guideline violations." },
+        ja: { title: "⛔ アカウント削除のお知らせ", body: "コミュニティガイドラインの繰り返し違反によりアカウントが完全に削除されました。" }
+    },
     raid_start: {
         ko: { title: "⚔️ 레이드 출현!", body: "이상 현상이 감지되었습니다. 지금 바로 참여하세요!" },
         en: { title: "⚔️ Raid Alert!", body: "An anomaly has been detected. Join the raid now!" },
@@ -2543,11 +2559,24 @@ function getLocalizedMessage(type, lang) {
  * 게시물 삭제 알림 본문 동적 생성 (신고 누적 횟수 포함)
  */
 function buildPostDeletedBody(lang, reportCount) {
-    const over = reportCount >= 3;
+    const over = reportCount >= 4;
     const bodies = {
-        ko: `신고 접수로 인해 게시물이 삭제되었습니다. (신고 누적 ${reportCount}회)\n신고가 3회 이상 누적${over ? '되어' : '될 경우'} 계정이 정지 또는 영구 삭제될 수 있습니다.`,
-        en: `Your post was removed due to community reports. (Total reports: ${reportCount})\n${over ? 'Having accumulated 3 or more reports,' : 'Accumulating 3 or more reports'} may result in account suspension or permanent deletion.`,
-        ja: `報告を受けたため、投稿が削除されました。（報告累計${reportCount}回）\n報告が3回以上累積${over ? 'したため' : 'した場合'}、アカウントが停止または永久削除される場合があります。`
+        ko: `신고 접수로 인해 게시물이 삭제되었습니다. (삭제 누적 ${reportCount}회)\n게시물 삭제가 4회 누적${over ? '되어' : '될 경우'} 계정이 7일간 정지됩니다.`,
+        en: `Your post was removed due to community reports. (Total deletions: ${reportCount})\n${over ? 'Having accumulated 4 post deletions,' : 'Accumulating 4 post deletions'} will result in a 7-day account suspension.`,
+        ja: `報告を受けたため、投稿が削除されました。（削除累計${reportCount}回）\n投稿削除が4回累積${over ? 'したため' : 'した場合'}、アカウントが7日間停止されます。`
+    };
+    return bodies[lang] || bodies.ko;
+}
+
+function buildAccountSuspendedBody(lang, suspendedUntil) {
+    const date = new Date(suspendedUntil).toLocaleDateString(
+        lang === 'ja' ? 'ja-JP' : lang === 'en' ? 'en-US' : 'ko-KR',
+        { year: 'numeric', month: 'long', day: 'numeric' }
+    );
+    const bodies = {
+        ko: `신고 누적으로 인해 계정이 7일간 정지되었습니다.\n정지 해제일: ${date}\n커뮤니티 가이드라인을 준수해 주세요.`,
+        en: `Your account has been suspended for 7 days due to accumulated reports.\nSuspension ends: ${date}\nPlease follow community guidelines.`,
+        ja: `報告累積によりアカウントが7日間停止されました。\n解除日: ${date}\nコミュニティガイドラインを遵守してください。`
     };
     return bodies[lang] || bodies.ko;
 }
@@ -3162,13 +3191,46 @@ async function handleScreeningDeletePost(request) {
     const adminEmail = request.auth.token.email || request.auth.uid;
     console.log(`[screeningDeletePost] Admin ${adminEmail} deleted post ${postId} from user ${ownerUid}`);
 
-    // Increment user's total deletion count (ensures count starts from 1)
-    const prevTotal = data.totalReportCount || 0;
-    const newTotal = prevTotal + 1;
-    await userRef.update({ totalReportCount: newTotal });
+    // adminDeleteCount 증가 후 자동 정지/삭제 판단
+    const adminDeleteCount = (data.adminDeleteCount || 0) + 1;
+    const suspensionCount = data.suspensionCount || 0;
 
-    if (sendNotification) {
-        await handleSendUserWarning({ ...request, data: { uid: ownerUid, type: "post_deleted", reportCount: newTotal } });
+    if (adminDeleteCount >= 4) {
+        const newSuspensionCount = suspensionCount + 1;
+
+        if (newSuspensionCount >= 4) {
+            // 4회차 정지 → 계정 자동 삭제
+            await userRef.update({ adminDeleteCount: 0, suspensionCount: newSuspensionCount });
+            // Mark report as processed first
+            try {
+                const postReportRef = db.collection("post_reports").doc(postId);
+                const postReportDoc = await postReportRef.get();
+                if (postReportDoc.exists) {
+                    await postReportRef.update({ processed: true, processedAt: Date.now(), processedAction: "deleted" });
+                }
+            } catch (e) { /* ignore */ }
+            // 삭제 알림 발송 후 계정 삭제
+            try {
+                await handleSendUserWarning({ ...request, data: { uid: ownerUid, type: "account_deleted" } });
+            } catch (e) { /* ignore */ }
+            await handleDeleteAccount({ ...request, data: { uid: ownerUid } });
+            console.log(`[screeningDeletePost] Auto-deleted account ${ownerUid} after 4th suspension`);
+            return { success: true, deletedPostId: postId, remainingPosts: posts.length, autoDeleted: true };
+        }
+
+        // 4회차 게시물 삭제 → 7일 자동 정지
+        const suspendedUntil = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        await getAuth().updateUser(ownerUid, { disabled: true });
+        await userRef.update({ adminDeleteCount: 0, suspensionCount: newSuspensionCount, suspendedUntil });
+        if (sendNotification) {
+            await handleSendUserWarning({ ...request, data: { uid: ownerUid, type: "account_suspended", suspendedUntil } });
+        }
+        console.log(`[screeningDeletePost] Auto-suspended ${ownerUid} for 7 days (suspension #${newSuspensionCount})`);
+    } else {
+        await userRef.update({ adminDeleteCount });
+        if (sendNotification) {
+            await handleSendUserWarning({ ...request, data: { uid: ownerUid, type: "post_deleted", reportCount: adminDeleteCount } });
+        }
     }
 
     // Mark the post_reports doc as processed so history is preserved across sessions
@@ -3265,8 +3327,28 @@ async function handleScreeningDismissReport(request) {
         throw new HttpsError("invalid-argument", "postId는 필수입니다.");
     }
 
+    // 기각 전 신고 수 조회 → totalReportCount 차감
+    const postReportRef = db.collection("post_reports").doc(postId);
+    const postReportDoc = await postReportRef.get();
+    if (postReportDoc.exists) {
+        const dismissedCount = postReportDoc.data().reportCount || 0;
+        if (dismissedCount > 0) {
+            const ownerUid = postId.split("_").slice(0, -1).join("_");
+            if (ownerUid) {
+                const { FieldValue } = require("firebase-admin/firestore");
+                const userRef = db.collection("users").doc(ownerUid);
+                const userSnap = await userRef.get();
+                if (userSnap.exists) {
+                    const currentTotal = userSnap.data().totalReportCount || 0;
+                    const newTotal = Math.max(0, currentTotal - dismissedCount);
+                    await userRef.update({ totalReportCount: newTotal });
+                }
+            }
+        }
+    }
+
     // Mark as processed instead of deleting to preserve history
-    await db.collection("post_reports").doc(postId).set(
+    await postReportRef.set(
         { processed: true, processedAt: Date.now(), processedAction: "dismissed" },
         { merge: true }
     );
@@ -4586,6 +4668,32 @@ exports.cleanupExpiredPlannerPhotos = onSchedule({
         }
     }
     console.log(`[Storage Cleanup] ${deletedCount}개 만료 플래너 사진(+썸네일) 삭제 완료`);
+});
+
+// ─── 만료된 계정 정지 자동 해제 (매일 01:00 KST) ───
+
+exports.checkExpiredSuspensions = onSchedule({
+    schedule: "0 1 * * *",
+    timeZone: "Asia/Seoul",
+    region: "asia-northeast3"
+}, async () => {
+    const now = Date.now();
+    const snap = await db.collection("users").where("suspendedUntil", "<=", now).get();
+    if (snap.empty) return;
+
+    const { FieldValue } = require("firebase-admin/firestore");
+    let released = 0;
+    for (const doc of snap.docs) {
+        try {
+            await getAuth().updateUser(doc.id, { disabled: false });
+            await doc.ref.update({ suspendedUntil: FieldValue.delete() });
+            released++;
+            console.log(`[autoUnsuspend] Re-enabled uid=${doc.id}`);
+        } catch (e) {
+            console.warn(`[autoUnsuspend] Failed for uid=${doc.id}:`, e.message);
+        }
+    }
+    console.log(`[autoUnsuspend] ${released}/${snap.size} 계정 정지 해제 완료`);
 });
 
 // ─── 이미지 썸네일 자동 생성 (Storage trigger) ───
