@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.772] - 2026-05-05
+
+### 변경
+- Differentiate 삭제처리/신고기각 badges; hide report warning on dismiss
+
 ## [1.0.771] - 2026-05-05
 
 ### 변경
