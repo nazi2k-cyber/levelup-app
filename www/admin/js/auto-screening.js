@@ -191,9 +191,23 @@ async function saveSchedulerConfig() {
         profileSchedulerIntervalMin: Math.max(5, Number(document.getElementById("cfg-sch-profile-min").value) || 60),
     };
     try {
-        await callAdmin("updateScreeningConfig", { settings, resetScheduler });
+        const result = await callAdmin("updateScreeningConfig", { settings, resetScheduler });
+        // Immediately apply verified state from backend read-back so the form
+        // reflects what Firestore actually persisted — avoids stale-read race.
+        const verified = result?.savedSettings;
+        if (verified) {
+            const plannerChk = document.getElementById("cfg-sch-planner-enabled");
+            const profileChk = document.getElementById("cfg-sch-profile-enabled");
+            const plannerMin = document.getElementById("cfg-sch-planner-min");
+            const profileMin = document.getElementById("cfg-sch-profile-min");
+            if (plannerChk) plannerChk.checked = !!verified.plannerSchedulerEnabled;
+            if (profileChk) profileChk.checked = !!verified.profileSchedulerEnabled;
+            if (plannerMin && verified.plannerSchedulerIntervalMin) plannerMin.value = verified.plannerSchedulerIntervalMin;
+            if (profileMin && verified.profileSchedulerIntervalMin) profileMin.value = verified.profileSchedulerIntervalMin;
+        }
         resultEl.innerHTML = '<span class="text-success text-sm">저장 완료!</span>';
-        setTimeout(() => loadSchedulerConfig(), 800);
+        // Full reload after 2s to update lastRunAt status display
+        setTimeout(() => loadSchedulerConfig(), 2000);
     } catch (e) {
         resultEl.innerHTML = `<span class="text-error text-sm">실패: ${e.message}</span>`;
     }

@@ -4512,10 +4512,14 @@ async function handleUpdateScreeningConfig(request) {
         ]);
     }
 
-    const adminEmail = request.auth.token.email || request.auth.uid;
-    console.log(`[updateScreeningConfig] Admin ${adminEmail} updated screening config${resetScheduler ? " (scheduler timer reset)" : ""}`);
+    // Read back to verify persistence and return verified state to client
+    const verifiedDoc = await db.collection("screening_config").doc("settings").get();
+    const savedSettings = verifiedDoc.exists ? verifiedDoc.data() : null;
 
-    return { success: true };
+    const adminEmail = request.auth.token.email || request.auth.uid;
+    console.log(`[updateScreeningConfig] Admin ${adminEmail}: plannerEnabled=${savedSettings?.plannerSchedulerEnabled}, profileEnabled=${savedSettings?.profileSchedulerEnabled}${resetScheduler ? " (timer reset)" : ""}`);
+
+    return { success: true, savedSettings };
 }
 
 // ─── 자동 스크리닝: 핸들러 — 스크리닝 통계 ───
