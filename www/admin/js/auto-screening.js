@@ -210,11 +210,26 @@ async function saveSchedulerConfig() {
         const n = Math.floor(Number(raw));
         return Number.isFinite(n) ? Math.max(5, Math.min(1440, n)) : def;
     };
+    const plannerEnabledEl = document.getElementById("cfg-sch-planner-enabled");
+    const plannerMinEl = document.getElementById("cfg-sch-planner-min");
+    const profileEnabledEl = document.getElementById("cfg-sch-profile-enabled");
+    const profileMinEl = document.getElementById("cfg-sch-profile-min");
+
+    if (!plannerEnabledEl || !plannerMinEl || !profileEnabledEl || !profileMinEl) {
+        const missing = [
+            !plannerEnabledEl && "cfg-sch-planner-enabled",
+            !plannerMinEl && "cfg-sch-planner-min",
+            !profileEnabledEl && "cfg-sch-profile-enabled",
+            !profileMinEl && "cfg-sch-profile-min",
+        ].filter(Boolean).join(", ");
+        throw new Error(`스케줄러 폼 요소를 찾을 수 없습니다: ${missing}`);
+    }
+
     const settings = {
-        plannerSchedulerEnabled: !!document.getElementById("cfg-sch-planner-enabled").checked,
-        plannerSchedulerIntervalMin: clampInt(document.getElementById("cfg-sch-planner-min").value, 30),
-        profileSchedulerEnabled: !!document.getElementById("cfg-sch-profile-enabled").checked,
-        profileSchedulerIntervalMin: clampInt(document.getElementById("cfg-sch-profile-min").value, 60),
+        plannerSchedulerEnabled: !!plannerEnabledEl.checked,
+        plannerSchedulerIntervalMin: clampInt(plannerMinEl.value, 30),
+        profileSchedulerEnabled: !!profileEnabledEl.checked,
+        profileSchedulerIntervalMin: clampInt(profileMinEl.value, 60),
     };
     tlog("Scheduler[Save]", `payload=${JSON.stringify(settings)} reset=${resetScheduler}`);
 
