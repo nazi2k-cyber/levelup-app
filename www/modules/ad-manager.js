@@ -23,6 +23,10 @@
     const MIN_SESSIONS_BEFORE_ADS = 3;
     const NEW_USER_AD_GATE_WINDOW_MS = 24 * 60 * 60 * 1000; // 1일차만 광고 지연 적용
 
+    const AD_LOAD_RETRY_MS = 30 * 1000;
+    const AD_LOAD_BACKOFF_NO_FILL_MS = 5 * 60 * 1000;
+    const AD_LOAD_BACKOFF_NETWORK_MS = 60 * 1000;
+
     // --- 내부 상태 ---
     let _admobInitialized = false;
     let _consentStatus = 'UNKNOWN';
@@ -38,6 +42,9 @@
     // 보상형 전면 광고
     let _rewardedInterstitialReady = false;
     let _rewardedInterstitialListenersRegistered = false;
+    let _rewardedNextRetryAt = 0;
+    let _rewardedInterstitialNextRetryAt = 0;
+    let _adMobConsentMisconfigured = false;
     let _riRewardEarned = false;
     let _riContext = null;
 
@@ -152,6 +159,15 @@
             AppLogger.warn('[NativeAd] Native Advanced API 사용 불가. miss=' + _nativeAdMissingCount + ', plugins=' + (pluginKeys || '(none)') + ', AdMobMethods=' + (adMobKeys || '(none)'));
         }
     }
+
+    function _getAdLoadBackoffMs(error) {
+        const code = Number(error?.code);
+        const msg = (error?.message || error?.errorMessage || '').toLowerCase();
+        if (code === 3 || msg.includes('no fill')) return AD_LOAD_BACKOFF_NO_FILL_MS;
+        if (code === 2 || msg.includes('network')) return AD_LOAD_BACKOFF_NETWORK_MS;
+        return AD_LOAD_RETRY_MS;
+    }
+
     function _registerNativeAdFailure(reason, error) {
         _nativeAdLoadFailureCount += 1;
         if (_nativeAdLoadFailureCount >= 3) _nativeAdDisabled = true;
@@ -215,6 +231,7 @@
                     errMsg.toLowerCase().includes('form unavailable') ||
                     errMsg.toLowerCase().includes('no matching form');
                 if (isMisconfiguration) {
+                    _adMobConsentMisconfigured = true;
                     if (window.AppLogger) AppLogger.error(
                         '[AdMob] Publisher misconfiguration — 동의 양식이 AdMob 콘솔에 설정되지 않았습니다. ' +
                         'Firebase 콘솔 → Privacy & messaging 에서 GDPR 메시지를 생성하세요. ' +
@@ -372,7 +389,8 @@
 
     // --- 보상형 광고 ---
     async function preloadRewarded() {
-        if (!_admobInitialized) return;
+        if (!_admobInitialized || _adMobConsentMisconfigured) return;
+        if (Date.now() < _rewardedNextRetryAt) return;
         try {
             const { AdMob } = window.Capacitor.Plugins;
             if (!AdMob) return;
@@ -385,10 +403,12 @@
             _rewardedAdReady = false;
             console.warn('[AdMob] 보상형 광고 프리로드 실패:', e);
             if (window.AppLogger) AppLogger.warn('[AdMob] 프리로드 실패: ' + (e.message || ''));
+            const retryDelay = _getAdLoadBackoffMs(e);
+            _rewardedNextRetryAt = Date.now() + retryDelay;
             if (!preloadRewarded._retryCount) preloadRewarded._retryCount = 0;
             if (preloadRewarded._retryCount < 3) {
                 preloadRewarded._retryCount++;
-                setTimeout(() => preloadRewarded(), 30000);
+                setTimeout(() => preloadRewarded(), retryDelay);
             }
         }
     }
@@ -454,7 +474,8 @@
 
     // --- 보상형 전면 광고 ---
     async function preloadRewardedInterstitial() {
-        if (!_admobInitialized) return;
+        if (!_admobInitialized || _adMobConsentMisconfigured) return;
+        if (Date.now() < _rewardedInterstitialNextRetryAt) return;
         try {
             const { AdMob } = window.Capacitor.Plugins;
             if (!AdMob) return;
@@ -467,10 +488,12 @@
             _rewardedInterstitialReady = false;
             console.warn('[AdMob] 보상형 전면 프리로드 실패:', e);
             if (window.AppLogger) AppLogger.warn('[AdMob] 보상형 전면 프리로드 실패: ' + (e.message || ''));
+            const retryDelay = _getAdLoadBackoffMs(e);
+            _rewardedInterstitialNextRetryAt = Date.now() + retryDelay;
             if (!preloadRewardedInterstitial._retryCount) preloadRewardedInterstitial._retryCount = 0;
             if (preloadRewardedInterstitial._retryCount < 3) {
                 preloadRewardedInterstitial._retryCount++;
-                setTimeout(() => preloadRewardedInterstitial(), 30000);
+                setTimeout(() => preloadRewardedInterstitial(), retryDelay);
             }
         }
     }
