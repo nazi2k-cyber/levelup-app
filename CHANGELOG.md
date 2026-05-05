@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.774] - 2026-05-05
+
+### 변경
+- fix: 스케줄러 저장 후 체크박스 상태 유지 — 백엔드 read-back 검증 및 즉시 UI 반영
+
 ## [1.0.773] - 2026-05-05
 
 ### 변경
