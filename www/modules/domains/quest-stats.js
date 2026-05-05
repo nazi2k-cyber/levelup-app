@@ -107,17 +107,23 @@ export function createQuestStatsModule(deps) {
         const selectedCount = state.selectedDailyKeys.length;
         const baseLabel = { ko: '주간 퀘스트', en: 'Weekly Quests', ja: '週間クエスト' };
         const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
-        btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
+        btn.innerHTML = `<span class="qstats-dd-btn-label">${label}</span><span class="qstats-dd-btn-caret">▾</span>`;
+        btn.classList.add('qstats-dd-btn');
         btn.style.color = selectedCount > 0 ? 'var(--neon-cyan)' : '';
         btn.style.borderColor = selectedCount > 0 ? 'var(--neon-cyan)' : '';
 
         const dayNames = { ko:["일","월","화","수","목","금","토"], en:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], ja:["日","月","火","水","木","金","土"] };
         const selectAllLabel = { ko: '전체', en: 'All', ja: '全体' };
         const dowName = (dayNames[lang] || dayNames.en)[refDow];
+        const multiSelectLabel = {
+            ko: `${dowName}요일 퀘스트 (멀티 선택)`,
+            en: `${dowName} Quests (Multi-select)`,
+            ja: `${dowName}曜日クエスト（複数選択）`
+        };
         const isAllSelected = !state.dailyAllDeselected && state.selectedDailyKeys.length === 0;
         menu.innerHTML = [
             `<label class="qstats-diy-dd-item" style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" ${isAllSelected ? 'checked' : ''} onchange="window.toggleQstatsDailyAll(this.checked)">${selectAllLabel[lang] || selectAllLabel.en}</label>`,
-            `<div style="padding:4px 12px; font-size:0.62rem; color:var(--text-sub); border-bottom:1px solid rgba(255,255,255,0.06);">${dowName}요일 퀘스트 (멀티 선택)</div>`,
+            `<div class="qstats-dd-subtitle">${multiSelectLabel[lang] || multiSelectLabel.en}</div>`,
             ...quests.map((q, i) => {
                 const key = `${refDow}:${i}`;
                 const isItemActive = isAllSelected || state.selectedDailyKeys.includes(key);
@@ -138,7 +144,8 @@ export function createQuestStatsModule(deps) {
         const lang = AppState.currentLang;
         const baseLabel = { ko: '사이드 퀘스트', en: 'Side Quests', ja: 'サイドクエスト' };
         const label = selectedCount > 0 ? `${baseLabel[lang] || baseLabel.en} ${selectedCount}` : (baseLabel[lang] || baseLabel.en);
-        btn.innerHTML = `${label} <span style="font-size:0.6em;">▾</span>`;
+        btn.innerHTML = `<span class="qstats-dd-btn-label">${label}</span><span class="qstats-dd-btn-caret">▾</span>`;
+        btn.classList.add('qstats-dd-btn');
         btn.style.color = selectedCount > 0 ? 'var(--neon-gold)' : '';
         btn.style.borderColor = 'var(--neon-gold)';
 
