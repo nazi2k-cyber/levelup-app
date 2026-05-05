@@ -47,7 +47,8 @@ function render() {
                     <select id="rpt-processed-filter" style="padding:4px 8px; font-size:0.8rem; min-width:180px;">
                         <option value="">전체 처리 상태</option>
                         <option value="pending">미처리</option>
-                        <option value="done">처리 완료</option>
+                        <option value="deleted">삭제처리</option>
+                        <option value="dismissed">신고기각</option>
                     </select>
                 </div>
             </div>
@@ -129,8 +130,8 @@ async function loadReports() {
             }
             if (processedFilter === "pending") {
                 filtered = filtered.filter(r => !_processedPostIds.has(r.postId));
-            } else if (processedFilter === "done") {
-                filtered = filtered.filter(r => _processedPostIds.has(r.postId));
+            } else if (processedFilter === "deleted" || processedFilter === "dismissed") {
+                filtered = filtered.filter(r => _processedPostIds.get(r.postId) === processedFilter);
             }
             listEl.innerHTML = renderReportTable(filtered);
             countEl.textContent = `총 ${_reports.length}개 / 필터: ${filtered.length}개`;

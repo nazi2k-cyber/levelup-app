@@ -141,7 +141,7 @@ async function loadUsers() {
                 <input type="checkbox" id="um-filter-reported"> <span style="color:#ff5252;">신고 유저만 보기</span>
             </label>
             <label class="text-sm" style="display:flex; align-items:center; gap:4px; cursor:pointer;">
-                <input type="checkbox" id="um-filter-total-reported"> <span style="color:#ff5252;">신고 누적 3회 이상</span>
+                <input type="checkbox" id="um-filter-total-reported"> <span style="color:#ff5252;">삭제 누적 3회 이상</span>
             </label>
             <label class="text-sm" style="display:flex; align-items:center; gap:4px; cursor:pointer;">
                 <input type="checkbox" id="um-filter-suspension-count"> <span style="color:#ff8a80;">정지 누적 3회 이상</span>
@@ -150,7 +150,7 @@ async function loadUsers() {
                 <option value="name">이름순</option>
                 <option value="level-desc">레벨 내림차순</option>
                 <option value="report-desc">신고 내림차순</option>
-                <option value="total-report-desc">신고 누적 내림차순</option>
+                <option value="total-report-desc">삭제 누적 내림차순</option>
             </select>
         </div>`;
         html += '<div id="um-table-wrap">';
@@ -176,7 +176,7 @@ async function loadUsers() {
                 filtered = filtered.filter(u => (u.reportCount || 0) > 0);
             }
             if (totalReportedOnly) {
-                filtered = filtered.filter(u => (u.totalReportCount || 0) >= 3);
+                filtered = filtered.filter(u => (u.adminDeleteCount || 0) >= 3);
             }
             if (suspensionCountOnly) {
                 filtered = filtered.filter(u => (u.suspensionCount || 0) >= 3);
@@ -188,7 +188,7 @@ async function loadUsers() {
             } else if (sortBy === "report-desc") {
                 filtered.sort((a, b) => (b.reportCount || 0) - (a.reportCount || 0));
             } else if (sortBy === "total-report-desc") {
-                filtered.sort((a, b) => (b.totalReportCount || 0) - (a.totalReportCount || 0));
+                filtered.sort((a, b) => (b.adminDeleteCount || 0) - (a.adminDeleteCount || 0));
             } else {
                 filtered.sort((a, b) => a.displayName.localeCompare(b.displayName));
             }
@@ -211,7 +211,7 @@ async function loadUsers() {
 
 function renderUserTable(users) {
     let html = `<table>
-        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>신고</th><th>신고 누적</th><th>정지</th><th>정지 누적</th><th>상태</th><th>UID</th></tr></thead>
+        <thead><tr><th>이름</th><th>이메일</th><th>레벨</th><th>신고</th><th>삭제 누적</th><th>정지</th><th>정지 누적</th><th>상태</th><th>UID</th></tr></thead>
         <tbody>`;
     for (const u of users) {
         const statusBadge = u.disabled
@@ -221,12 +221,14 @@ function renderUserTable(users) {
         const reportBadge = rc > 0
             ? (rc >= 3 ? `<span class="badge badge-fail">${rc}건</span>` : `<span class="badge badge-warn">${rc}건</span>`)
             : '<span class="text-sub">—</span>';
-        const trc = u.totalReportCount || 0;
-        const totalBadge = trc >= 3
-            ? `<span class="badge badge-fail">${trc}건</span>`
-            : trc > 0
-                ? `<span class="badge badge-warn">${trc}건</span>`
-                : '<span class="text-sub">0건</span>';
+        const adc = u.adminDeleteCount || 0;
+        const totalBadge = adc >= 4
+            ? `<span class="badge badge-fail">${adc}회</span>`
+            : adc >= 3
+                ? `<span class="badge badge-warn">${adc}회</span>`
+                : adc > 0
+                    ? `<span class="badge badge-info">${adc}회</span>`
+                    : '<span class="text-sub">—</span>';
         const suspBadge = buildSuspensionBadge(u);
         const sc = u.suspensionCount || 0;
         const suspCountBadge = sc >= 4
@@ -236,7 +238,7 @@ function renderUserTable(users) {
                 : sc > 0
                     ? `<span class="badge badge-info">${sc}회</span>`
                     : '<span class="text-sub">—</span>';
-        html += `<tr class="um-row${rc > 0 || trc > 0 ? ' ps-reported' : ''}" data-uid="${u.uid}" style="cursor:pointer;">
+        html += `<tr class="um-row${rc > 0 || adc > 0 ? ' ps-reported' : ''}" data-uid="${u.uid}" style="cursor:pointer;">
             <td>${escHtml(u.displayName)}</td>
             <td class="text-sub">${escHtml(u.email || "—")}</td>
             <td>Lv.${u.level}</td>
