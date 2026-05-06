@@ -116,7 +116,7 @@ const i18n = {
         lib_ad_loading: "광고 로딩 중...",
         ri_spin_prompt: "광고를 시청하면 스핀 보상을 한 번 더 받을 수 있습니다. 시청하시겠습니까?",
         ri_spin_bonus: "추가 보상 획득!",
-        ri_dungeon_prompt: "광고를 시청하면 추가 던전 보상을 받을 수 있습니다. 시청하시겠습니까?",
+        ri_dungeon_prompt: "광고를 시청하면 이번 레이드 기여가 2회 처리됩니다. 시청하시겠습니까?",
         ri_dungeon_bonus: "추가 던전 보상!",
 
         // 릴스 탭
@@ -937,7 +937,7 @@ const i18n = {
         lib_ad_loading: "Loading ad...",
         ri_spin_prompt: "Watch an ad to double your spin reward?",
         ri_spin_bonus: "Bonus reward earned!",
-        ri_dungeon_prompt: "Watch an ad for extra dungeon rewards?",
+        ri_dungeon_prompt: "Watch an ad to have this raid counted as 2 contributions. Continue?",
         ri_dungeon_bonus: "Extra dungeon reward!",
 
         // Reels tab
@@ -1758,7 +1758,7 @@ const i18n = {
         lib_ad_loading: "広告読み込み中...",
         ri_spin_prompt: "広告を視聴するとスピン報酬をもう一度受け取れます。視聴しますか？",
         ri_spin_bonus: "追加報酬獲得！",
-        ri_dungeon_prompt: "広告を視聴すると追加ダンジョン報酬が受け取れます。視聴しますか？",
+        ri_dungeon_prompt: "広告を視聴すると今回のレイド貢献が2回分として処理されます。視聴しますか？",
         ri_dungeon_bonus: "追加ダンジョン報酬！",
 
         // リールタブ
