@@ -5,6 +5,11 @@
 형식: [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)
 버전 관리: [Semantic Versioning](https://semver.org/lang/ko/)
 
+## [1.0.786] - 2026-05-06
+
+### 변경
+- Fix login screen flicker when returning from background
+
 ## [1.0.785] - 2026-05-06
 
 ### 변경
