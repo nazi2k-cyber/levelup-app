@@ -42,6 +42,14 @@ export function createAuthProfileModule(deps) {
     let initializedUid = null;
     let logoutUiTimer = null;
     const LOGOUT_UI_DELAY_MS = 800;
+    const RESUME_AUTH_GRACE_MS = 3000;
+    let lastResumeVisibleAt = Date.now();
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            lastResumeVisibleAt = Date.now();
+        }
+    });
 
     async function handleAuthStateChanged(user) {
         const AppState = getAppState();
@@ -176,6 +184,23 @@ export function createAuthProfileModule(deps) {
             const latestUser = auth.currentUser;
             if (latestUser) {
                 AppLogger.info('[Auth] 로그아웃 UI 전환 취소: 사용자 세션 복구 감지');
+                logoutUiTimer = null;
+                return;
+            }
+
+            if (document.hidden) {
+                AppLogger.info('[Auth] 백그라운드 상태로 로그아웃 UI 전환 보류');
+                logoutUiTimer = null;
+                return;
+            }
+
+            const sinceResumeMs = Date.now() - lastResumeVisibleAt;
+            if (sinceResumeMs < RESUME_AUTH_GRACE_MS) {
+                const remainingMs = RESUME_AUTH_GRACE_MS - sinceResumeMs;
+                AppLogger.info('[Auth] 포그라운드 복귀 직후 인증 복구 대기: ' + remainingMs + 'ms');
+                logoutUiTimer = setTimeout(() => {
+                    handleAuthStateChanged(null);
+                }, remainingMs + 100);
                 return;
             }
 
