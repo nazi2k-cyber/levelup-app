@@ -2691,7 +2691,13 @@ window.syncGlobalDungeon = async () => {
                     const dng = JSON.parse(data.dungeonStr);
                     if (dng.lastGeneratedDate === targetDate && dng.slot === targetSlot && dng.isJoined) {
                         realParticipants++;
-                        if (dng.hasContributed) totalDamage++;
+                        const contributionUsed = Math.max(0, Number(dng.contributionUsed) || 0);
+                        if (contributionUsed > 0) {
+                            totalDamage += contributionUsed;
+                        } else if (dng.hasContributed) {
+                            // 구버전 데이터 호환: contributionUsed가 없는 경우 1회로 간주
+                            totalDamage++;
+                        }
                         let title = "각성자";
                         if (data.titleHistoryStr) {
                             try {
@@ -2724,6 +2730,7 @@ window.syncGlobalDungeon = async () => {
                                 instaId: data.instaId || '',
                                 linkedinId: data.linkedinId || '',
                                 hasContributed: !!dng.hasContributed,
+                                contributionUsed: Math.max(0, Number(dng.contributionUsed) || 0),
                                 hasProximityBonus: !!dng.hasProximityBonus,
                                 statValue: Number(stats[AppState.dungeon.targetStat]) || 0,
                                 hasEntryBonus: !!dng.hasEntryBonus,
@@ -2741,12 +2748,16 @@ window.syncGlobalDungeon = async () => {
         const scaledHP = baseHP + Math.floor(Math.max(0, realParticipants - 5) / 3);
 
         // 로컬 기여가 서버에 아직 반영 안 된 경우 보정
-        const localContributed = AppState.dungeon.hasContributed;
+        const localContributionUsed = Math.max(0, Number(AppState.dungeon.contributionUsed) || 0);
         const myUid = auth.currentUser?.uid;
         const myDataInServer = participants.find(p => p.id === myUid);
-        if (localContributed && myDataInServer && !myDataInServer.hasContributed) {
-            totalDamage++;
-            myDataInServer.hasContributed = true;
+        const serverContributionUsed = myDataInServer ? Math.max(0, Number(myDataInServer.contributionUsed) || 0) : 0;
+        if (localContributionUsed > serverContributionUsed) {
+            totalDamage += (localContributionUsed - serverContributionUsed);
+            if (myDataInServer) {
+                myDataInServer.contributionUsed = localContributionUsed;
+                myDataInServer.hasContributed = localContributionUsed >= Math.max(1, Number(AppState.dungeon.contributionLimit) || 1);
+            }
         }
 
         const prevDmg = AppState.dungeon.bossDamageDealt || 0;
